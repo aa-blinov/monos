@@ -4,7 +4,7 @@ date: 2024-05-02T18:00:00+00:00
 category: Образование/Большие языковые модели
 tags: [rag, llm, retrieval, generation, knowledge-intensive, prompt-engineering]
 status: published
-author: Иван Блинов
+author: Александр Блинов
 source: https://arxiv.org/abs/2312.10997, https://arxiv.org/abs/2005.11401
 ---
 
