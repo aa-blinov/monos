@@ -32,13 +32,21 @@ source: https://www.anthropic.com/research/building-effective-agents, https://ar
    - [Тип 1: Рефлективный агент](#тип-1-рефлективный-агент-reflective-agent)
    - [Тип 2: Иерархический агент](#тип-2-иерархический-агент-hierarchical-agent)
    - [Тип 3: Специализированный агент](#тип-3-специализированный-агент-specialist-agent)
+   - [Управление состоянием (State Management)](#управление-состоянием-state-management)
 7. [Часть 6: Как построить простого агента](#часть-6-как-построить-простого-агента)
    - [Минимальный пример на Python](#минимальный-пример-на-python)
-8. [Часть 7: Лучшие практики](#часть-7-лучшие-практики)
-9. [Часть 8: Примеры реальных агентов](#часть-8-примеры-реальных-агентов)
-10. [Часть 9: Вызовы и ограничения](#часть-9-вызовы-и-ограничения)
-11. [Заключение: агенты как будущее AI](#заключение-агенты-как-будущее-ai)
-12. [Дальнейшее чтение](#дальнейшее-чтение)
+8. [Часть 6.5: Оценка и тестирование агентов](#часть-65-оценка-и-тестирование-агентов)
+9. [Часть 7: Лучшие практики](#часть-7-лучшие-практики)
+10. [Часть 8: Примеры реальных агентов](#часть-8-примеры-реальных-агентов)
+11. [Часть 8.2: Оптимизация токенов и Rate Limiting](#часть-82-оптимизация-токенов-и-rate-limiting)
+12. [Часть 8.3: Логирование и Мониторинг](#часть-83-логирование-и-мониторинг)
+13. [Часть 8.4: Персистентность](#часть-84-персистентность)
+14. [Часть 8.5: Версионирование Промптов](#часть-85-версионирование-промптов)
+15. [Часть 8.6: Фреймворки для разработки агентов](#часть-86-фреймворки-для-разработки-агентов)
+16. [Часть 9: Streaming](#часть-9-streaming--потоковые-ответы)
+17. [Часть 10: Вызовы и ограничения](#часть-10-вызовы-и-ограничения)
+18. [Заключение: агенты как будущее AI](#заключение-агенты-как-будущее-ai)
+19. [Дальнейшее чтение](#дальнейшее-чтение)
 
 ---
 
@@ -351,6 +359,61 @@ LLM не имеет встроенной долговременной памят
 Логи: Log files (времяцепь событий)
 ```
 
+### Управление состоянием (State Management)
+
+**Проблема:** Агенты работают в итеративном цикле, и между вызовами нужно сохранить контекст. Где это хранить? Как быстро доступ? Как синхронизировать?
+
+**Стратегия 1: В памяти приложения**
+
+```python
+class Agent:
+    def __init__(self):
+        self.state = {"messages": [], "facts": {}, "current_task": None}
+    
+    def step(self):
+        # Состояние доступно во всех методах
+        pass
+```
+
+**Плюсы:** Быстро, просто  
+**Минусы:** Теряется если приложение упадет, не масштабируется на несколько процессов
+
+**Стратегия 2: В базе данных**
+
+```python
+class Agent:
+    def __init__(self, session_id):
+        self.session_id = session_id
+    
+    def step(self):
+        # Загружаем состояние из БД
+        state = db.get_session(self.session_id)
+        # Обновляем
+        state.update(...)
+        # Сохраняем обратно
+        db.save_session(self.session_id, state)
+```
+
+**Плюсы:** Персистентно, масштабируемо  
+**Минусы:** Медленнее, нужна синхронизация
+
+**Стратегия 3: Вся история в контексте (Stateless)**
+
+```python
+def step(messages_history, task):
+    # Claude видит всю историю, решает что делать дальше
+    response = claude.messages.create(
+        messages=messages_history,
+        system="You are an agent..."
+    )
+    return response
+```
+
+**Плюсы:** Простая архитектура, Claude видит всё  
+**Минусы:** Может быть много токенов, контекст растет
+
+**Лучшее решение:** Гибридное - важные факты в БД, последняя история в контексте.
+
 ## Часть 5: Практические типы агентов
 
 ### Тип 1: Рефлективный агент (Reflective Agent)
@@ -512,6 +575,82 @@ run_agent("Какое число больше: результат 2+2*3 или 2
 
 Весь процесс — это итеративный цикл между пользователем/системой и моделью.
 
+## Часть 6.5: Оценка и тестирование агентов
+
+Кок вы знаете, работает ли ваш агент хорошо? Одно дело сказать "он работает", и совсем другое — иметь конкретные метрики.
+
+### Ключевые метрики для агентов
+
+**1. Success Rate** — Процент дач выполненых успешно
+
+```
+100 задач: 87 выполнены правильно
+13 ошибок
+
+Success Rate = 87%
+```
+
+**2. Token Efficiency** — Сколько токенов тратится на задачу
+
+```
+Плохая агент: 50K токенов на простой задаче
+Хорошая агент: 5K токенов на ту же задаче
+```
+
+**3. Latency** — Сколько времени требуется для выполнения
+
+```
+Потребно 2 с для все задачи (good UX)
+Одна задача тъет 5 минут — проблема
+```
+
+**4. Tool Usage Accuracy** — Насколько агент корректно вызывает инструменты
+
+```
+От таблицы усеров агент вызывает get_users
+Вместо delete_users
+↑
+Нюанс выбрал правильно (хорошо)
+```
+
+### Как тестировать
+
+**Шаг 1: Собрать тестовые данные**
+
+```python
+test_cases = [
+    {
+        "input": "Найди ме рестораны в Москве",
+        "expected_output": [структура ресторанов],
+        "should_call_tools": ["search_restaurants", "get_ratings"]
+    }
+]
+```
+
+**Шаг 2: Прогонить агента**
+
+```python
+for test in test_cases:
+    result = agent.run(test["input"])
+    assert result == test["expected_output"], f"Failed: {result}"
+```
+
+**Шаг 3: Высчитать метрики**
+
+```python
+metrics = {
+    "success_rate": passed / total,
+    "avg_tokens": sum(tokens) / len(tokens),
+    "avg_latency": sum(times) / len(times)
+}
+```
+
+### Обычные ошибки в тестировании
+
+1. **Копирование ответов** — тесты принимают телько точные ответы, а не эквивалентные
+2. **Нет граничных тестов** — не тестируют неюбычные входные данные
+3. **Не тестируют выбор инструментов** — полагают, что агент всегда выбырает нужные тоолы
+
 ## Часть 7: Лучшие практики
 
 > **Совет для Claude:** Claude лучше всего работает с явными инструкциями о том, как использовать инструменты. Предоставляйте четкие описания функций и примеры использования, и Claude будет эффективнее выбирать подходящие инструменты для задачи.
@@ -634,7 +773,362 @@ assert len(result) > 0
 5. Финальный агент форматирует в статью с ссылками
 ```
 
-## Часть 9: Вызовы и ограничения
+## Часть 8.2: Оптимизация токенов и Rate Limiting
+
+### Проблема: Количество токенов
+
+Каждый токен стоит денег. При снижении токенов экономия существенная.
+
+**Типы затрат токенов:**
+- Неабы нередундантность: не включать старые сообщения
+- Краткие промпты: "Найди топ-5" иместо длинных объяснений
+- Кеширование: если одним часто вопросы повторяются, на хранить результаты
+
+```python
+# Хорошая оптимизация
+import hashlib
+
+cache = {}
+
+def call_claude_cached(message):
+    # Покажчик для команды
+    key = hashlib.md5(message.encode()).hexdigest()
+    
+    if key in cache:
+        return cache[key]  # Не тратим токены!
+    
+    response = claude.messages.create(
+        messages=[{"role": "user", "content": message}]
+    )
+    cache[key] = response
+    return response
+```
+
+### Rate Limiting
+
+При количестви речестов API темпом име лимиты.
+
+```python
+from datetime import datetime, timedelta
+import time
+
+class RateLimiter:
+    def __init__(self, calls_per_minute=60):
+        self.calls_per_minute = calls_per_minute
+        self.calls = []
+    
+    def wait_if_needed(self):
+        now = datetime.now()
+        # Очистим старые вызовы
+        self.calls = [c for c in self.calls if c > now - timedelta(minutes=1)]
+        
+        if len(self.calls) >= self.calls_per_minute:
+            wait_time = (self.calls[0] + timedelta(minutes=1) - now).total_seconds()
+            time.sleep(wait_time)
+        
+        self.calls.append(now)
+
+limiter = RateLimiter(calls_per_minute=60)
+
+def safe_call():
+    limiter.wait_if_needed()
+    return claude.messages.create(...)
+```
+
+## Часть 8.3: Логирование и Мониторинг
+
+### Почему бесмысленно?
+
+Когда агент составил со стона, нужно знать:
+- Вняти было выстроенные?
+- Какие тоолс вырозвал?
+- О какая цена вынесос?
+
+```python
+import logging
+from datetime import datetime
+import json
+
+# Настроим логи
+логгинг = logging.getLogger("agent")
+
+class AgentLogger:
+    def __init__(self):
+        self.logs = []
+    
+    def log_step(self, step_num, action, tool_name=None, tool_args=None, result=None, tokens_used=0):
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "step": step_num,
+            "action": action,
+            "tool": tool_name,
+            "tool_args": tool_args,
+            "result": result,
+            "tokens_used": tokens_used
+        }
+        self.logs.append(log_entry)
+        print(f"[Шаг {step_num}] {action} -> {tool_name}({tool_args})")
+        if result:
+            print(f"  Результат: {result}")
+    
+    def save(self, filename):
+        with open(filename, "w") as f:
+            json.dump(self.logs, f, indent=2, default=str)
+
+logger = AgentLogger()
+logger.log_step(1, "think", tokens_used=145)
+logger.log_step(2, "call_tool", "search_web", {"query": "Claude API"}, "Found 5 results", tokens_used=200)
+logger.save("agent_trace.json")
+```
+
+### Метрики для мониторинга
+
+```
+Статистика за 1000 вызовов:
+- Токенов в среднем: 2,500 по задаче
+- Времени в среднем: 3.2 секунды
+- Успех рате: 92%
+- Самые используемые туолс: web_search (856 раз), calculator (312 раз)
+```
+
+## Часть 8.4: Персистентность (Пссхранение Состояния)
+
+### Проблема
+
+Конда пользователь закрывает сайт, а потом вовращается, агент должен выпомнить такая она была.
+
+### Опции сохранения
+
+**Опция 1: JSON Файл**
+
+```python
+import json
+
+state = {
+    "messages": [...],
+    "facts": {...},
+    "task": "Find best flights",
+    "progress": 0.7
+}
+
+# Сохраним
+митвить with open(f"state_{session_id}.json", "w") as f:
+    json.dump(state, f)
+
+# На счет восстанавливаем
+митвить with open(f"state_{session_id}.json", "r") as f:
+    state = json.load(f)
+```
+
+**Опция 2: БАН (Наилучшее решение)**
+
+```python
+import sqlite3
+
+class PersistenceManager:
+    def __init__(self, db_path="agent.db"):
+        self.conn = sqlite3.connect(db_path)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                state TEXT,
+                updated_at TIMESTAMP
+            )
+        """)
+    
+    def save(self, session_id, state):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO sessions (id, state, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            (session_id, json.dumps(state))
+        )
+        self.conn.commit()
+    
+    def load(self, session_id):
+        row = self.conn.execute(
+            "SELECT state FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+        return json.loads(row[0]) if row else None
+
+pm = PersistenceManager()
+pm.save("session_123", state)
+loaded_state = pm.load("session_123")
+```
+
+## Часть 8.5: Версионирование Промптов
+
+### Очем это
+
+Когда вы итерируете инструкции для агента, нужно разниця, какие версии работают лучше.
+
+### Структура версий
+
+```
+prompts/
+├── v1_initial.txt
+├── v2_more_detailed.txt
+├── v3_with_examples.txt
+├── v4_optimized.txt (currently in production)
+├── v5_experimental.txt
+└── metadata.json
+```
+
+**metadata.json:**
+
+```json
+{
+  "prompts": {
+    "v1_initial": {"created": "2024-01-01", "status": "deprecated"},
+    "v2_more_detailed": {"created": "2024-01-15", "status": "deprecated"},
+    "v3_with_examples": {"created": "2024-02-01", "status": "deprecated"},
+    "v4_optimized": {"created": "2024-02-15", "status": "production", "success_rate": 0.94},
+    "v5_experimental": {"created": "2024-03-01", "status": "testing", "success_rate": 0.89}
+  }
+}
+```
+
+### Код для управления
+
+```python
+class PromptVersionManager:
+    def __init__(self, prompts_dir="prompts"):
+        self.prompts_dir = prompts_dir
+        self.versions = {}
+        self.load_metadata()
+    
+    def load_metadata(self):
+        with open(f"{self.prompts_dir}/metadata.json") as f:
+            self.metadata = json.load(f)
+    
+    def get_prompt(self, version_or_status="production"):
+        # Если запрашиваем конкретную версию
+        if version_or_status.startswith("v"):
+            version = version_or_status
+        else:
+            # Если запрашиваем по статусу, ищем последнюю
+            version = [v for v, data in self.metadata["prompts"].items() 
+                      if data["status"] == version_or_status][-1]
+        
+        with open(f"{self.prompts_dir}/{version}.txt") as f:
+            return f.read()
+    
+    def compare_versions(self, v1, v2):
+        """Compare performance of two versions"""
+        data1 = self.metadata["prompts"][v1]
+        data2 = self.metadata["prompts"][v2]
+        
+        print(f"{v1}: {data1.get('success_rate', 'N/A')}")
+        print(f"{v2}: {data2.get('success_rate', 'N/A')}")
+    
+    def rollback(self, to_version):
+        """Rollback to previous version"""
+        self.metadata["prompts"]["production"] = self.metadata["prompts"][to_version]
+        self.save_metadata()
+    
+    def save_metadata(self):
+        with open(f"{self.prompts_dir}/metadata.json", "w") as f:
+            json.dump(self.metadata, f, indent=2)
+
+# Использование
+manager = PromptVersionManager()
+
+# Получаем текущую production версию
+prompt = manager.get_prompt("production")
+
+# Или конкретную
+prompt_v3 = manager.get_prompt("v3_with_examples")
+
+# Сравниваем
+manager.compare_versions("v4_optimized", "v5_experimental")
+
+# Если в v5 поехали, роллбек
+# manager.rollback("v4_optimized")
+```
+
+### Лучшие практики
+
+1. **Намидж выс цели выполнения** - Тестируйте v5 на подножестве, трнтроль сред понятия
+2. **Не бопунять вынолнения** - Оставить стабильную v4 в production пока v5 механически отопве
+
+## Часть 8.6: Фреймворки для разработки агентов
+
+Не нужно выписывать всё с нуля. Есть фреймворки, которые упростяют разработку.
+
+### LangChain
+
+**Что:** Один из популярных фреймворков для работы с LLM
+
+**Плюсы:**
+- интеграция с надо и инструментами
+- хранилище векторов out-of-the-box
+- поддоржка многих моделей
+
+**Минусы:**
+- большая кривая обучения
+- много абстракций
+
+### Anthropic SDK
+
+**Что:** Официальный Python SDK на Claude
+
+**Плюсы:**
+- наиболее свежие фичи для Claude
+- нативная поддержка tool_use и MCP
+- простая API
+
+**Минусы:**
+- беован только на Claude
+- меньше экосистемы отп сравнению с LangChain
+
+### AutoGen
+
+**Что:** Микрософтовы скрипт для скоординированных множественных агентов
+
+**Плюсы:**
+- читать рассуждение многих агентов
+- встроенное кеш и мемори
+
+**Минусы:**
+- Меньше енкор чем LangChain
+- Медленнее развитие
+
+### Кто выбрать?
+
+- **Хотите все на Claude?** → Anthropic SDK
+- **Нужна экосистема?** → LangChain
+- **Много агентов?** → AutoGen
+
+## Часть 9: Streaming — Потоковые ответы
+
+**Проблема:** Когда агент экономит 5 минут, делая решение, пользователю нужен прогресс.
+
+**Решение:** Streaming. Вы можете начать показывать рассуждения агента сразу же.
+
+```python
+# Без streaming (плохая UX)
+response = claude.messages.create(messages=messages)
+# где-то татд на сервере 5 минут
+# А потом сразу расъ всё текстов
+
+# С streaming (хорошая UX)
+with claude.messages.stream(
+    messages=messages,
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+        # Чітатель видит прогресс сразу
+```
+
+**Когда это полезно:**
+- для long-running агентов
+- когда агент объясняет дынные которые генерираются
+- для веб-интерфейсов
+
+**Когда это не нужно:**
+- агент выбор тоолс (мэда ждать до окончания думки)
+- задачи, которые должны выполниться в вфоне
+
+## Часть 10: Вызовы и ограничения
 
 ### 1. Стоимость вычислений
 
