@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { FolderIcon, DocumentIcon, DocumentTextIcon, Cog6ToothIcon, CodeBracketIcon } from 'heroicons-svelte/solid';
 
   const dispatch = createEventDispatcher();
 
@@ -39,21 +40,19 @@
   }
 
   /**
-   * Get icon for file type
+   * Get icon component for file type
    * @param {string} name
    * @param {boolean} isDir
-   * @returns {string}
+   * @returns {Component}
    */
-  function getIcon(name, isDir) {
-    if (isDir) {
-      return '[DIR]';
-    }
-    if (name.endsWith('.md')) return '[MD]';
-    if (name.endsWith('.json')) return '[JSON]';
-    if (name.endsWith('.yaml') || name.endsWith('.yml')) return '[YAML]';
-    if (name.endsWith('.py')) return '[PY]';
-    if (name.endsWith('.js') || name.endsWith('.ts')) return '[JS]';
-    return '[FILE]';
+  function getIconComponent(name, isDir) {
+    if (isDir) return FolderIcon;
+    if (name.endsWith('.md')) return DocumentTextIcon;
+    if (name.endsWith('.json')) return Cog6ToothIcon;
+    if (name.endsWith('.yaml') || name.endsWith('.yml')) return Cog6ToothIcon;
+    if (name.endsWith('.py')) return CodeBracketIcon;
+    if (name.endsWith('.js') || name.endsWith('.ts')) return CodeBracketIcon;
+    return DocumentIcon;
   }
 
   /**
@@ -102,9 +101,11 @@
       <div class="w-4" />
     {/if}
 
-    <span class="text-xs font-mono text-gray-600 dark:text-gray-400">
-      {getIcon(node.name, node.is_dir)}
-    </span>
+    <svelte:component
+      this={getIconComponent(node.name, node.is_dir)}
+      class="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0"
+      aria-hidden="true"
+    />
 
     <div class="flex-1 min-w-0">
       <div class="font-medium text-gray-900 dark:text-gray-100 truncate">

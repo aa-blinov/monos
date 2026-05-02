@@ -239,6 +239,19 @@
   }
 
   /**
+   * Strip YAML frontmatter from content
+   */
+  function stripFrontmatter(text) {
+    if (text.startsWith('---')) {
+      const endFrontmatter = text.indexOf('---', 3);
+      if (endFrontmatter !== -1) {
+        return text.substring(endFrontmatter + 3).trim();
+      }
+    }
+    return text;
+  }
+
+  /**
    * Toggle editing mode
    */
   function toggleEditing() {
@@ -433,7 +446,7 @@
         >
           <!-- Markdown Preview -->
           <div class="space-y-4 text-gray-900 dark:text-gray-100">
-            {#each editedContent.split('\n\n') as paragraph}
+            {#each stripFrontmatter(editedContent).split('\n\n') as paragraph}
               {#if paragraph.startsWith('# ')}
                 <h1 class="text-2xl font-bold">
                   {paragraph.replace(/^#\s+/, '')}
