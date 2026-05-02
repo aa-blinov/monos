@@ -1,0 +1,23 @@
+# macOS system files
+.DS_Store
+
+# Obsidian system files
+.obsidian/
+
+# Python / uv environment and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.uv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# User-specific assets or temporary files
+*.tmp
+*.log
+
+# Sensitive environment variables
+.env
+.env.local
