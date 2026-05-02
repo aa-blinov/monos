@@ -10,7 +10,6 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
-from rich.table import Table
 
 console = Console()
 
@@ -37,7 +36,7 @@ def discover_categories():
         # Find all subdirectories (subcategories)
         for sub_dir in sorted(main_dir.iterdir()):
             if sub_dir.is_dir() and not sub_dir.name.startswith("."):
-                subcategories[sub_dir.name] = f"Подкатегория: {sub_dir.name}"
+                subcategories[sub_dir.name] = sub_dir
 
         if subcategories:
             categories[main_dir.name] = subcategories
@@ -45,95 +44,97 @@ def discover_categories():
     return categories
 
 
-def display_categories(categories):
-    """Display category structure in a nice table."""
-    table = Table(title="📁 Доступные категории")
-    table.add_column("Основная категория", style="cyan")
-    table.add_column("Подкатегория", style="magenta")
-    table.add_column("Описание", style="green")
+def display_tree(categories, selected_main=None, selected_sub=None):
+    """Display the category tree with visual hierarchy."""
+    console.clear()
+    console.print("[bold cyan]📂 Навигация по категориям[/bold cyan]\n")
 
-    for main_cat in sorted(categories.keys()):
-        subcats = categories[main_cat]
-        first = True
-        for subcat in sorted(subcats.keys()):
-            description = subcats[subcat]
-            if first:
-                table.add_row(main_cat, subcat, description)
-                first = False
-            else:
-                table.add_row("", subcat, description)
+    for i, main_cat in enumerate(sorted(categories.keys()), 1):
+        is_selected_main = main_cat == selected_main
+        marker = "▶ " if is_selected_main else "  "
+        color = "yellow" if is_selected_main else "white"
+        console.print(f"{marker}[{color}]{i}. {main_cat}[/{color}]")
 
-    console.print(table)
+        if is_selected_main:
+            subcats = sorted(categories[main_cat].keys())
+            for j, sub_cat in enumerate(subcats, 1):
+                is_selected_sub = sub_cat == selected_sub
+                sub_marker = "  └─ ▶" if is_selected_sub else "  └─"
+                sub_color = "green" if is_selected_sub else "dim"
+                console.print(f"{sub_marker}[{sub_color}]{j}. {sub_cat}[/{sub_color}]")
+            console.print(
+                f"  └─[dim]{len(subcats) + 1}. [yellow]+ Создать новую подкатегорию[/yellow][/dim]"
+            )
 
-
-def select_category(categories):
-    """Let user select main category and subcategory."""
-    display_categories(categories)
     console.print()
 
-    # Select main category
-    main_categories = sorted(categories.keys())
-    console.print("Выберите основную категорию:")
-    for i, cat in enumerate(main_categories, 1):
-        console.print(f"  {i}. {cat}")
+
+def select_category_interactive(categories):
+    """Interactive navigation through category tree."""
+    selected_main = None
+    selected_sub = None
 
     while True:
-        try:
-            choice = int(
-                Prompt.ask(
-                    "Введите номер основной категории",
-                    choices=[str(i) for i in range(1, len(main_categories) + 1)],
-                )
+        display_tree(categories, selected_main, selected_sub)
+
+        if selected_main is None:
+            console.print(
+                "[dim]Выберите основную категорию (введите номер и нажмите Enter)[/dim]"
             )
-            main_cat = main_categories[choice - 1]
-            break
-        except (ValueError, IndexError):
-            console.print("[red]Неверный выбор. Попробуйте снова.[/red]")
+            choice = Prompt.ask("[cyan]Выбор[/cyan]", default="")
 
-    # Select or create subcategory
-    subcategories = sorted(categories[main_cat].keys())
-    console.print(f"\nВыберите подкатегорию для '{main_cat}':")
-    for i, subcat in enumerate(subcategories, 1):
-        console.print(f"  {i}. {subcat}")
-    console.print(
-        f"  {len(subcategories) + 1}. [yellow]+ Создать новую подкатегорию[/yellow]"
-    )
+            try:
+                choice_num = int(choice)
+                main_cats = sorted(categories.keys())
+                if 1 <= choice_num <= len(main_cats):
+                    selected_main = main_cats[choice_num - 1]
+                else:
+                    console.print("[red]❌ Неверный номер[/red]")
+            except ValueError:
+                console.print("[red]❌ Введите число[/red]")
 
-    while True:
-        try:
-            choice = int(
-                Prompt.ask(
-                    "Введите номер подкатегории",
-                    choices=[str(i) for i in range(1, len(subcategories) + 2)],
-                )
-            )
+        else:
+            subcats = sorted(categories[selected_main].keys())
+            console.print(f"\n[dim]Выберите подкатегорию в '{selected_main}'[/dim]")
+            console.print("[dim](Введите 0 для выбора другой основной категории)[/dim]")
 
-            if choice == len(subcategories) + 1:
-                # Create new subcategory
-                new_subcat = Prompt.ask("📂 Введите название новой подкатегории")
-                new_subcat = new_subcat.replace(" ", "_")
-                root_dir = Path(__file__).parent
-                new_subcat_path = root_dir / main_cat / new_subcat
-                new_subcat_path.mkdir(parents=True, exist_ok=True)
-                console.print(f"[green]✅ Подкатегория '{new_subcat}' создана![/green]")
-                sub_cat = new_subcat
-                break
-            else:
-                sub_cat = subcategories[choice - 1]
-                break
-        except (ValueError, IndexError):
-            console.print("[red]Неверный выбор. Попробуйте снова.[/red]")
+            choice = Prompt.ask("[cyan]Выбор[/cyan]", default="")
 
-    return main_cat, sub_cat
+            try:
+                choice_num = int(choice)
+
+                if choice_num == 0:
+                    selected_main = None
+                    selected_sub = None
+                elif choice_num == len(subcats) + 1:
+                    # Create new subcategory
+                    new_subcat = Prompt.ask("\n📂 Название новой подкатегории")
+                    new_subcat = new_subcat.replace(" ", "_")
+                    root_dir = Path(__file__).parent
+                    new_subcat_path = root_dir / selected_main / new_subcat
+                    new_subcat_path.mkdir(parents=True, exist_ok=True)
+                    console.print(
+                        f"[green]✅ Подкатегория '{new_subcat}' создана![/green]"
+                    )
+                    selected_sub = new_subcat
+                    return selected_main, selected_sub
+                elif 1 <= choice_num <= len(subcats):
+                    selected_sub = subcats[choice_num - 1]
+                    return selected_main, selected_sub
+                else:
+                    console.print("[red]❌ Неверный номер[/red]")
+            except ValueError:
+                console.print("[red]❌ Введите число[/red]")
 
 
 def get_note_details():
     """Get note title and optional tags."""
-    title = Prompt.ask("📝 Введите название заметки")
+    console.print()
+    title = Prompt.ask("📝 Название заметки")
 
     # Optional: get tags
     tags_input = Prompt.ask(
-        "🏷️  Введите теги (через запятую)",
+        "🏷️  Теги (через запятую)",
         default="",
     )
     tags = [tag.strip() for tag in tags_input.split(",") if tag.strip()]
@@ -205,8 +206,8 @@ def main():
         console.print("[red]❌ Не найдено категорий в проекте![/red]")
         return
 
-    # Select category
-    main_cat, sub_cat = select_category(categories)
+    # Interactive selection
+    main_cat, sub_cat = select_category_interactive(categories)
 
     # Get note details
     title, tags = get_note_details()
