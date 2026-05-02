@@ -19,17 +19,15 @@ def discover_categories():
     root_dir = Path(__file__).parent
     categories = {}
 
-    # Find all directories starting with a number (main categories)
+    # Find all directories (main categories) excluding assets and hidden
+    exclude_dirs = {"assets", ".git", "__pycache__"}
+
     for main_dir in sorted(root_dir.iterdir()):
         if not main_dir.is_dir():
             continue
         if main_dir.name.startswith("."):
             continue
-        if main_dir.name == "assets":
-            continue
-
-        # Check if it looks like a main category (starts with digit)
-        if not main_dir.name[0].isdigit():
+        if main_dir.name in exclude_dirs:
             continue
 
         subcategories = {}
