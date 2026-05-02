@@ -2,10 +2,11 @@
 FastAPI backend for Zed Notes WebUI
 """
 
+import logging
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from schemas import (
@@ -21,6 +22,9 @@ from schemas import (
     UpdateNoteRequest,
 )
 from services import NotesService
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -61,11 +65,11 @@ async def get_directory_tree():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/file/{file_path:path}", response_model=FileInfo)
-async def get_file_info(file_path: str):
+@app.get("/api/file-info")
+async def get_file_info(path: str = Query(...)):
     """Получить информацию о файле"""
     try:
-        file_info = service.get_file_info(file_path)
+        file_info = service.get_file_info(path)
         return file_info
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
@@ -73,11 +77,18 @@ async def get_file_info(file_path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/file/{file_path:path}/content")
-async def get_file_content(file_path: str):
+@app.get("/api/file")
+async def get_file_content(path: str = Query(...)):
     """Получить содержимое файла"""
     try:
-        content = service.read_file(file_path)
+        # Check if path is a directory
+        from pathlib import Path as PathlibPath
+
+        file_path = PathlibPath(service.root_path) / path
+        if file_path.is_dir():
+            raise HTTPException(status_code=400, detail="Path is a directory, not a file")
+
+        content = service.read_file(path)
         return {"content": content}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
@@ -85,11 +96,11 @@ async def get_file_content(file_path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/file/{file_path:path}/content")
-async def update_file_content(file_path: str, request: UpdateNoteRequest):
+@app.post("/api/file")
+async def update_file_content(path: str = Query(...), request: UpdateNoteRequest = None):
     """Обновить содержимое файла"""
     try:
-        service.write_file(file_path, request.content)
+        service.write_file(path, request.content)
         return {"message": "File updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -110,11 +121,11 @@ async def create_note(request: CreateNoteRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/file/{file_path:path}/rename")
-async def rename_file(file_path: str, request: RenameFileRequest):
+@app.post("/api/file/rename")
+async def rename_file(path: str = Query(...), request: RenameFileRequest = None):
     """Переименовать файл"""
     try:
-        new_path = service.rename_file(file_path, request.new_name)
+        new_path = service.rename_file(path, request.new_name)
         return {"path": new_path, "message": "File renamed successfully"}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
@@ -122,11 +133,11 @@ async def rename_file(file_path: str, request: RenameFileRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/file/{file_path:path}")
-async def delete_file(file_path: str):
+@app.delete("/api/file")
+async def delete_file(path: str = Query(...)):
     """Удалить файл"""
     try:
-        service.delete_file(file_path)
+        service.delete_file(path)
         return {"message": "File deleted successfully"}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")

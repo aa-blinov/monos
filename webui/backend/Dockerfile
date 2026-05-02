@@ -8,17 +8,17 @@ RUN apt-get update && apt-get install -y \
     grep \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy backend files
+COPY . /app/backend/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
-# Copy backend code
-COPY . .
+# Set working directory to backend
+WORKDIR /app/backend
 
-# Expose port
+# Expose FastAPI port
 EXPOSE 8000
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run FastAPI application
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

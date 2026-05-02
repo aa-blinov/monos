@@ -2,6 +2,7 @@
 Service layer for file and notes operations
 """
 
+import logging
 import os
 import shutil
 import subprocess
@@ -17,24 +18,42 @@ from schemas import (
     SearchResult,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class NotesService:
     """Сервис для работы с заметками"""
 
     def __init__(self, root_path: Optional[Path] = None):
         if root_path is None:
-            # Ищем .git папку для определения корня
-            current = Path.cwd()
-            while current != current.parent:
-                if (current / ".git").exists():
-                    root_path = current
-                    break
-                current = current.parent
+            # Check Docker volume mount first
+            if Path("/app/Образование").exists():
+                root_path = Path("/app")
+                logger.info(f"Using Docker mounted root: {root_path}")
             else:
-                root_path = Path.cwd()
+                # Search for .git folder
+                current = Path.cwd()
+                while current != current.parent:
+                    if (current / ".git").exists():
+                        root_path = current
+                        logger.info(f"Found .git at: {root_path}")
+                        break
+                    current = current.parent
+                else:
+                    root_path = Path.cwd()
+                    logger.warning(f"No .git found, using cwd: {root_path}")
 
         self.root_path = root_path
-        self.notes_dir = root_path / "Образование"
+        logger.info(f"Root path: {self.root_path}")
+
+        # Use root for browsing all categories
+        self.notes_dir = root_path
+        logger.info(f"Notes dir: {self.notes_dir}")
+
+        # List available directories
+        if self.notes_dir.exists():
+            available_dirs = [d.name for d in self.notes_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
+            logger.info(f"Available directories: {available_dirs}")
 
     def get_directory_tree(self, path: Optional[Path] = None) -> DirectoryNode:
         """Получить дерево директорий"""
@@ -60,11 +79,12 @@ class NotesService:
             try:
                 entries = sorted(path.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
                 for entry in entries:
+                    # Skip hidden files and README files
                     if entry.name.startswith(".") or entry.name == "README.md":
                         continue
 
                     if entry.is_dir():
-                        # Только если есть markdown файлы
+                        # Only include directories that contain markdown files
                         has_md = any(f.suffix == ".md" for f in entry.rglob("*.md"))
                         if has_md:
                             child = self.get_directory_tree(entry)
@@ -72,8 +92,8 @@ class NotesService:
                     elif entry.suffix == ".md":
                         child = self.get_directory_tree(entry)
                         node.children.append(child)
-            except PermissionError:
-                pass
+            except PermissionError as e:
+                logger.warning(f"Permission denied accessing {path}: {e}")
 
         return node
 
@@ -125,9 +145,9 @@ class NotesService:
 
         # Определяем путь
         if category:
-            dir_path = self.notes_dir / category
+            dir_path = self.root_path / category
         else:
-            dir_path = self.notes_dir
+            dir_path = self.root_path
 
         dir_path.mkdir(parents=True, exist_ok=True)
         file_path = dir_path / filename
@@ -189,7 +209,7 @@ class NotesService:
         results = []
 
         # Поиск по названиям
-        for note in self.notes_dir.rglob("*.md"):
+        for note in self.root_path.rglob("*.md"):
             if note.name == "README.md":
                 continue
 
@@ -205,7 +225,7 @@ class NotesService:
         if search_content:
             try:
                 result = subprocess.run(
-                    ["grep", "-r", "-i", "-l", query, str(self.notes_dir)],
+                    ["grep", "-r", "-i", "-l", query, str(self.root_path)],
                     capture_output=True,
                     text=True,
                     timeout=5,
@@ -281,8 +301,10 @@ class NotesService:
 
     def get_stats(self) -> dict:
         """Получить статистику"""
-        notes = list(self.notes_dir.rglob("*.md"))
-        notes = [n for n in notes if n.name != "README.md"]
+        notes = []
+        for note in self.root_path.rglob("*.md"):
+            if note.name != "README.md":
+                notes.append(note)
 
         total_size = sum(n.stat().st_size for n in notes)
 

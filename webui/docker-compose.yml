@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   backend:
@@ -9,20 +9,24 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../:/app/zed-notes:ro
+      - ../Образование:/app/Образование:ro
+      - ../Работа:/app/Работа:ro
+      - ../Документы:/app/Документы:ro
+      - ../Личное и Творчество:/app/Личное и Творчество:ro
+      - ../Проекты и Образование:/app/Проекты и Образование:ro
+      - ../assets:/app/assets:ro
+      - ../.scripts:/app/.scripts:ro
+      - ../.git:/app/.git:ro
     environment:
       - PYTHONUNBUFFERED=1
-    working_dir: /app
-    command: >
-      bash -c "cd /app/webui/backend &&
-               python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - zed-notes
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "python -m urllib.request || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
@@ -32,13 +36,15 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend/src:/app/src:ro
-      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
       - /app/node_modules
     environment:
       - VITE_API_URL=http://backend:8000
-    working_dir: /app
-    command: npm run dev -- --host 0.0.0.0
     depends_on:
       backend:
         condition: service_healthy

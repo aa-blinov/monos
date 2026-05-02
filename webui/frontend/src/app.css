@@ -61,7 +61,7 @@ button {
 
 /* Markdown preview */
 .markdown-preview {
-  @apply prose dark:prose-invert max-w-none;
+  @apply max-w-none;
 }
 
 .markdown-preview h1,

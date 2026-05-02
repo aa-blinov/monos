@@ -50,7 +50,7 @@
     {/if}
 
     <div class="flex-1 overflow-hidden">
-      {#if currentFile}
+      {#if currentFile && !currentFile.isDir}
         <Editor {currentFile} />
       {:else}
         <div class="h-full flex items-center justify-center">

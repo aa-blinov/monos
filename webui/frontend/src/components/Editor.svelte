@@ -65,7 +65,14 @@
       error = '';
       success = '';
 
-      const response = await fetch(`/api/file/${currentFile.path}/content`);
+      // Don't load content for directories
+      if (currentFile.isDir) {
+        error = 'Cannot load content for directories';
+        isLoading = false;
+        return;
+      }
+
+      const response = await fetch(`/api/file?path=${encodeURIComponent(currentFile.path)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -94,7 +101,7 @@
    */
   async function loadFileInfo() {
     try {
-      const response = await fetch(`/api/file/${currentFile.path}`);
+      const response = await fetch(`/api/file-info?path=${encodeURIComponent(currentFile.path)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -113,7 +120,7 @@
       error = '';
       success = '';
 
-      const response = await fetch(`/api/file/${currentFile.path}/content`, {
+      const response = await fetch(`/api/file?path=${encodeURIComponent(currentFile.path)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editedContent })
@@ -152,7 +159,7 @@
       isSaving = true;
       error = '';
 
-      const response = await fetch(`/api/file/${currentFile.path}/rename`, {
+      const response = await fetch(`/api/file/rename?path=${encodeURIComponent(currentFile.path)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_name: newFileName.trim() })
@@ -189,7 +196,7 @@
       isDeleting = true;
       error = '';
 
-      const response = await fetch(`/api/file/${currentFile.path}`, {
+      const response = await fetch(`/api/file?path=${encodeURIComponent(currentFile.path)}`, {
         method: 'DELETE'
       });
 
