@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import Sidebar from './components/Sidebar.svelte';
   import Editor from './components/Editor.svelte';
-  import Browser from './components/Browser.svelte';
   import Header from './components/Header.svelte';
 
   let currentFile = null;
@@ -53,11 +52,10 @@
       {#if currentFile && !currentFile.isDir}
         <Editor {currentFile} />
       {:else}
-        <div class="h-full flex items-center justify-center">
-          <div class="text-center">
-            <h1 class="text-3xl font-bold mb-4">Zed Notes</h1>
-            <p class="text-gray-500 dark:text-gray-400 mb-8">Выберите файл для начала</p>
-            <Browser on:selectFile={selectFile} />
+        <div class="h-full flex items-center justify-center px-8">
+          <div class="text-center max-w-md">
+            <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-gray-100">Zed Notes</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400">Выберите файл в боковой панели слева, чтобы начать редактирование</p>
           </div>
         </div>
       {/if}
