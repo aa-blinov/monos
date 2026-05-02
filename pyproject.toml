@@ -9,9 +9,6 @@ description = "Personal note management system with automated formatting and org
 readme = "README.md"
 requires-python = ">=3.12"
 
-[tool.uv]
-python-version = "3.12"
-
 [dependency-groups]
 dev = [
     "mdformat>=0.7.16",
