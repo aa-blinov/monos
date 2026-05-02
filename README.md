@@ -41,7 +41,7 @@
 Убедитесь, что установлены:
 - ✅ `uv` — менеджер проектов (https://docs.astral.sh/uv/getting-started/)
 - ✅ `git` — контроль версий
-- ✅ Python 3.8+
+- ✅ Python 3.12+
 
 ### Инициализация окружения
 
@@ -98,6 +98,13 @@ pre-commit run --all-files
   uv run format_notes.py
   ```
 
+- **`check_links.py`** — Проверка мёртвых ссылок между заметками
+  ```bash
+  uv run check_links.py           # Базовая проверка
+  uv run check_links.py --verbose # Подробный вывод
+  uv run check_links.py -v        # Краткая форма verbose
+  ```
+
 ### Встроенные инструменты
 
 Все используемые инструменты настроены в `pyproject.toml` и `.pre-commit-config.yaml`:
@@ -106,4 +113,11 @@ pre-commit run --all-files
 - **ruff** — Быстрый Python линтер и форматер
 - **pre-commit** — Автоматизация проверок при коммитах
 
-Список агентов и их инструкции по управлению базой знаний находятся в файле `Agents.md`.
+## Документация
+
+- **`README.md`** — Основная документация проекта
+- **`CONTRIBUTING.md`** — Инструкции для разработчиков
+- **`SETUP_SUMMARY.md`** — Подробное описание настройки pre-commit hooks
+- **`FRONTMATTER.md`** — Стандарт YAML фронтматтера для заметок
+- **`Agents.md`** — Инструкции для AI-агентов
+
