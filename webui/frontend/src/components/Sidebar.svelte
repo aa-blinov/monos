@@ -19,6 +19,18 @@
   /** @type {string} */
   let error = '';
 
+  /** @type {boolean} */
+  let showCreateModal = false;
+
+  /** @type {string} */
+  let newNoteTitle = '';
+
+  /** @type {string} */
+  let newNoteCategory = '';
+
+  /** @type {boolean} */
+  let isCreating = false;
+
   /**
    * Fetch directory tree from API
    */
@@ -104,6 +116,49 @@
     loadTree();
   }
 
+  /**
+   * Create new note
+   */
+  async function createNewNote() {
+    if (!newNoteTitle.trim()) {
+      error = 'Title is required';
+      return;
+    }
+
+    try {
+      isCreating = true;
+      error = '';
+      const response = await fetch('/api/notes/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newNoteTitle,
+          category: newNoteCategory,
+          tags: [],
+          content: ''
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      showCreateModal = false;
+      newNoteTitle = '';
+      newNoteCategory = '';
+
+      // Reload tree and select new note
+      await loadTree();
+      dispatch('selectFile', { path: data.path, name: newNoteTitle, isDir: false });
+    } catch (err) {
+      error = `Failed to create note: ${err.message}`;
+      console.error(error);
+    } finally {
+      isCreating = false;
+    }
+  }
+
   onMount(() => {
     loadTree();
   });
@@ -162,6 +217,16 @@
         {/if}
         Refresh
       </button>
+      <button
+        on:click={() => showCreateModal = true}
+        class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+        title="Create new note"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New
+      </button>
     </div>
   </div>
 
@@ -214,8 +279,81 @@
   {/if}
 </div>
 
+<!-- Create Note Modal -->
+{#if showCreateModal}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 w-96 shadow-lg">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create New Note</h2>
+
+      <div class="space-y-4">
+        <!-- Title Input -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Title
+          </label>
+          <input
+            type="text"
+            bind:value={newNoteTitle}
+            placeholder="Note title..."
+            class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+          />
+        </div>
+
+        <!-- Category Select -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Category
+          </label>
+          <select
+            bind:value={newNoteCategory}
+            class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100"
+          >
+            <option value="">Root</option>
+            <option value="Образование">Образование</option>
+            <option value="Работа">Работа</option>
+            <option value="Документы">Документы</option>
+            <option value="Личное и Творчество">Личное и Творчество</option>
+            <option value="Проекты и Образование">Проекты и Образование</option>
+          </select>
+        </div>
+
+        <!-- Error Message -->
+        {#if error}
+          <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-200">
+            {error}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-2 mt-6">
+        <button
+          on:click={() => showCreateModal = false}
+          disabled={isCreating}
+          class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition"
+        >
+          Cancel
+        </button>
+        <button
+          on:click={createNewNote}
+          disabled={isCreating || !newNoteTitle.trim()}
+          class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+        >
+          {#if isCreating}
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          {/if}
+          Create
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
-  :global(button) {
+  :global(.sidebar button) {
     display: flex;
     align-items: center;
     justify-content: center;
