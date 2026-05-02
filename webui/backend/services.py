@@ -27,7 +27,7 @@ class NotesService:
     def __init__(self, root_path: Optional[Path] = None):
         if root_path is None:
             # Check Docker volume mount first
-            if Path("/app/Образование").exists():
+            if Path("/app/notes").exists():
                 root_path = Path("/app")
                 logger.info(f"Using Docker mounted root: {root_path}")
             else:
@@ -46,8 +46,8 @@ class NotesService:
         self.root_path = root_path
         logger.info(f"Root path: {self.root_path}")
 
-        # Use root for browsing all categories
-        self.notes_dir = root_path
+        # Use notes directory for browsing all categories
+        self.notes_dir = root_path / "notes"
         logger.info(f"Notes dir: {self.notes_dir}")
 
         # List available directories

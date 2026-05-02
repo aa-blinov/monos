@@ -9,11 +9,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../Образование:/app/Образование:ro
-      - ../Работа:/app/Работа:ro
-      - ../Документы:/app/Документы:ro
-      - ../Личное и Творчество:/app/Личное и Творчество:ro
-      - ../Проекты и Образование:/app/Проекты и Образование:ro
+      - ../notes:/app/notes:ro
       - ../assets:/app/assets:ro
       - ../.scripts:/app/.scripts:ro
       - ../.git:/app/.git:ro
