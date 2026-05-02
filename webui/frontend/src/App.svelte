@@ -53,9 +53,9 @@
         <Editor {currentFile} />
       {:else}
         <div class="h-full flex items-center justify-center px-8">
-          <div class="text-center max-w-md">
-            <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-gray-100">Zed Notes</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-400">Выберите файл в боковой панели слева, чтобы начать редактирование</p>
+          <div class="text-center max-w-xl">
+            <h1 class="text-5xl font-bold mb-6 text-gray-900 dark:text-gray-100">Zed Notes</h1>
+            <p class="text-xl text-gray-600 dark:text-gray-400 leading-relaxed">Выберите файл в боковой панели слева, чтобы начать редактирование</p>
           </div>
         </div>
       {/if}
