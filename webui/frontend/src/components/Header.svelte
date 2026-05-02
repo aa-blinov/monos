@@ -102,16 +102,24 @@
 
     <button
       on:click={toggleDarkMode}
-      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex-shrink-0"
+      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex-shrink-0 text-gray-700 dark:text-gray-300"
       title="Переключить тему"
     >
       {#if isDarkMode}
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.591a.75.75 0 101.06 1.06l1.591-1.591zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.591-1.591a.75.75 0 10-1.06 1.06l1.591 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061 1.06l1.591 1.591a.75.75 0 101.06-1.06l-1.59-1.591zM6 12a.75.75 0 01-.75-.75V8.25a.75.75 0 011.5 0V11.25A.75.75 0 016 12zM6.166 6.166a.75.75 0 010-1.06L7.757 3.515a.75.75 0 011.06 1.06l-1.591 1.591z" />
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" stroke-width="2" />
+          <line x1="12" y1="1" x2="12" y2="3" stroke-width="2" stroke-linecap="round" />
+          <line x1="12" y1="21" x2="12" y2="23" stroke-width="2" stroke-linecap="round" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2" stroke-linecap="round" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2" stroke-linecap="round" />
+          <line x1="1" y1="12" x2="3" y2="12" stroke-width="2" stroke-linecap="round" />
+          <line x1="21" y1="12" x2="23" y2="12" stroke-width="2" stroke-linecap="round" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2" stroke-linecap="round" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2" stroke-linecap="round" />
         </svg>
       {:else}
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       {/if}
     </button>
