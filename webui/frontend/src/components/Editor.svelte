@@ -81,8 +81,17 @@
       content = data.content;
       editedContent = content;
 
-      // Extract title from first markdown heading
-      const titleMatch = content.match(/^#\s+(.+?)$/m);
+      // Extract title from first markdown heading (skip YAML frontmatter)
+      // Remove YAML frontmatter if present
+      let contentWithoutFrontmatter = content;
+      if (content.startsWith('---')) {
+        const endFrontmatter = content.indexOf('---', 3);
+        if (endFrontmatter !== -1) {
+          contentWithoutFrontmatter = content.substring(endFrontmatter + 3);
+        }
+      }
+
+      const titleMatch = contentWithoutFrontmatter.match(/^#\s+(.+?)$/m);
       title = titleMatch ? titleMatch[1] : currentFile.name;
       editedTitle = title;
 

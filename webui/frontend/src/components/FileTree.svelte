@@ -46,14 +46,14 @@
    */
   function getIcon(name, isDir) {
     if (isDir) {
-      return '📁';
+      return '[DIR]';
     }
-    if (name.endsWith('.md')) return '📝';
-    if (name.endsWith('.json')) return '⚙️';
-    if (name.endsWith('.yaml') || name.endsWith('.yml')) return '⚙️';
-    if (name.endsWith('.py')) return '🐍';
-    if (name.endsWith('.js') || name.endsWith('.ts')) return '📜';
-    return '📄';
+    if (name.endsWith('.md')) return '[MD]';
+    if (name.endsWith('.json')) return '[JSON]';
+    if (name.endsWith('.yaml') || name.endsWith('.yml')) return '[YAML]';
+    if (name.endsWith('.py')) return '[PY]';
+    if (name.endsWith('.js') || name.endsWith('.ts')) return '[JS]';
+    return '[FILE]';
   }
 
   /**
@@ -102,7 +102,7 @@
       <div class="w-4" />
     {/if}
 
-    <span class="text-lg">
+    <span class="text-xs font-mono text-gray-600 dark:text-gray-400">
       {getIcon(node.name, node.is_dir)}
     </span>
 
