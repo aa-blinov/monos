@@ -14,45 +14,49 @@ from rich.table import Table
 
 console = Console()
 
-# Define category structure based on your current system
-CATEGORIES = {
-    "01_Work": {
-        "EORA": "EORA проекты, стратегия, встречи",
-        "NSTU": "NSTU проекты и коммерческие предложения",
-        "Research_DPI": "Исследовательские материалы по DPI",
-    },
-    "02_Projects_and_Education": {
-        "HSE_Stephen": "Проект для ВШЭ",
-        "Wife_Study": "Учебные материалы",
-        "Pet_Projects": "Личные проекты",
-    },
-    "03_Tech_Knowledge": {
-        "LLM": "Знания про LLM и RAG",
-        "Python": "Python и программирование",
-        "Copilot": "Промпты для ИИ-помощников",
-    },
-    "04_Documents": {
-        "Digital_Nomad": "Digital Nomad Residency материалы",
-        "TRP_and_PR": "ВНЖ и документы",
-    },
-    "05_Personal_and_Creative": {
-        "Psychology": "Психология и личное развитие",
-        "Ideas": "Идеи для проектов",
-        "Prompts": "Избранные промпты",
-    },
-}
+
+def discover_categories():
+    """Dynamically discover categories from the actual filesystem structure."""
+    root_dir = Path(__file__).parent
+    categories = {}
+
+    # Find all directories starting with a number (main categories)
+    for main_dir in sorted(root_dir.iterdir()):
+        if not main_dir.is_dir():
+            continue
+        if main_dir.name.startswith("."):
+            continue
+        if main_dir.name == "assets":
+            continue
+
+        # Check if it looks like a main category (starts with digit)
+        if not main_dir.name[0].isdigit():
+            continue
+
+        subcategories = {}
+        # Find all subdirectories (subcategories)
+        for sub_dir in sorted(main_dir.iterdir()):
+            if sub_dir.is_dir() and not sub_dir.name.startswith("."):
+                subcategories[sub_dir.name] = f"Подкатегория: {sub_dir.name}"
+
+        if subcategories:
+            categories[main_dir.name] = subcategories
+
+    return categories
 
 
-def display_categories():
+def display_categories(categories):
     """Display category structure in a nice table."""
     table = Table(title="📁 Доступные категории")
     table.add_column("Основная категория", style="cyan")
     table.add_column("Подкатегория", style="magenta")
     table.add_column("Описание", style="green")
 
-    for main_cat, subcats in CATEGORIES.items():
+    for main_cat in sorted(categories.keys()):
+        subcats = categories[main_cat]
         first = True
-        for subcat, description in subcats.items():
+        for subcat in sorted(subcats.keys()):
+            description = subcats[subcat]
             if first:
                 table.add_row(main_cat, subcat, description)
                 first = False
@@ -62,13 +66,13 @@ def display_categories():
     console.print(table)
 
 
-def select_category():
+def select_category(categories):
     """Let user select main category and subcategory."""
-    display_categories()
+    display_categories(categories)
     console.print()
 
     # Select main category
-    main_categories = list(CATEGORIES.keys())
+    main_categories = sorted(categories.keys())
     console.print("Выберите основную категорию:")
     for i, cat in enumerate(main_categories, 1):
         console.print(f"  {i}. {cat}")
@@ -86,22 +90,37 @@ def select_category():
         except (ValueError, IndexError):
             console.print("[red]Неверный выбор. Попробуйте снова.[/red]")
 
-    # Select subcategory
-    subcategories = list(CATEGORIES[main_cat].keys())
+    # Select or create subcategory
+    subcategories = sorted(categories[main_cat].keys())
     console.print(f"\nВыберите подкатегорию для '{main_cat}':")
     for i, subcat in enumerate(subcategories, 1):
         console.print(f"  {i}. {subcat}")
+    console.print(
+        f"  {len(subcategories) + 1}. [yellow]+ Создать новую подкатегорию[/yellow]"
+    )
 
     while True:
         try:
             choice = int(
                 Prompt.ask(
                     "Введите номер подкатегории",
-                    choices=[str(i) for i in range(1, len(subcategories) + 1)],
+                    choices=[str(i) for i in range(1, len(subcategories) + 2)],
                 )
             )
-            sub_cat = subcategories[choice - 1]
-            break
+
+            if choice == len(subcategories) + 1:
+                # Create new subcategory
+                new_subcat = Prompt.ask("📂 Введите название новой подкатегории")
+                new_subcat = new_subcat.replace(" ", "_")
+                root_dir = Path(__file__).parent
+                new_subcat_path = root_dir / main_cat / new_subcat
+                new_subcat_path.mkdir(parents=True, exist_ok=True)
+                console.print(f"[green]✅ Подкатегория '{new_subcat}' создана![/green]")
+                sub_cat = new_subcat
+                break
+            else:
+                sub_cat = subcategories[choice - 1]
+                break
         except (ValueError, IndexError):
             console.print("[red]Неверный выбор. Попробуйте снова.[/red]")
 
@@ -179,8 +198,15 @@ def main():
     """Main function."""
     console.print("[bold cyan]🎯 Создание новой заметки[/bold cyan]\n")
 
+    # Discover categories dynamically
+    categories = discover_categories()
+
+    if not categories:
+        console.print("[red]❌ Не найдено категорий в проекте![/red]")
+        return
+
     # Select category
-    main_cat, sub_cat = select_category()
+    main_cat, sub_cat = select_category(categories)
 
     # Get note details
     title, tags = get_note_details()
