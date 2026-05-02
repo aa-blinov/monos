@@ -70,7 +70,7 @@ python3 setup.py  # или python setup.py на Windows
 
 ```bash
 # Создаём или редактируем файлы
-uv run new_note.py
+uv run .scripts/new_note.py
 # ... редактируем файлы в IDE ...
 
 # Коммитим (pre-commit hooks сработают автоматически)

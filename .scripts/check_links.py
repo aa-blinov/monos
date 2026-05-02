@@ -4,9 +4,9 @@ Check for dead links in markdown files.
 Validates internal links and image paths.
 
 Usage:
-    uv run check_links.py                    # Check all files
-    uv run check_links.py --fix              # Fix relative links
-    uv run check_links.py --verbose          # Detailed output
+    python3 .scripts/check_links.py                    # Check all files
+    python3 .scripts/check_links.py --verbose         # Detailed output
+    python3 .scripts/check_links.py -v                # Short form
 """
 
 import argparse

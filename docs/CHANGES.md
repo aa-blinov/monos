@@ -102,12 +102,12 @@ author: Иван Блинов
 
 2. **Create a note:**
    ```bash
-   uv run new_note.py
+   uv run .scripts/new_note.py
    ```
 
 3. **Check for broken links:**
    ```bash
-   python3 check_links.py
+   python3 .scripts/check_links.py
    ```
 
 4. **Commit (hooks run automatically):**

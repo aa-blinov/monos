@@ -80,13 +80,16 @@ def main() -> int:
     # Final message
     print_header("Setup complete!")
     print("\n📝 Ready to work! Available commands:")
-    print("   uv run new_note.py       — create a new note")
-    print("   uv run format_notes.py    — format all notes")
-    print("   pre-commit run --all-files — check all files manually")
+    print("   uv run .scripts/new_note.py       — create a new note")
+    print("   uv run .scripts/format_notes.py    — format all notes")
+    print("   python3 .scripts/check_links.py    — check for dead links")
+    print("   pre-commit run --all-files         — check all files manually")
     print("\n💡 Next steps:")
-    print("   1. Try creating a note: uv run new_note.py")
-    print("   2. Or format existing notes: uv run format_notes.py")
-    print("\n")
+    print("   1. Try creating a note: uv run .scripts/new_note.py")
+    print("   2. Or format existing notes: uv run .scripts/format_notes.py")
+    print("   3. Check links: python3 .scripts/check_links.py")
+    print("\n📚 Documentation: see docs/ folder")
+    print()
 
     return 0
 

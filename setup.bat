@@ -64,14 +64,17 @@ echo 🔧 Setup complete!
 echo ============================================================
 echo.
 echo 📝 Ready to work! Available commands:
-echo    uv run new_note.py       — create a new note
-echo    uv run format_notes.py    — format all notes
-echo    pre-commit run --all-files — check all files manually
+echo    uv run .scripts/new_note.py       — create a new note
+echo    uv run .scripts/format_notes.py    — format all notes
+echo    python .scripts/check_links.py     — check for dead links
+echo    pre-commit run --all-files         — check all files manually
 echo.
 echo 💡 Next steps:
-echo    1. Clone the repo on another machine
-echo    2. Run: python setup.py (or setup.bat on Windows)
-echo    3. Start creating notes!
+echo    1. Try creating a note: uv run .scripts/new_note.py
+echo    2. Or format existing notes: uv run .scripts/format_notes.py
+echo    3. Check links: python .scripts/check_links.py
+echo.
+echo 📚 Documentation: see docs/ folder
 echo.
 
 exit /b 0

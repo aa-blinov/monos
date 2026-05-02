@@ -88,21 +88,21 @@ pre-commit run --all-files
 
 ### Основные скрипты
 
-- **`new_note.py`** — Интерактивное создание новой заметки с древовидной навигацией по категориям и YAML фронтматтером
+- **`.scripts/new_note.py`** — Интерактивное создание новой заметки с древовидной навигацией по категориям и YAML фронтматтером
   ```bash
-  uv run new_note.py
+  uv run .scripts/new_note.py
   ```
 
-- **`format_notes.py`** — Форматирование всех заметок по стандарту mdformat
+- **`.scripts/format_notes.py`** — Форматирование всех заметок по стандарту mdformat
   ```bash
-  uv run format_notes.py
+  uv run .scripts/format_notes.py
   ```
 
-- **`check_links.py`** — Проверка мёртвых ссылок между заметками
+- **`.scripts/check_links.py`** — Проверка мёртвых ссылок между заметками
   ```bash
-  uv run check_links.py           # Базовая проверка
-  uv run check_links.py --verbose # Подробный вывод
-  uv run check_links.py -v        # Краткая форма verbose
+  python3 .scripts/check_links.py           # Базовая проверка
+  python3 .scripts/check_links.py --verbose # Подробный вывод
+  python3 .scripts/check_links.py -v        # Краткая форма verbose
   ```
 
 ### Встроенные инструменты

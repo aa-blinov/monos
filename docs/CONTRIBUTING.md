@@ -42,7 +42,7 @@ setup.bat
 ### Создание новой заметки
 
 ```bash
-uv run new_note.py
+uv run .scripts/new_note.py
 ```
 
 Интерактивный скрипт поможет вам:
@@ -53,7 +53,7 @@ uv run new_note.py
 ### Форматирование существующих заметок
 
 ```bash
-uv run format_notes.py
+uv run .scripts/format_notes.py
 ```
 
 Применит mdformat ко всем Markdown файлам с соблюдением стандартов проекта.
@@ -130,10 +130,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ```bash
 # Создать заметку
-uv run new_note.py
+uv run .scripts/new_note.py
 
 # Отформатировать все файлы
-uv run format_notes.py
+uv run .scripts/format_notes.py
 
 # Проверить весь репо
 pre-commit run --all-files
