@@ -1,13 +1,10 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "zed-notes"
 version = "0.1.0"
 description = "Personal note management system with automated formatting and organization"
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [{name = "Zed Notes"}]
 
 [dependency-groups]
 dev = [
@@ -16,6 +13,11 @@ dev = [
     "mdformat-frontmatter>=0.4.0",
     "pre-commit>=3.0.0",
     "ruff>=0.1.0",
+]
+
+tui = [
+    "textual>=0.40.0",
+    "pyyaml>=6.0",
 ]
 
 [tool.ruff]
