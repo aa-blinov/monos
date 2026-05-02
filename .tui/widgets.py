@@ -43,6 +43,9 @@ class NotesBrowser(Vertical):
     def on_mount(self) -> None:
         """При загрузке"""
         self.load_notes()
+        # Развернём корневой узел
+        if self._tree:
+            self._tree.root.expand()
 
     def load_notes(self) -> None:
         """Загрузить все заметки в дерево"""
@@ -52,6 +55,8 @@ class NotesBrowser(Vertical):
         self._tree.clear()
         root = self._tree.root
         self._populate_tree(root, self.notes_manager.notes_dir)
+        # Развернём корневой узел после загрузки
+        root.expand()
 
     def show_notes(self, notes: List[Path]) -> None:
         """
@@ -90,7 +95,11 @@ class NotesBrowser(Vertical):
                 if entry.is_dir():
                     # Добавляем папку
                     label = f"{entry.name}/"
-                    node = parent.add(label, expand=False, data={"path": entry})
+                    # Автоматически развертываем подпапки для удобства
+                    has_content = any(
+                        p.suffix == ".md" or p.is_dir() for p in entry.iterdir() if not p.name.startswith(".")
+                    )
+                    node = parent.add(label, expand=has_content, data={"path": entry})
                     # Рекурсивно добавляем содержимое
                     self._populate_tree(node, entry)
 
