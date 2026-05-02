@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zed-notes"
+version = "0.1.0"
+description = "Personal note management system with automated formatting and organization"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.uv]
+python-version = "3.12"
+
+[dependency-groups]
+dev = [
+    "mdformat>=0.7.16",
+    "mdformat-gfm>=0.6.0",
+    "mdformat-frontmatter>=0.4.0",
+    "pre-commit>=3.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.mdformat]
+wrap = 120
+number = true
