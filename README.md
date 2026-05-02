@@ -1,3 +1,10 @@
+---
+title: README
+date: 2026-05-02T16:06:02+00:00
+category: Прочее
+tags: []
+status: draft
+---
 # Система организации заметок (Zed Notes)
 
 Данный репозиторий организован по принципу тематического разделения сфер жизни и работы для удобной навигации и быстрого поиска информации.
@@ -86,24 +93,51 @@ pre-commit run --all-files
 
 ## Автоматизация
 
-### Основные скрипты
+### ⚡ Быстрый запуск через Make (рекомендуется)
 
-- **`.scripts/new_note.py`** — Интерактивное создание новой заметки с древовидной навигацией по категориям и YAML фронтматтером
-  ```bash
-  uv run .scripts/new_note.py
-  ```
+Используйте `make` для запуска скриптов без зависания `uv`:
 
-- **`.scripts/format_notes.py`** — Форматирование всех заметок по стандарту mdformat
-  ```bash
-  uv run .scripts/format_notes.py
-  ```
+```bash
+# Показать все доступные команды
+make help
 
-- **`.scripts/check_links.py`** — Проверка мёртвых ссылок между заметками
-  ```bash
-  python3 .scripts/check_links.py           # Базовая проверка
-  python3 .scripts/check_links.py --verbose # Подробный вывод
-  python3 .scripts/check_links.py -v        # Краткая форма verbose
-  ```
+# Создать новую заметку
+make new-note
+
+# Отформатировать все Markdown файлы
+make format-notes
+
+# Проверить мертвые ссылки
+make check-links
+
+# Добавить фронтматтер ко всем файлам
+make add-frontmatter
+
+# Установить зависимости
+make install
+```
+
+### Запуск скриптов напрямую через Python
+
+Если `make` недоступен, запускайте скрипты напрямую:
+
+```bash
+# Создать новую заметку
+python3 .scripts/new_note.py
+
+# Отформатировать все заметки
+python3 .scripts/format_notes.py
+
+# Проверить мертвые ссылки
+python3 .scripts/check_links.py
+python3 .scripts/check_links.py --verbose
+python3 .scripts/check_links.py -v
+
+# Добавить фронтматтер ко всем файлам
+python3 .scripts/add_frontmatter.py
+```
+
+⚠️ **НЕ рекомендуется** использовать `uv run .scripts/...` так как `uv` может зависнуть при инициализации проекта. Используйте либо `make`, либо `python3` напрямую.
 
 ### Встроенные инструменты
 
@@ -115,8 +149,9 @@ pre-commit run --all-files
 
 ## Документация
 
-- **`README.md`** — Основная документация проекта
-- **`docs/CONTRIBUTING.md`** — Инструкции для разработчиков
+- **`README.md`** — Основная документация проекта (этот файл)
+- **`docs/CONTRIBUTING.md`** — Инструкции для разработчиков и Git workflow
 - **`docs/SETUP_SUMMARY.md`** — Подробное описание настройки pre-commit hooks
 - **`docs/FRONTMATTER.md`** — Стандарт YAML фронтматтера для заметок
 - **`docs/Agents.md`** — Инструкции для AI-агентов
+- **`Makefile`** — Команды для запуска скриптов без `uv run`

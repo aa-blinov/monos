@@ -18,7 +18,7 @@ date: 2024-05-02T15:30:00+00:00
 category: Работа/EORA
 tags: [ai, rag, benchmark]
 status: draft
-author: Иван Блинов
+author: Александр Блинов
 ---
 ```
 

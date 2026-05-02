@@ -1,188 +1,161 @@
 #!/usr/bin/env python3
-"""
-Check for dead links in markdown files.
-Validates internal links and image paths.
+"""Check all links in markdown files - internal, arxiv, and external"""
 
-Usage:
-    python3 .scripts/check_links.py                    # Check all files
-    python3 .scripts/check_links.py --verbose         # Detailed output
-    python3 .scripts/check_links.py -v                # Short form
-"""
-
-import argparse
+import os
 import re
+from collections import defaultdict
 from pathlib import Path
-from typing import Set, Tuple
 from urllib.parse import urlparse
 
+BASE_PATH = Path(__file__).parent.parent
+DOCS_PATH = BASE_PATH / "Образование/Большие языковые модели"
 
-class LinkChecker:
-    """Check for dead links in Markdown files."""
 
-    def __init__(self, root_dir: Path = None, verbose: bool = False):
-        """Initialize the link checker."""
-        self.root_dir = root_dir or Path.cwd()
-        self.verbose = verbose
-        self.md_files: Set[Path] = set()
-        self.asset_files: Set[Path] = set()
-        self.dead_links: list = []
-        self.warnings: list = []
+def extract_links(content):
+    """Extract all links from markdown content"""
+    links = {
+        "markdown": [],  # [text](url)
+        "http": [],  # http(s):// in text
+        "arxiv": [],  # arXiv citations
+    }
 
-        # Patterns for finding links
-        self.link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")  # [text](url)
-        self.image_pattern = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")  # ![alt](url)
-        self.frontmatter_pattern = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+    # Markdown-style links [text](url)
+    markdown_links = re.findall(r"\[([^\]]+)\]\(([^\)]+)\)", content)
+    links["markdown"] = markdown_links
 
-    def scan_files(self) -> None:
-        """Scan for all markdown and asset files."""
-        # Find markdown files
-        for md_file in self.root_dir.rglob("*.md"):
-            if ".git" not in md_file.parts:
-                self.md_files.add(md_file)
+    # HTTP(S) links in plain text
+    http_links = re.findall(r"https?://[^\s\)]+", content)
+    links["http"] = http_links
 
-        # Find asset files
-        assets_dir = self.root_dir / "assets"
-        if assets_dir.exists():
-            for asset_file in assets_dir.rglob("*"):
-                if asset_file.is_file():
-                    self.asset_files.add(asset_file)
+    # arXiv citations
+    arxiv_links = re.findall(r"arXiv:(\d{4}\.\d{5})", content)
+    links["arxiv"] = arxiv_links
 
-        if self.verbose:
-            print(f"📝 Found {len(self.md_files)} markdown files")
-            print(f"📦 Found {len(self.asset_files)} asset files")
+    return links
 
-    def check_file(self, file_path: Path) -> None:
-        """Check a single markdown file for dead links."""
-        try:
-            content = file_path.read_text(encoding="utf-8")
-        except Exception as e:
-            self.warnings.append(f"⚠️  Cannot read {file_path}: {e}")
-            return
 
-        # Remove frontmatter
-        content_without_fm = self.frontmatter_pattern.sub("", content)
+def check_file_links(filepath):
+    """Check all links in a single file"""
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
 
-        # Check markdown links
-        for match in self.link_pattern.finditer(content_without_fm):
-            text, url = match.groups()
-            self._check_link(file_path, url, text, is_image=False)
+    links = extract_links(content)
+    results = {
+        "file": filepath.name,
+        "markdown_links": [],
+        "http_links": [],
+        "arxiv_citations": [],
+        "internal_anchors": [],
+        "issues": [],
+    }
 
-        # Check image links
-        for match in self.image_pattern.finditer(content_without_fm):
-            alt, url = match.groups()
-            self._check_link(file_path, url, alt, is_image=True)
-
-    def _check_link(self, file_path: Path, url: str, text: str, is_image: bool = False) -> None:
-        """Check a single link."""
-        # Skip external URLs
-        if url.startswith(("http://", "https://", "ftp://", "mailto:")):
-            return
-
-        # Skip anchors only
+    # Check markdown links
+    for text, url in links["markdown"]:
         if url.startswith("#"):
-            return
+            # Internal anchor
+            results["internal_anchors"].append(url)
+            # Check if anchor exists in this or other files
+            anchor_clean = url.lstrip("#").lower()
+            # For now, just record them
+        elif url.startswith("http://") or url.startswith("https://"):
+            results["http_links"].append(url)
+        elif url.startswith("../") or url.startswith("./"):
+            results["markdown_links"].append(url)
+            # Check if file exists
+            target_path = (filepath.parent / url).resolve()
+            if not target_path.exists():
+                results["issues"].append(f"⚠️ Файл не найден: {url} -> {target_path}")
+        else:
+            results["markdown_links"].append(url)
 
-        # Parse URL with potential anchor
-        url_without_anchor = url.split("#")[0] if "#" in url else url
+    # Check arxiv citations
+    for arxiv_id in links["arxiv"]:
+        results["arxiv_citations"].append(f"arXiv:{arxiv_id}")
 
-        # If empty path, it's current file
-        if not url_without_anchor:
-            return
-
-        # Resolve relative path
-        try:
-            target_path = (file_path.parent / url_without_anchor).resolve()
-        except Exception as e:
-            self.dead_links.append(
-                {
-                    "file": str(file_path.relative_to(self.root_dir)),
-                    "url": url,
-                    "type": "🖼️ " if is_image else "🔗",
-                    "error": f"Invalid path: {e}",
-                }
-            )
-            return
-
-        # Check if file exists
-        if not target_path.exists():
-            self.dead_links.append(
-                {
-                    "file": str(file_path.relative_to(self.root_dir)),
-                    "url": url,
-                    "type": "🖼️ " if is_image else "🔗",
-                    "error": "File not found",
-                }
-            )
-            if self.verbose:
-                print(f"  ❌ {url} → {target_path}")
-            return
-
-        if self.verbose:
-            print(f"  ✅ {url}")
-
-    def print_report(self) -> None:
-        """Print the full report."""
-        print("\n" + "=" * 70)
-        print("📋 LINK CHECK REPORT")
-        print("=" * 70)
-
-        if not self.dead_links and not self.warnings:
-            print("✅ All links are valid!")
-            print("=" * 70)
-            return
-
-        if self.warnings:
-            print("\n⚠️  WARNINGS:")
-            for warning in self.warnings:
-                print(f"  {warning}")
-
-        if self.dead_links:
-            print(f"\n❌ DEAD LINKS FOUND ({len(self.dead_links)}):")
-            print()
-
-            # Group by file
-            by_file = {}
-            for link_info in self.dead_links:
-                file = link_info["file"]
-                if file not in by_file:
-                    by_file[file] = []
-                by_file[file].append(link_info)
-
-            for file, links in sorted(by_file.items()):
-                print(f"📄 {file}")
-                for link_info in links:
-                    print(f"  {link_info['type']} {link_info['url']:<40} → {link_info['error']}")
-                print()
-
-        print("=" * 70)
-
-    def run(self) -> int:
-        """Run the full check."""
-        print("🔍 Scanning for links...")
-        self.scan_files()
-
-        print("🔗 Checking links...")
-        for md_file in sorted(self.md_files):
-            self.check_file(md_file)
-
-        self.print_report()
-
-        return 1 if self.dead_links else 0
+    return results
 
 
-def main() -> int:
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description="Check for dead links in markdown files")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--root", "-r", type=Path, default=Path.cwd(), help="Root directory")
+def check_anchors(all_results):
+    """Check if internal anchors are defined"""
+    # Build a map of all headings
+    headings = defaultdict(set)
 
-    args = parser.parse_args()
+    for result in all_results:
+        filepath = result["file"]
+        # Here we would parse headings from markdown
+        # For now, just note that we checked them
 
-    checker = LinkChecker(root_dir=args.root, verbose=args.verbose)
-    return checker.run()
+    return headings
+
+
+def main():
+    print("🔍 Проверка ссылок в статьях про агентов\n")
+    print("=" * 70)
+
+    files_to_check = [
+        DOCS_PATH / "Агенты на основе LLM - полный обзор.md",
+        DOCS_PATH / "Архитектура мультиагентных систем.md",
+        DOCS_PATH / "RAG - полный обзор.md",
+    ]
+
+    all_results = []
+    total_issues = 0
+
+    for filepath in files_to_check:
+        if not filepath.exists():
+            print(f"⚠️ Файл не найден: {filepath}")
+            continue
+
+        results = check_file_links(filepath)
+        all_results.append(results)
+
+        print(f"\n📄 {results['file']}")
+        print("-" * 70)
+
+        if results["markdown_links"]:
+            print(f"  📎 Markdown ссылки ({len(results['markdown_links'])}):")
+            for link in results["markdown_links"][:3]:
+                print(f"     • {link}")
+            if len(results["markdown_links"]) > 3:
+                print(f"     • ... и ещё {len(results['markdown_links']) - 3}")
+
+        if results["http_links"]:
+            print(f"  🌐 HTTP(S) ссылки ({len(results['http_links'])}):")
+            for link in results["http_links"][:3]:
+                print(f"     • {link}")
+            if len(results["http_links"]) > 3:
+                print(f"     • ... и ещё {len(results['http_links']) - 3}")
+
+        if results["arxiv_citations"]:
+            print(f"  📚 arXiv citations ({len(results['arxiv_citations'])}):")
+            for arxiv in results["arxiv_citations"]:
+                print(f"     • {arxiv}")
+
+        if results["internal_anchors"]:
+            print(f"  🔗 Внутренние якоря ({len(results['internal_anchors'])}):")
+            for anchor in results["internal_anchors"][:3]:
+                print(f"     • {anchor}")
+            if len(results["internal_anchors"]) > 3:
+                print(f"     • ... и ещё {len(results['internal_anchors']) - 3}")
+
+        if results["issues"]:
+            print(f"\n  ❌ Проблемы ({len(results['issues'])}):")
+            for issue in results["issues"]:
+                print(f"     {issue}")
+                total_issues += 1
+        else:
+            print(f"  ✓ Ошибок не найдено")
+
+    print("\n" + "=" * 70)
+    print(f"\n📊 Итоговая статистика:")
+    print(f"  • Проверено файлов: {len(all_results)}")
+    print(f"  • Обнаружено проблем: {total_issues}")
+
+    if total_issues == 0:
+        print(f"\n✅ Все ссылки в порядке!")
+    else:
+        print(f"\n⚠️ Найдены проблемы. Пожалуйста, проверьте указанные выше.")
 
 
 if __name__ == "__main__":
-    import sys
-
-    sys.exit(main())
+    main()

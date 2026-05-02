@@ -1,3 +1,10 @@
+---
+title: Бэкап Outline Wiki
+date: 2026-05-02T16:06:02+00:00
+category: Работа/EORA/Сервисы
+tags: []
+status: draft
+---
 `backup.sh`
 
 ```shell

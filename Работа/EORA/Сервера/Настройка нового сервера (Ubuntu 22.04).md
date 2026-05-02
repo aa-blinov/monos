@@ -1,3 +1,10 @@
+---
+title: Настройка нового сервера (Ubuntu 22.04)
+date: 2026-05-02T16:06:02+00:00
+category: Работа/EORA/Сервера
+tags: []
+status: draft
+---
 ```sh
 
 #!/bin/bash
