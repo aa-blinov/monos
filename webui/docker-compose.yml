@@ -3,28 +3,45 @@ version: '3.8'
 services:
   backend:
     build:
-      context: backend
+      context: ./backend
       dockerfile: Dockerfile
+    container_name: zed-notes-backend
     ports:
       - "8000:8000"
     volumes:
-      - ../:/app:ro
+      - ../:/app/zed-notes:ro
     environment:
       - PYTHONUNBUFFERED=1
-    command: python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    working_dir: /app
+    command: >
+      bash -c "cd /app/webui/backend &&
+               python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - zed-notes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
-      context: frontend
-      dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: zed-notes-frontend
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://backend:8000
+    working_dir: /app
+    command: npm run dev -- --host 0.0.0.0
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - zed-notes
 
