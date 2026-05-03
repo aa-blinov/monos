@@ -58,15 +58,23 @@ docker-compose up --build
 
 ---
 
-## Команды Make
+## Основные команды
 
+### Docker (рекомендуется)
 ```bash
-cd zed-notes/webui
+cd webui
+docker-compose up -d --build
+```
 
-make help              # Показать все команды
-make dev               # Запустить оба сервиса одновременно
-make install           # Установить все зависимости
-make build             # Собрать для production
+### Разработка (локально)
+```bash
+# Бэкенд
+cd webui/backend
+python3 -m uvicorn main:app --reload --port 8000
+
+# Фронтенд
+cd webui/frontend
+npm run dev
 ```
 
 ---
@@ -121,7 +129,6 @@ Ctrl+Shift+R (или Cmd+Shift+R на Mac)
 
 - **README.md** — Полное описание проекта
 - **QUICKSTART.md** — Подробный гайд
-- **Makefile** — Все команды
 
 ---
 

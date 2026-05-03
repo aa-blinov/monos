@@ -17,24 +17,57 @@
   let activeTab = 'reader'; // 'source' or 'reader' for mobile
   let isSyncScrollEnabled = true;
 
+  let backlinks = [];
+  let isLoadingBacklinks = false;
+
   let editorRef;
   let previewRef;
-  let isSyncingScroll = false;
+  let activePane = null; // 'editor' or 'preview'
 
   function handleEditorScroll() {
-    if (!isSyncScrollEnabled || isSyncingScroll || !editorRef || !previewRef) return;
-    isSyncingScroll = true;
+    if (!isSyncScrollEnabled || activePane !== 'editor' || !editorRef || !previewRef) return;
     const scrollPercentage = editorRef.scrollTop / (editorRef.scrollHeight - editorRef.clientHeight);
     previewRef.scrollTop = scrollPercentage * (previewRef.scrollHeight - previewRef.clientHeight);
-    setTimeout(() => { isSyncingScroll = false; }, 50);
   }
 
   function handlePreviewScroll() {
-    if (!isSyncScrollEnabled || isSyncingScroll || !editorRef || !previewRef) return;
-    isSyncingScroll = true;
+    if (!isSyncScrollEnabled || activePane !== 'preview' || !editorRef || !previewRef) return;
     const scrollPercentage = previewRef.scrollTop / (previewRef.scrollHeight - previewRef.clientHeight);
     editorRef.scrollTop = scrollPercentage * (editorRef.scrollHeight - editorRef.clientHeight);
-    setTimeout(() => { isSyncingScroll = false; }, 50);
+  }
+
+  async function loadBacklinks() {
+    if (!currentFile || currentFile.isDir) return;
+    try {
+      isLoadingBacklinks = true;
+      const response = await fetch(`/api/notes/backlinks?path=${encodeURIComponent(currentFile.path)}`);
+      backlinks = await response.json();
+    } catch (error) {
+      console.error('Failed to load backlinks:', error);
+    } finally {
+      isLoadingBacklinks = false;
+    }
+  }
+
+  async function handleWikiLinkClick(target) {
+    try {
+      const response = await fetch(`/api/notes/resolve-link?name=${encodeURIComponent(target)}`);
+      const data = await response.json();
+      if (data && data.path) {
+        dispatch('selectFile', { path: data.path, name: data.name, isDir: false });
+      } else {
+        alert(`Note "${target}" not found.`);
+      }
+    } catch (error) {
+      console.error('Error resolving wiki-link:', error);
+    }
+  }
+
+  function handlePreviewClick(e) {
+    const target = e.target.closest('.wikilink');
+    if (target) {
+      handleWikiLinkClick(target.dataset.target);
+    }
   }
 
   async function loadFile() {
@@ -51,6 +84,8 @@
       fileInfo = await infoResponse.json();
       title = fileInfo.metadata?.title || currentFile.name.replace('.md', '');
       editedTitle = title;
+      
+      await loadBacklinks();
     } catch (error) {
       console.error('Failed to load file:', error);
     } finally {
@@ -206,26 +241,31 @@
           bind:this={editorRef}
           bind:value={editedContent}
           on:scroll={handleEditorScroll}
+          on:mouseenter={() => activePane = 'editor'}
           class="flex-1 px-6 lg:px-12 py-6 lg:py-10 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30"
           placeholder="Begin writing..."
         />
       </div>
 
       <!-- Preview Panel -->
-      <div class="flex-1 flex flex-col min-w-0 bg-[var(--bg-primary)] {activeTab === 'reader' ? 'flex' : 'hidden lg:flex'}">
+      <div 
+        on:mouseenter={() => activePane = 'preview'}
+        class="flex-1 flex flex-col min-w-0 bg-[var(--bg-primary)] {activeTab === 'reader' ? 'flex' : 'hidden lg:flex'}"
+      >
         <div class="hidden lg:flex px-12 py-4 items-center border-b border-[var(--border-subtle)]">
           <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Reader</span>
         </div>
         <div 
           bind:this={previewRef}
           on:scroll={handlePreviewScroll}
-          class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12 prose-typography font-serif"
+          on:click={handlePreviewClick}
+          class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12 prose-typography"
         >
           <!-- Markdown Preview -->
           <div class="max-w-2xl mx-auto">
             {#if parseFrontmatter(editedContent).metadata}
               <div class="mb-12 pb-8 border-b border-[var(--border-subtle)] opacity-60">
-                <div class="grid grid-cols-2 gap-4 text-[10px] uppercase tracking-widest font-mono">
+                <div class="grid grid-cols-2 gap-4 text-xs font-mono">
                   {#each Object.entries(parseFrontmatter(editedContent).metadata) as [key, value]}
                     {#if value}
                       <span class="text-[var(--text-secondary)]">{key}:</span>
@@ -237,39 +277,61 @@
             {/if}
             {#each parseFrontmatter(editedContent).content.split('\n\n') as paragraph}
               {#if paragraph.startsWith('# ')}
-                <h1 class="text-2xl lg:text-4xl font-serif font-medium mb-4 lg:mb-8">
+                <h1 class="text-xl font-bold mb-6">
                   {paragraph.replace(/^#\s+/, '')}
                 </h1>
               {:else if paragraph.startsWith('## ')}
-                <h2 class="text-xl lg:text-2xl font-serif font-medium mt-8 lg:mt-12 mb-3 lg:mb-6">
+                <h2 class="text-lg font-bold mt-8 mb-4">
                   {paragraph.replace(/^##\s+/, '')}
                 </h2>
               {:else if paragraph.startsWith('### ')}
-                <h3 class="text-lg lg:text-xl font-serif font-medium mt-6 lg:mt-10 mb-2 lg:mb-4">
+                <h3 class="text-base font-bold mt-6 mb-3">
                   {paragraph.replace(/^###\s+/, '')}
                 </h3>
               {:else if paragraph.startsWith('- ')}
-                <ul class="list-disc ml-6 space-y-1 lg:space-y-2 mb-6 lg:mb-8">
+                <ul class="list-disc ml-6 space-y-1 mb-4">
                   {#each paragraph.split('\n') as item}
                     {#if item.startsWith('- ')}
-                      <li class="text-base lg:text-lg">{item.replace(/^-\s+/, '')}</li>
+                      <li class="text-sm leading-relaxed">{item.replace(/^-\s+/, '')}</li>
                     {/if}
                   {/each}
                 </ul>
               {:else if paragraph.startsWith('> ')}
-                <blockquote class="border-l-2 border-[var(--text-primary)] pl-6 lg:pl-8 italic my-6 lg:my-10 text-lg lg:text-xl text-[var(--text-secondary)]">
+                <blockquote class="border-l-2 border-[var(--text-primary)] pl-6 italic my-6 text-sm text-[var(--text-secondary)]">
                   {paragraph.replace(/^>\s+/, '')}
                 </blockquote>
               {:else if paragraph.trim()}
-                <p class="text-base lg:text-lg leading-relaxed mb-6 lg:mb-8">
+                <p class="text-sm leading-relaxed mb-4">
                   {@html paragraph
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/\`(.*?)\`/g, '<code class="bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded font-mono text-xs lg:text-sm">$1</code>')
+                    .replace(/\`(.*?)\`/g, '<code class="bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
+                    .replace(/\[\[(.*?)\]\]/g, (match, p1) => {
+                      const [target, label] = p1.split('|');
+                      return `<button class="wikilink underline underline-offset-4 decoration-[var(--border-subtle)] hover:decoration-[var(--text-primary)] transition-colors" data-target="${target.trim()}">${(label || target).trim()}</button>`;
+                    })
                     .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="underline underline-offset-4 decoration-[var(--text-secondary)] hover:decoration-[var(--text-primary)]">$1</a>')}
                 </p>
               {/if}
             {/each}
+
+            <!-- Backlinks Section -->
+            {#if backlinks.length > 0}
+              <div class="mt-20 pt-12 border-t border-[var(--border-subtle)]">
+                <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] mb-8">Linked Mentions</h3>
+                <div class="grid grid-cols-1 gap-8">
+                  {#each backlinks as link}
+                    <button 
+                      on:click={() => dispatch('selectFile', { path: link.path, name: link.name, isDir: false })}
+                      class="text-left group"
+                    >
+                      <div class="text-lg font-serif group-hover:underline decoration-[var(--border-subtle)]">{link.name}</div>
+                      <div class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] mt-1 opacity-50">{link.path}</div>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
       </div>
@@ -301,5 +363,14 @@
   }
   textarea::-webkit-scrollbar {
     display: none;
+  }
+  
+  :global(.wikilink) {
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
   }
 </style>

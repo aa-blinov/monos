@@ -21,6 +21,13 @@ class NoteIndex(Base):
     last_opened = Column(DateTime, default=datetime.datetime.now)
     hash = Column(String)  # Для быстрой проверки изменений
 
+class NoteLink(Base):
+    __tablename__ = "note_links"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    source_path = Column(String, index=True)
+    target_name = Column(String, index=True)
+
 class FolderConfig(Base):
     __tablename__ = "folder_config"
     

@@ -92,7 +92,7 @@
 
     <main class="flex-1 overflow-hidden relative">
       {#if currentFile && !currentFile.isDir}
-        <Editor {currentFile} />
+        <Editor {currentFile} on:selectFile={selectFile} />
       {:else}
         <div class="h-full flex items-center justify-center px-8">
           <div class="text-center max-w-2xl">

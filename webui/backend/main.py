@@ -5,7 +5,7 @@ FastAPI backend for Monos WebUI
 import asyncio
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -235,6 +235,7 @@ async def get_recent_notes(limit: int = Query(10)):
     try:
         return service.get_recent_notes(limit)
     except Exception as e:
+        logger.exception("Error getting recent notes")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -245,6 +246,26 @@ async def set_directory_icon(path: str = Query(...), request: SetIconRequest = N
         service.set_folder_icon(path, request.icon)
         return {"message": "Icon updated successfully"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notes/backlinks", response_model=List[SearchResult])
+async def get_backlinks(path: str = Query(...)):
+    """Получить обратные ссылки для заметки"""
+    try:
+        return service.get_backlinks(path)
+    except Exception as e:
+        logger.exception("Error getting backlinks")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notes/resolve-link", response_model=Optional[SearchResult])
+async def resolve_link(name: str = Query(...)):
+    """Разрешить wiki-link в путь к файлу"""
+    try:
+        return service.resolve_link(name)
+    except Exception as e:
+        logger.exception("Error resolving link")
         raise HTTPException(status_code=500, detail=str(e))
 
 

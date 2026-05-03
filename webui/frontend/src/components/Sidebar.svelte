@@ -441,25 +441,37 @@
     <div class="px-6 mb-6">
       <button 
         on:click={() => showRecent = !showRecent}
-        class="flex items-center justify-between w-full text-[10px] uppercase tracking-widest font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-3"
+        class="flex items-center justify-between w-full text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-4"
       >
         <span>Recent Thoughts</span>
         <span class="transform transition-transform {showRecent ? 'rotate-90' : ''}">›</span>
       </button>
       
       {#if showRecent}
-        <div class="space-y-2">
+        <div class="space-y-3">
           {#each recentNotes as note}
             <button 
               on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
               class="w-full text-left group block"
             >
-              <div class="text-[11px] font-medium truncate group-hover:text-[var(--text-primary)] transition-colors">{note.name}</div>
-              <div class="text-[8px] uppercase tracking-tight text-[var(--text-secondary)] opacity-40 truncate">{note.path}</div>
+              <div class="text-[11px] font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
+              <div class="text-[8px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path}</div>
             </button>
           {/each}
         </div>
       {/if}
+    </div>
+  {/if}
+
+  <!-- Visual Separator -->
+  <div class="px-6 mb-6">
+    <div class="h-[1px] bg-[var(--border-subtle)] w-full opacity-50"></div>
+  </div>
+
+  <!-- Tree View Header -->
+  {#if !searchQuery.trim() && !searchContent}
+    <div class="px-6 mb-4">
+      <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
     </div>
   {/if}
 

@@ -28,12 +28,21 @@
 
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 14px; /* Set a consistent base size */
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-    @apply font-medium tracking-tight;
+  h1 {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    @apply text-xl font-bold tracking-tight;
+  }
+  h2 {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    @apply text-lg font-bold tracking-tight;
+  }
+  h3 {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    @apply text-base font-bold tracking-tight;
   }
 }
 
@@ -61,15 +70,15 @@
 
 /* Typography Helpers */
 .font-serif {
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .font-sans {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* Markdown Styles */
@@ -78,19 +87,19 @@
 }
 
 .prose-typography h1 {
-  @apply text-4xl mb-8 mt-12;
+  @apply text-xl mb-6 mt-10;
 }
 
 .prose-typography h2 {
-  @apply text-2xl mb-6 mt-10;
+  @apply text-lg mb-5 mt-8;
 }
 
 .prose-typography h3 {
-  @apply text-xl mb-4 mt-8;
+  @apply text-base mb-4 mt-6;
 }
 
 .prose-typography p {
-  @apply mb-6 text-lg;
+  @apply mb-4;
 }
 
 .prose-typography ul, .prose-typography ol {

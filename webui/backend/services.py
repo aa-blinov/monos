@@ -12,10 +12,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
+import re
 import yaml
-from sqlalchemy import create_engine
+import mdformat
+from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
-from database import Base, NoteIndex, get_engine, get_session
+from database import Base, NoteIndex, NoteLink, get_engine, get_session
 from schemas import (
     DirectoryNode,
     FileInfo,
@@ -128,6 +130,7 @@ class NotesService:
                     # Новый элемент
                     metadata = self._get_metadata(item) if not is_dir else None
                     title = metadata.title if metadata and metadata.title else item.name.replace(".md", "")
+                    content = self.read_file(path) if not is_dir and item.suffix == ".md" else ""
                     
                     new_entry = NoteIndex(
                         path=path,
@@ -135,27 +138,50 @@ class NotesService:
                         title=title,
                         is_dir=is_dir,
                         parent_path=str(item.parent.relative_to(self.root_path)),
-                        content=self.read_file(path) if not is_dir and item.suffix == ".md" else "",
+                        content=content,
                         tags=json.dumps(metadata.tags if metadata else []),
                         last_modified=mtime,
                         hash=self._get_file_hash(item) if not is_dir else ""
                     )
                     session.add(new_entry)
+                    
+                    # Извлекаем ссылки
+                    if not is_dir and item.suffix == ".md":
+                        self._update_links(session, path, content)
                 else:
                     # Проверяем на изменения
                     entry = db_map[path]
                     if entry.last_modified != mtime:
                         metadata = self._get_metadata(item) if not is_dir else None
                         entry.title = metadata.title if metadata and metadata.title else item.name.replace(".md", "")
-                        entry.content = self.read_file(path) if not is_dir and item.suffix == ".md" else ""
+                        content = self.read_file(path) if not is_dir and item.suffix == ".md" else ""
+                        entry.content = content
                         entry.tags = json.dumps(metadata.tags if metadata else [])
                         entry.last_modified = mtime
                         entry.hash = self._get_file_hash(item) if not is_dir else ""
+                        
+                        # Обновляем ссылки
+                        if not is_dir and item.suffix == ".md":
+                            self._update_links(session, path, content)
 
             session.commit()
         finally:
             session.close()
         logger.info("Indexing completed")
+
+    def _update_links(self, session, source_path: str, content: str):
+        """Извлечь ссылки [[...]] и обновить таблицу note_links"""
+        # Удаляем старые ссылки
+        session.query(NoteLink).filter(NoteLink.source_path == source_path).delete()
+        
+        # Находим новые ссылки
+        links = re.findall(r"\[\[(.*?)\]\]", content)
+        for link in links:
+            # Обработка [[Note Name|Display Name]]
+            target = link.split("|")[0].strip()
+            if target:
+                new_link = NoteLink(source_path=source_path, target_name=target)
+                session.add(new_link)
 
     def _get_file_hash(self, path: Path) -> str:
         """Получить хеш файла для быстрой проверки изменений"""
@@ -453,16 +479,83 @@ class NotesService:
             return {"success": False, "message": f"Ошибка: {str(e)}"}
 
     def format_notes(self) -> dict:
-        """Format notes"""
+        """Форматировать все заметки с помощью mdformat"""
         try:
-            script_path = self.root_path / ".scripts" / "format_notes.py"
-            if script_path.exists():
-                subprocess.run(["python3", str(script_path)], capture_output=True, text=True, timeout=30)
+            formatted_count = 0
+            # Исключаем README.md и Agents.md как в оригинальном скрипте
+            exclude_files = {"README.md", "AGENTS.md", "README.md"}
+            
+            for item in self.notes_dir.rglob("*.md"):
+                if item.name in exclude_files:
+                    continue
+                
+                try:
+                    original_content = item.read_text(encoding="utf-8")
+                    
+                    # Форматируем
+                    formatted_content = mdformat.text(
+                        original_content,
+                        options={"wrap": "no"},
+                        extensions={"gfm", "frontmatter"}
+                    )
+                    
+                    if original_content != formatted_content:
+                        item.write_text(formatted_content, encoding="utf-8")
+                        formatted_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to format {item}: {e}")
+
+            if formatted_count > 0:
                 self.index_all_files()
-                return {"success": True, "message": "Форматирование завершено"}
-            return {"success": False, "message": "Скрипт не найден"}
+                
+            return {"success": True, "message": f"Форматирование завершено. Обновлено файлов: {formatted_count}"}
         except Exception as e:
+            logger.exception("Error formatting notes")
             return {"success": False, "message": str(e)}
+
+    def get_backlinks(self, file_path: str) -> List[SearchResult]:
+        """Получить список заметок, которые ссылаются на данную"""
+        session = get_session(self.engine)
+        try:
+            # Сначала находим имя и заголовок текущей заметки
+            note = session.query(NoteIndex).filter(NoteIndex.path == file_path).first()
+            if not note:
+                return []
+            
+            # Ищем ссылки, где target_name совпадает с title или именем файла
+            backlinks_query = session.query(NoteIndex).join(
+                NoteLink, NoteLink.source_path == NoteIndex.path
+            ).filter(
+                (NoteLink.target_name == note.title) | 
+                (NoteLink.target_name == note.name.replace(".md", ""))
+            ).distinct()
+            
+            entries = backlinks_query.all()
+            return [
+                SearchResult(
+                    path=e.path,
+                    name=e.name.replace(".md", ""),
+                    excerpt=f"Linked to this note"
+                ) for e in entries
+            ]
+        finally:
+            session.close()
+
+    def resolve_link(self, target_name: str) -> Optional[SearchResult]:
+        """Найти путь к заметке по её имени или заголовку"""
+        session = get_session(self.engine)
+        try:
+            # Ищем точное совпадение по заголовку или имени файла
+            note = session.query(NoteIndex).filter(
+                (NoteIndex.is_dir == False) & 
+                ((NoteIndex.title == target_name) | (NoteIndex.name == target_name) | (NoteIndex.name == target_name + ".md"))
+            ).first()
+            
+            if note:
+                return SearchResult(path=note.path, name=note.name.replace(".md", ""))
+            return None
+        finally:
+            session.close()
 
     def get_stats(self) -> dict:
         """Статистика из БД"""
