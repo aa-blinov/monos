@@ -1,5 +1,5 @@
 [project]
-name = "zed-notes"
+name = "monos"
 version = "0.1.0"
 description = "Personal note management system with automated formatting and organization"
 readme = "README.md"

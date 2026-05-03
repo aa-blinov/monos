@@ -5,7 +5,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: zed-notes-backend
+    container_name: monos-backend
     ports:
       - "8000:8000"
     volumes:
@@ -16,7 +16,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     networks:
-      - zed-notes
+      - monos
     healthcheck:
       test: ["CMD-SHELL", "python -m urllib.request || exit 1"]
       interval: 30s
@@ -28,7 +28,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: zed-notes-frontend
+    container_name: monos-frontend
     ports:
       - "5173:5173"
     volumes:
@@ -45,8 +45,8 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - zed-notes
+      - monos
 
 networks:
-  zed-notes:
+  monos:
     driver: bridge

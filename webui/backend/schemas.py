@@ -101,3 +101,11 @@ class FormatNotesResponse(BaseModel):
     success: bool
     message: str
     files_count: int = 0
+
+
+class Settings(BaseModel):
+    """Настройки приложения"""
+
+    auto_sync_interval: int = Field(default=0, description="Интервал автосинхронизации в минутах (0 - выключено)")
+    auto_format_on_save: bool = Field(default=False, description="Форматировать после каждого сохранения")
+    git_commit_message: str = Field(default="Auto-sync from WebUI", description="Сообщение коммита по умолчанию")

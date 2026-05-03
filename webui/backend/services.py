@@ -2,6 +2,7 @@
 Service layer for file and notes operations
 """
 
+import json
 import logging
 import os
 import shutil
@@ -16,6 +17,7 @@ from schemas import (
     FileInfo,
     FileMetadata,
     SearchResult,
+    Settings,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,13 +52,42 @@ class NotesService:
         self.notes_dir = root_path / "notes"
         logger.info(f"Notes dir: {self.notes_dir}")
 
+        # Settings path
+        self.settings_path = root_path / ".zed_settings.json"
+        self._settings = self._load_settings()
+
         # List available directories
         if self.notes_dir.exists():
             available_dirs = [d.name for d in self.notes_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
             logger.info(f"Available directories: {available_dirs}")
 
+    def _load_settings(self) -> Settings:
+        """Загрузить настройки из файла"""
+        if self.settings_path.exists():
+            try:
+                with open(self.settings_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return Settings(**data)
+            except Exception as e:
+                logger.error(f"Failed to load settings: {e}")
+        return Settings()
+
+    def get_settings(self) -> Settings:
+        """Получить текущие настройки"""
+        return self._settings
+
+    def update_settings(self, settings: Settings) -> Settings:
+        """Обновить настройки"""
+        self._settings = settings
+        try:
+            with open(self.settings_path, "w", encoding="utf-8") as f:
+                json.dump(settings.model_dump(), f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Failed to save settings: {e}")
+        return self._settings
+
     def get_directory_tree(self, path: Optional[Path] = None) -> DirectoryNode:
-        """Получить дерево директорий"""
+        """Получить дерево директорий (Оптимизировано)"""
         if path is None:
             path = self.notes_dir
 
@@ -64,38 +95,57 @@ class NotesService:
             raise ValueError(f"Path does not exist: {path}")
 
         is_dir = path.is_dir()
-        size = self._get_size(path)
+        
+        # ОПТИМИЗАЦИЯ: Не считаем размер всей папки рекурсивно, только для файлов
+        size = path.stat().st_size if not is_dir else 0
 
         node = DirectoryNode(
             path=str(path.relative_to(self.root_path)),
             name=path.name,
             is_dir=is_dir,
             size=size,
-            size_human=self._humanize_size(size),
+            size_human=self._humanize_size(size) if not is_dir else "",
             metadata=self._get_metadata(path) if not is_dir else None,
         )
 
         if is_dir:
             try:
-                entries = sorted(path.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
-                for entry in entries:
-                    # Skip hidden files and README files
-                    if entry.name.startswith(".") or entry.name == "README.md":
-                        continue
-
-                    if entry.is_dir():
-                        # Only include directories that contain markdown files
-                        has_md = any(f.suffix == ".md" for f in entry.rglob("*.md"))
-                        if has_md:
-                            child = self.get_directory_tree(entry)
+                # Используем scandir для более быстрого обхода
+                with os.scandir(path) as it:
+                    entries = []
+                    for entry in it:
+                        if entry.name.startswith(".") or entry.name == "README.md":
+                            continue
+                        entries.append(entry)
+                    
+                    # Сортировка: сначала папки, потом файлы
+                    entries.sort(key=lambda e: (not e.is_dir(), e.name.lower()))
+                    
+                    for entry in entries:
+                        entry_path = Path(entry.path)
+                        if entry.is_dir():
+                            # ОПТИМИЗАЦИЯ: Убрали rglob. 
+                            # Просто добавляем все папки в notes/
+                            child = self.get_directory_tree(entry_path)
                             node.children.append(child)
-                    elif entry.suffix == ".md":
-                        child = self.get_directory_tree(entry)
-                        node.children.append(child)
+                        elif entry.name.endswith(".md"):
+                            child = self.get_directory_tree(entry_path)
+                            node.children.append(child)
             except PermissionError as e:
                 logger.warning(f"Permission denied accessing {path}: {e}")
 
         return node
+
+    def create_directory(self, dir_path: str) -> None:
+        """Создать новую директорию в разделе notes/"""
+        # Гарантируем, что путь начинается с notes/
+        path = Path(dir_path)
+        if not str(path).startswith("notes"):
+            path = Path("notes") / path
+            
+        full_path = self.root_path / path
+        full_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Created directory: {full_path}")
 
     def get_file_info(self, file_path: str) -> FileInfo:
         """Получить информацию о файле"""
@@ -244,35 +294,71 @@ class NotesService:
 
         return sorted(results, key=lambda r: r.name)
 
-    def sync_git(self, message: str = "Auto-sync from WebUI") -> dict:
-        """Синхронизировать с Git"""
+    def sync_git(self, message: Optional[str] = None) -> dict:
+        """Профессиональная синхронизация с Git (Rebase strategy)"""
+        if message is None:
+            message = self._settings.git_commit_message
+
         try:
-            # git add
-            subprocess.run(
-                ["git", "add", "-A"],
-                cwd=self.root_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # git commit (игнорируем ошибку если нечего коммитить)
-            subprocess.run(
-                ["git", "commit", "-m", message],
+            # 1. Проверяем наличие изменений
+            status_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
                 cwd=self.root_path,
                 capture_output=True,
+                text=True,
+                check=True
             )
+            has_changes = bool(status_proc.stdout.strip())
 
-            # git push
-            subprocess.run(
-                ["git", "push"],
+            # 2. Коммитим локальные изменения
+            if has_changes:
+                subprocess.run(["git", "add", "-A"], cwd=self.root_path, check=True, capture_output=True)
+                subprocess.run(["git", "commit", "-m", message], cwd=self.root_path, check=True, capture_output=True)
+                logger.info(f"Committed changes with message: {message}")
+
+            # 3. Fetch
+            subprocess.run(["git", "fetch", "origin"], cwd=self.root_path, check=True, capture_output=True)
+
+            # 4. Pull --rebase
+            # Определяем текущую ветку
+            branch_proc = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 cwd=self.root_path,
-                check=True,
                 capture_output=True,
+                text=True,
+                check=True
+            )
+            branch = branch_proc.stdout.strip()
+
+            pull_proc = subprocess.run(
+                ["git", "pull", "--rebase", "origin", branch],
+                cwd=self.root_path,
+                capture_output=True,
+                text=True
             )
 
+            if pull_proc.returncode != 0:
+                # КОНФЛИКТ!
+                logger.error(f"Sync conflict during rebase: {pull_proc.stderr}")
+                subprocess.run(["git", "rebase", "--abort"], cwd=self.root_path, capture_output=True)
+                return {
+                    "success": False,
+                    "message": "Конфликт при синхронизации. Пожалуйста, разрешите конфликты вручную в репозитории."
+                }
+
+            # 5. Push
+            subprocess.run(["git", "push", "origin", branch], cwd=self.root_path, check=True, capture_output=True)
+            
+            logger.info("Git sync completed successfully")
             return {"success": True, "message": "Синхронизация успешна"}
+
         except subprocess.CalledProcessError as e:
-            return {"success": False, "message": f"Ошибка Git: {str(e)}"}
+            error_msg = e.stderr.decode() if isinstance(e.stderr, bytes) else str(e.stderr)
+            logger.error(f"Git error during sync: {error_msg}")
+            return {"success": False, "message": f"Ошибка Git: {error_msg}"}
+        except Exception as e:
+            logger.error(f"Unexpected error during sync: {e}")
+            return {"success": False, "message": f"Ошибка: {str(e)}"}
 
     def format_notes(self) -> dict:
         """Форматировать заметки"""

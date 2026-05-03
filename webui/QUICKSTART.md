@@ -1,214 +1,101 @@
-# Zed Notes WebUI — Быстрый старт
+# Monos WebUI — Быстрый старт
 
-## 🚀 За 5 минут до запуска
+Этот гайд поможет вам запустить веб-интерфейс Monos за несколько минут.
 
-### Шаг 1: Установка зависимостей
+## 🐳 Способ 1: Через Docker (рекомендуется)
 
-```bash
-cd webui
-make install
-```
+Если у вас установлен Docker и Docker Compose, это самый простой путь.
 
-Или вручную:
+1.  **Запуск всех сервисов**:
+    ```bash
+    cd webui
+    docker-compose up -d --build
+    ```
 
-```bash
-# Backend
-cd backend
-pip install -r requirements.txt
+2.  **Проверка**:
+    - Откройте в браузере: **http://localhost:5173**
+    - Бэкенд будет доступен по адресу: http://localhost:8000
+    - Документация API (Swagger): http://localhost:8000/docs
 
-# Frontend (в новом терминале)
-cd frontend
-npm install
-```
+3.  **Остановка**:
+    ```bash
+    docker-compose down
+    ```
 
-### Шаг 2: Запуск приложения
+---
 
-**Вариант 1: Оба сервиса одновременно**
+## 🛠 Способ 2: Локальный запуск (для разработки)
 
-```bash
-cd webui
-make dev
-```
+### 1. Подготовка Бэкенда (Python)
 
-Откроется:
-- 🌐 Frontend: http://localhost:5173
-- 🔗 Backend API: http://localhost:8000
-- 📚 API Документация: http://localhost:8000/docs
+1.  Перейдите в директорию бэкенда:
+    ```bash
+    cd webui/backend
+    ```
 
-**Вариант 2: Отдельные сервисы**
+2.  Создайте виртуальное окружение и установите зависимости:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # На Windows: venv\Scripts\activate
+    pip install -r requirements.txt
+    ```
 
-Terminal 1 (Backend):
-```bash
-cd webui/backend
-python -m uvicorn main:app --reload --port 8000
-```
+3.  Настройте переменные окружения (создайте `.env` из примера):
+    ```bash
+    cp .env.example .env
+    ```
 
-Terminal 2 (Frontend):
-```bash
-cd webui/frontend
-npm run dev
-```
+4.  Запустите сервер:
+    ```bash
+    python -m uvicorn main:app --reload --port 8000
+    ```
 
-**Вариант 3: Docker**
+### 2. Подготовка Фронтенда (Svelte)
 
-```bash
-cd webui
-make docker-up
-```
+1.  Откройте новый терминал и перейдите в директорию фронтенда:
+    ```bash
+    cd webui/frontend
+    ```
 
-## 📖 Что дальше?
+2.  Установите зависимости:
+    ```bash
+    npm install
+    ```
 
-### Использование WebUI
+3.  Запустите сервер разработки:
+    ```bash
+    npm run dev
+    ```
 
-1. Откройте http://localhost:5173
-2. Выберите файл из левой боковой панели
-3. Редактируйте содержимое в центре
-4. Сохраняйте автоматически или нажимайте "Сохранить"
-5. Синхронизируйте с Git через кнопку в header
+4.  Откройте браузер по адресу: **http://localhost:5173**
 
-### Основные функции
+---
 
-| Функция | Как использовать |
-|---------|------------------|
-| **Просмотр файлов** | Кликните на файл в боковой панели |
-| **Редактирование** | Пишите в левом окне редактора |
-| **Live Preview** | Смотрите результат в правом окне |
-| **Поиск** | Используйте поле поиска в sidebar |
-| **Создать заметку** | Кнопка "Создать" в браузере файлов |
-| **Переименовать** | Правая кнопка мыши или кнопка в editor |
-| **Удалить** | Кнопка "Удалить" в editor |
-| **Git Sync** | Кнопка "Синхронизировать" в header |
-| **Форматировать** | Кнопка "Форматировать" в header |
-| **Темная тема** | Кнопка луны в header |
+## 📚 Основные функции
 
-## 🔧 Команды Make
+### Навигация
+- **Слева**: Дерево папок и файлов. Кликните на любой файл, чтобы открыть его.
+- **Поиск**: Используйте строку поиска над деревом файлов для быстрого нахождения заметок.
 
-```bash
-make help            # Показать все команды
+### Редактирование
+- **Editor**: Левая часть экрана — это Markdown редактор. Сохранение происходит по кнопке **Save**.
+- **Preview**: Правая часть экрана отображает отрендеренный Markdown в реальном времени.
 
-# Разработка
-make dev             # Запустить оба сервиса
-make backend-dev     # Только backend
-make frontend-dev    # Только frontend
+### Инструменты (Header)
+- **Format**: Запускает автоматическое форматирование всех заметок в базе.
+- **Sync**: Синхронизирует ваши изменения с Git репозиторием (git add -> commit -> push).
+- **Theme**: Переключение между темной и светлой темой (сохраняется в браузере).
 
-# Установка
-make install         # Установить все зависимости
-make install-backend # Только Python
-make install-frontend # Только Node
+---
 
-# Сборка
-make build           # Собрать для production
-make build-frontend  # Собрать frontend
+## ⚙️ Настройка путей
 
-# Docker
-make docker-up       # Запустить контейнеры
-make docker-down     # Остановить контейнеры
-make docker-build    # Пересобрать образы
+По умолчанию бэкенд ищет заметки в папке `notes/` в корне основного репозитория. Если вы запускаете бэкенд локально, убедитесь, что он находится в правильной директории или настройте путь в `services.py`.
 
-# Очистка
-make clean           # Удалить dist и node_modules
-make clean-all       # Полная очистка
-```
+В Docker Compose пути проброшены автоматически:
+- База знаний: `../notes` -> `/app/notes`
+- Ассеты: `../assets` -> `/app/assets`
 
-## 🐛 Решение проблем
+---
 
-### Backend не запускается
-
-```bash
-# Проверить порт
-lsof -i :8000
-
-# Убить процесс
-kill -9 <PID>
-
-# Запустить с другим портом
-python -m uvicorn main:app --port 8001
-```
-
-### Frontend не подключается к backend
-
-Проверить в `vite.config.js`:
-```javascript
-proxy: {
-  '/api': {
-    target: 'http://localhost:8000',  // Должен совпадать с портом backend
-    changeOrigin: true,
-  }
-}
-```
-
-### Ошибка "git not found"
-
-Git нужен для синхронизации. Убедитесь, что Git установлен:
-```bash
-git --version
-```
-
-### Ошибка "grep not found"
-
-`grep` используется для поиска содержимого файлов:
-- На Linux/Mac: уже установлен
-- На Windows: используйте WSL или MinGW
-
-## 📚 Документация
-
-- **API Docs:** http://localhost:8000/docs (Swagger UI)
-- **Backend:** `webui/backend/README.md` (в разработке)
-- **Frontend:** `webui/frontend/` (основные файлы)
-- **Полная документация:** `webui/README.md`
-
-## 🎯 Следующие шаги
-
-### Для разработки
-
-1. **Добавить новый endpoint:**
-   - Добавить схему в `schemas.py`
-   - Добавить метод в `services.py`
-   - Добавить route в `main.py`
-
-2. **Добавить новый компонент:**
-   - Создать `.svelte` файл в `components/`
-   - Использовать TailwindCSS для стилей
-   - Импортировать в App или другие компоненты
-
-3. **Кастомизировать стили:**
-   - Редактировать `tailwind.config.js` для расширений
-   - Редактировать `app.css` для глобальных стилей
-   - Компоненты используют `class="..."` для TailwindCSS
-
-### Для production
-
-1. **Собрать frontend:**
-   ```bash
-   make build-frontend
-   # или
-   cd frontend && npm run build
-   ```
-
-2. **Развернуть backend:**
-   - На Render: https://render.com
-   - На Railway: https://railway.app
-   - На Replit: https://replit.com
-
-3. **Развернуть frontend:**
-   - На Vercel: https://vercel.com
-   - На Netlify: https://netlify.com
-   - На GitHub Pages: (требует доп. настройки)
-
-## 💡 Советы
-
-- Используйте `make dev` для быстрого старта в разработке
-- Проверьте API Docs на http://localhost:8000/docs для тестирования endpoints
-- Темная тема сохраняется в localStorage
-- Все операции с Git выполняются автоматически
-- Markdown поддерживает базовый синтаксис (заголовки, списки, код и т.д.)
-
-## 📞 Помощь
-
-Если что-то не работает:
-1. Проверьте логи в console (F12 в браузере)
-2. Проверьте терминал backend для Python ошибок
-3. Убедитесь, что порты 8000 и 5173 свободны
-4. Очистите кэш браузера (Ctrl+Shift+R)
-
-Готово! 🎉 Вы можете начать использовать Zed Notes WebUI.
+Готово! 🎉 Вы можете начать использовать Monos WebUI.

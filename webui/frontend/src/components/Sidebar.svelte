@@ -6,128 +6,67 @@
 
   /** @type {Object} */
   let tree = null;
-
   /** @type {string} */
   let searchQuery = '';
-
   /** @type {string} */
   let selectedPath = null;
-
   /** @type {boolean} */
   let isLoading = true;
-
   /** @type {string} */
   let error = '';
 
   /** @type {boolean} */
   let showCreateModal = false;
+  /** @type {boolean} */
+  let showCreateFolderModal = false;
 
   /** @type {string} */
   let newNoteTitle = '';
-
   /** @type {string} */
   let newNoteCategory = '';
+  /** @type {string} */
+  let newFolderName = '';
 
   /** @type {boolean} */
   let isCreating = false;
 
-  /**
-   * Fetch directory tree from API
-   */
-  async function loadTree() {
+  // Export loadTree to be callable from parent
+  export async function loadTree() {
     try {
       isLoading = true;
       error = '';
       const response = await fetch('/api/tree');
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       tree = await response.json();
     } catch (err) {
       error = `Failed to load tree: ${err.message}`;
-      console.error(error);
     } finally {
       isLoading = false;
     }
   }
 
-  /**
-   * Filter tree nodes by search query recursively
-   * @param {Object} node - Tree node
-   * @param {string} query - Search query
-   * @returns {Object|null}
-   */
-  function filterNode(node, query) {
-    if (!query.trim()) {
-      return node;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const nameMatches = node.name.toLowerCase().includes(lowerQuery);
-
-    if (node.is_dir && node.children) {
-      const filteredChildren = node.children
-        .map(child => filterNode(child, query))
-        .filter(child => child !== null);
-
-      if (filteredChildren.length > 0 || nameMatches) {
-        return {
-          ...node,
-          children: filteredChildren
-        };
-      }
-      return null;
-    }
-
-    return nameMatches ? node : null;
-  }
-
-  /**
-   * Get filtered tree based on search query
-   * @returns {Object}
-   */
-  function getFilteredTree() {
-    if (!tree) return null;
-    if (!searchQuery.trim()) return tree;
-    const filtered = filterNode(tree, searchQuery);
-    return filtered || { ...tree, children: [] };
-  }
-
-  /**
-   * Handle file selection
-   * @param {CustomEvent} event
-   */
-  function handleSelectFile(event) {
-    selectedPath = event.detail.path;
-    dispatch('selectFile', event.detail);
-  }
-
-  /**
-   * Clear search
-   */
-  function clearSearch() {
-    searchQuery = '';
-  }
-
-  /**
-   * Reload tree
-   */
-  function reloadTree() {
-    loadTree();
-  }
-
-  /**
-   * Create new note
-   */
-  async function createNewNote() {
-    if (!newNoteTitle.trim()) {
-      error = 'Title is required';
-      return;
-    }
-
+  async function createFolder() {
+    if (!newFolderName.trim()) return;
     try {
       isCreating = true;
-      error = '';
+      const response = await fetch(`/api/directory/create?path=${encodeURIComponent(newFolderName)}`, {
+        method: 'POST'
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      showCreateFolderModal = false;
+      newFolderName = '';
+      await loadTree();
+    } catch (err) {
+      error = `Failed to create folder: ${err.message}`;
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  async function createNewNote() {
+    if (!newNoteTitle.trim()) return;
+    try {
+      isCreating = true;
       const response = await fetch('/api/notes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,63 +77,71 @@
           content: ''
         })
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       showCreateModal = false;
       newNoteTitle = '';
       newNoteCategory = '';
-
-      // Reload tree and select new note
       await loadTree();
       dispatch('selectFile', { path: data.path, name: newNoteTitle, isDir: false });
     } catch (err) {
       error = `Failed to create note: ${err.message}`;
-      console.error(error);
     } finally {
       isCreating = false;
     }
   }
 
-  onMount(() => {
-    loadTree();
-  });
+  function filterNode(node, query) {
+    if (!query.trim()) return node;
+    const lowerQuery = query.toLowerCase();
+    const nameMatches = node.name.toLowerCase().includes(lowerQuery);
+    if (node.is_dir && node.children) {
+      const filteredChildren = node.children
+        .map(child => filterNode(child, query))
+        .filter(child => child !== null);
+      if (filteredChildren.length > 0 || nameMatches) {
+        return { ...node, children: filteredChildren };
+      }
+      return null;
+    }
+    return nameMatches ? node : null;
+  }
+
+  function getFilteredTree() {
+    if (!tree) return null;
+    if (!searchQuery.trim()) return tree;
+    const filtered = filterNode(tree, searchQuery);
+    return filtered || { ...tree, children: [] };
+  }
+
+  function handleSelectFile(event) {
+    selectedPath = event.detail.path;
+    dispatch('selectFile', event.detail);
+  }
+
+  function clearSearch() {
+    searchQuery = '';
+  }
+
+  onMount(loadTree);
 </script>
 
-<div class="h-full flex flex-col bg-white dark:bg-slate-900">
+<div class="h-full flex flex-col bg-[var(--bg-primary)]">
   <!-- Search Section -->
-  <div class="border-b border-gray-200 dark:border-gray-700 p-4 space-y-3">
-    <!-- Search Input -->
-    <div class="relative">
-      <svg
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
+  <div class="p-6 space-y-4">
+    <div class="relative group">
       <input
         type="text"
-        placeholder="Search files..."
+        placeholder="Search..."
         bind:value={searchQuery}
-        class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+        class="w-full bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] py-2 text-sm outline-none transition-all placeholder-[var(--text-secondary)]"
       />
       {#if searchQuery}
         <button
           on:click={clearSearch}
-          class="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition"
-          title="Clear search"
+          class="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:opacity-60 transition"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -202,112 +149,83 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-x-6 gap-y-2">
       <button
-        on:click={reloadTree}
-        disabled={isLoading}
-        class="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
-        title="Refresh file tree"
+        on:click={() => showCreateFolderModal = true}
+        class="text-xs font-medium uppercase tracking-widest hover:opacity-60 transition"
       >
-        {#if isLoading}
-          <svg class="w-4 h-4 animate-spin inline mr-2" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        {/if}
-        Refresh
+        New Folder
       </button>
       <button
         on:click={() => showCreateModal = true}
-        class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
-        title="Create new note"
+        class="text-xs font-medium uppercase tracking-widest hover:opacity-60 transition"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        New
+        New Note
       </button>
     </div>
   </div>
 
-  <!-- Error Message -->
-  {#if error}
-    <div class="mx-4 mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-200">
-      {error}
-    </div>
-  {/if}
-
   <!-- Tree View -->
-  <div class="flex-1 overflow-y-auto">
+  <div class="flex-1 overflow-y-auto px-4 pb-6">
     {#if isLoading}
       <div class="flex items-center justify-center h-32">
-        <div class="text-center text-gray-500 dark:text-gray-400">
-          <svg class="w-8 h-8 animate-spin mx-auto mb-2" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <p class="text-sm">Loading...</p>
-        </div>
+        <span class="text-xs uppercase tracking-widest animate-pulse">Loading</span>
       </div>
     {:else if tree}
-      <div class="p-2">
+      <div class="space-y-1">
         {#each getFilteredTree().children || [] as node (node.path)}
-          <FileTree
-            {node}
-            {selectedPath}
-            on:selectFile={handleSelectFile}
-          />
+          <FileTree {node} {selectedPath} on:selectFile={handleSelectFile} />
         {/each}
       </div>
     {:else}
       <div class="flex items-center justify-center h-32">
-        <div class="text-center text-gray-500 dark:text-gray-400">
-          <p class="text-sm">No files found</p>
-        </div>
+        <span class="text-xs uppercase tracking-widest opacity-40">Empty</span>
       </div>
     {/if}
   </div>
 
   <!-- Stats Footer -->
   {#if tree}
-    <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
-      <p>
-        {tree.children ? tree.children.length : 0}
-        item{tree.children && tree.children.length !== 1 ? 's' : ''}
-      </p>
+    <div class="px-6 py-4 border-t border-[var(--border-subtle)] text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
+      {tree.children ? tree.children.length : 0} Items
     </div>
   {/if}
 </div>
 
+<!-- Create Folder Modal -->
+{#if showCreateFolderModal}
+  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
+      <h2 class="text-2xl font-serif mb-8 tracking-tight">New Section</h2>
+      <div class="space-y-8">
+        <div>
+          <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Folder Name</label>
+          <input id="folder-name" type="text" bind:value={newFolderName} placeholder="e.g. Research/AI" class="w-full" />
+        </div>
+      </div>
+      <div class="flex gap-6 mt-12">
+        <button on:click={() => showCreateFolderModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">Cancel</button>
+        <button on:click={createFolder} disabled={isCreating || !newFolderName.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+          {isCreating ? 'Creating...' : 'Create'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- Create Note Modal -->
 {#if showCreateModal}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 w-96 shadow-lg">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create New Note</h2>
-
-      <div class="space-y-4">
-        <!-- Title Input -->
+  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
+      <h2 class="text-2xl font-serif mb-8 tracking-tight">New Note</h2>
+      <div class="space-y-8">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Title
-          </label>
-          <input
-            type="text"
-            bind:value={newNoteTitle}
-            placeholder="Note title..."
-            class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-          />
+          <label for="note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Title</label>
+          <input id="note-title" type="text" bind:value={newNoteTitle} placeholder="Name your thought..." class="w-full" />
         </div>
-
-        <!-- Category Select -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Category
-          </label>
-          <select
-            bind:value={newNoteCategory}
-            class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100"
-          >
+          <label for="note-category" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Category</label>
+          <select id="note-category" bind:value={newNoteCategory} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 text-sm outline-none appearance-none cursor-pointer">
             <option value="">Root</option>
             <option value="Образование">Образование</option>
             <option value="Работа">Работа</option>
@@ -316,36 +234,11 @@
             <option value="Проекты и Образование">Проекты и Образование</option>
           </select>
         </div>
-
-        <!-- Error Message -->
-        {#if error}
-          <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-200">
-            {error}
-          </div>
-        {/if}
       </div>
-
-      <!-- Buttons -->
-      <div class="flex gap-2 mt-6">
-        <button
-          on:click={() => showCreateModal = false}
-          disabled={isCreating}
-          class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition"
-        >
-          Cancel
-        </button>
-        <button
-          on:click={createNewNote}
-          disabled={isCreating || !newNoteTitle.trim()}
-          class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
-        >
-          {#if isCreating}
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-          {/if}
-          Create
+      <div class="flex gap-6 mt-12">
+        <button on:click={() => showCreateModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">Cancel</button>
+        <button on:click={createNewNote} disabled={isCreating || !newNoteTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+          {isCreating ? 'Creating...' : 'Create'}
         </button>
       </div>
     </div>

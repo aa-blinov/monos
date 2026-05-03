@@ -2,129 +2,136 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  @apply transition-colors;
+@layer base {
+  :root {
+    --bg-primary: #ffffff;
+    --text-primary: #111111;
+    --text-secondary: #666666;
+    --border-subtle: #eeeeee;
+    --accent: #000000;
+  }
+
+  .dark {
+    --bg-primary: #000000;
+    --text-primary: #eeeeee;
+    --text-secondary: #999999;
+    --border-subtle: #222222;
+    --accent: #ffffff;
+  }
+
+  html {
+    @apply transition-none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 16px;
+  }
+
+  body {
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    @apply font-medium tracking-tight;
+  }
 }
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+* {
+  @apply transition-colors duration-200;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100 dark:bg-gray-800;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-600 rounded;
+  @apply bg-gray-200 dark:bg-gray-800 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-500;
+  @apply bg-gray-300 dark:bg-gray-700;
 }
 
-/* Code blocks */
-pre {
-  @apply bg-gray-100 dark:bg-gray-800 rounded p-4 overflow-x-auto;
+/* Typography Helpers */
+.font-serif {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
-code {
-  @apply font-mono text-sm;
+.font-sans {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Links */
-a {
-  @apply text-blue-600 dark:text-blue-400 hover:underline;
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
-/* Inputs */
-input[type="text"],
-input[type="email"],
-textarea {
-  @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500;
+/* Markdown Styles */
+.prose-typography {
+  @apply max-w-none leading-relaxed;
 }
 
-textarea {
-  @apply font-mono resize-none;
+.prose-typography h1 {
+  @apply text-4xl mb-8 mt-12;
 }
 
-/* Buttons */
-button {
-  @apply font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900;
+.prose-typography h2 {
+  @apply text-2xl mb-6 mt-10;
 }
 
-/* Markdown preview */
-.markdown-preview {
-  @apply max-w-none;
+.prose-typography h3 {
+  @apply text-xl mb-4 mt-8;
 }
 
-.markdown-preview h1,
-.markdown-preview h2,
-.markdown-preview h3,
-.markdown-preview h4,
-.markdown-preview h5,
-.markdown-preview h6 {
-  @apply font-bold mt-6 mb-3;
+.prose-typography p {
+  @apply mb-6 text-lg;
 }
 
-.markdown-preview h1 {
-  @apply text-3xl;
+.prose-typography ul, .prose-typography ol {
+  @apply mb-6 ml-6;
 }
 
-.markdown-preview h2 {
-  @apply text-2xl border-b border-gray-300 dark:border-gray-600 pb-2;
-}
-
-.markdown-preview h3 {
-  @apply text-xl;
-}
-
-.markdown-preview p {
-  @apply mb-4 leading-relaxed;
-}
-
-.markdown-preview ul,
-.markdown-preview ol {
-  @apply ml-6 mb-4;
-}
-
-.markdown-preview li {
+.prose-typography li {
   @apply mb-2;
 }
 
-.markdown-preview blockquote {
-  @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-4;
+.prose-typography blockquote {
+  @apply border-l-2 border-[var(--text-primary)] pl-6 italic my-8;
 }
 
-.markdown-preview table {
-  @apply w-full border-collapse border border-gray-300 dark:border-gray-600 my-4;
+.prose-typography code {
+  @apply font-mono text-sm bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded;
 }
 
-.markdown-preview th,
-.markdown-preview td {
-  @apply border border-gray-300 dark:border-gray-600 px-4 py-2;
+.prose-typography pre {
+  @apply bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg overflow-x-auto my-8 border border-[var(--border-subtle)];
 }
 
-.markdown-preview th {
-  @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+.prose-typography a {
+  @apply underline decoration-1 underline-offset-4 hover:decoration-2 transition-all;
 }
 
-/* Loading spinner */
-.spinner {
-  animation: spin 1s linear infinite;
+/* Input Fields */
+input[type="text"],
+textarea {
+  @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none transition-all py-2;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Buttons */
+.btn-minimal {
+  @apply px-4 py-2 text-sm font-medium transition-all hover:opacity-70 disabled:opacity-30;
+}
+
+.btn-primary {
+  @apply bg-[var(--text-primary)] text-[var(--bg-primary)] px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all;
+}
+
+.btn-secondary {
+  @apply border border-[var(--border-subtle)] hover:border-[var(--text-primary)] px-6 py-2 rounded-full font-medium transition-all;
 }

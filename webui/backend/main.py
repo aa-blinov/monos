@@ -1,12 +1,13 @@
 """
-FastAPI backend for Zed Notes WebUI
+FastAPI backend for Monos WebUI
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from schemas import (
@@ -20,15 +21,17 @@ from schemas import (
     SearchRequest,
     SearchResult,
     UpdateNoteRequest,
+    Settings,
 )
 from services import NotesService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Zed Notes WebUI",
+    title="Monos WebUI",
     description="Web interface for managing notes",
     version="1.0.0",
 )
@@ -46,13 +49,58 @@ app.add_middleware(
 service = NotesService()
 
 
+# ============ Background Tasks ============
+
+async def auto_sync_loop():
+    """Фоновая задача для автосинхронизации"""
+    while True:
+        try:
+            settings = service.get_settings()
+            interval = settings.auto_sync_interval
+            
+            if interval > 0:
+                logger.info(f"Starting scheduled auto-sync (interval: {interval} min)")
+                result = service.sync_git()
+                if not result["success"]:
+                    logger.error(f"Auto-sync failed: {result['message']}")
+                else:
+                    logger.info("Auto-sync completed successfully")
+                
+                # Ждем интервал (переводим минуты в секунды)
+                await asyncio.sleep(interval * 60)
+            else:
+                # Если автосинхронизация выключена, проверяем настройки раз в минуту
+                await asyncio.sleep(60)
+        except Exception as e:
+            logger.error(f"Error in auto-sync loop: {e}")
+            await asyncio.sleep(60)
+
+@app.on_event("startup")
+async def startup_event():
+    """Действия при запуске приложения"""
+    # Запускаем цикл автосинхронизации в фоне
+    asyncio.create_task(auto_sync_loop())
+
+
 # ============ Routes ============
 
 
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"message": "Zed Notes WebUI API", "version": "1.0.0"}
+    return {"message": "Monos WebUI API", "version": "1.0.0"}
+
+
+@app.get("/api/settings", response_model=Settings)
+async def get_settings():
+    """Получить настройки"""
+    return service.get_settings()
+
+
+@app.post("/api/settings", response_model=Settings)
+async def update_settings(settings: Settings):
+    """Обновить настройки"""
+    return service.update_settings(settings)
 
 
 @app.get("/api/tree", response_model=DirectoryNode)
@@ -141,6 +189,16 @@ async def delete_file(path: str = Query(...)):
         return {"message": "File deleted successfully"}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/directory/create")
+async def create_directory(path: str = Query(...)):
+    """Создать новую директорию"""
+    try:
+        service.create_directory(path)
+        return {"message": "Directory created successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
