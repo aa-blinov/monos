@@ -108,7 +108,7 @@ class NotesService:
                 if item.name.startswith(".") or item.name == "README.md":
                     continue
                 
-                rel_path = str(item.relative_to(self.root_path))
+                rel_path = item.relative_to(self.root_path).as_posix()
                 mtime = datetime.fromtimestamp(item.stat().st_mtime)
                 files_on_disk[rel_path] = (item, mtime)
 

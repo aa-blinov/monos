@@ -252,7 +252,7 @@
       showCreateModal = false;
       newNoteTitle = '';
       await loadTree();
-      dispatch('selectFile', { path: data.path, name: newNoteTitle, isDir: false });
+      dispatch('navigate', { path: data.path, name: newNoteTitle, isDir: false });
     } catch (err) {
       error = `Failed to create note: ${err.message}`;
     } finally {
@@ -278,8 +278,9 @@
   }
 
   function handleSelectFile(event) {
-    selectedPath = event.detail.path;
-    dispatch('selectFile', event.detail);
+    const detail = event.detail;
+    selectedPath = detail.path;
+    dispatch('navigate', detail);
   }
 
   function handleRightClick(event) {
@@ -517,7 +518,7 @@
             {node} 
             {selectedPath} 
             expanded={!!searchQuery.trim()}
-            on:selectFile={handleSelectFile} 
+            on:navigate={handleSelectFile} 
             on:rightClick={handleRightClick}
             on:moveFile={handleMoveFile}
           />

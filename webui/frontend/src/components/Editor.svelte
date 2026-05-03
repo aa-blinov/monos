@@ -54,7 +54,7 @@
       const response = await fetch(`/api/notes/resolve-link?name=${encodeURIComponent(target)}`);
       const data = await response.json();
       if (data && data.path) {
-        dispatch('selectFile', { path: data.path, name: data.name, isDir: false });
+        dispatch('navigate', { path: data.path, name: data.name, isDir: false });
       } else {
         alert(`Note "${target}" not found.`);
       }

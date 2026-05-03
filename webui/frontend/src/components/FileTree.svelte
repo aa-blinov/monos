@@ -43,8 +43,9 @@
   function handleSelect() {
     if (node.is_dir) {
       toggle();
+      return;
     }
-    dispatch('selectFile', { path: node.path, name: node.name, isDir: node.is_dir });
+    dispatch('navigate', { path: node.path, name: node.name, isDir: node.is_dir });
   }
 
   function onRightClick(e) {
@@ -143,7 +144,7 @@
           node={child}
           {selectedPath}
           {expanded}
-          on:selectFile
+          on:navigate={(e) => dispatch('navigate', e.detail)}
           on:rightClick
           on:moveFile
         />
