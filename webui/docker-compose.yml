@@ -9,10 +9,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../notes:/app/notes:ro
-      - ../assets:/app/assets:ro
-      - ../.scripts:/app/.scripts:ro
+      - ../notes:/app/notes
+      - ../assets:/app/assets
+      - ../.scripts:/app/.scripts
       - ../.git:/app/.git:ro
+      - ./.data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     networks:

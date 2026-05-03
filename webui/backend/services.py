@@ -7,11 +7,15 @@ import logging
 import os
 import shutil
 import subprocess
+import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
 import yaml
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database import Base, NoteIndex, get_engine, get_session
 from schemas import (
     DirectoryNode,
     FileInfo,
@@ -24,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class NotesService:
-    """Сервис для работы с заметками"""
+    """Сервис для работы с заметками (с гибридным хранилищем: Файлы + SQLite)"""
 
     def __init__(self, root_path: Optional[Path] = None):
         if root_path is None:
@@ -56,10 +60,14 @@ class NotesService:
         self.settings_path = root_path / ".zed_settings.json"
         self._settings = self._load_settings()
 
-        # List available directories
-        if self.notes_dir.exists():
-            available_dirs = [d.name for d in self.notes_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
-            logger.info(f"Available directories: {available_dirs}")
+        # Database initialization
+        db_dir = root_path / "data"
+        db_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = db_dir / "notes_index.db"
+        self.engine = get_engine(str(self.db_path))
+        
+        # Начальная индексация
+        self.index_all_files()
 
     def _load_settings(self) -> Settings:
         """Загрузить настройки из файла"""
@@ -86,55 +94,120 @@ class NotesService:
             logger.error(f"Failed to save settings: {e}")
         return self._settings
 
+    def index_all_files(self):
+        """Просканировать все файлы и обновить индекс в БД"""
+        logger.info("Starting background indexing...")
+        session = get_session(self.engine)
+        
+        try:
+            # 1. Получаем список всех файлов на диске
+            files_on_disk = {}
+            for item in self.notes_dir.rglob("*"):
+                if item.name.startswith(".") or item.name == "README.md":
+                    continue
+                
+                rel_path = str(item.relative_to(self.root_path))
+                mtime = datetime.fromtimestamp(item.stat().st_mtime)
+                files_on_disk[rel_path] = (item, mtime)
+
+            # 2. Получаем текущий индекс из БД
+            db_entries = session.query(NoteIndex).all()
+            db_map = {entry.path: entry for entry in db_entries}
+
+            # 3. Синхронизируем
+            # Удаляем из БД то, чего нет на диске
+            for path in db_map:
+                if path not in files_on_disk:
+                    session.delete(db_map[path])
+            
+            # Добавляем или обновляем
+            for path, (item, mtime) in files_on_disk.items():
+                is_dir = item.is_dir()
+                
+                if path not in db_map:
+                    # Новый элемент
+                    metadata = self._get_metadata(item) if not is_dir else None
+                    title = metadata.title if metadata and metadata.title else item.name.replace(".md", "")
+                    
+                    new_entry = NoteIndex(
+                        path=path,
+                        name=item.name,
+                        title=title,
+                        is_dir=is_dir,
+                        parent_path=str(item.parent.relative_to(self.root_path)),
+                        content=self.read_file(path) if not is_dir and item.suffix == ".md" else "",
+                        tags=json.dumps(metadata.tags if metadata else []),
+                        last_modified=mtime,
+                        hash=self._get_file_hash(item) if not is_dir else ""
+                    )
+                    session.add(new_entry)
+                else:
+                    # Проверяем на изменения
+                    entry = db_map[path]
+                    if entry.last_modified != mtime:
+                        metadata = self._get_metadata(item) if not is_dir else None
+                        entry.title = metadata.title if metadata and metadata.title else item.name.replace(".md", "")
+                        entry.content = self.read_file(path) if not is_dir and item.suffix == ".md" else ""
+                        entry.tags = json.dumps(metadata.tags if metadata else [])
+                        entry.last_modified = mtime
+                        entry.hash = self._get_file_hash(item) if not is_dir else ""
+
+            session.commit()
+        finally:
+            session.close()
+        logger.info("Indexing completed")
+
+    def _get_file_hash(self, path: Path) -> str:
+        """Получить хеш файла для быстрой проверки изменений"""
+        if path.is_dir(): return ""
+        try:
+            return hashlib.md5(path.read_bytes()).hexdigest()
+        except:
+            return ""
+
     def get_directory_tree(self, path: Optional[Path] = None) -> DirectoryNode:
-        """Получить дерево директорий (Оптимизировано)"""
+        """Получить дерево директорий (Теперь из БД - мгновенно)"""
         if path is None:
             path = self.notes_dir
-
-        if not path.exists():
-            raise ValueError(f"Path does not exist: {path}")
-
-        is_dir = path.is_dir()
         
-        # ОПТИМИЗАЦИЯ: Не считаем размер всей папки рекурсивно, только для файлов
-        size = path.stat().st_size if not is_dir else 0
-
-        node = DirectoryNode(
-            path=str(path.relative_to(self.root_path)),
-            name=path.name,
-            is_dir=is_dir,
-            size=size,
-            size_human=self._humanize_size(size) if not is_dir else "",
-            metadata=self._get_metadata(path) if not is_dir else None,
-        )
-
-        if is_dir:
-            try:
-                # Используем scandir для более быстрого обхода
-                with os.scandir(path) as it:
-                    entries = []
-                    for entry in it:
-                        if entry.name.startswith(".") or entry.name == "README.md":
-                            continue
-                        entries.append(entry)
-                    
-                    # Сортировка: сначала папки, потом файлы
-                    entries.sort(key=lambda e: (not e.is_dir(), e.name.lower()))
-                    
-                    for entry in entries:
-                        entry_path = Path(entry.path)
-                        if entry.is_dir():
-                            # ОПТИМИЗАЦИЯ: Убрали rglob. 
-                            # Просто добавляем все папки в notes/
-                            child = self.get_directory_tree(entry_path)
-                            node.children.append(child)
-                        elif entry.name.endswith(".md"):
-                            child = self.get_directory_tree(entry_path)
-                            node.children.append(child)
-            except PermissionError as e:
-                logger.warning(f"Permission denied accessing {path}: {e}")
-
-        return node
+        rel_path = str(path.relative_to(self.root_path))
+        
+        session = get_session(self.engine)
+        try:
+            is_notes_root = rel_path == "notes"
+            
+            # Получаем всех детей из БД
+            children_entries = session.query(NoteIndex).filter(NoteIndex.parent_path == rel_path).all()
+            
+            node = DirectoryNode(
+                path=rel_path,
+                name=path.name if not is_notes_root else "notes",
+                is_dir=True,
+                size=0,
+                size_human="",
+                metadata=None,
+            )
+            
+            # Сортировка детей: папки вперед
+            sorted_children = sorted(children_entries, key=lambda e: (not e.is_dir, e.name.lower()))
+            
+            for entry in sorted_children:
+                if entry.is_dir:
+                    child_node = self.get_directory_tree(self.root_path / entry.path)
+                    node.children.append(child_node)
+                else:
+                    node.children.append(DirectoryNode(
+                        path=entry.path,
+                        name=entry.name,
+                        is_dir=False,
+                        size=0,
+                        size_human="",
+                        metadata=None
+                    ))
+            
+            return node
+        finally:
+            session.close()
 
     def create_directory(self, dir_path: str) -> None:
         """Создать новую директорию в разделе notes/"""
@@ -146,6 +219,15 @@ class NotesService:
         full_path = self.root_path / path
         full_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Created directory: {full_path}")
+        self.index_all_files() # Переиндексируем
+
+    def get_flat_directories(self) -> List[str]:
+        """Получить список всех директорий (для выпадающих списков)"""
+        dirs = [""] # Корень (notes/)
+        for item in self.notes_dir.rglob("*"):
+            if item.is_dir() and not item.name.startswith("."):
+                dirs.append(str(item.relative_to(self.notes_dir)))
+        return sorted(dirs)
 
     def get_file_info(self, file_path: str) -> FileInfo:
         """Получить информацию о файле"""
@@ -181,6 +263,7 @@ class NotesService:
 
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
+        self.index_all_files() # Переиндексируем
 
     def create_note(
         self,
@@ -190,10 +273,8 @@ class NotesService:
         content: str = "",
     ) -> str:
         """Создать новую заметку"""
-        # Генерируем имя файла
         filename = title.lower().replace(" ", "_") + ".md"
 
-        # Определяем путь
         if category:
             dir_path = self.root_path / category
         else:
@@ -202,7 +283,6 @@ class NotesService:
         dir_path.mkdir(parents=True, exist_ok=True)
         file_path = dir_path / filename
 
-        # Проверяем существование
         counter = 1
         while file_path.exists():
             base = title.lower().replace(" ", "_")
@@ -210,7 +290,6 @@ class NotesService:
             file_path = dir_path / filename
             counter += 1
 
-        # Создаём YAML фронтматтер
         frontmatter = {
             "title": title,
             "date": datetime.now().isoformat(),
@@ -219,7 +298,6 @@ class NotesService:
             "status": "draft",
         }
 
-        # Пишем файл
         with open(file_path, "w", encoding="utf-8") as f:
             f.write("---\n")
             f.write(yaml.dump(frontmatter, allow_unicode=True, default_flow_style=False))
@@ -229,6 +307,7 @@ class NotesService:
             else:
                 f.write(f"# {title}\n\n")
 
+        self.index_all_files()
         return str(file_path.relative_to(self.root_path))
 
     def delete_file(self, file_path: str) -> None:
@@ -241,209 +320,182 @@ class NotesService:
             path.unlink()
         else:
             shutil.rmtree(path)
+        self.index_all_files()
 
     def rename_file(self, file_path: str, new_name: str) -> str:
-        """Переименовать файл"""
+        """Переименовать файл или директорию"""
         path = self.root_path / file_path
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
 
+        if path.is_file() and path.suffix == ".md" and not new_name.lower().endswith(".md"):
+            new_name += ".md"
+
         new_path = path.parent / new_name
         path.rename(new_path)
 
+        self.index_all_files()
         return str(new_path.relative_to(self.root_path))
 
+    def move_item(self, source_path: str, target_dir: str) -> None:
+        """Переместить файл или директорию"""
+        source = self.root_path / source_path
+        target = self.root_path / target_dir / source.name
+
+        if not source.exists():
+            raise FileNotFoundError(f"Source not found: {source}")
+        
+        if str(target).startswith(str(source)):
+            raise ValueError("Cannot move an item into itself")
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(target))
+        self.index_all_files()
+
     def search(self, query: str, search_content: bool = True) -> List[SearchResult]:
-        """Поиск по файлам"""
-        query_lower = query.lower()
-        results = []
-
-        # Поиск по названиям
-        for note in self.root_path.rglob("*.md"):
-            if note.name == "README.md":
-                continue
-
-            if query_lower in note.name.lower():
-                results.append(
-                    SearchResult(
-                        path=str(note.relative_to(self.root_path)),
-                        name=note.name,
-                    )
+        """Поиск по индексу БД (Молниеносно)"""
+        session = get_session(self.engine)
+        try:
+            query_str = f"%{query.lower()}%"
+            
+            # Поиск по названию или содержимому
+            search_query = session.query(NoteIndex).filter(NoteIndex.is_dir == False)
+            if search_content:
+                search_query = search_query.filter(
+                    (NoteIndex.name.ilike(query_str)) | 
+                    (NoteIndex.content.ilike(query_str)) |
+                    (NoteIndex.title.ilike(query_str))
                 )
-
-        # Поиск по содержимому
-        if search_content:
-            try:
-                result = subprocess.run(
-                    ["grep", "-r", "-i", "-l", query, str(self.root_path)],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
+            else:
+                search_query = search_query.filter(
+                    (NoteIndex.name.ilike(query_str)) | 
+                    (NoteIndex.title.ilike(query_str))
                 )
+            
+            entries = search_query.all()
+            results = []
+            
+            for entry in entries:
+                # Генерируем простой сниппет
+                excerpt = ""
+                if search_content and query.lower() in entry.content.lower():
+                    idx = entry.content.lower().find(query.lower())
+                    start = max(0, idx - 40)
+                    end = min(len(entry.content), idx + 60)
+                    excerpt = entry.content[start:end].replace("\n", " ")
+                    if start > 0: excerpt = "..." + excerpt
+                    if end < len(entry.content): excerpt = excerpt + "..."
+                else:
+                    excerpt = "Совпадение в названии"
+                
+                results.append(SearchResult(
+                    path=entry.path,
+                    name=entry.name.replace(".md", ""),
+                    excerpt=excerpt
+                ))
+            
+            return sorted(results, key=lambda r: r.name)
+        finally:
+            session.close()
 
-                if result.stdout:
-                    for line in result.stdout.strip().split("\n"):
-                        path = Path(line)
-                        if path.suffix == ".md" and path.name != "README.md":
-                            rel_path = str(path.relative_to(self.root_path))
-                            # Проверяем, уже ли есть в results
-                            if not any(r.path == rel_path for r in results):
-                                results.append(SearchResult(path=rel_path, name=path.name))
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                pass
+    def get_recent_notes(self, limit: int = 10) -> List[SearchResult]:
+        """Получить список недавних файлов"""
+        session = get_session(self.engine)
+        try:
+            entries = session.query(NoteIndex).filter(NoteIndex.is_dir == False).order_by(desc(NoteIndex.last_opened)).limit(limit).all()
+            return [
+                SearchResult(
+                    path=e.path,
+                    name=e.name.replace(".md", ""),
+                    excerpt=f"Last opened: {e.last_opened.strftime('%Y-%m-%d %H:%M')}"
+                ) for e in entries
+            ]
+        finally:
+            session.close()
 
-        return sorted(results, key=lambda r: r.name)
+    def set_folder_icon(self, path: str, icon: str) -> None:
+        """Установить иконку для папки"""
+        session = get_session(self.engine)
+        try:
+            cfg = session.query(FolderConfig).filter(FolderConfig.path == path).first()
+            if cfg:
+                cfg.icon = icon
+            else:
+                cfg = FolderConfig(path=path, icon=icon)
+                session.add(cfg)
+            session.commit()
+        finally:
+            session.close()
 
     def sync_git(self, message: Optional[str] = None) -> dict:
-        """Профессиональная синхронизация с Git (Rebase strategy)"""
+        """Git Sync"""
         if message is None:
             message = self._settings.git_commit_message
 
         try:
-            # 1. Проверяем наличие изменений
-            status_proc = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=self.root_path,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            has_changes = bool(status_proc.stdout.strip())
+            status_proc = subprocess.run(["git", "status", "--porcelain"], cwd=self.root_path, capture_output=True, text=True, check=True)
+            if status_proc.stdout.strip():
+                subprocess.run(["git", "add", "-A"], cwd=self.root_path, check=True)
+                subprocess.run(["git", "commit", "-m", message], cwd=self.root_path, check=True)
 
-            # 2. Коммитим локальные изменения
-            if has_changes:
-                subprocess.run(["git", "add", "-A"], cwd=self.root_path, check=True, capture_output=True)
-                subprocess.run(["git", "commit", "-m", message], cwd=self.root_path, check=True, capture_output=True)
-                logger.info(f"Committed changes with message: {message}")
-
-            # 3. Fetch
-            subprocess.run(["git", "fetch", "origin"], cwd=self.root_path, check=True, capture_output=True)
-
-            # 4. Pull --rebase
-            # Определяем текущую ветку
-            branch_proc = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=self.root_path,
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            subprocess.run(["git", "fetch", "origin"], cwd=self.root_path, check=True)
+            
+            branch_proc = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.root_path, capture_output=True, text=True, check=True)
             branch = branch_proc.stdout.strip()
 
-            pull_proc = subprocess.run(
-                ["git", "pull", "--rebase", "origin", branch],
-                cwd=self.root_path,
-                capture_output=True,
-                text=True
-            )
-
-            if pull_proc.returncode != 0:
-                # КОНФЛИКТ!
-                logger.error(f"Sync conflict during rebase: {pull_proc.stderr}")
-                subprocess.run(["git", "rebase", "--abort"], cwd=self.root_path, capture_output=True)
-                return {
-                    "success": False,
-                    "message": "Конфликт при синхронизации. Пожалуйста, разрешите конфликты вручную в репозитории."
-                }
-
-            # 5. Push
-            subprocess.run(["git", "push", "origin", branch], cwd=self.root_path, check=True, capture_output=True)
+            subprocess.run(["git", "pull", "--rebase", "origin", branch], cwd=self.root_path, check=True)
+            subprocess.run(["git", "push", "origin", branch], cwd=self.root_path, check=True)
             
-            logger.info("Git sync completed successfully")
+            self.index_all_files() # После пулла нужно переиндексировать
             return {"success": True, "message": "Синхронизация успешна"}
-
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr.decode() if isinstance(e.stderr, bytes) else str(e.stderr)
-            logger.error(f"Git error during sync: {error_msg}")
-            return {"success": False, "message": f"Ошибка Git: {error_msg}"}
         except Exception as e:
-            logger.error(f"Unexpected error during sync: {e}")
+            logger.error(f"Git error: {e}")
             return {"success": False, "message": f"Ошибка: {str(e)}"}
 
     def format_notes(self) -> dict:
-        """Форматировать заметки"""
+        """Format notes"""
         try:
             script_path = self.root_path / ".scripts" / "format_notes.py"
             if script_path.exists():
-                result = subprocess.run(
-                    ["python3", str(script_path)],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                )
-                if result.returncode == 0:
-                    return {"success": True, "message": "Форматирование завершено"}
-                else:
-                    return {
-                        "success": False,
-                        "message": f"Ошибка форматирования: {result.stderr}",
-                    }
-            else:
-                return {"success": False, "message": "Скрипт форматирования не найден"}
-        except subprocess.TimeoutExpired:
-            return {"success": False, "message": "Форматирование заняло слишком много времени"}
+                subprocess.run(["python3", str(script_path)], capture_output=True, text=True, timeout=30)
+                self.index_all_files()
+                return {"success": True, "message": "Форматирование завершено"}
+            return {"success": False, "message": "Скрипт не найден"}
         except Exception as e:
-            return {"success": False, "message": f"Ошибка: {str(e)}"}
+            return {"success": False, "message": str(e)}
 
     def get_stats(self) -> dict:
-        """Получить статистику"""
-        notes = []
-        for note in self.root_path.rglob("*.md"):
-            if note.name != "README.md":
-                notes.append(note)
-
-        total_size = sum(n.stat().st_size for n in notes)
-
-        return {
-            "total_notes": len(notes),
-            "total_size": total_size,
-            "total_size_mb": round(total_size / (1024 * 1024), 2),
-        }
+        """Статистика из БД"""
+        session = get_session(self.engine)
+        try:
+            count = session.query(NoteIndex).filter(NoteIndex.is_dir == False).count()
+            return {
+                "total_notes": count,
+                "total_size": 0, # Можно добавить при желании
+                "total_size_mb": 0,
+            }
+        finally:
+            session.close()
 
     # ===== Private Methods =====
 
     @staticmethod
-    def _get_size(path: Path) -> int:
-        """Получить размер файла/папки"""
-        if path.is_file():
-            return path.stat().st_size
-        else:
-            total = 0
-            try:
-                for entry in path.rglob("*"):
-                    if entry.is_file():
-                        total += entry.stat().st_size
-            except PermissionError:
-                pass
-            return total
-
-    @staticmethod
     def _humanize_size(size: int) -> str:
-        """Преобразовать размер в читаемый формат"""
-        if size < 1024:
-            return f"{size}B"
-        elif size < 1024 * 1024:
-            return f"{size / 1024:.1f}KB"
-        else:
-            return f"{size / (1024 * 1024):.1f}MB"
+        if size < 1024: return f"{size}B"
+        elif size < 1024 * 1024: return f"{size / 1024:.1f}KB"
+        else: return f"{size / (1024 * 1024):.1f}MB"
 
     @staticmethod
     def _get_metadata(path: Path) -> Optional[FileMetadata]:
-        """Получить YAML фронтматтер из файла"""
-        if not path.is_file() or path.suffix != ".md":
-            return None
-
+        if not path.is_file() or path.suffix != ".md": return None
         try:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
-
             if content.startswith("---"):
                 parts = content.split("---", 2)
                 if len(parts) >= 2:
                     metadata = yaml.safe_load(parts[1])
                     if isinstance(metadata, dict):
                         return FileMetadata(**metadata)
-        except Exception:
-            pass
-
+        except: pass
         return None

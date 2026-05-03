@@ -13,9 +13,29 @@
   let isLoading = true;
   let isSaving = false;
   let isDeleting = false;
-  let isEditing = false;
   let showDeleteConfirm = false;
   let activeTab = 'reader'; // 'source' or 'reader' for mobile
+  let isSyncScrollEnabled = true;
+
+  let editorRef;
+  let previewRef;
+  let isSyncingScroll = false;
+
+  function handleEditorScroll() {
+    if (!isSyncScrollEnabled || isSyncingScroll || !editorRef || !previewRef) return;
+    isSyncingScroll = true;
+    const scrollPercentage = editorRef.scrollTop / (editorRef.scrollHeight - editorRef.clientHeight);
+    previewRef.scrollTop = scrollPercentage * (previewRef.scrollHeight - previewRef.clientHeight);
+    setTimeout(() => { isSyncingScroll = false; }, 50);
+  }
+
+  function handlePreviewScroll() {
+    if (!isSyncScrollEnabled || isSyncingScroll || !editorRef || !previewRef) return;
+    isSyncingScroll = true;
+    const scrollPercentage = previewRef.scrollTop / (previewRef.scrollHeight - previewRef.clientHeight);
+    editorRef.scrollTop = scrollPercentage * (editorRef.scrollHeight - editorRef.clientHeight);
+    setTimeout(() => { isSyncingScroll = false; }, 50);
+  }
 
   async function loadFile() {
     if (!currentFile || currentFile.isDir) return;
@@ -52,6 +72,7 @@
       if (!response.ok) throw new Error('Failed to save');
 
       content = editedContent;
+      title = editedTitle;
       await loadFile();
     } catch (error) {
       alert('Ошибка при сохранении: ' + error.message);
@@ -79,26 +100,29 @@
     }
   }
 
-  function toggleEditing() {
-    isEditing = !isEditing;
-    if (isEditing) {
-      editedTitle = title;
-      activeTab = 'source';
-    }
-  }
-
   function hasUnsavedChanges() {
     return editedContent !== content || editedTitle !== title;
   }
 
-  function stripFrontmatter(text) {
+  function parseFrontmatter(text) {
     if (text.startsWith('---')) {
-      const parts = text.split('---', 2);
-      if (parts.length > 1) {
-        return text.slice(parts[1].length + 6);
+      const parts = text.split('---');
+      if (parts.length >= 3) {
+        const yamlStr = parts[1];
+        const metadata = {};
+        yamlStr.split('\n').forEach(line => {
+          const [key, ...valParts] = line.split(':');
+          if (key && valParts.length > 0) {
+            metadata[key.trim()] = valParts.join(':').trim();
+          }
+        });
+        return {
+          metadata,
+          content: parts.slice(2).join('---').trim()
+        };
       }
     }
-    return text;
+    return { metadata: null, content: text };
   }
 
   onMount(loadFile);
@@ -111,17 +135,12 @@
   <div class="px-6 lg:px-12 py-6 lg:py-10 space-y-4 lg:space-y-6">
     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
       <div class="flex-1 min-w-0">
-        {#if isEditing}
-          <input
-            type="text"
-            bind:value={editedTitle}
-            class="text-3xl lg:text-5xl font-serif font-medium tracking-tight bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-2"
-          />
-        {:else}
-          <h1 class="text-3xl lg:text-5xl font-serif font-medium tracking-tight text-[var(--text-primary)] break-words lg:truncate">
-            {title}
-          </h1>
-        {/if}
+        <input
+          type="text"
+          bind:value={editedTitle}
+          placeholder="Note Title"
+          class="text-3xl lg:text-5xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-2 transition-colors"
+        />
         <p class="text-[10px] lg:text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mt-2 lg:mt-4 truncate">
           {currentFile.path}
         </p>
@@ -138,13 +157,6 @@
             {isSaving ? 'Saving' : 'Save'}
           </button>
         {/if}
-
-        <button
-          on:click={toggleEditing}
-          class="text-xs lg:text-sm font-medium uppercase tracking-widest hover:opacity-60 transition"
-        >
-          {isEditing ? 'Done' : 'Edit'}
-        </button>
 
         <button
           on:click={() => showDeleteConfirm = true}
@@ -178,13 +190,22 @@
       <!-- Editor Panel -->
       <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)] {activeTab === 'source' ? 'flex' : 'hidden lg:flex'}">
         <div class="hidden lg:flex px-12 py-4 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] z-10">
-          <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Markdown</span>
+          <div class="flex items-center gap-6">
+            <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Markdown</span>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input type="checkbox" bind:checked={isSyncScrollEnabled} class="hidden" />
+              <div class="w-2 h-2 rounded-full transition-colors {isSyncScrollEnabled ? 'bg-[var(--text-primary)]' : 'bg-transparent border border-[var(--text-secondary)]'} group-hover:opacity-70"></div>
+              <span class="text-[9px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
+            </label>
+          </div>
           <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
             {editedContent.length} chars
           </span>
         </div>
         <textarea
+          bind:this={editorRef}
           bind:value={editedContent}
+          on:scroll={handleEditorScroll}
           class="flex-1 px-6 lg:px-12 py-6 lg:py-10 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30"
           placeholder="Begin writing..."
         />
@@ -195,10 +216,26 @@
         <div class="hidden lg:flex px-12 py-4 items-center border-b border-[var(--border-subtle)]">
           <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Reader</span>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12 prose-typography font-serif">
+        <div 
+          bind:this={previewRef}
+          on:scroll={handlePreviewScroll}
+          class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12 prose-typography font-serif"
+        >
           <!-- Markdown Preview -->
           <div class="max-w-2xl mx-auto">
-            {#each stripFrontmatter(editedContent).split('\n\n') as paragraph}
+            {#if parseFrontmatter(editedContent).metadata}
+              <div class="mb-12 pb-8 border-b border-[var(--border-subtle)] opacity-60">
+                <div class="grid grid-cols-2 gap-4 text-[10px] uppercase tracking-widest font-mono">
+                  {#each Object.entries(parseFrontmatter(editedContent).metadata) as [key, value]}
+                    {#if value}
+                      <span class="text-[var(--text-secondary)]">{key}:</span>
+                      <span class="text-[var(--text-primary)]">{value}</span>
+                    {/if}
+                  {/each}
+                </div>
+              </div>
+            {/if}
+            {#each parseFrontmatter(editedContent).content.split('\n\n') as paragraph}
               {#if paragraph.startsWith('# ')}
                 <h1 class="text-2xl lg:text-4xl font-serif font-medium mb-4 lg:mb-8">
                   {paragraph.replace(/^#\s+/, '')}

@@ -22,6 +22,7 @@ from schemas import (
     SearchResult,
     UpdateNoteRequest,
     Settings,
+    SetIconRequest,
 )
 from services import NotesService
 
@@ -173,11 +174,17 @@ async def create_note(request: CreateNoteRequest):
 async def rename_file(path: str = Query(...), request: RenameFileRequest = None):
     """Переименовать файл"""
     try:
+        if request is None:
+            logger.error("Rename request body is missing")
+            raise HTTPException(status_code=400, detail="Request body is missing")
+        
+        logger.info(f"Renaming {path} to {request.new_name}")
         new_path = service.rename_file(path, request.new_name)
         return {"path": new_path, "message": "File renamed successfully"}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
+        logger.exception(f"Error renaming file {path}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -193,12 +200,50 @@ async def delete_file(path: str = Query(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/directories", response_model=List[str])
+async def get_directories():
+    """Получить плоский список всех директорий"""
+    try:
+        return service.get_flat_directories()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/file/move")
+async def move_file(source: str = Query(...), target: str = Query(...)):
+    """Переместить файл или директорию"""
+    try:
+        service.move_item(source, target)
+        return {"message": "Item moved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/directory/create")
 async def create_directory(path: str = Query(...)):
     """Создать новую директорию"""
     try:
         service.create_directory(path)
         return {"message": "Directory created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notes/recent", response_model=List[SearchResult])
+async def get_recent_notes(limit: int = Query(10)):
+    """Получить список недавних файлов"""
+    try:
+        return service.get_recent_notes(limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/directory/icon")
+async def set_directory_icon(path: str = Query(...), request: SetIconRequest = None):
+    """Установить иконку для директории"""
+    try:
+        service.set_folder_icon(path, request.icon)
+        return {"message": "Icon updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

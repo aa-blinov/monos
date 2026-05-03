@@ -67,6 +67,12 @@ class RenameFileRequest(BaseModel):
     new_name: str
 
 
+class SetIconRequest(BaseModel):
+    """Запрос на установку иконки"""
+
+    icon: str
+
+
 class SearchRequest(BaseModel):
     """Запрос на поиск"""
 
