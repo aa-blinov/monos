@@ -173,10 +173,10 @@
       </details>
 
       <form on:submit|preventDefault={authenticate} class="contents">
-        <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Personal Access Token</label>
+        <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">Personal Access Token</label>
         <div class="flex gap-3">
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-          <input type="password" name="token" autocomplete="new-password" bind:value={settings.git_token} placeholder="ghp_..." class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" disabled={isAuthenticated} />
+          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder="ghp_..." class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" disabled={isAuthenticated} />
           {#if isAuthenticated}
             <button type="button" on:click={() => { isAuthenticated = false; settings.git_token = ''; settings.git_owner = ''; settings.git_repo = ''; gitRepos = []; }} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">Reset</button>
           {:else}
@@ -193,8 +193,8 @@
 
       <div class="grid grid-cols-2 gap-6">
         <div>
-          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Owner</label>
-          <input type="text" bind:value={settings.git_owner} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm {isAuthenticated ? 'opacity-50' : ''}" disabled={isAuthenticated} />
+          <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">Owner</label>
+          <input type="text" id="git-owner" bind:value={settings.git_owner} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm {isAuthenticated ? 'opacity-50' : ''}" disabled={isAuthenticated} />
         </div>
         <div>
           <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Repository</label>

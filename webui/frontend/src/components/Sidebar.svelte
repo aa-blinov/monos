@@ -446,11 +446,20 @@
   });
 </script>
 
-<div 
-  class="h-full flex flex-col bg-[var(--bg-primary)] relative"
-  on:contextmenu|self={handleBackgroundRightClick}
->
-  <!-- Search Section -->
+  <div
+    class="h-full flex flex-col bg-[var(--bg-primary)] relative"
+    on:contextmenu|self={handleBackgroundRightClick}
+  >
+    <!-- Close button (mobile) -->
+    <div class="lg:hidden flex justify-start px-4 pt-3 pb-1">
+      <button on:click={() => dispatch('toggleSidebar')} class="p-1 hover:opacity-60" title="Close sidebar">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search Section -->
   <div class="p-6 space-y-4">
     <div class="space-y-2">
       <div class="relative group">
@@ -501,7 +510,7 @@
               class="w-full text-left group block"
             >
               <div class="text-[11px] font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
-              <div class="text-[8px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path}</div>
+              <div class="text-[8px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path?.startsWith('notes/') ? note.path.slice(6) : note.path}</div>
             </button>
           {/each}
         </div>
@@ -545,7 +554,7 @@
             on:click={() => handleSelectFile({ detail: { path: result.path, name: result.name, isDir: false } })}
             class="w-full text-left group block"
           >
-            <div class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path}</div>
+            <div class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path.startsWith('notes/') ? result.path.slice(6) : result.path}</div>
             <div class="text-sm font-serif font-medium group-hover:underline mb-2">{result.name}</div>
             {#if result.excerpt}
               <p class="text-xs text-[var(--text-secondary)] leading-relaxed italic line-clamp-3">

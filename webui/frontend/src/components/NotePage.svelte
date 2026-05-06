@@ -23,10 +23,13 @@
 </script>
 
 {#if currentFile}
-  <Editor
-    key={currentFile.path}
-    {currentFile}
-    on:navigate={(e) => dispatch('navigate', e.detail)}
-    on:fileDeleted={() => dispatch('fileDeleted')}
-  />
+  <div class="h-full">
+    {#key currentFile.path}
+      <Editor
+        {currentFile}
+        on:navigate={(e) => dispatch('navigate', e.detail)}
+        on:fileDeleted={() => dispatch('fileDeleted')}
+      />
+    {/key}
+  </div>
 {/if}

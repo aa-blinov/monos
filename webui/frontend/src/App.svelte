@@ -61,7 +61,7 @@
       {/if}
 
       <div
-        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-80' : 'w-72 border-r border-[var(--border-subtle)]'}
+        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'w-72 border-r border-[var(--border-subtle)]'}
                {isMobile && !sidebarOpen ? '-translate-x-full' : ''}
                {isMobile ? 'transition-transform duration-300 ease-in-out' : ''}
                overflow-y-auto"
@@ -70,6 +70,7 @@
           bind:this={sidebarComponent}
           on:navigate={handleNavigate}
           on:openSettings={() => navigate('/settings')}
+          on:toggleSidebar={toggleSidebar}
         />
       </div>
 
