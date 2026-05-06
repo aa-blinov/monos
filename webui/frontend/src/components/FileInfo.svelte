@@ -78,16 +78,6 @@
       <!-- Note Metadata (from SQLite) -->
       {#if fileInfo.metadata}
         <div class="pt-8 border-t border-[var(--border-subtle)] space-y-8">
-          <!-- Status -->
-          {#if fileInfo.metadata.status}
-            <div>
-              <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">State</span>
-              <p class="text-sm font-medium italic">
-                {fileInfo.metadata.status}
-              </p>
-            </div>
-          {/if}
-
           <!-- Tags -->
           {#if fileInfo.metadata.tags && fileInfo.metadata.tags.length > 0}
             <div>

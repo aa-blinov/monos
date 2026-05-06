@@ -16,8 +16,10 @@ from schemas import (
     FileInfo,
     FileMetadata,
     FormatNotesResponse,
+    GitSetupRequest,
     GitSyncRequest,
     GitSyncResponse,
+    GitStatusResponse,
     RenameFileRequest,
     SearchRequest,
     SearchResult,
@@ -159,14 +161,13 @@ async def update_file_content(path: str = Query(...), request: UpdateNoteRequest
 
 @app.put("/api/file/metadata", response_model=FileMetadata)
 async def update_file_metadata(path: str = Query(...), request: UpdateMetadataRequest = None):
-    """Обновить метаданные заметки (title, category, tags, status)"""
+    """Обновить метаданные заметки (title, category, tags)"""
     try:
         return service.update_metadata(
             file_path=path,
             title=request.title,
             category=request.category,
             tags=request.tags,
-            status=request.status,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found in index")
@@ -308,12 +309,113 @@ async def get_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/git/sync", response_model=GitSyncResponse)
-async def sync_git(request: GitSyncRequest):
-    """Синхронизировать с Git"""
+@app.get("/api/git/status", response_model=GitStatusResponse)
+async def git_status():
     try:
-        result = service.sync_git(message=request.message)
+        return service.git_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/git/setup")
+async def git_setup(request: GitSetupRequest):
+    try:
+        s = service.get_settings()
+        s.git_token = request.token
+        s.git_owner = request.owner
+        s.git_repo = request.repo
+        s.git_branch = request.branch or "main"
+        if request.device_name:
+            s.device_name = request.device_name
+        service.update_settings(s)
+        result = service.git_init_remote()
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/git/sync", response_model=GitSyncResponse)
+async def git_sync(request: GitSyncRequest = None):
+    try:
+        msg = request.message if request else None
+        result = service.sync_git(message=msg)
         return GitSyncResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/git/repos")
+async def git_repos(token: str = Query(...)):
+    try:
+        return service.get_github_repos(token)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/git/branches")
+async def git_branches(token: str = Query(...), owner: str = Query(...), repo: str = Query(...)):
+    try:
+        branches = service.get_github_branches(token, owner, repo)
+        return {"branches": branches}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/git/user")
+async def git_user(token: str = Query(...)):
+    try:
+        login = service.get_github_user(token)
+        return {"login": login}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/git/conflicts")
+async def git_conflicts():
+    try:
+        conflict_dir = service.notes_dir / "_conflicts"
+        if not conflict_dir.exists():
+            return {"conflicts": []}
+        files = []
+        for f in conflict_dir.rglob("*.md"):
+            files.append({
+                "path": str(f.relative_to(conflict_dir)),
+                "name": f.name,
+                "content": f.read_text(encoding="utf-8"),
+            })
+        return {"conflicts": files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/git/conflicts/resolve")
+async def git_resolve_conflicts():
+    try:
+        conflict_dir = service.notes_dir / "_conflicts"
+        if conflict_dir.exists():
+            import shutil
+            shutil.rmtree(conflict_dir)
+        return {"message": "Conflicts resolved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/git/log")
+async def git_log(count: int = Query(20)):
+    try:
+        result = service._git("log", f"--max-count={count}", "--format=%H|%ai|%s")
+        entries = []
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = line.split("|", 2)
+            if len(parts) == 3:
+                entries.append({"hash": parts[0], "date": parts[1], "message": parts[2]})
+        return {"entries": entries}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

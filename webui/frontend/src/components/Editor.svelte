@@ -30,7 +30,6 @@
   let activePane = null; // 'editor' or 'preview'
 
   let showMetadata = false;
-  let editableStatus = '';
   let editableTags = [];
   let metadataTimer;
   const METADATA_DELAY = 1200;
@@ -97,7 +96,6 @@
       fileInfo = await infoResponse.json();
       title = fileInfo.metadata?.title || currentFile.name.replace('.md', '');
       editedTitle = title;
-      editableStatus = fileInfo.metadata?.status || '';
       editableTags = fileInfo.metadata?.tags || [];
       
       await loadBacklinks();
@@ -171,7 +169,7 @@
   async function saveMetadataFields() {
     if (!currentFile || !fileInfo) return;
     if (metadataTimer) clearTimeout(metadataTimer);
-    const payload = { title: editedTitle, status: editableStatus || null, tags: editableTags };
+    const payload = { title: editedTitle, tags: editableTags };
     try {
       const response = await fetch(`/api/file/metadata?path=${encodeURIComponent(currentFile.path)}`, {
         method: 'PUT',
@@ -201,10 +199,6 @@
 
   function removeTag(i) {
     editableTags = editableTags.filter((_, idx) => idx !== i);
-    scheduleMetadataSave();
-  }
-
-  function handleStatusChange() {
     scheduleMetadataSave();
   }
 
@@ -260,17 +254,7 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center gap-4 lg:gap-6 lg:pt-2">
-        <div class="text-[10px] lg:text-xs font-mono uppercase tracking-widest min-w-[4rem] text-right">
-          {#if isSaving}
-            <span class="text-[var(--text-secondary)]">Saving…</span>
-          {:else if saveMessage === 'Saved'}
-            <span class="text-[var(--green)]/70">Saved</span>
-          {:else if saveMessage === 'Save failed'}
-            <span class="text-red-400">Save failed</span>
-          {/if}
-        </div>
-
+      <div class="flex items-center gap-3 lg:pt-2">
         <button
           on:click={() => showDeleteConfirm = true}
           class="text-xs lg:text-sm font-medium uppercase tracking-widest text-red-500 hover:opacity-60 transition"
@@ -304,18 +288,6 @@
       </button>
       {#if showMetadata}
         <div class="mt-3 space-y-3 text-xs">
-          <div class="flex items-center gap-3">
-            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] w-20 shrink-0">State</span>
-            <select
-              bind:value={editableStatus}
-              on:change={handleStatusChange}
-              class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-1 outline-none focus:border-[var(--text-primary)] transition-colors text-xs"
-            >
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
           <div class="flex items-start gap-3">
             <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] w-20 shrink-0 pt-1">Tags</span>
             <div class="flex-1 flex flex-wrap gap-2 items-center">
@@ -355,8 +327,8 @@
               <span class="text-[9px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
             </label>
           </div>
-          <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
-            {(editedContent || '').length} chars
+          <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] tabular-nums">
+            {(editedContent || '').trim() ? (editedContent || '').trim().split(/\s+/).length : 0} words · {(editedContent || '').length} chars
           </span>
         </div>
         <textarea

@@ -4,6 +4,8 @@ import os
 import shutil
 import subprocess
 import hashlib
+import urllib.request
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -17,11 +19,14 @@ from schemas import (
     DirectoryNode,
     FileInfo,
     FileMetadata,
-    SearchResult,
+    GitStatusResponse,
     Settings,
+    SearchResult,
 )
 
 logger = logging.getLogger(__name__)
+
+CONFLICT_DIR = "_conflicts"
 
 
 class NotesService:
@@ -53,6 +58,7 @@ class NotesService:
         self.db_path = db_dir / "notes_index.db"
         self.engine = get_engine(str(self.db_path))
 
+        self._configure_git()
         self.index_all_files()
 
     def _load_settings(self) -> Settings:
@@ -65,17 +71,258 @@ class NotesService:
                 logger.error(f"Failed to load settings: {e}")
         return Settings()
 
+    def save_settings(self):
+        with open(self.settings_path, "w", encoding="utf-8") as f:
+            json.dump(self._settings.model_dump(), f, indent=2, ensure_ascii=False)
+
     def get_settings(self) -> Settings:
         return self._settings
 
     def update_settings(self, settings: Settings) -> Settings:
         self._settings = settings
-        try:
-            with open(self.settings_path, "w", encoding="utf-8") as f:
-                json.dump(settings.model_dump(), f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error(f"Failed to save settings: {e}")
+        self.save_settings()
+        self._configure_git()
         return self._settings
+
+    # ===== Git Operations =====
+
+    def _configure_git(self):
+        try:
+            subprocess.run(["git", "config", "--global", "user.name", "Monos WebUI"], capture_output=True)
+            subprocess.run(["git", "config", "--global", "user.email", "monos@webui.local"], capture_output=True)
+            subprocess.run(["git", "config", "--global", "pull.rebase", "false"], capture_output=True)
+            subprocess.run(["git", "config", "--global", "core.autocrlf", "input"], capture_output=True)
+        except Exception as e:
+            logger.warning(f"Failed to configure git global: {e}")
+
+    def _git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git"] + list(args),
+            cwd=self.notes_dir,
+            capture_output=True,
+            text=True,
+            check=check,
+        )
+
+    def git_is_initialized(self) -> bool:
+        return (self.notes_dir / ".git").exists()
+
+    def git_init_remote(self) -> dict:
+        s = self._settings
+        if not s.git_token or not s.git_owner or not s.git_repo:
+            return {"success": False, "message": "Missing git settings: token, owner, repo"}
+
+        if not self.git_is_initialized():
+            self._git("init")
+            logger.info("Git repo initialized")
+            # Create .gitignore excluding _conflicts/
+            gitignore = self.notes_dir / ".gitignore"
+            if not gitignore.exists():
+                gitignore.write_text(f"{CONFLICT_DIR}/\n", encoding="utf-8")
+                self._git("add", ".gitignore")
+                self._git("commit", "-m", "Initial commit", check=False)
+
+        remote_url = f"https://{s.git_token}@github.com/{s.git_owner}/{s.git_repo}.git"
+        existing = self._git("remote", "get-url", "origin", check=False).stdout.strip()
+        if existing:
+            if existing != remote_url:
+                self._git("remote", "set-url", "origin", remote_url)
+                logger.info(f"Updated remote URL")
+        else:
+            self._git("remote", "add", "origin", remote_url)
+            logger.info(f"Remote origin added")
+
+        branch = s.git_branch or "main"
+        try:
+            self._git("fetch", "origin", check=False)
+            self._git("checkout", "-b", branch, check=False)
+            self._git("branch", "--set-upstream-to", f"origin/{branch}", branch, check=False)
+        except Exception:
+            pass
+
+        return {"success": True, "message": "Git initialized and remote configured"}
+
+    def git_status(self) -> GitStatusResponse:
+        if not self.git_is_initialized():
+            return GitStatusResponse(initialized=False, has_remote=False, status="no_repo")
+
+        result = GitStatusResponse(initialized=True, has_remote=False)
+
+        has_remote = self._git("remote", check=False).stdout.strip()
+        result.has_remote = bool(has_remote)
+        if has_remote:
+            result.remote_url = self._git("remote", "get-url", "origin", check=False).stdout.strip()
+
+        branch = self._git("rev-parse", "--abbrev-ref", "HEAD", check=False).stdout.strip()
+        result.current_branch = branch if branch and branch != "HEAD" else None
+
+        try:
+            status_out = self._git("status", "--porcelain", check=False).stdout
+            lines = [l for l in status_out.split("\n") if l.strip()]
+            result.staged = sum(1 for l in lines if l[0] != " " and l[0] != "?")
+            result.unstaged = sum(1 for l in lines if l[1] != " " and l[0] != "?")
+            result.untracked = sum(1 for l in lines if l.startswith("??"))
+            result.status = "clean" if not lines else "dirty"
+        except Exception:
+            pass
+
+        try:
+            with open(self.notes_dir / ".git" / "MONOS_LAST_SYNC", "r") as f:
+                result.last_sync = f.read().strip()
+        except Exception:
+            pass
+
+        if has_remote:
+            try:
+                self._git("fetch", "origin", check=False)
+                rev = self._git("rev-list", "--left-right", "--count", f"{branch}...origin/{branch}", check=False).stdout.strip()
+                parts = rev.split("\t")
+                if len(parts) == 2:
+                    result.behind = int(parts[0])
+                    result.ahead = int(parts[1])
+                if result.behind > 0:
+                    result.status = "behind"
+                elif result.ahead > 0:
+                    result.status = "ahead" if result.status == "clean" else result.status
+            except Exception:
+                pass
+
+            try:
+                conflict_files = self._git("diff", "--name-only", "--diff-filter=U", check=False).stdout.strip()
+                if conflict_files:
+                    result.conflicts = [f.strip() for f in conflict_files.split("\n") if f.strip()]
+                    result.status = "conflict"
+            except Exception:
+                pass
+
+        return result
+
+    def sync_git(self, message: Optional[str] = None) -> dict:
+        if not self.git_is_initialized():
+            init = self.git_init_remote()
+            if not init["success"]:
+                return init
+
+        s = self._settings
+        device = s.device_name or "Monos"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        commit_msg = f"Commit from {device} on {timestamp}"
+
+        conflicts = []
+        try:
+            # Stage all
+            self._git("add", "-A")
+
+            # Check if there's something to commit
+            status = self._git("status", "--porcelain", check=False).stdout.strip()
+            if status:
+                self._git("commit", "-m", commit_msg)
+                logger.info(f"Committed changes: {commit_msg}")
+
+            # Fetch remote
+            fetch_result = self._git("fetch", "origin", check=False)
+            if fetch_result.returncode != 0:
+                return {"success": False, "message": f"Failed to fetch: {fetch_result.stderr}", "conflicts": []}
+
+            branch = s.git_branch or "main"
+
+            # Try to pull (merge)
+            pull_result = self._git("pull", "origin", branch, check=False)
+
+            if pull_result.returncode != 0:
+                if "conflict" in pull_result.stderr.lower() or "merge conflict" in pull_result.stdout.lower():
+                    # Save conflict files
+                    conflict_files = self._git("diff", "--name-only", "--diff-filter=U", check=False).stdout.strip()
+                    if conflict_files:
+                        cfs = [f.strip() for f in conflict_files.split("\n") if f.strip()]
+                        conflict_dir = self.notes_dir / CONFLICT_DIR
+                        for cf in cfs:
+                            dst = conflict_dir / cf
+                            dst.parent.mkdir(parents=True, exist_ok=True)
+                            # Save remote version (theirs — stage 3)
+                            theirs = subprocess.run(
+                                ["git", "show", f":3:{cf}"],
+                                cwd=self.notes_dir, capture_output=True, text=True
+                            )
+                            if theirs.returncode == 0:
+                                dst.write_text(theirs.stdout, encoding="utf-8")
+                            conflicts.append(cf)
+                            logger.info(f"Conflict saved: {cf} -> {dst}")
+
+                    # Abort merge, use ours (local) for conflicted files
+                    self._git("merge", "--abort", check=False)
+                    self._git("add", "-A")
+                    self._git("commit", "-m", f"{commit_msg} (with conflict resolution)", check=False)
+                    logger.info("Conflicts aborted, local changes committed")
+
+            # Push
+            push_result = self._git("push", "origin", branch, check=False)
+            if push_result.returncode != 0:
+                return {"success": False, "message": f"Push failed: {push_result.stderr}", "conflicts": conflicts}
+
+            # Save last sync time
+            with open(self.notes_dir / ".git" / "MONOS_LAST_SYNC", "w") as f:
+                f.write(timestamp)
+
+            self.index_all_files()
+            msg = "Sync successful"
+            if conflicts:
+                msg += f". {len(conflicts)} conflict(s) saved to {CONFLICT_DIR}/"
+            return {"success": True, "message": msg, "conflicts": conflicts}
+
+        except Exception as e:
+            logger.error(f"Git sync error: {e}")
+            return {"success": False, "message": f"Error: {str(e)}", "conflicts": conflicts}
+
+    # ===== GitHub API =====
+
+    def github_request(self, token: str, path: str) -> dict:
+        url = f"https://api.github.com{path}"
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Accept", "application/vnd.github+json")
+        req.add_header("User-Agent", "Monos-WebUI/1.0")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            logger.error(f"GitHub API error {e.code}: {body}")
+            raise Exception(f"GitHub API error {e.code}: {body}")
+        except Exception as e:
+            logger.error(f"GitHub request failed: {e}")
+            raise
+
+    def get_github_repos(self, token: str) -> List[dict]:
+        repos = []
+        page = 1
+        while True:
+            data = self.github_request(token, f"/user/repos?per_page=100&page={page}&sort=updated")
+            if not data:
+                break
+            repos.extend(data)
+            page += 1
+            if page > 10:
+                break
+        return [
+            {
+                "name": r["name"],
+                "full_name": r["full_name"],
+                "private": r["private"],
+                "default_branch": r["default_branch"],
+            }
+            for r in repos
+        ]
+
+    def get_github_branches(self, token: str, owner: str, repo: str) -> List[str]:
+        data = self.github_request(token, f"/repos/{owner}/{repo}/branches?per_page=100")
+        return [b["name"] for b in data]
+
+    def get_github_user(self, token: str) -> str:
+        data = self.github_request(token, "/user")
+        return data.get("login", "")
+
+    # ===== Indexing =====
 
     def index_all_files(self):
         logger.info("Starting background indexing...")
@@ -84,6 +331,8 @@ class NotesService:
             files_on_disk = {}
             for item in self.notes_dir.rglob("*"):
                 if item.name.startswith(".") or item.name == "README.md":
+                    continue
+                if CONFLICT_DIR in item.parts:
                     continue
                 rel_path = item.relative_to(self.root_path).as_posix()
                 mtime = datetime.fromtimestamp(item.stat().st_mtime)
@@ -105,7 +354,6 @@ class NotesService:
                     title = item.name.replace(".md", "")
                     tags = []
                     category = None
-                    status = None
                     date_created = None
 
                     if not is_dir and item.suffix == ".md":
@@ -117,7 +365,6 @@ class NotesService:
                             title = metadata_dict.get("title", title)
                             tags = metadata_dict.get("tags", [])
                             category = metadata_dict.get("category")
-                            status = metadata_dict.get("status")
                             date_str = metadata_dict.get("date")
                             if date_str:
                                 try:
@@ -130,16 +377,11 @@ class NotesService:
                             content = raw
 
                     new_entry = NoteIndex(
-                        path=path,
-                        name=item.name,
-                        title=title,
+                        path=path, name=item.name, title=title,
                         is_dir=is_dir,
                         parent_path=str(item.parent.relative_to(self.root_path)),
-                        content=content,
-                        tags=json.dumps(tags),
-                        category=category,
-                        status=status,
-                        date_created=date_created,
+                        content=content, tags=json.dumps(tags),
+                        category=category, date_created=date_created,
                         last_modified=mtime,
                         hash=self._get_file_hash(item) if not is_dir else ""
                     )
@@ -155,7 +397,6 @@ class NotesService:
                         title = item.name.replace(".md", "")
                         tags = json.loads(entry.tags) if entry.tags else []
                         category = entry.category
-                        status = entry.status
                         date_created = entry.date_created
 
                         if not is_dir and item.suffix == ".md":
@@ -167,7 +408,6 @@ class NotesService:
                                 title = metadata_dict.get("title", title)
                                 tags = metadata_dict.get("tags", tags)
                                 category = metadata_dict.get("category", category)
-                                status = metadata_dict.get("status", status)
                                 date_str = metadata_dict.get("date")
                                 if date_str:
                                     try:
@@ -183,7 +423,6 @@ class NotesService:
                         entry.content = content
                         entry.tags = json.dumps(tags)
                         entry.category = category
-                        entry.status = status
                         entry.date_created = date_created
                         entry.last_modified = mtime
                         entry.hash = self._get_file_hash(item) if not is_dir else ""
@@ -235,10 +474,8 @@ class NotesService:
             is_notes_root = rel_path == "notes"
             children = session.query(NoteIndex).filter(NoteIndex.parent_path == rel_path).all()
             node = DirectoryNode(
-                path=rel_path,
-                name=path.name if not is_notes_root else "notes",
-                is_dir=True,
-                size=0, size_human="", metadata=None,
+                path=rel_path, name=path.name if not is_notes_root else "notes",
+                is_dir=True, size=0, size_human="", metadata=None,
             )
             for entry in sorted(children, key=lambda e: (not e.is_dir, e.name.lower())):
                 if entry.is_dir:
@@ -293,7 +530,6 @@ class NotesService:
                     date=entry.date_created.isoformat() if entry.date_created else None,
                     category=entry.category,
                     tags=tags,
-                    status=entry.status,
                 )
         finally:
             session.close()
@@ -342,7 +578,7 @@ class NotesService:
                 parent_path=str(file_path.parent.relative_to(self.root_path)),
                 content=body, tags=json.dumps(tags),
                 category=category if category else None,
-                status="draft", date_created=datetime.now(),
+                date_created=datetime.now(),
                 last_modified=datetime.now(),
                 hash=self._get_file_hash(file_path),
             ))
@@ -358,7 +594,6 @@ class NotesService:
         title: Optional[str] = None,
         category: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        status: Optional[str] = None,
     ) -> FileMetadata:
         session = get_session(self.engine)
         try:
@@ -371,8 +606,6 @@ class NotesService:
                 entry.category = category if category else None
             if tags is not None:
                 entry.tags = json.dumps(tags)
-            if status is not None:
-                entry.status = status if status else None
             session.commit()
             current_tags = json.loads(entry.tags) if entry.tags else []
             return FileMetadata(
@@ -380,7 +613,6 @@ class NotesService:
                 date=entry.date_created.isoformat() if entry.date_created else None,
                 category=entry.category,
                 tags=current_tags,
-                status=entry.status,
             )
         finally:
             session.close()
@@ -462,24 +694,6 @@ class NotesService:
             session.commit()
         finally:
             session.close()
-
-    def sync_git(self, message: Optional[str] = None) -> dict:
-        if message is None:
-            message = self._settings.git_commit_message
-        try:
-            proc = subprocess.run(["git", "status", "--porcelain"], cwd=self.root_path, capture_output=True, text=True, check=True)
-            if proc.stdout.strip():
-                subprocess.run(["git", "add", "-A"], cwd=self.root_path, check=True)
-                subprocess.run(["git", "commit", "-m", message], cwd=self.root_path, check=True)
-            subprocess.run(["git", "fetch", "origin"], cwd=self.root_path, check=True)
-            branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.root_path, capture_output=True, text=True, check=True).stdout.strip()
-            subprocess.run(["git", "pull", "--rebase", "origin", branch], cwd=self.root_path, check=True)
-            subprocess.run(["git", "push", "origin", branch], cwd=self.root_path, check=True)
-            self.index_all_files()
-            return {"success": True, "message": "Sync successful"}
-        except Exception as e:
-            logger.error(f"Git error: {e}")
-            return {"success": False, "message": f"Error: {str(e)}"}
 
     def format_notes(self) -> dict:
         try:

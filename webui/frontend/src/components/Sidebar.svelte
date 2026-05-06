@@ -95,6 +95,7 @@
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
   let isDragOverRoot = false;
+  let isSyncing = false;
 
   // Reactive filtering
   $: filteredTree = (() => {
@@ -411,6 +412,21 @@
     }
   }
 
+  async function handleSync() {
+    if (isSyncing) return;
+    isSyncing = true;
+    try {
+      const r = await fetch('/api/git/sync', { method: 'POST' });
+      const data = await r.json();
+      await loadTree();
+      await loadDirectories();
+    } catch (e) {
+      console.error('Sync failed:', e);
+    } finally {
+      isSyncing = false;
+    }
+  }
+
   function clearSearch() {
     searchQuery = '';
     searchResults = [];
@@ -578,9 +594,35 @@
   </div>
 
   <!-- Stats Footer -->
-  {#if tree && !searchContent}
-    <div class="px-6 py-4 border-t border-[var(--border-subtle)] text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
-      {totalNotes} Notes
+  {#if !searchContent}
+    <div class="px-6 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] uppercase tracking-widest">
+      <span class="text-[var(--text-secondary)]">{tree ? totalNotes : 0} Notes</span>
+      <div class="flex items-center gap-3">
+        <button
+          on:click={handleSync}
+          disabled={isSyncing}
+          class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-30"
+          title="Sync with Git"
+        >
+          {#if isSyncing}
+            <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+          {:else}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          {/if}
+        </button>
+        <button
+          on:click={() => dispatch('openSettings')}
+          class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          title="Settings"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
     </div>
   {/if}
 
@@ -657,8 +699,9 @@
 
 <!-- Create Folder Modal -->
 {#if showCreateFolderModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50" on:keydown={(e) => e.key === 'Escape' && (showCreateFolderModal = false)}>
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl" on:click|stopPropagation>
       <h2 class="text-2xl font-serif mb-8 tracking-tight">New Section</h2>
       <div class="space-y-8">
         <div>
@@ -671,7 +714,7 @@
         </div>
         <div>
           <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Folder Name</label>
-          <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder="e.g. AI" class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" />
+          <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder="e.g. AI" class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
         </div>
       </div>
       <div class="flex gap-6 mt-12">
@@ -686,21 +729,14 @@
 
 <!-- Create Note Modal -->
 {#if showCreateModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50" on:keydown={(e) => e.key === 'Escape' && (showCreateModal = false)}>
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl" on:click|stopPropagation>
       <h2 class="text-2xl font-serif mb-8 tracking-tight">New Note</h2>
       <div class="space-y-8">
         <div>
           <label for="note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Title</label>
-          <input id="note-title" type="text" bind:value={newNoteTitle} placeholder="Name your thought..." class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" />
-        </div>
-        <div>
-          <label for="note-location" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Location</label>
-          <select id="note-location" bind:value={newNoteCategory} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 text-sm outline-none appearance-none cursor-pointer">
-            {#each directoryList as dir}
-              <option value={dir}>{dir || 'Root'}</option>
-            {/each}
-          </select>
+          <input id="note-title" type="text" bind:value={newNoteTitle} placeholder="Name your thought..." class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newNoteTitle.trim()) createNewNote(); if (e.key === 'Escape') showCreateModal = false; }} />
         </div>
       </div>
       <div class="flex gap-6 mt-12">

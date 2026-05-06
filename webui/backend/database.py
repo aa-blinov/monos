@@ -18,7 +18,6 @@ class NoteIndex(Base):
     content = Column(Text)
     tags = Column(String)
     category = Column(String, nullable=True)
-    status = Column(String, nullable=True)
     date_created = Column(DateTime, nullable=True)
     last_modified = Column(DateTime)
     last_opened = Column(DateTime, default=datetime.datetime.now)
@@ -43,7 +42,7 @@ def get_engine(db_path: str):
     try:
         with engine.connect() as conn:
             from sqlalchemy import text
-            conn.execute(text("SELECT date_created FROM notes_index LIMIT 1"))
+            conn.execute(text("SELECT category FROM notes_index LIMIT 1"))
     except Exception:
         print("Schema mismatch detected, resetting database...")
         Base.metadata.drop_all(bind=engine)
