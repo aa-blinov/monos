@@ -163,7 +163,7 @@
 </header>
 
 {#if showSettings}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-12 w-[32rem] shadow-2xl">
       <h3 class="text-3xl font-serif mb-8 tracking-tight">Settings</h3>
 

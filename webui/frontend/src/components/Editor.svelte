@@ -265,7 +265,7 @@
           {#if isSaving}
             <span class="text-[var(--text-secondary)]">Saving…</span>
           {:else if saveMessage === 'Saved'}
-            <span class="text-green-600/60 dark:text-green-400/60">Saved</span>
+            <span class="text-[var(--green)]/70">Saved</span>
           {:else if saveMessage === 'Save failed'}
             <span class="text-red-400">Save failed</span>
           {/if}
@@ -416,7 +416,7 @@
                   {@html paragraph
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/\`(.*?)\`/g, '<code class="bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
+                    .replace(/\`(.*?)\`/g, '<code class="bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
                     .replace(/\[\[(.*?)\]\]/g, (match, p1) => {
                       const [target, label] = p1.split('|');
                       return `<button class="wikilink underline underline-offset-4 decoration-[var(--border-subtle)] hover:decoration-[var(--text-primary)] transition-colors" data-target="${target.trim()}">${(label || target).trim()}</button>`;
@@ -452,7 +452,7 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteConfirm}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 lg:p-12 w-[90%] lg:w-[32rem] shadow-2xl">
       <h3 class="text-2xl lg:text-3xl font-serif mb-6 tracking-tight">Archive this thought?</h3>
       <p class="text-[var(--text-secondary)] text-base lg:text-lg mb-10 font-serif italic">

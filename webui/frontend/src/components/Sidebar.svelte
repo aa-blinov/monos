@@ -604,7 +604,7 @@
 
 <!-- Rename Modal -->
 {#if showRenameModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
       <h2 class="text-2xl font-serif mb-8 tracking-tight">Rename {contextMenu.isDir ? 'Section' : 'Note'}</h2>
       <div class="space-y-8">
@@ -632,7 +632,7 @@
 
 <!-- Icon Picker Modal -->
 {#if showIconModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-[28rem] shadow-2xl">
       <h2 class="text-2xl font-serif mb-8 tracking-tight">Section Icon</h2>
       <div class="grid grid-cols-6 gap-3">
@@ -657,7 +657,7 @@
 
 <!-- Create Folder Modal -->
 {#if showCreateFolderModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
       <h2 class="text-2xl font-serif mb-8 tracking-tight">New Section</h2>
       <div class="space-y-8">
@@ -686,7 +686,7 @@
 
 <!-- Create Note Modal -->
 {#if showCreateModal}
-  <div class="fixed inset-0 bg-black/20 dark:bg-white/5 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-96 shadow-2xl">
       <h2 class="text-2xl font-serif mb-8 tracking-tight">New Note</h2>
       <div class="space-y-8">
