@@ -1,5 +1,5 @@
 <script>
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -14,6 +14,11 @@
   let isSaving = false;
   let isDeleting = false;
   let showDeleteConfirm = false;
+  let autosaveTimer;
+  let lastSaved = null;
+  let saveMessage = '';
+  let saveMessageTimeout;
+  const AUTOSAVE_DELAY = 1500;
   let activeTab = 'reader'; // 'source' or 'reader' for mobile
   let isSyncScrollEnabled = true;
 
@@ -23,6 +28,12 @@
   let editorRef;
   let previewRef;
   let activePane = null; // 'editor' or 'preview'
+
+  let showMetadata = false;
+  let editableStatus = '';
+  let editableTags = [];
+  let metadataTimer;
+  const METADATA_DELAY = 1200;
 
   function handleEditorScroll() {
     if (!isSyncScrollEnabled || activePane !== 'editor' || !editorRef || !previewRef) return;
@@ -76,28 +87,49 @@
     try {
       isLoading = true;
       const response = await fetch(`/api/file?path=${encodeURIComponent(currentFile.path)}`);
+      if (!response.ok) throw new Error('File not found');
       const data = await response.json();
       content = data.content;
       editedContent = content;
 
       const infoResponse = await fetch(`/api/file-info?path=${encodeURIComponent(currentFile.path)}`);
+      if (!infoResponse.ok) throw new Error('File info not found');
       fileInfo = await infoResponse.json();
       title = fileInfo.metadata?.title || currentFile.name.replace('.md', '');
       editedTitle = title;
+      editableStatus = fileInfo.metadata?.status || '';
+      editableTags = fileInfo.metadata?.tags || [];
       
       await loadBacklinks();
     } catch (error) {
       console.error('Failed to load file:', error);
+      content = '';
+      editedContent = '';
+      title = '';
+      editedTitle = '';
+      fileInfo = null;
+      dispatch('fileDeleted');
     } finally {
       isLoading = false;
     }
   }
 
+  function scheduleAutosave() {
+    if (!currentFile || !hasUnsavedChanges() || isSaving) return;
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveContent, AUTOSAVE_DELAY);
+  }
+
   async function saveContent() {
-    if (!currentFile) return;
+    if (!currentFile || !hasUnsavedChanges() || isSaving) return;
+
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
 
     try {
       isSaving = true;
+      saveMessage = 'Saving…';
+
       const response = await fetch(`/api/file?path=${encodeURIComponent(currentFile.path)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,11 +141,71 @@
       content = editedContent;
       title = editedTitle;
       await loadFile();
+      saveMessage = 'Saved';
+      lastSaved = Date.now();
+      saveMessageTimeout = setTimeout(() => {
+        if (saveMessage === 'Saved') saveMessage = '';
+      }, 3000);
     } catch (error) {
-      alert('Ошибка при сохранении: ' + error.message);
+      saveMessage = 'Save failed';
+      saveMessageTimeout = setTimeout(() => {
+        if (saveMessage === 'Save failed') saveMessage = '';
+      }, 5000);
+      console.error('Save failed:', error);
     } finally {
       isSaving = false;
     }
+  }
+
+  function handleKeydown(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      saveContent();
+    }
+  }
+
+  $: editedContent, editedTitle, isSaving, scheduleAutosave();
+
+  $: if (fileInfo) editedTitle, scheduleMetadataSave();
+
+  async function saveMetadataFields() {
+    if (!currentFile || !fileInfo) return;
+    if (metadataTimer) clearTimeout(metadataTimer);
+    const payload = { title: editedTitle, status: editableStatus || null, tags: editableTags };
+    try {
+      const response = await fetch(`/api/file/metadata?path=${encodeURIComponent(currentFile.path)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Failed to save metadata');
+      const meta = await response.json();
+      title = meta.title || title;
+    } catch (e) {
+      console.error('Metadata save failed:', e);
+    }
+  }
+
+  function scheduleMetadataSave() {
+    if (metadataTimer) clearTimeout(metadataTimer);
+    metadataTimer = setTimeout(saveMetadataFields, METADATA_DELAY);
+  }
+
+  function addTag(e) {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      editableTags = [...editableTags, e.target.value.trim()];
+      e.target.value = '';
+      scheduleMetadataSave();
+    }
+  }
+
+  function removeTag(i) {
+    editableTags = editableTags.filter((_, idx) => idx !== i);
+    scheduleMetadataSave();
+  }
+
+  function handleStatusChange() {
+    scheduleMetadataSave();
   }
 
   async function deleteFile() {
@@ -139,28 +231,14 @@
     return editedContent !== content || editedTitle !== title;
   }
 
-  function parseFrontmatter(text) {
-    if (text.startsWith('---')) {
-      const parts = text.split('---');
-      if (parts.length >= 3) {
-        const yamlStr = parts[1];
-        const metadata = {};
-        yamlStr.split('\n').forEach(line => {
-          const [key, ...valParts] = line.split(':');
-          if (key && valParts.length > 0) {
-            metadata[key.trim()] = valParts.join(':').trim();
-          }
-        });
-        return {
-          metadata,
-          content: parts.slice(2).join('---').trim()
-        };
-      }
-    }
-    return { metadata: null, content: text };
-  }
-
   onMount(loadFile);
+
+  onDestroy(() => {
+    if (hasUnsavedChanges() && currentFile) {
+      const blob = new Blob([JSON.stringify({ content: editedContent })], { type: 'application/json' });
+      navigator.sendBeacon(`/api/file?path=${encodeURIComponent(currentFile.path)}`, blob);
+    }
+  });
 
   $: if (currentFile) loadFile();
 </script>
@@ -183,15 +261,15 @@
 
       <!-- Action Buttons -->
       <div class="flex items-center gap-4 lg:gap-6 lg:pt-2">
-        {#if hasUnsavedChanges()}
-          <button
-            on:click={saveContent}
-            disabled={isSaving}
-            class="text-xs lg:text-sm font-bold uppercase tracking-widest hover:opacity-60 transition"
-          >
-            {isSaving ? 'Saving' : 'Save'}
-          </button>
-        {/if}
+        <div class="text-[10px] lg:text-xs font-mono uppercase tracking-widest min-w-[4rem] text-right">
+          {#if isSaving}
+            <span class="text-[var(--text-secondary)]">Saving…</span>
+          {:else if saveMessage === 'Saved'}
+            <span class="text-green-600/60 dark:text-green-400/60">Saved</span>
+          {:else if saveMessage === 'Save failed'}
+            <span class="text-red-400">Save failed</span>
+          {/if}
+        </div>
 
         <button
           on:click={() => showDeleteConfirm = true}
@@ -215,6 +293,50 @@
     </div>
   </div>
 
+  <!-- Metadata -->
+  {#if fileInfo}
+    <div class="px-6 lg:px-12 pb-4 border-b border-[var(--border-subtle)]">
+      <button
+        on:click={() => showMetadata = !showMetadata}
+        class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+      >
+        Details {showMetadata ? '−' : '+'}
+      </button>
+      {#if showMetadata}
+        <div class="mt-3 space-y-3 text-xs">
+          <div class="flex items-center gap-3">
+            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] w-20 shrink-0">State</span>
+            <select
+              bind:value={editableStatus}
+              on:change={handleStatusChange}
+              class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-1 outline-none focus:border-[var(--text-primary)] transition-colors text-xs"
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] w-20 shrink-0 pt-1">Tags</span>
+            <div class="flex-1 flex flex-wrap gap-2 items-center">
+              {#each editableTags as tag, i}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 border border-[var(--border-subtle)] text-[10px]">
+                  #{tag}
+                  <button on:click={() => removeTag(i)} class="hover:opacity-60">✕</button>
+                </span>
+              {/each}
+              <input
+                placeholder="Add tag..."
+                on:keydown={addTag}
+                class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-xs min-w-[80px]"
+              />
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <!-- Content Area -->
   {#if isLoading}
     <div class="flex-1 flex items-center justify-center">
@@ -234,7 +356,7 @@
             </label>
           </div>
           <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
-            {editedContent.length} chars
+            {(editedContent || '').length} chars
           </span>
         </div>
         <textarea
@@ -242,6 +364,7 @@
           bind:value={editedContent}
           on:scroll={handleEditorScroll}
           on:mouseenter={() => activePane = 'editor'}
+          on:keydown={handleKeydown}
           class="flex-1 px-6 lg:px-12 py-6 lg:py-10 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30"
           placeholder="Begin writing..."
         />
@@ -263,19 +386,7 @@
         >
           <!-- Markdown Preview -->
           <div class="max-w-2xl mx-auto">
-            {#if parseFrontmatter(editedContent).metadata}
-              <div class="mb-12 pb-8 border-b border-[var(--border-subtle)] opacity-60">
-                <div class="grid grid-cols-2 gap-4 text-xs font-mono">
-                  {#each Object.entries(parseFrontmatter(editedContent).metadata) as [key, value]}
-                    {#if value}
-                      <span class="text-[var(--text-secondary)]">{key}:</span>
-                      <span class="text-[var(--text-primary)]">{value}</span>
-                    {/if}
-                  {/each}
-                </div>
-              </div>
-            {/if}
-            {#each parseFrontmatter(editedContent).content.split('\n\n') as paragraph}
+            {#each (editedContent || '').split('\n\n') as paragraph}
               {#if paragraph.startsWith('# ')}
                 <h1 class="text-xl font-bold mb-6">
                   {paragraph.replace(/^#\s+/, '')}

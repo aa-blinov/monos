@@ -1,13 +1,3 @@
----
-title: Retrieval-Augmented Generation - исчерпывающий обзор современного подхода к решению проблем LLM
-date: 2024-05-02T18:00:00+00:00
-category: Образование/Большие языковые модели
-tags: [RAG, LLM, NLP, Information Retrieval]
-status: published
-author: Александр Блинов
-source: https://arxiv.org/abs/2312.10997, https://arxiv.org/abs/2005.11401, https://arxiv.org/abs/2310.03025, https://arxiv.org/abs/2401.08406
----
-
 # Retrieval-Augmented Generation. Полный обзор современного подхода к решению проблем больших языковых моделей
 
 > **В этой серии:** [Агенты на основе LLM](Агенты%20на%20основе%20LLM.md) — [ReAct](ReAct%20-%20Reasoning%20and%20Acting.md) — [Построение эффективных агентов](Построение%20эффективных%20агентов%20-%20практическое%20руководство.md) — [Архитектура мультиагентных систем](Архитектура%20мультиагентных%20систем.md)

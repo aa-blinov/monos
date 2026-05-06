@@ -14,6 +14,7 @@ from schemas import (
     CreateNoteRequest,
     DirectoryNode,
     FileInfo,
+    FileMetadata,
     FormatNotesResponse,
     GitSyncRequest,
     GitSyncResponse,
@@ -21,6 +22,7 @@ from schemas import (
     SearchRequest,
     SearchResult,
     UpdateNoteRequest,
+    UpdateMetadataRequest,
     Settings,
     SetIconRequest,
 )
@@ -151,6 +153,23 @@ async def update_file_content(path: str = Query(...), request: UpdateNoteRequest
     try:
         service.write_file(path, request.content)
         return {"message": "File updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/file/metadata", response_model=FileMetadata)
+async def update_file_metadata(path: str = Query(...), request: UpdateMetadataRequest = None):
+    """Обновить метаданные заметки (title, category, tags, status)"""
+    try:
+        return service.update_metadata(
+            file_path=path,
+            title=request.title,
+            category=request.category,
+            tags=request.tags,
+            status=request.status,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found in index")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

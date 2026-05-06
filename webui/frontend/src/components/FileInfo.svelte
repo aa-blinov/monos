@@ -8,7 +8,7 @@
    * @property {string} size_human - Human-readable size
    * @property {string} modified - Modified date
    * @property {string} created - Created date
-   * @property {Object} metadata - YAML frontmatter metadata
+   * @property {Object} metadata - Note metadata (from SQLite)
    */
 
   /** @type {FileInfoData} */
@@ -75,19 +75,9 @@
         </div>
       </div>
 
-      <!-- Metadata from YAML Frontmatter -->
+      <!-- Note Metadata (from SQLite) -->
       {#if fileInfo.metadata}
         <div class="pt-8 border-t border-[var(--border-subtle)] space-y-8">
-          <!-- Category -->
-          {#if fileInfo.metadata.category}
-            <div>
-              <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Sphere</span>
-              <p class="text-sm font-medium uppercase tracking-wider">
-                {fileInfo.metadata.category}
-              </p>
-            </div>
-          {/if}
-
           <!-- Status -->
           {#if fileInfo.metadata.status}
             <div>

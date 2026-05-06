@@ -1,10 +1,3 @@
----
-title: EORA + KODE. План-разработки
-date: 2026-05-02T16:06:02+00:00
-category: Работа/EORA/Проекты/KODE
-tags: []
-status: draft
----
 ## Команда
 
 - **Full-time (EORA):**

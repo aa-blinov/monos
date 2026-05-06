@@ -1,10 +1,3 @@
----
-title: KODE - МФЦ
-date: 2026-05-02T16:06:02+00:00
-category: Работа/EORA/Проекты/KODE
-tags: []
-status: draft
----
 ![image-2.png](../../../../assets/images/image-2.png)
 
 **Цель**: сократить нагрузку на сотрудников МФЦ.

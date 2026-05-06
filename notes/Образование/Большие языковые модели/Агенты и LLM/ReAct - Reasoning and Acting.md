@@ -1,13 +1,3 @@
----
-title: "ReAct: Synergizing Reasoning and Acting in Language Models"
-date: 2024-01-15
-category: "Образование/Большие языковые модели"
-tags: ["LLM", "агенты", "ReAct", "reasoning", "acting", "prompting"]
-status: "published"
-source: "arXiv:2210.03629"
-related: ["Агенты на основе LLM", "Архитектура мультиагентных систем", "RAG"]
----
-
 # ReAct: Synergizing Reasoning and Acting in Language Models
 
 > **В этой серии:** [Агенты на основе LLM](Агенты%20на%20основе%20LLM.md) — [Построение эффективных агентов](Построение%20эффективных%20агентов%20-%20практическое%20руководство.md) — [Архитектура мультиагентных систем](Архитектура%20мультиагентных%20систем.md) — [RAG](RAG.md)

@@ -11,5 +11,5 @@ RUN npm install --legacy-peer-deps
 # Expose Vite dev server port
 EXPOSE 5173
 
-# Run Vite dev server with host 0.0.0.0
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+# Install dependencies on start (syncs with mounted package.json) and run Vite
+CMD sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 5173"

@@ -96,9 +96,9 @@
 <div class="text-xs group">
   <button
     class="w-full flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all border-l-2 text-left {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
-    class:border-[var(--text-primary)]={selectedPath === node.path}
-    class:border-transparent={selectedPath !== node.path}
-    class:bg-[var(--border-subtle)]={selectedPath === node.path}
+    class:border-[var(--text-primary)]={selectedPath === node.path || (node.is_dir && isDragOver)}
+    class:border-transparent={selectedPath !== node.path && !(node.is_dir && isDragOver)}
+    class:bg-[var(--border-subtle)]={selectedPath === node.path || (node.is_dir && isDragOver)}
     on:click={handleSelect}
     on:contextmenu={onRightClick}
     on:keydown={(e) => e.key === 'Enter' && handleSelect()}

@@ -1,10 +1,3 @@
----
-title: Deep Packet Inspection. Введение
-date: 2026-05-02T16:06:02+00:00
-category: Работа/Исследования DPI
-tags: []
-status: draft
----
 ## Deep Packet Inspection: методы, современные средства обхода и разработка утилит противодействия
 
 ### **Введение**

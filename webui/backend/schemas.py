@@ -9,12 +9,21 @@ from pydantic import BaseModel, Field
 
 
 class FileMetadata(BaseModel):
-    """YAML фронтматтер заметки"""
+    """Метаданные заметки"""
 
     title: Optional[str] = None
     date: Optional[str] = None
     category: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
+    status: Optional[str] = None
+
+
+class UpdateMetadataRequest(BaseModel):
+    """Запрос на обновление метаданных"""
+
+    title: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
     status: Optional[str] = None
 
 

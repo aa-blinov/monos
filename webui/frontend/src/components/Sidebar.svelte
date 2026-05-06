@@ -94,6 +94,7 @@
 
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
+  let isDragOverRoot = false;
 
   // Reactive filtering
   $: filteredTree = (() => {
@@ -388,16 +389,44 @@
     }
   }
 
+  function handleRootDragOver(e) {
+    if (e.target.closest('[draggable]')) return;
+    e.preventDefault();
+    isDragOverRoot = true;
+  }
+
+  function handleRootDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      isDragOverRoot = false;
+    }
+  }
+
+  async function handleRootDrop(e) {
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    isDragOverRoot = false;
+    const sourcePath = e.dataTransfer.getData('text/plain');
+    if (sourcePath) {
+      await handleMoveFile({ detail: { sourcePath, targetPath: 'notes' } });
+    }
+  }
+
   function clearSearch() {
     searchQuery = '';
     searchResults = [];
   }
 
+  function resetDragOver() { isDragOverRoot = false; }
+
   onMount(() => {
     loadTree();
     loadDirectories();
     window.addEventListener('click', closeContextMenu);
-    return () => window.removeEventListener('click', closeContextMenu);
+    window.addEventListener('dragend', resetDragOver);
+    return () => {
+      window.removeEventListener('click', closeContextMenu);
+      window.removeEventListener('dragend', resetDragOver);
+    };
   });
 </script>
 
@@ -471,15 +500,23 @@
 
   <!-- Tree View Header -->
   {#if !searchQuery.trim() && !searchContent}
-    <div class="px-6 mb-4">
+    <div class="px-6 mb-4 flex items-center justify-between">
       <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
+      <button
+        on:click={() => { newNoteCategory = ''; showCreateModal = true; }}
+        class="text-[10px] uppercase tracking-widest font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+      >+ New</button>
     </div>
   {/if}
 
   <!-- Tree View or Search Results -->
   <div 
     class="flex-1 overflow-y-auto px-4 pb-6"
+    class:bg-[var(--border-subtle)]={isDragOverRoot}
     on:contextmenu|self={handleBackgroundRightClick}
+    on:dragover={handleRootDragOver}
+    on:dragleave={handleRootDragLeave}
+    on:drop={handleRootDrop}
   >
     {#if isSearching}
       <div class="flex items-center justify-center h-32">
@@ -512,6 +549,15 @@
       </div>
     {:else if tree}
       <div class="space-y-1">
+        {#if isDragOverRoot}
+          <div
+            class="mx-2 py-3 border-2 border-dashed border-[var(--text-secondary)]/30 rounded text-center"
+            on:dragover|preventDefault
+            on:drop={handleRootDrop}
+          >
+            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)]/50">Drop to root</span>
+          </div>
+        {/if}
         <!-- Render children directly to hide 'notes' root node -->
         {#each filteredTree.children || [] as node (node.path)}
           <FileTree 

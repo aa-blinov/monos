@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -8,7 +8,7 @@ Base = declarative_base()
 
 class NoteIndex(Base):
     __tablename__ = "notes_index"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     path = Column(String, unique=True, index=True)
     name = Column(String)
@@ -16,36 +16,38 @@ class NoteIndex(Base):
     is_dir = Column(Boolean, default=False)
     parent_path = Column(String, index=True)
     content = Column(Text)
-    tags = Column(String)  # Сохраняем как JSON-строку
+    tags = Column(String)
+    category = Column(String, nullable=True)
+    status = Column(String, nullable=True)
+    date_created = Column(DateTime, nullable=True)
     last_modified = Column(DateTime)
     last_opened = Column(DateTime, default=datetime.datetime.now)
-    hash = Column(String)  # Для быстрой проверки изменений
+    hash = Column(String)
 
 class NoteLink(Base):
     __tablename__ = "note_links"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     source_path = Column(String, index=True)
     target_name = Column(String, index=True)
 
 class FolderConfig(Base):
     __tablename__ = "folder_config"
-    
+
     path = Column(String, primary_key=True, index=True)
-    icon = Column(String)  # Имя иконки или эмодзи
+    icon = Column(String)
 
 def get_engine(db_path: str):
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-    
-    # Пытаемся проверить схему (простой сброс при ошибке для кэша)
+
     try:
         with engine.connect() as conn:
             from sqlalchemy import text
-            conn.execute(text("SELECT last_opened FROM notes_index LIMIT 1"))
+            conn.execute(text("SELECT date_created FROM notes_index LIMIT 1"))
     except Exception:
         print("Schema mismatch detected, resetting database...")
         Base.metadata.drop_all(bind=engine)
-    
+
     Base.metadata.create_all(bind=engine)
     return engine
 

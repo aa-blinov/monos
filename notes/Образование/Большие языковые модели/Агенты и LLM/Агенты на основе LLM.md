@@ -1,13 +1,3 @@
----
-title: Агенты на основе LLM - полный обзор
-date: 2026-05-02T16:06:02+00:00
-category: Образование/Большие языковые модели
-tags: [agents, LLM, AI, tools, reasoning]
-status: published
-author: Александр Блинов
-source: https://www.anthropic.com/research/building-effective-agents, https://arxiv.org/abs/2210.03629, https://arxiv.org/abs/2308.08155, https://arxiv.org/abs/2311.08435
----
-
 # Агенты на основе LLM: полный обзор от теории к практике
 
 > **В этой серии:** [ReAct](ReAct%20-%20Reasoning%20and%20Acting.md) — [Построение эффективных агентов](Построение%20эффективных%20агентов%20-%20практическое%20руководство.md) — [Архитектура мультиагентных систем](Архитектура%20мультиагентных%20систем.md) — [RAG](RAG.md)

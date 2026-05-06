@@ -1,10 +1,3 @@
----
-title: MediaSquash
-date: 2026-05-02T16:06:02+00:00
-category: Личное и Творчество/Идеи
-tags: []
-status: draft
----
 # Техническое задание: MediaSquash
 
 ## 1. Общие положения
