@@ -30,11 +30,15 @@
   async function loadSettings() {
     try {
       const r = await fetch('/api/settings');
-      if (!r.ok) return;
-    settings = await r.json();
-    if (settings.theme && themes[settings.theme]) {
-      $activeTheme = settings.theme;
-    }
+      if (r.ok) {
+        const saved = await r.json();
+        settings = { ...settings, ...saved };
+        if (saved.theme && themes[saved.theme]) {
+          $activeTheme = saved.theme;
+        }
+      }
+    } catch (e) { console.error(e); }
+  }
       if (settings.git_token) {
         isAuthenticated = true;
         await fetchRepos();

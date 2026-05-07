@@ -545,8 +545,9 @@ function gitExec(cmd, cwd) {
 
 function isGitRepo() {
   try {
-    execSync('git rev-parse --git-dir', { cwd: NOTES_DIR, stdio: 'ignore' });
-    return true;
+    const topLevel = execSync('git rev-parse --show-toplevel', { cwd: NOTES_DIR, stdio: 'pipe', encoding: 'utf-8' }).trim();
+    const notesDir = path.resolve(NOTES_DIR);
+    return topLevel === notesDir;
   } catch { return false; }
 }
 
