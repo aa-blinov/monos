@@ -3,6 +3,7 @@
   import RichEditor from './RichEditor.svelte';
   import SourceEditor from './SourceEditor.svelte';
   import { editMode } from '../stores.js';
+  import { Wand } from 'lucide-svelte';
 
   let richEditor;
 
@@ -279,9 +280,7 @@
       class="p-1 hover:opacity-60 transition-opacity disabled:opacity-30"
       title="Format all notes"
     >
-      <svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4h2l3 10h2l3-10h2M8 14h6M5 18h14" />
-      </svg>
+      <Wand size="18" class="lg:w-5 lg:h-5" />
     </button>
     <button
       on:click={() => showDeleteConfirm = true}
