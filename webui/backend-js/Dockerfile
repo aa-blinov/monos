@@ -2,17 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install git for sync operations
-RUN apk add --no-cache git
+# Install git and build tools for native modules
+RUN apk add --no-cache git python3 make g++
 
 # Copy package files and install
-COPY package.json package-lock.json ./
-RUN npm ci --only=production
+COPY package.json ./
+RUN npm install --omit=dev
 
 # Copy source
 COPY . .
-
-ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
