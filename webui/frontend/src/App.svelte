@@ -9,6 +9,9 @@
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode, searchQuery, searchResults, isSearching } from './stores.js';
 
+  let isDarkMode = false;
+  let sidebarOpen = true;
+  let isMobile = false;
   let sidebarComponent;
   let searchTimer;
 
