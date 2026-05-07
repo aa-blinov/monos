@@ -197,7 +197,8 @@
 
   function addTag(e) {
     if (e.key === 'Enter' && e.target.value.trim()) {
-      editableTags = [...editableTags, e.target.value.trim()];
+      const newTags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+      editableTags = [...editableTags, ...newTags];
       e.target.value = '';
       scheduleMetadataSave();
     }
