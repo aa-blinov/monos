@@ -193,6 +193,7 @@
       if (response.ok) {
         showIconModal = false;
         await loadTree();
+        if (selectedPath) expandToPath(tree, selectedPath);
       }
     } catch (err) {
       console.error('Failed to set icon:', err);
