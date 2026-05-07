@@ -22,18 +22,18 @@
       </svg>
     </button>
     <h1 class="text-xl lg:text-2xl font-serif font-medium tracking-tight whitespace-nowrap">Monos</h1>
-  </div>
-
-  <div class="flex items-center gap-3 lg:gap-6">
-    <button on:click={toggleEditorMode} class="text-sm font-medium hover:opacity-60 transition" title="Switch editor mode">
-      {$editMode === 'rich' ? 'Source' : 'Rich'}
-    </button>
 
     {#if $editMode === 'source'}
       <button on:click={() => $syncScroll = !$syncScroll} class="text-sm font-medium hover:opacity-60 transition {$syncScroll ? '' : 'opacity-30'}" title="Toggle sync scroll">
         Sync Scroll
       </button>
     {/if}
+  </div>
+
+  <div class="flex items-center gap-3 lg:gap-6">
+    <button on:click={toggleEditorMode} class="text-sm font-medium hover:opacity-60 transition" title="Switch editor mode">
+      {$editMode === 'rich' ? 'Source' : 'Rich'}
+    </button>
 
     <button on:click={toggleDarkMode} class="p-1 hover:opacity-60 transition-opacity" title="Toggle Theme">
       {#if isDarkMode}
