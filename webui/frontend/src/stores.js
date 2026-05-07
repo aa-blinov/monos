@@ -8,6 +8,9 @@ export const fontSize = writable(localStorage.getItem('fontSize') || 'medium');
 export const lineHeight = writable(localStorage.getItem('lineHeight') || 'normal');
 export const contentWidth = writable(localStorage.getItem('contentWidth') || 'medium');
 export const editorFontSize = writable(localStorage.getItem('editorFontSize') || 'medium');
+export const searchQuery = writable('');
+export const searchResults = writable([]);
+export const isSearching = writable(false);
 
 editMode.subscribe(value => {
   localStorage.setItem('editMode', value);

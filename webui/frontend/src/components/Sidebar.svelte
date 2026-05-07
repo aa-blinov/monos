@@ -19,8 +19,6 @@
   /** @type {Object} */
   let tree = null;
   /** @type {string} */
-  let searchQuery = '';
-  /** @type {string} */
   let selectedPath = null;
   /** @type {boolean} */
   let isLoading = true;
@@ -31,7 +29,6 @@
   let showCreateModal = false;
   /** @type {boolean} */
   let showCreateFolderModal = false;
-
   /** @type {string} */
   let newNoteTitle = '';
   /** @type {string} */
@@ -40,17 +37,9 @@
   let newFolderName = '';
   /** @type {string} */
   let newFolderNameInput = '';
-
   /** @type {boolean} */
   let isCreating = false;
 
-  /** @type {boolean} */
-  let searchContent = false;
-  /** @type {Array} */
-  let searchResults = [];
-  /** @type {boolean} */
-  let isSearching = false;
-  let searchTimeout;
   let allTags = [];
   let showTagSuggestions = false;
   let tagFilter = '';
@@ -61,10 +50,6 @@
       if (r.ok) allTags = await r.json();
     } catch {}
   }
-
-  $: tagFilter = searchQuery.startsWith('#') ? searchQuery.slice(1) : '';
-  $: filteredTags = allTags.filter(t => t.toLowerCase().includes(tagFilter.toLowerCase()));
-  $: showTagSuggestions = searchQuery.startsWith('#') && filteredTags.length > 0;
 
   /** @type {Array<string>} */
   let directoryList = [""];
@@ -98,13 +83,7 @@
   let isDragOverRoot = false;
   let isSyncing = false;
 
-  // Reactive filtering
-  $: filteredTree = (() => {
-    if (!tree) return null;
-    if (!searchQuery.trim() || searchContent) return tree;
-    const filtered = filterNode(tree, searchQuery);
-    return filtered || { ...tree, children: [] };
-  })();
+  $: filteredTree = tree;
 
   function countNotes(node) {
     if (!node) return 0;
@@ -214,48 +193,6 @@
     }
   }
 
-  async function performSearch() {
-    if (!searchQuery.trim() || !searchContent) {
-      searchResults = [];
-      return;
-    }
-
-    try {
-      isSearching = true;
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: searchQuery,
-          search_content: true
-        })
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      searchResults = await response.json();
-    } catch (err) {
-      error = `Search failed: ${err.message}`;
-    } finally {
-      isSearching = false;
-    }
-  }
-
-  function handleSearchInput() {
-    if (searchContent) {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(performSearch, 500);
-    }
-  }
-
-  function toggleSearchMode() {
-    searchContent = !searchContent;
-    if (searchContent && searchQuery.trim()) {
-      performSearch();
-    } else {
-      searchResults = [];
-    }
-  }
-
   async function createFolder() {
     if (!newFolderNameInput.trim()) return;
     const fullPath = newFolderName ? `${newFolderName}/${newFolderNameInput}` : newFolderNameInput;
@@ -301,23 +238,6 @@
     } finally {
       isCreating = false;
     }
-  }
-
-  function filterNode(node, query) {
-    if (!query.trim()) return node;
-    const lowerQuery = query.toLowerCase();
-    const nameMatches = node.name.toLowerCase().includes(lowerQuery);
-    if (node.is_dir) {
-      if (!node.children) return nameMatches ? { ...node, children: [] } : null;
-      const filteredChildren = node.children
-        .map(child => filterNode(child, query))
-        .filter(child => child !== null);
-      if (nameMatches || filteredChildren.length > 0) {
-        return { ...node, children: filteredChildren };
-      }
-      return null;
-    }
-    return nameMatches ? node : null;
   }
 
   function handleSelectFile(event) {
@@ -468,11 +388,6 @@
     }
   }
 
-  function clearSearch() {
-    searchQuery = '';
-    searchResults = [];
-  }
-
   function resetDragOver() { isDragOverRoot = false; }
 
   onMount(() => {
@@ -501,50 +416,8 @@
       </button>
     </div>
 
-    <!-- Search Section -->
-  <div class="px-4 py-5 space-y-4">
-    <div class="space-y-2">
-      <div class="relative group">
-        <input
-          type="text"
-          placeholder={searchContent ? "Search in notes..." : "Search files..."}
-          bind:value={searchQuery}
-          on:input={handleSearchInput}
-          class="w-full bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] py-2 text-sm outline-none transition-all placeholder-[var(--text-secondary)]"
-        />
-        {#if showTagSuggestions}
-          <div class="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-30 max-h-48 overflow-y-auto">
-            {#each filteredTags as tag}
-              <button
-                on:click={() => { searchQuery = `#${tag} `; tagFilter = ''; }}
-                class="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-secondary)] transition"
-              >#{tag}</button>
-            {/each}
-          </div>
-        {/if}
-        {#if searchQuery}
-          <button
-            on:click={clearSearch}
-            class="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:opacity-60 transition"
-          >
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        {/if}
-      </div>
-      
-      <button 
-        on:click={toggleSearchMode}
-        class="text-[10px] uppercase tracking-widest font-bold {searchContent ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'} hover:opacity-100 transition-opacity"
-      >
-        {searchContent ? "● Global Search" : "○ Global Search"}
-      </button>
-    </div>
-  </div>
-
   <!-- Recent Files Section -->
-  {#if !searchQuery.trim() && !searchContent && recentNotes.length > 0}
+  {#if recentNotes.length > 0}
     <div class="px-4 mb-4">
       <button 
         on:click={() => showRecent = !showRecent}
@@ -576,7 +449,6 @@
   </div>
 
   <!-- Tree View Header -->
-  {#if !searchQuery.trim() && !searchContent}
     <div class="px-4 mb-4 flex items-center justify-between">
       <h3 class="text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
       <button
@@ -584,7 +456,6 @@
         class="text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >+ New</button>
     </div>
-  {/if}
 
   <!-- Tree View or Search Results -->
   <div 
@@ -595,32 +466,7 @@
     on:dragleave={handleRootDragLeave}
     on:drop={handleRootDrop}
   >
-    {#if isSearching}
-      <div class="flex items-center justify-center h-32">
-        <span class="text-xs uppercase tracking-widest animate-pulse">Searching</span>
-      </div>
-    {:else if searchContent && searchQuery.trim()}
-      <div class="space-y-8 px-2">
-        {#each searchResults as result}
-          <button 
-            on:click={() => handleSelectFile({ detail: { path: result.path, name: result.name, isDir: false } })}
-            class="w-full text-left group block"
-          >
-            <div class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path.startsWith('notes/') ? result.path.slice(6) : result.path}</div>
-            <div class="text-sm font-serif font-medium group-hover:underline mb-2">{result.name}</div>
-            {#if result.excerpt}
-              <p class="text-xs text-[var(--text-secondary)] leading-relaxed italic line-clamp-3">
-                {@html result.excerpt.replace(new RegExp(searchQuery, 'gi'), match => `<mark class="bg-[var(--text-primary)] text-[var(--bg-primary)] px-0.5">${match}</mark>`)}
-              </p>
-            {/if}
-          </button>
-        {:else}
-          <div class="flex items-center justify-center h-32">
-            <span class="text-xs uppercase tracking-widest opacity-40">No matches found</span>
-          </div>
-        {/each}
-      </div>
-    {:else if isLoading}
+    {#if isLoading}
       <div class="flex items-center justify-center h-32">
         <span class="text-xs uppercase tracking-widest animate-pulse">Loading</span>
       </div>
@@ -642,8 +488,8 @@
             {node} 
             {selectedPath} 
             {expandedPaths}
-            searchMode={!!searchQuery.trim()}
-            expanded={!!searchQuery.trim() || expandedPaths.has(node.path)}
+            searchMode={false}
+            expanded={expandedPaths.has(node.path)}
             on:navigate={handleSelectFile} 
             on:rightClick={handleRightClick}
             on:moveFile={handleMoveFile}
@@ -659,8 +505,7 @@
   </div>
 
   <!-- Stats Footer -->
-  {#if !searchContent}
-    <div class="px-4 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
+  <div class="px-4 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
       <span class="text-[var(--text-secondary)]">{tree ? totalNotes : 0} Notes</span>
       <div class="flex items-center gap-3">
         <button
@@ -689,7 +534,6 @@
         </button>
       </div>
     </div>
-  {/if}
 
   <!-- Context Menu -->
   {#if contextMenu.show}

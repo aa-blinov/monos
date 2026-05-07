@@ -7,7 +7,7 @@
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode } from './stores.js';
+  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode, searchQuery, searchResults, isSearching } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
@@ -113,6 +113,36 @@
       </div>
 
       <main class="flex-1 overflow-hidden relative">
+        {#if $searchQuery.trim()}
+          <div class="h-full overflow-y-auto px-4 lg:px-12 py-8">
+            {#if $isSearching}
+              <div class="flex items-center justify-center h-32">
+                <span class="text-xs uppercase tracking-widest animate-pulse">Searching</span>
+              </div>
+            {:else if $searchResults.length > 0}
+              <div class="max-w-2xl mx-auto space-y-8">
+                {#each $searchResults as result}
+                  <button
+                    on:click={() => { handleNavigate({ detail: { path: result.path, name: result.name, isDir: false } }); $searchQuery = ''; $searchResults = []; }}
+                    class="w-full text-left group block"
+                  >
+                    <div class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path.startsWith('notes/') ? result.path.slice(6) : result.path}</div>
+                    <div class="text-lg font-serif font-medium group-hover:underline mb-2">{result.name}</div>
+                    {#if result.excerpt}
+                      <p class="text-xs text-[var(--text-secondary)] leading-relaxed italic line-clamp-3">
+                        {@html result.excerpt.replace(new RegExp($searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), match => `<mark class="bg-[var(--text-primary)] text-[var(--bg-primary)] px-0.5">${match}</mark>`)}
+                      </p>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {:else}
+              <div class="flex items-center justify-center h-32">
+                <span class="text-xs uppercase tracking-widest opacity-40">No results</span>
+              </div>
+            {/if}
+          </div>
+        {:else}
         <Route path="/notes/*" let:params>
           <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => { navigate('/'); if (sidebarComponent) sidebarComponent.loadTree(); }} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} />
         </Route>
@@ -129,6 +159,7 @@
             </div>
           </div>
         </Route>
+        {/if}
       </main>
     </div>
   </div>
