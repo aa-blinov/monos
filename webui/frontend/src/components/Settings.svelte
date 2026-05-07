@@ -200,7 +200,7 @@
             class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
           >
             {#each fontOptions as f}
-              <option value={f.name}>{f.name} <span class="opacity-40 text-[10px]">({f.category})</span></option>
+              <option value={f.name}>{f.name} ({f.category})</option>
             {/each}
           </select>
         </div>
@@ -216,7 +216,6 @@
             {/each}
           </select>
         </div>
-      <div class="grid grid-cols-2 gap-6">
         <div>
           <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Line Height</label>
           <select
@@ -242,8 +241,13 @@
           </select>
         </div>
       </div>
-      <div class="mt-5">
-        <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Default Editor Mode</label>
+    </section>
+
+    <!-- Editor Preferences -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Editor</h2>
+      <div>
+        <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Default Mode</label>
         <select
           value={$editMode}
           on:change={(e) => { $editMode = e.target.value; saveSettings(); }}
