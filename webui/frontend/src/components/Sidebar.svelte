@@ -127,8 +127,8 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       tree = await response.json();
       await loadRecentNotes();
-      treeKey++;
       if (pendingSelectedPath) {
+        treeKey++;
         selectedPath = pendingSelectedPath;
         expandToPath(tree, pendingSelectedPath);
         pendingSelectedPath = null;
@@ -193,7 +193,6 @@
       if (response.ok) {
         showIconModal = false;
         await loadTree();
-        if (selectedPath) expandToPath(tree, selectedPath);
       }
     } catch (err) {
       console.error('Failed to set icon:', err);
