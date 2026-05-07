@@ -389,14 +389,14 @@ app.post('/api/search', (req, res) => {
     let results;
     if (search_content) {
       results = db.prepare(`
-        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR content LIKE ? OR title LIKE ?)
+        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR content LIKE ? OR title LIKE ? OR tags LIKE ?)
         ORDER BY last_opened DESC LIMIT 50
-      `).all(q, q, q);
+      `).all(q, q, q, q);
     } else {
       results = db.prepare(`
-        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR title LIKE ?)
+        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR title LIKE ? OR tags LIKE ?)
         ORDER BY last_opened DESC LIMIT 50
-      `).all(q, q);
+      `).all(q, q, q);
     }
 
     res.json(results.map(e => {
