@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { getDb, closeDb } from './database.js';
 
@@ -531,7 +532,247 @@ app.post('/api/directory/icon', (req, res) => {
   }
 });
 
-// Format notes
+// ---- GIT OPERATIONS ----
+
+function gitExec(cmd, cwd) {
+  try {
+    return execSync(cmd, { cwd: cwd || NOTES_DIR, encoding: 'utf-8', timeout: 30000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }).trim();
+  } catch (e) {
+    if (e.stderr) return e.stderr.trim();
+    throw e;
+  }
+}
+
+function isGitRepo() {
+  try {
+    execSync('git rev-parse --git-dir', { cwd: NOTES_DIR, stdio: 'ignore' });
+    return true;
+  } catch { return false; }
+}
+
+app.post('/api/git/setup', (req, res) => {
+  try {
+    const { token, repo, branch, device_name } = req.body;
+    if (!token || !repo || !branch) return res.status(400).json({ detail: 'Missing token, repo, or branch' });
+
+    const remoteUrl = `https://${token}@github.com/${repo}.git`;
+    const cwd = NOTES_DIR;
+
+    // Init if needed
+    if (!isGitRepo()) {
+      gitExec('git init', cwd);
+      gitExec(`git remote add origin ${remoteUrl}`, cwd);
+    } else {
+      gitExec(`git remote set-url origin ${remoteUrl}`, cwd);
+    }
+
+    gitExec(`git config user.name "${device_name || 'Monos'}"`, cwd);
+    gitExec(`git config user.email "${device_name || 'user'}@monos.local"`, cwd);
+    gitExec(`git fetch origin ${branch} --depth=1`, cwd);
+    gitExec(`git checkout -B ${branch} origin/${branch}`, cwd);
+
+    // Save settings to a JSON file
+    const settingsPath = path.join(ROOT_DIR, '.data', 'git_settings.json');
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(settingsPath, JSON.stringify({ repo, branch, device_name }, null, 2));
+
+    gitExec(`git add -A`, cwd);
+    try { gitExec(`git commit -m "Init from ${device_name || 'Monos'}"`, cwd); } catch {}
+    try { gitExec(`git push origin ${branch}`, cwd); } catch {}
+
+    res.json({ message: `Connected to ${repo}/${branch}` });
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/status', (req, res) => {
+  try {
+    if (!isGitRepo()) return res.json({ initialized: false });
+
+    const settingsPath = path.join(ROOT_DIR, '.data', 'git_settings.json');
+    let settings = {};
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
+
+    const branch = gitExec('git rev-parse --abbrev-ref HEAD', NOTES_DIR);
+    const status = gitExec('git status --porcelain', NOTES_DIR);
+    const hasChanges = status.length > 0;
+
+    res.json({ initialized: true, branch, repo: settings.repo || '', hasChanges, status });
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/repos', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ detail: 'Token required' });
+
+    // Use GitHub API to list repos
+    const https = await import('https');
+    const repos = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: '/user/repos?per_page=100&sort=updated',
+        headers: {
+          'User-Agent': 'Monos',
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        }
+      };
+      https.get(options, (resp) => {
+        let data = '';
+        resp.on('data', chunk => data += chunk);
+        resp.on('end', () => {
+          try {
+            resolve(JSON.parse(data).map(r => r.full_name));
+          } catch { resolve([]); }
+        });
+      }).on('error', reject);
+    });
+    res.json(repos);
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/branches', async (req, res) => {
+  try {
+    const { token, repo } = req.query;
+    if (!token || !repo) return res.status(400).json({ detail: 'Token and repo required' });
+
+    const https = await import('https');
+    const branches = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: `/repos/${repo}/branches?per_page=100`,
+        headers: {
+          'User-Agent': 'Monos',
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        }
+      };
+      https.get(options, (resp) => {
+        let data = '';
+        resp.on('data', chunk => data += chunk);
+        resp.on('end', () => {
+          try {
+            resolve(JSON.parse(data).map(b => b.name));
+          } catch { resolve([]); }
+        });
+      }).on('error', reject);
+    });
+    res.json(branches);
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/user', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ detail: 'Token required' });
+
+    const https = await import('https');
+    const user = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: '/user',
+        headers: {
+          'User-Agent': 'Monos',
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        }
+      };
+      https.get(options, (resp) => {
+        let data = '';
+        resp.on('data', chunk => data += chunk);
+        resp.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch { resolve({}); }
+        });
+      }).on('error', reject);
+    });
+    res.json({ login: user.login || 'unknown' });
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.post('/api/git/sync', (req, res) => {
+  try {
+    if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+
+    const cwd = NOTES_DIR;
+    let result = 'Synced';
+
+    // Pull
+    try { result = gitExec('git pull --no-edit', cwd); } catch (e) {
+      const errStr = e.stderr || e.message || '';
+      if (errStr.includes('CONFLICT')) {
+        return res.json({ message: 'Conflicts detected', conflicts: true });
+      }
+    }
+
+    // Add and commit
+    gitExec('git add -A', cwd);
+    try {
+      gitExec('git diff --cached --quiet', cwd);
+    } catch {
+      gitExec('git commit -m "Auto-sync from Monos"', cwd);
+    }
+
+    // Push
+    try { gitExec('git push', cwd); } catch {}
+
+    indexAllFiles();
+    res.json({ message: result, conflicts: false });
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/log', (req, res) => {
+  try {
+    if (!isGitRepo()) return res.json([]);
+    const limit = parseInt(req.query.limit) || 20;
+    const raw = gitExec(`git log --oneline -${limit}`, NOTES_DIR);
+    const log = raw.split('\n').filter(Boolean).map(line => {
+      const [hash, ...rest] = line.split(' ');
+      return { hash, message: rest.join(' ') };
+    });
+    res.json(log);
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.get('/api/git/conflicts', (req, res) => {
+  try {
+    if (!isGitRepo()) return res.json([]);
+    const status = gitExec('git diff --name-only --diff-filter=U', NOTES_DIR);
+    res.json(status.split('\n').filter(Boolean));
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+app.post('/api/git/conflicts/resolve', (req, res) => {
+  try {
+    const { files } = req.body;
+    if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+    const cwd = NOTES_DIR;
+    for (const file of (files || [])) {
+      gitExec(`git add "${file}"`, cwd);
+    }
+    gitExec(`git commit -m "Resolve conflicts"`, cwd);
+    res.json({ message: 'Conflicts resolved' });
+  } catch (e) {
+    res.status(500).json({ detail: e.message || String(e) });
+  }
+});
+
+// ---- FORMAT ----
 app.post('/api/format', (req, res) => {
   try {
     const excluded = new Set(['README.md', 'AGENTS.md']);
