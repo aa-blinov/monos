@@ -1,9 +1,20 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import FileTree from './FileTree.svelte';
-  import { heroIcons, iconOptions } from '../lib/heroIcons.js';
+  import { iconOptions } from '../lib/icons.js';
+  import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
+
+  const iconMap = {
+    "folder": Icon.Folder, "folder-open": Icon.FolderOpen, "graduation-cap": Icon.GraduationCap,
+    "archive": Icon.Archive, "beaker": Icon.Beaker, "book-open": Icon.BookOpen,
+    "briefcase": Icon.Briefcase, "building": Icon.Building, "calendar": Icon.Calendar,
+    "chart-bar": Icon.BarChart, "clipboard": Icon.Clipboard, "code": Icon.Code,
+    "file-text": Icon.FileText, "globe": Icon.Globe, "heart": Icon.Heart,
+    "home": Icon.Home, "inbox": Icon.Inbox, "lightbulb": Icon.Lightbulb,
+    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag
+  };
 
   /** @type {Object} */
   let tree = null;
@@ -726,9 +737,9 @@
             on:click={() => setFolderIcon(icon)}
             class="aspect-square flex items-center justify-center hover:bg-[var(--border-subtle)] transition rounded border border-transparent hover:border-[var(--border-subtle)]"
           >
-            <svg class="w-6 h-6 text-[var(--text-primary)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-              {@html heroIcons[icon]}
-            </svg>
+            {#if iconMap[icon]}
+              <svelte:component this={iconMap[icon]} size="20" />
+            {/if}
           </button>
         {/each}
       </div>

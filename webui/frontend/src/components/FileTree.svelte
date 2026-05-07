@@ -1,8 +1,18 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { heroIcons } from '../lib/heroIcons.js';
+  import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
+
+  const iconMap = {
+    "folder": Icon.Folder, "folder-open": Icon.FolderOpen, "graduation-cap": Icon.GraduationCap,
+    "archive": Icon.Archive, "beaker": Icon.Beaker, "book-open": Icon.BookOpen,
+    "briefcase": Icon.Briefcase, "building": Icon.Building, "calendar": Icon.Calendar,
+    "chart-bar": Icon.BarChart, "clipboard": Icon.Clipboard, "code": Icon.Code,
+    "file-text": Icon.FileText, "globe": Icon.Globe, "heart": Icon.Heart,
+    "home": Icon.Home, "inbox": Icon.Inbox, "lightbulb": Icon.Lightbulb,
+    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag
+  };
 
   export let node;
   export let expanded = false;
@@ -105,19 +115,15 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </span>
-      {#if node.icon && heroIcons[node.icon]}
+      {#if node.icon && iconMap[node.icon]}
         <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-            {@html heroIcons[node.icon]}
-          </svg>
+          <svelte:component this={iconMap[node.icon]} size="14" />
         </span>
       {/if}
     {:else}
-      {#if node.icon && heroIcons[node.icon]}
+      {#if node.icon && iconMap[node.icon]}
         <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-            {@html heroIcons[node.icon]}
-          </svg>
+          <svelte:component this={iconMap[node.icon]} size="14" />
         </span>
       {:else}
         <svg class="w-3.5 h-3.5 opacity-30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
