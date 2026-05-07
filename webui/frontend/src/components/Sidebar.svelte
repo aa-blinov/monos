@@ -51,19 +51,6 @@
   /** @type {boolean} */
   let isSearching = false;
   let searchTimeout;
-  let allTags = [];
-  let showTagSuggestions = false;
-  let tagFilter = '';
-
-  async function loadTags() {
-    try {
-      const r = await fetch('/api/tags');
-      if (r.ok) allTags = await r.json();
-    } catch {}
-  }
-
-  $: filteredTags = allTags.filter(t => t.toLowerCase().includes(tagFilter.toLowerCase()));
-  $: showTagSuggestions = searchQuery.startsWith('#') && filteredTags.length > 0;
 
   /** @type {Array<string>} */
   let directoryList = [""];
@@ -476,7 +463,6 @@
   onMount(() => {
     loadTree();
     loadDirectories();
-    loadTags();
     window.addEventListener('click', closeContextMenu);
     window.addEventListener('dragend', resetDragOver);
     return () => {
@@ -507,19 +493,9 @@
           type="text"
           placeholder={searchContent ? "Search in notes..." : "Search files..."}
           bind:value={searchQuery}
-          on:input={(e) => { tagFilter = e.target.value.startsWith('#') ? e.target.value.slice(1) : ''; handleSearchInput(); }}
+          on:input={handleSearchInput}
           class="w-full bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] py-2 text-sm outline-none transition-all placeholder-[var(--text-secondary)]"
         />
-        {#if showTagSuggestions}
-          <div class="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-30 max-h-48 overflow-y-auto">
-            {#each filteredTags as tag}
-              <button
-                on:click={() => { searchQuery = `#${tag} `; tagFilter = ''; }}
-                class="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-secondary)] transition"
-              >#{tag}</button>
-            {/each}
-          </div>
-        {/if}
         {#if searchQuery}
           <button
             on:click={clearSearch}
