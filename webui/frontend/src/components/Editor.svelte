@@ -266,7 +266,7 @@
   </div>
 
   <!-- Header with Title and Actions -->
-  <div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3 border-b border-[var(--border-subtle)]">
+  <div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
       <div class="flex-1 min-w-0">
         <input
@@ -303,8 +303,8 @@
         {/if}
       </div>
     </div>
-
   </div>
+  <div class="border-b border-[var(--border-subtle)]"></div>
 
   <!-- Content Area -->
   {#if isLoading}
