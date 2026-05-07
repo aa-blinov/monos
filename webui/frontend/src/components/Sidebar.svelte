@@ -60,6 +60,8 @@
   let showIconModal = false;
   /** @type {string} */
   let iconPickerTarget = null;
+  /** @type {string} */
+  let selectedColor = '#a89984';
 
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
@@ -165,10 +167,13 @@
   async function setFolderIcon(icon) {
     if (!iconPickerTarget) return;
     try {
+      const body = {};
+      if (icon !== undefined) body.icon = icon || null;
+      body.color = selectedColor;
       const response = await fetch(`/api/directory/icon?path=${encodeURIComponent(iconPickerTarget)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ icon })
+        body: JSON.stringify(body)
       });
       if (response.ok) {
         showIconModal = false;
@@ -654,9 +659,9 @@
       {#if contextMenu.isDir}
         <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">New Note</button>
         <button on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">New Folder</button>
-        <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">Edit Icon</button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
+      <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">Edit Icon</button>
       <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">Rename</button>
       <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-red-500/10 text-red-500 transition">Delete</button>
     </div>
@@ -695,7 +700,14 @@
 {#if showIconModal}
   <div class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 w-[28rem] shadow-2xl">
-      <h2 class="text-2xl font-serif mb-8 tracking-tight">Section Icon</h2>
+      <h2 class="text-2xl font-serif mb-6 tracking-tight">Icon & Color</h2>
+      <div class="mb-6">
+        <label class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Color</label>
+        <div class="flex items-center gap-3">
+          <input type="color" bind:value={selectedColor} class="w-10 h-10 cursor-pointer border border-[var(--border-subtle)] bg-transparent p-0.5" />
+          <span class="text-[10px] text-[var(--text-secondary)]">{selectedColor}</span>
+        </div>
+      </div>
       <div class="grid grid-cols-6 gap-3">
         <button on:click={() => setFolderIcon(null)} class="aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[9px] uppercase tracking-tighter opacity-50">None</button>
         {#each iconOptions as icon}

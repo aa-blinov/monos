@@ -34,7 +34,8 @@ class FolderConfig(Base):
     __tablename__ = "folder_config"
 
     path = Column(String, primary_key=True, index=True)
-    icon = Column(String)
+    icon = Column(String, nullable=True)
+    color = Column(String, nullable=True)
 
 def get_engine(db_path: str):
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
@@ -48,6 +49,18 @@ def get_engine(db_path: str):
         Base.metadata.drop_all(bind=engine)
 
     Base.metadata.create_all(bind=engine)
+
+    # Migration: add color column to folder_config if missing
+    try:
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            conn.execute(text("SELECT color FROM folder_config LIMIT 1"))
+    except Exception:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE folder_config ADD COLUMN color VARCHAR"))
+            conn.commit()
+            print("Added color column to folder_config")
+
     return engine
 
 def get_session(engine):

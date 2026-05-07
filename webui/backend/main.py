@@ -262,9 +262,9 @@ async def get_recent_notes(limit: int = Query(10)):
 
 @app.post("/api/directory/icon")
 async def set_directory_icon(path: str = Query(...), request: SetIconRequest = None):
-    """Установить иконку для директории"""
+    """Установить иконку и цвет для элемента"""
     try:
-        service.set_folder_icon(path, request.icon)
+        service.set_folder_icon(path, request.icon if request else None, request.color if request else None)
         return {"message": "Icon updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

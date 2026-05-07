@@ -32,6 +32,7 @@ class DirectoryNode(BaseModel):
     name: str
     is_dir: bool
     icon: Optional[str] = None
+    color: Optional[str] = None
     size: int
     size_human: str
     children: List["DirectoryNode"] = Field(default_factory=list)
@@ -57,7 +58,8 @@ class RenameFileRequest(BaseModel):
 
 
 class SetIconRequest(BaseModel):
-    icon: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
 
 
 class SearchRequest(BaseModel):

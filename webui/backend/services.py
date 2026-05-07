@@ -478,14 +478,18 @@ class NotesService:
                 path=rel_path, name=path.name if not is_notes_root else "notes",
                 is_dir=True, size=0, size_human="", metadata=None,
                 icon=folder_cfg.icon if folder_cfg else None,
+                color=folder_cfg.color if folder_cfg else None,
             )
             for entry in sorted(children, key=lambda e: (not e.is_dir, e.name.lower())):
                 if entry.is_dir:
                     node.children.append(self.get_directory_tree(self.root_path / entry.path))
                 else:
+                    file_cfg = session.query(FolderConfig).filter(FolderConfig.path == entry.path).first()
                     node.children.append(DirectoryNode(
                         path=entry.path, name=entry.name, is_dir=False,
-                        size=0, size_human="", metadata=None
+                        size=0, size_human="", metadata=None,
+                        icon=file_cfg.icon if file_cfg else None,
+                        color=file_cfg.color if file_cfg else None,
                     ))
             return node
         finally:
@@ -695,14 +699,20 @@ class NotesService:
         finally:
             session.close()
 
-    def set_folder_icon(self, path: str, icon: str) -> None:
+    def set_folder_icon(self, path: str, icon: Optional[str] = None, color: Optional[str] = None) -> None:
         session = get_session(self.engine)
         try:
             cfg = session.query(FolderConfig).filter(FolderConfig.path == path).first()
             if cfg:
-                cfg.icon = icon
-            else:
-                session.add(FolderConfig(path=path, icon=icon))
+                if icon is None and color is None:
+                    session.delete(cfg)
+                else:
+                    if icon is not None:
+                        cfg.icon = icon if icon else None
+                    if color is not None:
+                        cfg.color = color if color else None
+            elif icon or color:
+                session.add(FolderConfig(path=path, icon=icon, color=color))
             session.commit()
         finally:
             session.close()
