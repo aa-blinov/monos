@@ -38,16 +38,15 @@
         }
       }
     } catch (e) { console.error(e); }
-  }
-      if (settings.git_token) {
-        isAuthenticated = true;
-        await fetchRepos();
-        if (settings.git_repo) {
-          await loadBranches();
-          await setupGitRepo();
-        }
+
+    if (settings.git_token) {
+      isAuthenticated = true;
+      await fetchRepos();
+      if (settings.git_repo) {
+        await loadBranches();
+        await setupGitRepo();
       }
-    } catch (e) { console.error(e); }
+    }
   }
 
   async function saveSettings() {
