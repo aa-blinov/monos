@@ -1,10 +1,37 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { editMode, syncScroll } from '../stores.js';
+  import { editMode, syncScroll, searchQuery, searchResults, isSearching } from '../stores.js';
+  import { Search, X } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
   export let isDarkMode = false;
+
+  let searchOpen = false;
+  let searchTimer;
+  let searchInputEl;
+
+  async function doSearch() {
+    if (!$searchQuery.trim()) { $searchResults = []; return; }
+    $isSearching = true;
+    try {
+      const r = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: $searchQuery, search_content: true }) });
+      if (r.ok) $searchResults = await r.json();
+    } catch {} finally { $isSearching = false; }
+  }
+
+  function handleSearchInput() { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, 300); }
+
+  function openSearch() {
+    searchOpen = true;
+    setTimeout(() => searchInputEl?.focus(), 50);
+  }
+
+  function closeSearch() {
+    searchOpen = false;
+    $searchQuery = '';
+    $searchResults = [];
+  }
 
   function toggleEditorMode() {
     $editMode = $editMode === 'rich' ? 'source' : 'rich';
@@ -25,6 +52,23 @@
   </div>
 
   <div class="flex items-center gap-3 lg:gap-6">
+    {#if searchOpen}
+      <div class="relative flex items-center">
+        <input
+          bind:this={searchInputEl}
+          type="text"
+          placeholder="Search notes..."
+          bind:value={$searchQuery}
+          on:input={handleSearchInput}
+          on:keydown={(e) => { if (e.key === 'Escape') closeSearch(); }}
+          class="w-48 lg:w-64 bg-transparent border-b border-[var(--text-primary)] py-1 text-sm outline-none placeholder-[var(--text-secondary)]"
+        />
+        <button on:click={closeSearch} class="ml-1 p-1 hover:opacity-60"><X size="14"/></button>
+      </div>
+    {:else}
+      <button on:click={openSearch} class="p-1 hover:opacity-60 transition" title="Search"><Search size="18"/></button>
+    {/if}
+
     {#if $editMode === 'source'}
       <button on:click={() => $syncScroll = !$syncScroll} class="text-sm font-medium hover:opacity-60 transition {$syncScroll ? '' : 'opacity-30'}" title="Toggle sync scroll">
         Sync Scroll
