@@ -463,6 +463,24 @@ app.get('/api/notes/resolve-link', (req, res) => {
   }
 });
 
+// Get all tags
+app.get('/api/tags', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare('SELECT tags FROM notes_index WHERE tags IS NOT NULL AND tags != \'[]\' AND tags != \'\'').all();
+    const tagSet = new Set();
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.tags);
+        for (const t of parsed) tagSet.add(t);
+      } catch {}
+    }
+    res.json([...tagSet].sort());
+  } catch (e) {
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // Directory list
 app.get('/api/directories', (req, res) => {
   try {
