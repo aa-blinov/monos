@@ -42,7 +42,7 @@
   }
 </script>
 
-<div class="flex-1 flex overflow-hidden border-t border-[var(--border-subtle)]">
+<div class="flex-1 flex overflow-hidden">
   <!-- Editor -->
   <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)]">
     <div class="hidden sm:flex px-12 py-4 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]">

@@ -266,14 +266,14 @@
   </div>
 
   <!-- Header with Title and Actions -->
-  <div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
+  <div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3 border-b border-[var(--border-subtle)]">
     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
       <div class="flex-1 min-w-0">
         <input
           type="text"
           bind:value={editedTitle}
           placeholder="Note Title"
-          class="text-xl lg:text-3xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-1 transition-colors"
+          class="text-lg lg:text-3xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-1 transition-colors"
         />
         {#if fileInfo}
           <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)] mt-0.5">
@@ -314,7 +314,7 @@
   {:else}
     {#if $editMode === 'rich'}
       <!-- Rich mode: full-width editor, no reader -->
-      <div class="flex-1 flex flex-col min-w-0 min-h-0 border-t border-[var(--border-subtle)]">
+      <div class="flex-1 flex flex-col min-w-0 min-h-0">
         <div class="hidden lg:flex px-12 py-4 items-center justify-end gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] z-10">
           <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] tabular-nums">
             {(editedContent || '').trim() ? (editedContent || '').trim().split(/\s+/).length : 0} words · {(editedContent || '').length} chars
