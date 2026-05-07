@@ -14,8 +14,8 @@ export const fontOptions = [
 ];
 
 export const fontSizeOptions = [
-  { name: 'Small', value: 'small', base: '13px' },
-  { name: 'Medium', value: 'medium', base: '14px' },
-  { name: 'Large', value: 'large', base: '16px' },
-  { name: 'Extra Large', value: 'xlarge', base: '18px' },
+  { name: 'Small', value: 'small', base: '14px' },
+  { name: 'Medium', value: 'medium', base: '16px' },
+  { name: 'Large', value: 'large', base: '18px' },
+  { name: 'Extra Large', value: 'xlarge', base: '20px' },
 ];
