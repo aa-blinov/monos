@@ -486,7 +486,7 @@
     </div>
 
     <!-- Search Section -->
-  <div class="p-6 space-y-4">
+  <div class="px-4 py-5 space-y-4">
     <div class="space-y-2">
       <div class="relative group">
         <input
@@ -519,7 +519,7 @@
 
   <!-- Recent Files Section -->
   {#if !searchQuery.trim() && !searchContent && recentNotes.length > 0}
-    <div class="px-6 mb-6">
+    <div class="px-4 mb-4">
       <button 
         on:click={() => showRecent = !showRecent}
          class="flex items-center justify-between w-full text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-4"
@@ -545,13 +545,13 @@
   {/if}
 
   <!-- Visual Separator -->
-  <div class="px-6 mb-6">
+  <div class="px-4 mb-4">
     <div class="h-[1px] bg-[var(--border-subtle)] w-full opacity-50"></div>
   </div>
 
   <!-- Tree View Header -->
   {#if !searchQuery.trim() && !searchContent}
-    <div class="px-6 mb-4 flex items-center justify-between">
+    <div class="px-4 mb-4 flex items-center justify-between">
       <h3 class="text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
       <button
         on:click={() => { newNoteCategory = ''; showCreateModal = true; }}
@@ -634,7 +634,7 @@
 
   <!-- Stats Footer -->
   {#if !searchContent}
-    <div class="px-6 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
+    <div class="px-4 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
       <span class="text-[var(--text-secondary)]">{tree ? totalNotes : 0} Notes</span>
       <div class="flex items-center gap-3">
         <button

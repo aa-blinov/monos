@@ -65,7 +65,7 @@
             <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] mb-8">Linked Mentions</h3>
             <div class="grid grid-cols-1 gap-8">
               {#each backlinks as link}
-                <button class="text-left group">
+                <button class="text-left group" on:click={() => dispatch('wikiLinkClick', link.name)}>
                   <div class="text-lg font-serif group-hover:underline decoration-[var(--border-subtle)]">{link.name}</div>
                   <div class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] mt-1 opacity-50">{link.path?.startsWith('notes/') ? link.path.slice(6) : link.path}</div>
                 </button>
