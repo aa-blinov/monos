@@ -31,6 +31,7 @@ class DirectoryNode(BaseModel):
     path: str
     name: str
     is_dir: bool
+    icon: Optional[str] = None
     size: int
     size_human: str
     children: List["DirectoryNode"] = Field(default_factory=list)

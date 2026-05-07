@@ -473,9 +473,11 @@ class NotesService:
         try:
             is_notes_root = rel_path == "notes"
             children = session.query(NoteIndex).filter(NoteIndex.parent_path == rel_path).all()
+            folder_cfg = session.query(FolderConfig).filter(FolderConfig.path == rel_path).first()
             node = DirectoryNode(
                 path=rel_path, name=path.name if not is_notes_root else "notes",
                 is_dir=True, size=0, size_human="", metadata=None,
+                icon=folder_cfg.icon if folder_cfg else None,
             )
             for entry in sorted(children, key=lambda e: (not e.is_dir, e.name.lower())):
                 if entry.is_dir:
