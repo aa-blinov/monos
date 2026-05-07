@@ -13,16 +13,27 @@
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
-    isMobile ? sidebarOpen = false : sidebarOpen = true;
+    if (isMobile && sidebarOpen) sidebarOpen = false;
+  }
+
+  function handleKeydown(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+      e.preventDefault();
+      toggleSidebar();
+    }
   }
 
   onMount(() => {
     updateMobileState();
     window.addEventListener('resize', updateMobileState);
+    window.addEventListener('keydown', handleKeydown);
     isDarkMode = localStorage.getItem('darkMode') === 'true' ||
       (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
     applyDarkMode(isDarkMode);
-    return () => window.removeEventListener('resize', updateMobileState);
+    return () => {
+      window.removeEventListener('resize', updateMobileState);
+      window.removeEventListener('keydown', handleKeydown);
+    };
   });
 
   function applyDarkMode(dark) {
@@ -61,9 +72,9 @@
       {/if}
 
       <div
-        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'w-72 border-r border-[var(--border-subtle)]'}
-               {isMobile && !sidebarOpen ? '-translate-x-full' : ''}
-               {isMobile ? 'transition-transform duration-300 ease-in-out' : ''}
+        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'shrink-0'}
+               {!sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0 border-r-0') : (isMobile ? '' : 'w-72 border-r border-[var(--border-subtle)]')}
+               transition-all duration-300 ease-in-out
                overflow-y-auto"
       >
         <Sidebar
