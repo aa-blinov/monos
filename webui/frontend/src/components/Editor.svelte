@@ -260,6 +260,12 @@
     }
   });
 
+  $: wordCharStats = (() => {
+    const txt = editedContent || '';
+    const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+    return `${words} words · ${txt.length} chars`;
+  })();
+
   $: if (currentFile) loadFile();
 
   let ignoreRichUpdate = false;
@@ -306,7 +312,7 @@
         {#if fileInfo}
           <div class="flex items-center gap-x-4 mt-0.5">
             <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)]">
-              Created {new Date(fileInfo.created).toLocaleString()} · Modified {new Date(fileInfo.modified).toLocaleString()}
+              Created {new Date(fileInfo.created).toLocaleString()} · Modified {new Date(fileInfo.modified).toLocaleString()} · {wordCharStats}
             </p>
             {#if editableTags.length > 0}
               {#each editableTags as tag, i}
@@ -337,11 +343,6 @@
     {#if $editMode === 'rich'}
       <!-- Rich mode: full-width editor, no reader -->
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
-        <div class="hidden lg:flex px-12 py-4 items-center justify-end gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] z-10">
-          <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] tabular-nums">
-            {(editedContent || '').trim() ? (editedContent || '').trim().split(/\s+/).length : 0} words · {(editedContent || '').length} chars
-          </span>
-        </div>
         <RichEditor
           bind:this={richEditor}
           content={editedContent}

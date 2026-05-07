@@ -51,9 +51,6 @@
         <div class="w-2 h-2 rounded-full transition-colors {isSyncScrollEnabled ? 'bg-[var(--text-primary)]' : 'bg-transparent border border-[var(--text-secondary)]'} group-hover:opacity-70"></div>
         <span class="text-[10px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
       </label>
-      <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] tabular-nums">
-        {(content || '').trim() ? (content || '').trim().split(/\s+/).length : 0} words · {(content || '').length} chars
-      </span>
     </div>
     <textarea
       bind:this={editorRef}
