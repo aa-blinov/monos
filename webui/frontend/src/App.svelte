@@ -99,6 +99,8 @@
     const cleanPath = rawPath.startsWith('notes/') ? rawPath.substring(6) : rawPath;
     navigate(`/notes/${cleanPath}`);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
+    $searchQuery = '';
+    $searchResults = [];
   }
 
 </script>
