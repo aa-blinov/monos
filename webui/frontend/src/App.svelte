@@ -7,7 +7,7 @@
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions } from './lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth } from './stores.js';
+  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editMode } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
