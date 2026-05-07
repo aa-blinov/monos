@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { navigate } from 'svelte-routing';
+  import { themes } from '../lib/themes.js';
+  import { activeTheme } from '../stores.js';
 
   let settings = {
     auto_sync_interval: 0,
@@ -147,13 +149,32 @@
 
     <!-- Header -->
     <div class="flex items-center gap-4">
-      <button on:click={() => history.back()} class="p-1 hover:opacity-60 transition-opacity" title="Back">
+      <button on:click={() => navigate('/')} class="p-1 hover:opacity-60 transition-opacity" title="Back">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </button>
       <h1 class="text-3xl lg:text-4xl font-serif tracking-tight">Settings</h1>
     </div>
+
+    <!-- Theme -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Theme</h2>
+      <div class="grid grid-cols-3 gap-3">
+        {#each Object.entries(themes) as [key, t]}
+          <button
+            on:click={() => $activeTheme = key}
+            class="p-4 border text-left transition-all text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
+          >
+            <div class="flex gap-1.5 mb-2">
+              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
+              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.dark['--bg-primary']}"></span>
+            </div>
+            <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
+          </button>
+        {/each}
+      </div>
+    </section>
 
     <!-- GitHub Connection -->
     <section class="space-y-5">

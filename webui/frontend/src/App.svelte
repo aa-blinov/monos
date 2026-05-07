@@ -5,11 +5,25 @@
   import Header from './components/Header.svelte';
   import NotePage from './components/NotePage.svelte';
   import Settings from './components/Settings.svelte';
+  import { themes } from './lib/themes.js';
+  import { activeTheme } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
   let isMobile = false;
   let sidebarComponent;
+
+  function applyTheme() {
+    const t = themes[$activeTheme];
+    if (!t) return;
+    const vars = isDarkMode ? t.dark : t.light;
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(vars)) {
+      root.style.setProperty(key, value);
+    }
+  }
+
+  $: applyTheme($activeTheme, isDarkMode);
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
@@ -29,19 +43,15 @@
     window.addEventListener('keydown', handleKeydown);
     isDarkMode = localStorage.getItem('darkMode') === 'true' ||
       (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    applyDarkMode(isDarkMode);
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    applyTheme();
     return () => {
       window.removeEventListener('resize', updateMobileState);
       window.removeEventListener('keydown', handleKeydown);
     };
   });
 
-  function applyDarkMode(dark) {
-    document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('darkMode', dark);
-  }
-
-  function toggleDarkMode() { isDarkMode = !isDarkMode; applyDarkMode(isDarkMode); }
+  function toggleDarkMode() { isDarkMode = !isDarkMode; localStorage.setItem('darkMode', isDarkMode); document.documentElement.classList.toggle('dark', isDarkMode); applyTheme(); }
   function toggleSidebar() { sidebarOpen = !sidebarOpen; }
 
   function handleNavigate(event) {
