@@ -384,7 +384,8 @@ app.post('/api/search', (req, res) => {
   try {
     const { query, search_content } = req.body;
     const db = getDb();
-    const q = `%${query}%`;
+    const cleanQuery = query.replace(/^#/, '');
+    const q = `%${cleanQuery}%`;
 
     let results;
     if (search_content) {
@@ -402,10 +403,10 @@ app.post('/api/search', (req, res) => {
     res.json(results.map(e => {
       let excerpt = '';
       if (search_content && e.content) {
-        const idx = e.content.toLowerCase().indexOf(query.toLowerCase());
+        const idx = e.content.toLowerCase().indexOf(cleanQuery.toLowerCase());
         if (idx >= 0) {
           const start = Math.max(0, idx - 60);
-          const end = Math.min(e.content.length, idx + query.length + 60);
+          const end = Math.min(e.content.length, idx + cleanQuery.length + 60);
           excerpt = (start > 0 ? '...' : '') + e.content.slice(start, end) + (end < e.content.length ? '...' : '');
         }
       }
