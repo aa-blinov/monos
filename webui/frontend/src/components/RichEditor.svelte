@@ -4,11 +4,13 @@
   import StarterKit from '@tiptap/starter-kit';
   import Placeholder from '@tiptap/extension-placeholder';
   import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+  import TaskList from '@tiptap/extension-task-list';
+  import TaskItem from '@tiptap/extension-task-item';
   import { Markdown } from 'tiptap-markdown';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
-    List, ListOrdered, Quote, Code2, Minus, Link, Table2
+    List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare
   } from 'lucide-svelte';
 
   export let content = '';
@@ -19,7 +21,7 @@
   let editor;
   let canUndo = false;
   let canRedo = false;
-  let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, quote: false, codeBlock: false };
+  let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false };
 
   function createEditor() {
     if (editor) return;
@@ -32,6 +34,8 @@
         TableRow,
         TableCell,
         TableHeader,
+        TaskList,
+        TaskItem.configure({ nested: true }),
         Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
       ],
       content: content,
@@ -48,7 +52,7 @@
     active = {
       bold: ed.isActive('bold'), italic: ed.isActive('italic'), strike: ed.isActive('strike'), code: ed.isActive('code'),
       heading: ed.isActive('heading') ? ed.getAttributes('heading').level : 0,
-      bullet: ed.isActive('bulletList'), ordered: ed.isActive('orderedList'),
+      bullet: ed.isActive('bulletList'), ordered: ed.isActive('orderedList'), task: ed.isActive('taskList'),
       quote: ed.isActive('blockquote'), codeBlock: ed.isActive('codeBlock'),
     };
     canUndo = ed.can().undo(); canRedo = ed.can().redo();
@@ -97,6 +101,7 @@
 
     <button on:click={cmd('toggleBulletList')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.bullet ? 'bg-[var(--bg-secondary)]' : ''}" title="Bullet List"><List size="16"/></button>
     <button on:click={cmd('toggleOrderedList')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.ordered ? 'bg-[var(--bg-secondary)]' : ''}" title="Numbered List"><ListOrdered size="16"/></button>
+    <button on:click={cmd('toggleTaskList')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.task ? 'bg-[var(--bg-secondary)]' : ''}" title="Checklist"><CheckSquare size="16"/></button>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <button on:click={cmd('toggleBlockquote')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" title="Blockquote"><Quote size="16"/></button>
@@ -117,6 +122,9 @@
       [&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-bold [&_.ProseMirror_h3]:my-2
       [&_.ProseMirror_h4]:text-base [&_.ProseMirror_h4]:font-bold [&_.ProseMirror_h4]:my-1.5
       [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:ml-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:ml-6
+      [&_.ProseMirror_ul[data-type='taskList']]:list-none [&_.ProseMirror_ul[data-type='taskList']]:ml-0
+      [&_.ProseMirror_li[data-type='taskItem']]:flex [&_.ProseMirror_li[data-type='taskItem']]:items-start [&_.ProseMirror_li[data-type='taskItem']]:gap-2
+      [&_label]:flex [&_label]:mt-0.5
       [&_.ProseMirror_blockquote]:border-l-2 [&_.ProseMirror_blockquote]:border-[var(--text-primary)] [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote]:my-4
       [&_.ProseMirror_code]:bg-[var(--bg-secondary)] [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono
       [&_.ProseMirror_pre]:bg-[var(--bg-secondary)] [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded [&_.ProseMirror_pre]:my-4 [&_.ProseMirror_pre]:overflow-x-auto
