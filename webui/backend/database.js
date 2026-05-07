@@ -55,6 +55,14 @@ function initTables() {
     CREATE INDEX IF NOT EXISTS idx_notes_is_dir ON notes_index(is_dir);
     CREATE INDEX IF NOT EXISTS idx_links_source ON note_links(source_path);
   `);
+
+  // Migrate: add settings table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
 }
 
 export function closeDb() {

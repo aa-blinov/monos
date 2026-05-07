@@ -37,13 +37,23 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     updateMobileState();
     window.addEventListener('resize', updateMobileState);
     window.addEventListener('keydown', handleKeydown);
     isDarkMode = localStorage.getItem('darkMode') === 'true' ||
       (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', isDarkMode);
+
+    // Load theme from server
+    try {
+      const r = await fetch('/api/settings');
+      if (r.ok) {
+        const s = await r.json();
+        if (s.theme && themes[s.theme]) $activeTheme = s.theme;
+      }
+    } catch {}
+
     applyTheme();
     return () => {
       window.removeEventListener('resize', updateMobileState);

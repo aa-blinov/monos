@@ -30,7 +30,11 @@
   async function loadSettings() {
     try {
       const r = await fetch('/api/settings');
-      if (r.ok) settings = await r.json();
+      if (!r.ok) return;
+    settings = await r.json();
+    if (settings.theme && themes[settings.theme]) {
+      $activeTheme = settings.theme;
+    }
       if (settings.git_token) {
         isAuthenticated = true;
         await fetchRepos();
@@ -44,9 +48,10 @@
 
   async function saveSettings() {
     try {
+      const payload = { ...settings, theme: $activeTheme };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify(payload)
       });
     } catch (e) { console.error(e); }
   }
@@ -163,7 +168,7 @@
       <div class="grid grid-cols-3 gap-3">
         {#each Object.entries(themes) as [key, t]}
           <button
-            on:click={() => $activeTheme = key}
+            on:click={() => { $activeTheme = key; saveSettings(); }}
             class="p-4 border text-left transition-all text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
           >
             <div class="flex gap-1.5 mb-2">

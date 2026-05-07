@@ -809,6 +809,39 @@ app.post('/api/format', (req, res) => {
   }
 });
 
+// ---- SETTINGS ----
+
+app.get('/api/settings', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    const settings = {};
+    for (const row of rows) {
+      try { settings[row.key] = JSON.parse(row.value); }
+      catch { settings[row.key] = row.value; }
+    }
+    res.json(settings);
+  } catch (e) {
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+app.post('/api/settings', (req, res) => {
+  try {
+    const db = getDb();
+    const tx = db.transaction((data) => {
+      const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+      for (const [key, value] of Object.entries(data)) {
+        upsert.run(key, typeof value === 'string' ? value : JSON.stringify(value));
+      }
+    });
+    tx(req.body);
+    res.json({ message: 'Saved' });
+  } catch (e) {
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // ---- INDEX FILES ON STARTUP ----
 indexAllFiles();
 
