@@ -62,6 +62,7 @@
     } catch {}
   }
 
+  $: tagFilter = searchQuery.startsWith('#') ? searchQuery.slice(1) : '';
   $: filteredTags = allTags.filter(t => t.toLowerCase().includes(tagFilter.toLowerCase()));
   $: showTagSuggestions = searchQuery.startsWith('#') && filteredTags.length > 0;
 
@@ -140,8 +141,9 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       tree = await response.json();
       await loadRecentNotes();
+      await loadTags();
+      treeKey++;
       if (pendingSelectedPath) {
-        treeKey++;
         selectedPath = pendingSelectedPath;
         expandToPath(tree, pendingSelectedPath);
         pendingSelectedPath = null;
@@ -507,7 +509,7 @@
           type="text"
           placeholder={searchContent ? "Search in notes..." : "Search files..."}
           bind:value={searchQuery}
-          on:input={(e) => { tagFilter = e.target.value.startsWith('#') ? e.target.value.slice(1) : ''; handleSearchInput(); }}
+          on:input={handleSearchInput}
           class="w-full bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] py-2 text-sm outline-none transition-all placeholder-[var(--text-secondary)]"
         />
         {#if showTagSuggestions}
