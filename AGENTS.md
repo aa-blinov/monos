@@ -1,109 +1,88 @@
 # Инструкции для AI-агентов (Monos)
 
-Этот файл содержит правила и контекст для AI-агентов, работающих с данной базой знаний. При взаимодействии с репозиторием агент должен придерживаться следующих принципов.
+Этот файл содержит правила и контекст для AI-агентов, работающих с данной базой знаний.
 
-## Роли и обязанности
+## Стек
 
-### 1. Архитектор (Structure Manager)
-- **Задача:** Поддерживать чистоту файловой структуры и единообразие формата.
-- **Действия:** 
-    - Следить, чтобы новые заметки не создавались в корне.
-    - Перемещать файлы согласно правилам в `README.md`.
-    - Использовать пробелы в названиях папок (например, `Большие языковые модели`, не `Bolshie_jazykovie_modeli`).
-    - **Форматирование:** Для поддержания порядка используйте функцию **Format** в WebUI. Она автоматически приведет все заметки к единому стандарту.
-    - **Создание заметок:** Для создания новых заметок используйте кнопку **"Создать"** в WebUI. Это гарантирует правильное размещение и наличие YAML фронтматтера.
+- **Backend:** Node.js + Express + better-sqlite3 (`webui/backend/`)
+- **Frontend:** Svelte 4 + Vite + Tailwind + TipTap (`webui/frontend/`)
+- **БД:** SQLite (файл `webui/.data/notes.db`)
+- **Заметки:** `notes/` — Markdown с wiki-links `[[...]]`
 
-### 2. Редактор (Knowledge Curator)
-- **Задача:** Оптимизация содержания заметок.
-- **Действия:**
-    - При чтении длинных файлов выделять ключевые тезисы.
-    - Добавлять перекрестные ссылки в формате `[[Название заметки]]`. WebUI автоматически распознает их и создаст связи.
-    - Использовать раздел **"Linked Mentions"** внизу заметки для обнаружения обратных связей.
-    - Убедиться, что все заметки имеют YAML фронтматтер.
+## Запуск
 
-### 3. Контекстный ассистент (Context Specialist)
-- **Задача:** Помогать пользователю находить информацию по ключевым темам.
-- **Контекст:**
-    - **Работа/EORA, Работа/NSTU:** Коммерческая разработка, RAG, бенчмарки, пресейлы, проекты.
-    - **Документы:** Релокация, Казахстан, Digital Nomad, ВНЖ (РПП).
-    - **Образование:** Python, LLM, RAG, NLP, AI.
+```bash
+# Backend
+cd webui/backend && npm install && node index.js
 
-## Технические правила работы
+# Frontend (dev)
+cd webui/frontend && npm install && npm run dev
+```
 
-### Работа с WebUI
-
-Все основные операции (создание, редактирование, форматирование, синхронизация) выполняются через WebUI.
-
-1. **Запуск (Docker):**
-   ```bash
-   cd webui
-   docker-compose up -d --build
-   ```
-
-2. **Запуск (Локально):**
-   - **Backend:** `cd webui/backend && python -m uvicorn main:app --reload --port 8000`
-   - **Frontend:** `cd webui/frontend && npm run dev`
-
-3. **Синхронизация:** Используйте кнопку **Sync** в Header для коммита и пуша изменений в Git.
-
-### Markdown и стандарты
-
-1. **Wiki-links:** Используйте `[[Note Name]]` или `[[Note Name|Display Label]]`.
-2. **YAML Фронтматтер:** Все заметки должны начинаться с блока `---`.
-3. **Изображения:** Должны находиться в `assets/images/`.
-4. **Кодировка:** Строго UTF-8.
-
-## Алгоритм сортировки новых данных (Inbox Zero)
-
-При обнаружении новых файлов в корне:
-1. Проанализировать содержимое.
-2. Переместить файл в нужную категорию через WebUI или файловую систему.
-3. Запустить **Format** в WebUI для унификации.
-
-## Git и версионирование
-
-1. **Перед пушем:** Нажать **Format** в WebUI.
-2. **Синхронизация:** Нажать **Sync** в WebUI.
-3. **Pre-commit:** Hooks автоматически проверят файлы при коммите.
+Бэкенд на порту 8000, фронтенд на 5173.
 
 ## Проверка кода (обязательно)
 
-Перед завершением задачи и особенно перед коммитом/пушем необходимо:
+Перед коммитом:
 
-1. **Frontend (Svelte):**
-   ```bash
-   cd webui/frontend
-   npm run check
-   ```
-   Это запускает `svelte-check` — проверяет Svelte-компоненты на ошибки, неопределённые переменные, неправильные типы.
-
-2. **Backend (Python):**
-   ```bash
-   cd webui/backend
-   python -m py_compile main.py schemas.py services.py database.py
-   ```
-   Проверка синтаксиса Python-файлов.
-
-3. **Docker:** Убедиться, что контейнеры запускаются без ошибок:
-   ```bash
-   docker-compose up -d --build
-   ```
-
-Эти шаги обязательны для каждого PR или коммита с изменениями кода.
-
-## Интеграция с pre-commit
-
-При каждом `git commit` автоматически выполняются:
-- ✅ mdformat — Форматирование Markdown
-- ✅ ruff — Проверка Python кода
-- ✅ pre-commit-hooks — Базовые проверки
-
-Если нужно выполнить проверки вручную:
 ```bash
-pre-commit run --all-files
+# Frontend
+cd webui/frontend && npm run check
+
+# Backend
+cd webui/backend && node --check index.js database.js
 ```
 
-Если нужно пропустить проверки (не рекомендуется):
-```bash
-git commit --no-verify
+## Структура
+
 ```
+webui/
+  backend/          # Node.js Express API
+    index.js        # Все роуты и бизнес-логика
+    database.js     # SQLite (better-sqlite3)
+  frontend/         # Svelte SPA
+    src/
+      components/   # Svelte компоненты
+      lib/          # Общие модули (icons.js)
+      stores.js     # Svelte stores (editMode, syncScroll)
+      app.css       # Gruvbox тема
+  .data/            # SQLite БД, настройки Git
+notes/              # Markdown заметки
+```
+
+## API эндпоинты
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/tree` | Дерево директорий |
+| GET | `/api/file?path=` | Читать файл |
+| POST | `/api/file?path=` | Сохранить файл |
+| DELETE | `/api/file?path=` | Удалить |
+| POST | `/api/file/rename?path=` | Переименовать |
+| POST | `/api/file/move?source=&target=` | Переместить |
+| GET | `/api/file-info?path=` | Инфо о файле |
+| PUT | `/api/file/metadata?path=` | Обновить метаданные |
+| POST | `/api/notes/create` | Создать заметку |
+| GET | `/api/notes/recent` | Последние открытые |
+| POST | `/api/search` | Поиск |
+| GET | `/api/notes/backlinks?path=` | Обратные ссылки |
+| GET | `/api/notes/resolve-link?name=` | Найти заметку по названию |
+| GET | `/api/directories` | Список папок |
+| POST | `/api/directory/create?path=` | Создать папку |
+| POST | `/api/directory/icon?path=` | Иконка и цвет |
+| POST | `/api/format` | Форматировать все заметки |
+| GET | `/api/git/status` | Git статус |
+| POST | `/api/git/setup` | Настроить Git |
+| POST | `/api/git/sync` | Синхронизация |
+| GET | `/api/git/log` | История коммитов |
+| GET | `/api/git/repos?token=` | Список репозиториев |
+| GET | `/api/git/branches?token=&repo=` | Ветки |
+| GET | `/api/git/user?token=` | Пользователь GitHub |
+| GET | `/api/git/conflicts` | Конфликты |
+| POST | `/api/git/conflicts/resolve` | Разрешить конфликты |
+
+## Git и версионирование
+
+1. Перед синхронизацией — нажать **Format** (иконка волшебной палочки в редакторе)
+2. **Sync** в футере сайдбара — pull + commit + push
+3. Pre-commit хуки в репозитории: mdformat, ruff, pre-commit-hooks
