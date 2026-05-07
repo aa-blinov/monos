@@ -13,7 +13,6 @@
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
     font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
-    line-height: var(--line-height, 1.625);
   }
 
   h1 {

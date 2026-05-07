@@ -7,10 +7,14 @@
   import TaskList from '@tiptap/extension-task-list';
   import TaskItem from '@tiptap/extension-task-item';
   import { Markdown } from 'tiptap-markdown';
+  import { get } from 'svelte/store';
+  import { lineHeight, contentWidth } from '../stores.js';
+  import { lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
-    List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare
+    List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
+    Maximize2, WrapText
   } from 'lucide-svelte';
 
   export let content = '';
@@ -22,6 +26,13 @@
   let canUndo = false;
   let canRedo = false;
   let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false };
+
+  function cycleOption(store, options) {
+    const current = get(store);
+    const idx = options.findIndex(o => o.value === current);
+    const next = options[(idx + 1) % options.length];
+    store.set(next.value);
+  }
 
   function createEditor() {
     if (editor) return;
@@ -111,6 +122,10 @@
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <button on:click={cmd('link')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Add Link"><Link size="16"/></button>
+    <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
+
+    <button on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Content Width"><Maximize2 size="16"/></button>
+    <button on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Line Height"><WrapText size="16"/></button>
   </div>
 
   <!-- Editor -->

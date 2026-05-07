@@ -1,19 +1,10 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { get } from 'svelte/store';
-  import { editMode, syncScroll, lineHeight, contentWidth } from '../stores.js';
-  import { lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
+  import { editMode, syncScroll } from '../stores.js';
 
   const dispatch = createEventDispatcher();
 
   export let isDarkMode = false;
-
-  function cycleOption(store, options) {
-    const current = get(store);
-    const idx = options.findIndex(o => o.value === current);
-    const next = options[(idx + 1) % options.length];
-    store.set(next.value);
-  }
 
   function toggleEditorMode() {
     $editMode = $editMode === 'rich' ? 'source' : 'rich';
@@ -39,14 +30,6 @@
         Sync Scroll
       </button>
     {/if}
-
-    <button on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="text-sm font-medium hover:opacity-60 transition" title="Content width">
-      Width
-    </button>
-
-    <button on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="text-sm font-medium hover:opacity-60 transition" title="Line height">
-      Height
-    </button>
 
     <button on:click={toggleEditorMode} class="text-sm font-medium hover:opacity-60 transition" title="Switch editor mode">
       {$editMode === 'rich' ? 'Source' : 'Rich'}
