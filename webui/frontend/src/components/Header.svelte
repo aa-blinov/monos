@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { editMode } from '../stores.js';
+  import { editMode, syncScroll } from '../stores.js';
 
   const dispatch = createEventDispatcher();
 
@@ -28,6 +28,12 @@
     <button on:click={toggleEditorMode} class="text-sm font-medium hover:opacity-60 transition" title="Switch editor mode">
       {$editMode === 'rich' ? 'Source' : 'Rich'}
     </button>
+
+    {#if $editMode === 'source'}
+      <button on:click={() => $syncScroll = !$syncScroll} class="text-sm font-medium hover:opacity-60 transition {$syncScroll ? '' : 'opacity-30'}" title="Toggle sync scroll">
+        Sync
+      </button>
+    {/if}
 
     <button on:click={toggleDarkMode} class="p-1 hover:opacity-60 transition-opacity" title="Toggle Theme">
       {#if isDarkMode}

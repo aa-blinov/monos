@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { marked } from 'marked';
+  import { syncScroll } from '../stores.js';
 
   const dispatch = createEventDispatcher();
 
@@ -10,7 +11,6 @@
   let editorRef;
   let previewRef;
   let activePane = null;
-  let isSyncScrollEnabled = true;
 
   function renderMarkdown(md) {
     let html = md
@@ -25,13 +25,13 @@
   $: previewHtml = renderMarkdown(content || '');
 
   function handleEditorScroll() {
-    if (!isSyncScrollEnabled || activePane !== 'editor' || !editorRef || !previewRef) return;
+    if (!$syncScroll || activePane !== 'editor' || !editorRef || !previewRef) return;
     const pct = editorRef.scrollTop / (editorRef.scrollHeight - editorRef.clientHeight);
     previewRef.scrollTop = pct * (previewRef.scrollHeight - previewRef.clientHeight);
   }
 
   function handlePreviewScroll() {
-    if (!isSyncScrollEnabled || activePane !== 'preview' || !editorRef || !previewRef) return;
+    if (!$syncScroll || activePane !== 'preview' || !editorRef || !previewRef) return;
     const pct = previewRef.scrollTop / (previewRef.scrollHeight - previewRef.clientHeight);
     editorRef.scrollTop = pct * (editorRef.scrollHeight - editorRef.clientHeight);
   }
@@ -45,13 +45,6 @@
 <div class="flex-1 flex overflow-hidden">
   <!-- Editor -->
   <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)]">
-    <div class="hidden sm:flex px-12 py-4 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]">
-      <label class="flex items-center gap-2 cursor-pointer group">
-        <input type="checkbox" bind:checked={isSyncScrollEnabled} class="hidden" />
-        <div class="w-2 h-2 rounded-full transition-colors {isSyncScrollEnabled ? 'bg-[var(--text-primary)]' : 'bg-transparent border border-[var(--text-secondary)]'} group-hover:opacity-70"></div>
-        <span class="text-[10px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
-      </label>
-    </div>
     <textarea
       bind:this={editorRef}
       bind:value={content}
@@ -63,10 +56,7 @@
   </div>
 
   <!-- Preview -->
-  <div     on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden sm:flex">
-    <div class="hidden lg:flex px-12 py-4 items-center border-b border-[var(--border-subtle)]">
-      <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Reader</span>
-    </div>
+  <div on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden sm:flex">
     <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12">
       <div class="max-w-2xl mx-auto prose-preview">
         {@html previewHtml}
