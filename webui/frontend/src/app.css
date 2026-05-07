@@ -161,3 +161,6 @@ textarea {
 .btn-secondary {
   @apply border border-[var(--border-subtle)] hover:border-[var(--text-primary)] px-6 py-2 rounded-full font-medium transition-all;
 }
+
+.animate-toast-in { animation: toastIn 0.3s ease-out; }
+@keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }

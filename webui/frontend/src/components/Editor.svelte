@@ -18,6 +18,9 @@
   let isLoading = true;
   let isSaving = false;
   let isDeleting = false;
+  let isFormatting = false;
+  let formatToast = '';
+  let formatToastTimer;
   let showDeleteConfirm = false;
   let autosaveTimer;
   let lastSaved = null;
@@ -82,6 +85,21 @@
     const target = e.target.closest('.wikilink');
     if (target) {
       handleWikiLinkClick(target.dataset.target);
+    }
+  }
+
+  async function handleFormat() {
+    if (isFormatting) return;
+    isFormatting = true;
+    try {
+      const r = await fetch('/api/format', { method: 'POST' });
+      formatToast = (await r.json()).message;
+      dispatch('formatComplete');
+    } catch (e) { formatToast = 'Format failed'; }
+    finally {
+      isFormatting = false;
+      if (formatToastTimer) clearTimeout(formatToastTimer);
+      formatToastTimer = setTimeout(() => formatToast = '', 3000);
     }
   }
 
@@ -253,8 +271,18 @@
 </script>
 
 <div class="h-full flex flex-col bg-[var(--bg-primary)] overflow-hidden relative min-h-0">
-  <!-- Delete button (top-right corner) -->
+  <!-- Delete + Format buttons (top-right corner) -->
   <div class="absolute top-2 right-3 lg:top-4 lg:right-12 flex items-center gap-2 z-10">
+    <button
+      on:click={handleFormat}
+      disabled={isFormatting}
+      class="p-1 hover:opacity-60 transition-opacity disabled:opacity-30"
+      title="Format all notes"
+    >
+      <svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4h2l3 10h2l3-10h2M8 14h6M5 18h14" />
+      </svg>
+    </button>
     <button
       on:click={() => showDeleteConfirm = true}
       class="p-1 hover:opacity-60 transition-opacity"
@@ -347,6 +375,14 @@
           {isDeleting ? 'Archiving...' : 'Delete Permanently'}
         </button>
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if formatToast}
+  <div class="fixed bottom-6 right-6 z-[200] animate-toast-in">
+    <div class="border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">
+      {formatToast}
     </div>
   </div>
 {/if}
