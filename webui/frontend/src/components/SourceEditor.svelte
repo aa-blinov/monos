@@ -44,13 +44,13 @@
 
 <div class="flex-1 flex overflow-hidden">
   <!-- Editor -->
-  <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)]">
+  <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)] pt-3 lg:pt-6">
     <textarea
       bind:this={editorRef}
       bind:value={content}
       on:scroll={handleEditorScroll}
       on:mouseenter={() => activePane = 'editor'}
-      class="flex-1 px-4 lg:px-12 pt-3 lg:pt-6 pb-3 lg:pb-6 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30 overscroll-contain"
+      class="flex-1 px-4 lg:px-12 pb-3 lg:pb-6 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30 overscroll-contain"
       placeholder="Begin writing..."
     />
   </div>
