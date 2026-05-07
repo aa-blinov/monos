@@ -50,14 +50,14 @@
       bind:value={content}
       on:scroll={handleEditorScroll}
       on:mouseenter={() => activePane = 'editor'}
-      class="flex-1 px-4 lg:px-12 py-4 lg:py-10 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30 overscroll-contain"
+      class="flex-1 px-4 lg:px-12 py-3 lg:py-6 bg-transparent font-mono text-xs lg:text-sm leading-relaxed resize-none focus:outline-none placeholder-[var(--text-secondary)]/30 overscroll-contain"
       placeholder="Begin writing..."
     />
   </div>
 
   <!-- Preview -->
   <div on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden sm:flex">
-    <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12">
+    <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 py-4 lg:py-6">
       <div class="max-w-2xl mx-auto prose-preview">
         {@html previewHtml}
         {#if backlinks.length > 0}
