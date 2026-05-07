@@ -312,7 +312,7 @@
         {#if fileInfo}
           <div class="flex items-center gap-x-4 mt-0.5">
             <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)]">
-              Created {new Date(fileInfo.created).toLocaleString()} · Modified {new Date(fileInfo.modified).toLocaleString()} · {wordCharStats}
+              Created {new Date(fileInfo.created).toLocaleString()} · Modified {new Date(fileInfo.modified).toLocaleString()}
             </p>
             {#if editableTags.length > 0}
               {#each editableTags as tag, i}
@@ -327,6 +327,7 @@
               on:keydown={addTag}
               class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-[11px] w-16"
             />
+            <span class="text-[10px] lg:text-[11px] text-[var(--text-muted)] ml-auto tabular-nums">{wordCharStats}</span>
           </div>
         {/if}
       </div>
