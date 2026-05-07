@@ -7,6 +7,14 @@
   export let isDarkMode = false;
 
   let isFormatting = false;
+  let toast = { show: false, message: '', style: '' };
+  let toastTimer;
+
+  function showToast(message, style = '') {
+    if (toastTimer) clearTimeout(toastTimer);
+    toast = { show: true, message, style };
+    toastTimer = setTimeout(() => toast.show = false, 3000);
+  }
 
   function toggleEditorMode() {
     $editMode = $editMode === 'rich' ? 'source' : 'rich';
@@ -19,8 +27,8 @@
     isFormatting = true;
     try {
       const r = await fetch('/api/format', { method: 'POST' });
-      alert((await r.json()).message);
-    } catch (e) { alert('Error: ' + e.message); }
+      showToast((await r.json()).message);
+    } catch (e) { showToast('Format failed: ' + e.message, 'text-red-500'); }
     finally { isFormatting = false; }
   }
 </script>
@@ -57,6 +65,16 @@
   </div>
 </header>
 
+{#if toast.show}
+  <div class="fixed bottom-6 right-6 z-[200]">
+    <div class="border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl animate-toast-in {toast.style}">
+      {toast.message}
+    </div>
+  </div>
+{/if}
+
 <style>
   button { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+  :global(.animate-toast-in) { animation: toastIn 0.3s ease-out; }
+  @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
