@@ -7,13 +7,12 @@
     @apply transition-none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-size: 16px;
+    font-size: var(--font-size-base, 16px);
   }
 
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
     font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
-    font-size: var(--font-size-base, 14px);
   }
 
   h1 {
