@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { heroIcons } from '../lib/heroIcons.js';
 
   const dispatch = createEventDispatcher();
 
