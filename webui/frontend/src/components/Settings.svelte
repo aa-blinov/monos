@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import { navigate } from 'svelte-routing';
   import { themes } from '../lib/themes.js';
-  import { fontOptions, fontSizeOptions } from '../lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize } from '../stores.js';
+  import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editMode } from '../stores.js';
 
   let settings = {
     auto_sync_interval: 0,
@@ -31,12 +31,16 @@
   async function loadSettings() {
     try {
       const r = await fetch('/api/settings');
-      if (r.ok) {
+    if (r.ok) {
         const saved = await r.json();
         settings = { ...settings, ...saved };
-        if (saved.theme && themes[saved.theme]) {
-          $activeTheme = saved.theme;
-        }
+        if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
+        if (saved.fontFamily) $fontFamily = saved.fontFamily;
+        if (saved.fontSize) $fontSize = saved.fontSize;
+        if (saved.lineHeight) $lineHeight = saved.lineHeight;
+        if (saved.contentWidth) $contentWidth = saved.contentWidth;
+        if (saved.editMode) $editMode = saved.editMode;
+      }
       }
     } catch (e) { console.error(e); }
 
@@ -52,7 +56,7 @@
 
   async function saveSettings() {
     try {
-      const payload = { ...settings, theme: $activeTheme };
+      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, lineHeight: $lineHeight, contentWidth: $contentWidth, editMode: $editMode };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -213,6 +217,42 @@
             {/each}
           </select>
         </div>
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Line Height</label>
+          <select
+            value={$lineHeight}
+            on:change={(e) => { $lineHeight = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            {#each lineHeightOptions as l}
+              <option value={l.value}>{l.name}</option>
+            {/each}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Content Width</label>
+          <select
+            value={$contentWidth}
+            on:change={(e) => { $contentWidth = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            {#each contentWidthOptions as w}
+              <option value={w.value}>{w.name}</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+      <div class="mt-5">
+        <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Default Editor Mode</label>
+        <select
+          value={$editMode}
+          on:change={(e) => { $editMode = e.target.value; saveSettings(); }}
+          class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+        >
+          <option value="rich">Rich</option>
+          <option value="source">Source</option>
+        </select>
       </div>
     </section>
 

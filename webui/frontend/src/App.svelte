@@ -6,8 +6,8 @@
   import NotePage from './components/NotePage.svelte';
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
-  import { fontOptions, fontSizeOptions } from './lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize } from './stores.js';
+  import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions } from './lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
@@ -30,10 +30,14 @@
     root.style.setProperty('--font-family', font?.family || $fontFamily);
     const size = fontSizeOptions.find(s => s.value === $fontSize);
     root.style.setProperty('--font-size-base', size?.base || '14px');
+    const lh = lineHeightOptions.find(l => l.value === $lineHeight);
+    root.style.setProperty('--line-height', lh?.value_css || '1.625');
+    const cw = contentWidthOptions.find(c => c.value === $contentWidth);
+    root.style.setProperty('--content-width', cw?.value_css || '56rem');
   }
 
   $: applyTheme($activeTheme, isDarkMode);
-  $: applyFont($fontFamily, $fontSize);
+  $: applyFont($fontFamily, $fontSize, $lineHeight, $contentWidth);
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
@@ -61,6 +65,9 @@
       if (r.ok) {
         const s = await r.json();
         if (s.theme && themes[s.theme]) $activeTheme = s.theme;
+        if (s.lineHeight) $lineHeight = s.lineHeight;
+        if (s.contentWidth) $contentWidth = s.contentWidth;
+        if (s.editMode) $editMode = s.editMode;
       }
     } catch {}
 

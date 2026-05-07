@@ -58,7 +58,7 @@
   <!-- Preview -->
   <div on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden sm:flex">
     <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 pt-3 lg:pt-6 pb-6 lg:pb-8">
-      <div class="max-w-2xl mx-auto prose-preview">
+      <div class="max-w-[var(--content-width,56rem)] mx-auto prose-preview">
         {@html previewHtml}
         {#if backlinks.length > 0}
           <div class="mt-20 pt-12 border-t border-[var(--border-subtle)]">

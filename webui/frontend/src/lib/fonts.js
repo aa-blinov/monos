@@ -19,3 +19,15 @@ export const fontSizeOptions = [
   { name: 'Large', value: 'large', base: '18px' },
   { name: 'Extra Large', value: 'xlarge', base: '20px' },
 ];
+
+export const lineHeightOptions = [
+  { name: 'Compact', value: 'compact', value_css: '1.4' },
+  { name: 'Normal', value: 'normal', value_css: '1.625' },
+  { name: 'Relaxed', value: 'relaxed', value_css: '1.9' },
+];
+
+export const contentWidthOptions = [
+  { name: 'Narrow', value: 'narrow', value_css: '42rem' },
+  { name: 'Medium', value: 'medium', value_css: '56rem' },
+  { name: 'Wide', value: 'wide', value_css: '72rem' },
+];
