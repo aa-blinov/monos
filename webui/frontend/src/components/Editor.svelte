@@ -304,7 +304,6 @@
       </div>
     </div>
   </div>
-  <div class="border-b border-[var(--border-subtle)]"></div>
 
   <!-- Content Area -->
   {#if isLoading}
