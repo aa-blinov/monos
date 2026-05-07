@@ -11,14 +11,11 @@
   let searchTimer;
   let searchInputEl;
   let allTags = [];
-  let tagLoaded = false;
 
   async function loadTags() {
-    if (tagLoaded) return;
     try {
       const r = await fetch('/api/tags');
       if (r.ok) allTags = await r.json();
-      tagLoaded = true;
     } catch {}
   }
 
