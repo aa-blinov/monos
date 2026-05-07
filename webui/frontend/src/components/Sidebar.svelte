@@ -129,7 +129,9 @@
     }
   }
 
-  // Export loadTree to be callable from parent
+  let pendingSelectedPath = null;
+  let treeKey = 0;
+
   export async function loadTree() {
     try {
       isLoading = true;
@@ -138,11 +140,46 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       tree = await response.json();
       await loadRecentNotes();
+      if (pendingSelectedPath) {
+        selectedPath = pendingSelectedPath;
+        expandToPath(tree, pendingSelectedPath);
+        treeKey++;
+        pendingSelectedPath = null;
+      }
     } catch (err) {
       error = `Failed to load tree: ${err.message}`;
     } finally {
       isLoading = false;
     }
+  }
+
+  function expandToPath(node, targetPath) {
+    expandedPaths = new Set();
+    if (!node) return;
+    _find(node, targetPath);
+    expandedPaths = new Set(expandedPaths);
+  }
+
+  function _find(node, targetPath) {
+    if (node.path === targetPath) return true;
+    if (node.children) {
+      for (const child of node.children) {
+        if (_find(child, targetPath)) {
+          expandedPaths.add(child.path);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  let expandedPaths = new Set();
+
+  export function setSelected(path) {
+    if (path === selectedPath) return;
+    expandToPath(tree, path);
+    selectedPath = path;
+    treeKey++;
   }
 
   async function loadDirectories() {
@@ -281,7 +318,7 @@
 
   function handleSelectFile(event) {
     const detail = event.detail;
-    selectedPath = detail.path;
+    setSelected(detail.path);
     dispatch('navigate', detail);
   }
 
@@ -484,7 +521,7 @@
       
       <button 
         on:click={toggleSearchMode}
-        class="text-[9px] uppercase tracking-widest font-bold {searchContent ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'} hover:opacity-100 transition-opacity"
+        class="text-[10px] uppercase tracking-widest font-bold {searchContent ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'} hover:opacity-100 transition-opacity"
       >
         {searchContent ? "● Global Search" : "○ Global Search"}
       </button>
@@ -496,7 +533,7 @@
     <div class="px-6 mb-6">
       <button 
         on:click={() => showRecent = !showRecent}
-        class="flex items-center justify-between w-full text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-4"
+         class="flex items-center justify-between w-full text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-4"
       >
         <span>Recent Thoughts</span>
         <span class="transform transition-transform {showRecent ? 'rotate-90' : ''}">›</span>
@@ -510,7 +547,7 @@
               class="w-full text-left group block"
             >
               <div class="text-[11px] font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
-              <div class="text-[8px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path?.startsWith('notes/') ? note.path.slice(6) : note.path}</div>
+              <div class="text-[10px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path?.startsWith('notes/') ? note.path.slice(6) : note.path}</div>
             </button>
           {/each}
         </div>
@@ -526,10 +563,10 @@
   <!-- Tree View Header -->
   {#if !searchQuery.trim() && !searchContent}
     <div class="px-6 mb-4 flex items-center justify-between">
-      <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
+      <h3 class="text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">Knowledge Tree</h3>
       <button
         on:click={() => { newNoteCategory = ''; showCreateModal = true; }}
-        class="text-[10px] uppercase tracking-widest font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+        class="text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >+ New</button>
     </div>
   {/if}
@@ -554,7 +591,7 @@
             on:click={() => handleSelectFile({ detail: { path: result.path, name: result.name, isDir: false } })}
             class="w-full text-left group block"
           >
-            <div class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path.startsWith('notes/') ? result.path.slice(6) : result.path}</div>
+            <div class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-1 truncate">{result.path.startsWith('notes/') ? result.path.slice(6) : result.path}</div>
             <div class="text-sm font-serif font-medium group-hover:underline mb-2">{result.name}</div>
             {#if result.excerpt}
               <p class="text-xs text-[var(--text-secondary)] leading-relaxed italic line-clamp-3">
@@ -580,20 +617,24 @@
             on:dragover|preventDefault
             on:drop={handleRootDrop}
           >
-            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)]/50">Drop to root</span>
+            <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]/50">Drop to root</span>
           </div>
         {/if}
         <!-- Render children directly to hide 'notes' root node -->
+        {#key treeKey}
         {#each filteredTree.children || [] as node (node.path)}
           <FileTree 
             {node} 
             {selectedPath} 
-            expanded={!!searchQuery.trim()}
+            {expandedPaths}
+            searchMode={!!searchQuery.trim()}
+            expanded={!!searchQuery.trim() || expandedPaths.has(node.path)}
             on:navigate={handleSelectFile} 
             on:rightClick={handleRightClick}
             on:moveFile={handleMoveFile}
           />
         {/each}
+        {/key}
       </div>
     {:else}
       <div class="flex items-center justify-center h-32">
@@ -604,7 +645,7 @@
 
   <!-- Stats Footer -->
   {#if !searchContent}
-    <div class="px-6 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] uppercase tracking-widest">
+    <div class="px-6 py-4 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
       <span class="text-[var(--text-secondary)]">{tree ? totalNotes : 0} Notes</span>
       <div class="flex items-center gap-3">
         <button

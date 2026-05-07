@@ -32,11 +32,11 @@
 <div class="flex-1 flex overflow-hidden border-t border-[var(--border-subtle)]">
   <!-- Editor -->
   <div class="flex-1 flex flex-col min-w-0 border-r border-[var(--border-subtle)]">
-    <div class="hidden lg:flex px-12 py-4 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]">
+    <div class="hidden sm:flex px-12 py-4 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]">
       <label class="flex items-center gap-2 cursor-pointer group">
         <input type="checkbox" bind:checked={isSyncScrollEnabled} class="hidden" />
         <div class="w-2 h-2 rounded-full transition-colors {isSyncScrollEnabled ? 'bg-[var(--text-primary)]' : 'bg-transparent border border-[var(--text-secondary)]'} group-hover:opacity-70"></div>
-        <span class="text-[9px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
+        <span class="text-[10px] uppercase tracking-[0.15em] font-bold {isSyncScrollEnabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-50'}">Sync Scroll</span>
       </label>
       <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] tabular-nums">
         {(content || '').trim() ? (content || '').trim().split(/\s+/).length : 0} words · {(content || '').length} chars
@@ -53,7 +53,7 @@
   </div>
 
   <!-- Preview -->
-  <div     on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden lg:flex">
+  <div     on:mouseenter={() => activePane = 'preview'} class="flex-1 flex-col min-w-0 bg-[var(--bg-primary)] hidden sm:flex">
     <div class="hidden lg:flex px-12 py-4 items-center border-b border-[var(--border-subtle)]">
       <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Reader</span>
     </div>

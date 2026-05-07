@@ -29,6 +29,7 @@
         {currentFile}
         on:navigate={(e) => dispatch('navigate', e.detail)}
         on:fileDeleted={() => dispatch('fileDeleted')}
+        on:fileOpened={(e) => dispatch('fileOpened', e.detail)}
       />
     {/key}
   </div>

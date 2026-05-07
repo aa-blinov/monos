@@ -2,8 +2,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import RichEditor from './RichEditor.svelte';
   import SourceEditor from './SourceEditor.svelte';
-
-  $: cleanFilePath = currentFile?.path?.startsWith('notes/') ? currentFile.path.slice(6) : currentFile?.path;
+  import { editMode } from '../stores.js';
 
   let richEditor;
 
@@ -25,8 +24,7 @@
   let saveMessage = '';
   let saveMessageTimeout;
   const AUTOSAVE_DELAY = 1500;
-  let activeTab = 'source'; // 'source' or 'reader' for mobile
-  let editMode = 'rich'; // 'rich' or 'source'
+  let activeTab = 'source';
   let isSyncScrollEnabled = true;
 
   let backlinks = [];
@@ -106,6 +104,7 @@
       editableTags = fileInfo.metadata?.tags || [];
       
       await loadBacklinks();
+      dispatch('fileOpened', currentFile.path);
     } catch (error) {
       console.error('Failed to load file:', error);
       content = '';
@@ -244,7 +243,7 @@
   $: if (currentFile) loadFile();
 
   let ignoreRichUpdate = false;
-  $: if (richEditor && editMode === 'rich' && !ignoreRichUpdate) {
+  $: if (richEditor && $editMode === 'rich' && !ignoreRichUpdate) {
     const md = richEditor.getMarkdown();
     if (md !== editedContent) {
       richEditor.setMarkdown(editedContent);
@@ -253,17 +252,8 @@
 </script>
 
 <div class="h-full flex flex-col bg-[var(--bg-primary)] overflow-hidden relative min-h-0">
-  <!-- Delete + Rich/Source toggle (top-right corner) -->
-  <div class="absolute top-4 right-4 lg:top-10 lg:right-12 flex items-center gap-2 z-10">
-    <button
-      on:click={() => editMode = 'rich'}
-      class="text-xs uppercase tracking-widest font-medium {editMode === 'rich' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}"
-    >Rich</button>
-    <button
-      on:click={() => editMode = 'source'}
-      class="text-xs uppercase tracking-widest font-medium {editMode === 'source' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}"
-    >Source</button>
-    <span class="text-[var(--border-subtle)] mx-1">|</span>
+  <!-- Delete button (top-right corner) -->
+  <div class="absolute top-2 right-3 lg:top-4 lg:right-12 flex items-center gap-2 z-10">
     <button
       on:click={() => showDeleteConfirm = true}
       class="p-1 hover:opacity-60 transition-opacity"
@@ -276,65 +266,45 @@
   </div>
 
   <!-- Header with Title and Actions -->
-  <div class="px-4 lg:px-12 py-4 lg:py-10 space-y-3 lg:space-y-6">
+  <div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
       <div class="flex-1 min-w-0">
         <input
           type="text"
           bind:value={editedTitle}
           placeholder="Note Title"
-          class="text-2xl lg:text-5xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-2 transition-colors"
+          class="text-xl lg:text-3xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-1 transition-colors"
         />
-        <p class="text-[9px] lg:text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mt-1.5 lg:mt-4 truncate">
-          {cleanFilePath}
-        </p>
+        {#if fileInfo}
+          <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)] mt-0.5">
+            Created {new Date(fileInfo.created).toLocaleDateString()} · Modified {new Date(fileInfo.modified).toLocaleDateString()}
+          </p>
+        {/if}
+        {#if editableTags.length > 0}
+          <div class="flex flex-wrap gap-1.5 mt-1.5">
+            {#each editableTags as tag, i}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 border border-[var(--border-subtle)] text-[11px]">
+                #{tag}
+                <button on:click={() => removeTag(i)} class="hover:opacity-60">&times;</button>
+              </span>
+            {/each}
+            <input
+              placeholder="+ tag"
+              on:keydown={addTag}
+              class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-[11px] w-16"
+            />
+          </div>
+        {:else}
+          <input
+            placeholder="+ tag"
+            on:keydown={addTag}
+            class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-[10px] mt-1 w-16"
+          />
+        {/if}
       </div>
     </div>
 
-    <!-- Mobile Tab Toggle -->
-    <div class="flex lg:hidden border-b border-[var(--border-subtle)] pb-2 gap-6">
-      <button
-        class="text-[10px] uppercase tracking-[0.2em] font-medium transition-opacity {editMode === 'rich' ? 'opacity-100 border-b border-[var(--text-primary)]' : 'opacity-40'}"
-        on:click={() => { editMode = 'rich'; activeTab = 'source'; }}
-      >Rich</button>
-      <button
-        class="text-[10px] uppercase tracking-[0.2em] font-medium transition-opacity {editMode === 'source' ? 'opacity-100 border-b border-[var(--text-primary)]' : 'opacity-40'}"
-        on:click={() => { editMode = 'source'; activeTab = 'source'; }}
-      >Source</button>
-    </div>
   </div>
-
-  <!-- Metadata -->
-  {#if fileInfo}
-    <div class="px-6 lg:px-12 pb-4 border-b border-[var(--border-subtle)]">
-      <button
-        on:click={() => showMetadata = !showMetadata}
-        class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-      >
-        Details {showMetadata ? '−' : '+'}
-      </button>
-      {#if showMetadata}
-        <div class="mt-3 space-y-3 text-xs">
-          <div class="flex items-start gap-3">
-            <span class="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] w-20 shrink-0 pt-1">Tags</span>
-            <div class="flex-1 flex flex-wrap gap-2 items-center">
-              {#each editableTags as tag, i}
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 border border-[var(--border-subtle)] text-[10px]">
-                  #{tag}
-                  <button on:click={() => removeTag(i)} class="hover:opacity-60">✕</button>
-                </span>
-              {/each}
-              <input
-                placeholder="Add tag..."
-                on:keydown={addTag}
-                class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-xs min-w-[80px]"
-              />
-            </div>
-          </div>
-        </div>
-      {/if}
-    </div>
-  {/if}
 
   <!-- Content Area -->
   {#if isLoading}
@@ -342,7 +312,7 @@
       <span class="text-xs uppercase tracking-widest animate-pulse">Gathering Thoughts</span>
     </div>
   {:else}
-    {#if editMode === 'rich'}
+    {#if $editMode === 'rich'}
       <!-- Rich mode: full-width editor, no reader -->
       <div class="flex-1 flex flex-col min-w-0 min-h-0 border-t border-[var(--border-subtle)]">
         <div class="hidden lg:flex px-12 py-4 items-center justify-end gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] z-10">
