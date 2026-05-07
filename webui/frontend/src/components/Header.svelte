@@ -31,7 +31,7 @@
 
     {#if $editMode === 'source'}
       <button on:click={() => $syncScroll = !$syncScroll} class="text-sm font-medium hover:opacity-60 transition {$syncScroll ? '' : 'opacity-30'}" title="Toggle sync scroll">
-        Sync
+        Sync Scroll
       </button>
     {/if}
 
