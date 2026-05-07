@@ -30,14 +30,12 @@
     root.style.setProperty('--font-family', font?.family || $fontFamily);
     const size = fontSizeOptions.find(s => s.value === $fontSize);
     root.style.setProperty('--font-size-base', size?.base || '14px');
-    const lh = lineHeightOptions.find(l => l.value === $lineHeight);
-    root.style.setProperty('--line-height', lh?.value_css || '1.625');
-    const cw = contentWidthOptions.find(c => c.value === $contentWidth);
-    root.style.setProperty('--content-width', cw?.value_css || '56rem');
   }
 
   $: applyTheme($activeTheme, isDarkMode);
-  $: applyFont($fontFamily, $fontSize, $lineHeight, $contentWidth);
+  $: applyFont($fontFamily, $fontSize);
+  $: document.documentElement.style.setProperty('--line-height', (lineHeightOptions.find(l => l.value === $lineHeight)?.value_css || '1.625'));
+  $: document.documentElement.style.setProperty('--content-width', (contentWidthOptions.find(c => c.value === $contentWidth)?.value_css || '56rem'));
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
@@ -65,8 +63,6 @@
       if (r.ok) {
         const s = await r.json();
         if (s.theme && themes[s.theme]) $activeTheme = s.theme;
-        if (s.lineHeight) $lineHeight = s.lineHeight;
-        if (s.contentWidth) $contentWidth = s.contentWidth;
         if (s.editMode) $editMode = s.editMode;
       }
     } catch {}

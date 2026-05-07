@@ -53,7 +53,7 @@
 
   async function saveSettings() {
     try {
-      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, lineHeight: $lineHeight, contentWidth: $contentWidth, editMode: $editMode };
+      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, editMode: $editMode };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
