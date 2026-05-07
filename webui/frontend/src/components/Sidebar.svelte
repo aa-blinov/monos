@@ -134,16 +134,16 @@
 
   export async function loadTree() {
     try {
-      isLoading = true;
+      if (!tree) isLoading = true;
       error = '';
       const response = await fetch('/api/tree');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       tree = await response.json();
       await loadRecentNotes();
+      treeKey++;
       if (pendingSelectedPath) {
         selectedPath = pendingSelectedPath;
         expandToPath(tree, pendingSelectedPath);
-        treeKey++;
         pendingSelectedPath = null;
       }
     } catch (err) {
