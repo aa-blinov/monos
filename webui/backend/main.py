@@ -142,6 +142,7 @@ async def get_file_content(path: str = Query(...)):
             raise HTTPException(status_code=400, detail="Path is a directory, not a file")
 
         content = service.read_file(path)
+        service.touch_last_opened(path)
         return {"content": content}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")

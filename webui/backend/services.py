@@ -504,6 +504,16 @@ class NotesService:
                 dirs.append(str(item.relative_to(self.notes_dir)))
         return sorted(dirs)
 
+    def touch_last_opened(self, file_path: str) -> None:
+        session = get_session(self.engine)
+        try:
+            entry = session.query(NoteIndex).filter(NoteIndex.path == file_path).first()
+            if entry:
+                entry.last_opened = datetime.now()
+                session.commit()
+        finally:
+            session.close()
+
     def get_file_info(self, file_path: str) -> FileInfo:
         path = self.root_path / file_path
         if not path.exists():
