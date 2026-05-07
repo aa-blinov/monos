@@ -50,10 +50,9 @@
       </svg>
     </button>
     <h1 class="text-xl lg:text-2xl font-serif font-medium tracking-tight whitespace-nowrap">Monos</h1>
-  </div>
 
-  <div class="flex-1 max-w-lg mx-4 lg:mx-8">
-    <div class="relative">
+    <div class="w-56 lg:w-72 ml-4 lg:ml-8">
+      <div class="relative">
       <input
         type="text"
         placeholder="Search notes..."
