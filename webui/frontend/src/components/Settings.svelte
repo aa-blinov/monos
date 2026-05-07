@@ -1,6 +1,5 @@
 <script>
   import { onMount } from 'svelte';
-  import { navigate } from 'svelte-routing';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { activeTheme, fontFamily, fontSize, editorFontSize, editMode } from '../stores.js';
@@ -159,7 +158,7 @@
 
     <!-- Header -->
     <div class="flex items-center gap-4">
-      <button on:click={() => navigate('/')} class="p-1 hover:opacity-60 transition-opacity" title="Back">
+      <button on:click={() => history.back()} class="p-1 hover:opacity-60 transition-opacity" title="Back">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>

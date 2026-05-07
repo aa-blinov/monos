@@ -535,7 +535,7 @@
               on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
               class="w-full text-left group block"
             >
-              <div class="text-[11px] font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
+              <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
               <div class="text-[10px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{note.path?.startsWith('notes/') ? note.path.slice(6) : note.path}</div>
             </button>
           {/each}
