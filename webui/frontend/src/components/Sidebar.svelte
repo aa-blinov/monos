@@ -418,7 +418,7 @@
 
   <!-- Recent Files Section -->
   {#if recentNotes.length > 0}
-    <div class="px-4 mb-4">
+    <div class="px-4 mb-4 pt-5">
       <button 
         on:click={() => showRecent = !showRecent}
          class="flex items-center justify-between w-full text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60 hover:opacity-100 transition-opacity mb-4"

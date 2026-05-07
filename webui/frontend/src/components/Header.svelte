@@ -1,23 +1,10 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { editMode, syncScroll, searchQuery, searchResults, isSearching } from '../stores.js';
+  import { editMode, syncScroll } from '../stores.js';
 
   const dispatch = createEventDispatcher();
 
   export let isDarkMode = false;
-
-  let searchTimer;
-
-  async function doSearch() {
-    if (!$searchQuery.trim()) { $searchResults = []; return; }
-    $isSearching = true;
-    try {
-      const r = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: $searchQuery, search_content: true }) });
-      if (r.ok) $searchResults = await r.json();
-    } catch {} finally { $isSearching = false; }
-  }
-
-  function handleSearchInput() { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, 300); }
 
   function toggleEditorMode() {
     $editMode = $editMode === 'rich' ? 'source' : 'rich';
@@ -27,8 +14,8 @@
   function toggleSidebar() { dispatch('toggleSidebar'); }
 </script>
 
-<header class="bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] py-3 flex items-center">
-  <div class="w-72 shrink-0 px-4 lg:px-8 flex items-center gap-4 lg:gap-6">
+<header class="bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] px-4 lg:px-8 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-4 lg:gap-6">
     <button on:click={toggleSidebar} class="hover:opacity-60 transition-opacity p-1" title="Toggle Sidebar">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
@@ -37,22 +24,7 @@
     <h1 class="text-xl lg:text-2xl font-serif font-medium tracking-tight whitespace-nowrap">Monos</h1>
   </div>
 
-  <div class="relative flex-1 px-4 lg:px-8">
-    <input
-      type="text"
-      placeholder="Search notes..."
-      bind:value={$searchQuery}
-      on:input={handleSearchInput}
-      class="w-full bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] py-1 text-sm outline-none placeholder-[var(--text-secondary)]"
-    />
-    {#if $searchQuery}
-      <button on:click={() => { $searchQuery = ''; $searchResults = []; }} class="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 p-1 hover:opacity-60">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    {/if}
-  </div>
-
-  <div class="flex items-center gap-3 lg:gap-6 px-4 lg:px-8 shrink-0">
+  <div class="flex items-center gap-3 lg:gap-6">
     {#if $editMode === 'source'}
       <button on:click={() => $syncScroll = !$syncScroll} class="text-sm font-medium hover:opacity-60 transition {$syncScroll ? '' : 'opacity-30'}" title="Toggle sync scroll">
         Sync Scroll
