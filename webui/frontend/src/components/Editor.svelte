@@ -273,7 +273,7 @@
           type="text"
           bind:value={editedTitle}
           placeholder="Note Title"
-          class="text-lg lg:text-3xl font-serif font-medium tracking-tight bg-transparent border-b border-transparent hover:border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none w-full pb-1 transition-colors"
+          class="text-lg lg:text-3xl font-serif font-medium tracking-tight bg-transparent outline-none w-full pb-1"
         />
         {#if fileInfo}
           <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)] mt-0.5">
