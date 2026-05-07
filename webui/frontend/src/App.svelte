@@ -135,6 +135,22 @@
       </div>
 
       <main class="flex-1 overflow-hidden relative">
+        <div class="border-b border-[var(--border-subtle)] px-4 lg:px-12 py-2">
+          <div class="relative max-w-lg">
+            <input
+              type="text"
+              placeholder="Search notes..."
+              bind:value={$searchQuery}
+              on:input={handleSearchInput}
+              class="w-full bg-transparent py-1 text-sm outline-none placeholder-[var(--text-secondary)]"
+            />
+            {#if $searchQuery}
+              <button on:click={() => { $searchQuery = ''; $searchResults = []; }} class="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:opacity-60">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            {/if}
+          </div>
+        </div>
         {#if $searchQuery.trim()}
           <div class="h-full overflow-y-auto px-4 lg:px-12 py-8">
             {#if $isSearching}
