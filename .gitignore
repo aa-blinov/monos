@@ -18,6 +18,9 @@ __pycache__/
 .pre-commit/
 .pre-commit-*.yaml.swp
 
+# SQLite database
+.data/
+
 # User-specific assets or temporary files
 *.tmp
 *.log
