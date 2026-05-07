@@ -3,7 +3,6 @@
   import { get } from 'svelte/store';
   import { editMode, syncScroll, lineHeight, contentWidth } from '../stores.js';
   import { lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
-  import { Maximize2, WrapText } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -41,12 +40,12 @@
       </button>
     {/if}
 
-    <button on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="text-sm font-medium hover:opacity-60 transition flex items-center gap-1" title="Content width: {$contentWidth}">
-      <Maximize2 size="14"/><span class="hidden lg:inline text-[10px] uppercase tracking-wider">{$contentWidth}</span>
+    <button on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="text-sm font-medium hover:opacity-60 transition" title="Content width">
+      Width
     </button>
 
-    <button on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="text-sm font-medium hover:opacity-60 transition flex items-center gap-1" title="Line height: {$lineHeight}">
-      <WrapText size="14"/><span class="hidden lg:inline text-[10px] uppercase tracking-wider">{$lineHeight}</span>
+    <button on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="text-sm font-medium hover:opacity-60 transition" title="Line height">
+      Height
     </button>
 
     <button on:click={toggleEditorMode} class="text-sm font-medium hover:opacity-60 transition" title="Switch editor mode">

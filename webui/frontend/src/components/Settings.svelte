@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import { navigate } from 'svelte-routing';
   import { themes } from '../lib/themes.js';
-  import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editMode } from '../stores.js';
+  import { fontOptions, fontSizeOptions } from '../lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize, editMode } from '../stores.js';
 
   let settings = {
     auto_sync_interval: 0,
@@ -37,8 +37,6 @@
         if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
         if (saved.fontFamily) $fontFamily = saved.fontFamily;
         if (saved.fontSize) $fontSize = saved.fontSize;
-        if (saved.lineHeight) $lineHeight = saved.lineHeight;
-        if (saved.contentWidth) $contentWidth = saved.contentWidth;
         if (saved.editMode) $editMode = saved.editMode;
       }
     } catch (e) { console.error(e); }
@@ -213,30 +211,6 @@
           >
             {#each fontSizeOptions as s}
               <option value={s.value}>{s.name} ({s.base})</option>
-            {/each}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Line Height</label>
-          <select
-            value={$lineHeight}
-            on:change={(e) => { $lineHeight = e.target.value; saveSettings(); }}
-            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
-          >
-            {#each lineHeightOptions as l}
-              <option value={l.value}>{l.name}</option>
-            {/each}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Content Width</label>
-          <select
-            value={$contentWidth}
-            on:change={(e) => { $contentWidth = e.target.value; saveSettings(); }}
-            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
-          >
-            {#each contentWidthOptions as w}
-              <option value={w.value}>{w.name}</option>
             {/each}
           </select>
         </div>
