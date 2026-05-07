@@ -276,30 +276,24 @@
           class="text-lg lg:text-3xl font-serif font-medium tracking-tight bg-transparent outline-none w-full pb-1 !border-none"
         />
         {#if fileInfo}
-          <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)] mt-0.5">
-            Created {new Date(fileInfo.created).toLocaleDateString()} · Modified {new Date(fileInfo.modified).toLocaleDateString()}
-          </p>
-        {/if}
-        {#if editableTags.length > 0}
-          <div class="flex flex-wrap gap-1.5 mt-1.5">
-            {#each editableTags as tag, i}
+          <div class="flex items-center gap-x-4 mt-0.5">
+            <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)]">
+              Created {new Date(fileInfo.created).toLocaleDateString()} · Modified {new Date(fileInfo.modified).toLocaleDateString()}
+            </p>
+            {#if editableTags.length > 0}
+              {#each editableTags as tag, i}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 border border-[var(--border-subtle)] text-[11px]">
-                #{tag}
-                <button on:click={() => removeTag(i)} class="hover:opacity-60">&times;</button>
-              </span>
-            {/each}
+                  #{tag}
+                  <button on:click={() => removeTag(i)} class="hover:opacity-60">&times;</button>
+                </span>
+              {/each}
+            {/if}
             <input
               placeholder="+ tag"
               on:keydown={addTag}
               class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-[11px] w-16"
             />
           </div>
-        {:else}
-          <input
-            placeholder="+ tag"
-            on:keydown={addTag}
-            class="bg-transparent border-b border-transparent focus:border-[var(--border-subtle)] outline-none py-0.5 text-[10px] mt-1 w-16"
-          />
         {/if}
       </div>
     </div>
