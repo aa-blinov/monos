@@ -63,6 +63,11 @@
   /** @type {string} */
   let selectedColor = '#a89984';
 
+  const colorOptions = [
+    '#a89984', '#928374', '#fb4934', '#fe8019', '#fabd2f',
+    '#b8bb26', '#8ec07c', '#83a598', '#458588', '#d3869b'
+  ];
+
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
   let isDragOverRoot = false;
@@ -703,9 +708,15 @@
       <h2 class="text-2xl font-serif mb-6 tracking-tight">Icon & Color</h2>
       <div class="mb-6">
         <label class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">Color</label>
-        <div class="flex items-center gap-3">
-          <input type="color" bind:value={selectedColor} class="w-10 h-10 cursor-pointer border border-[var(--border-subtle)] bg-transparent p-0.5" />
-          <span class="text-[10px] text-[var(--text-secondary)]">{selectedColor}</span>
+        <div class="flex gap-2 flex-wrap">
+          {#each colorOptions as c}
+            <button
+              on:click={() => selectedColor = c}
+              class="w-7 h-7 rounded-full border-2 transition-all {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
+              style="background: {c}"
+              title={c}
+            ></button>
+          {/each}
         </div>
       </div>
       <div class="grid grid-cols-6 gap-3">
