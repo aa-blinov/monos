@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { navigate } from 'svelte-routing';
   import { themes } from '../lib/themes.js';
-  import { activeTheme } from '../stores.js';
+  import { fontOptions, fontSizeOptions } from '../lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize } from '../stores.js';
 
   let settings = {
     auto_sync_interval: 0,
@@ -181,6 +182,37 @@
             <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
           </button>
         {/each}
+      </div>
+    </section>
+
+    <!-- Font -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Typography</h2>
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Font</label>
+          <select
+            value={$fontFamily}
+            on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            {#each fontOptions as f}
+              <option value={f.name}>{f.name} <span class="opacity-40 text-[10px]">({f.category})</span></option>
+            {/each}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Size</label>
+          <select
+            value={$fontSize}
+            on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            {#each fontSizeOptions as s}
+              <option value={s.value}>{s.name} ({s.base})</option>
+            {/each}
+          </select>
+        </div>
       </div>
     </section>
 

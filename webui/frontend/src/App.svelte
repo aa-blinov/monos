@@ -6,7 +6,8 @@
   import NotePage from './components/NotePage.svelte';
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
-  import { activeTheme } from './stores.js';
+  import { fontOptions, fontSizeOptions } from './lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
@@ -23,7 +24,16 @@
     }
   }
 
+  function applyFont() {
+    const root = document.documentElement;
+    const font = fontOptions.find(f => f.family.includes($fontFamily) || f.name === $fontFamily);
+    root.style.setProperty('--font-family', font?.family || $fontFamily);
+    const size = fontSizeOptions.find(s => s.value === $fontSize);
+    root.style.setProperty('--font-size-base', size?.base || '14px');
+  }
+
   $: applyTheme($activeTheme, isDarkMode);
+  $: applyFont($fontFamily, $fontSize);
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
@@ -55,6 +65,7 @@
     } catch {}
 
     applyTheme();
+    applyFont();
     return () => {
       window.removeEventListener('resize', updateMobileState);
       window.removeEventListener('keydown', handleKeydown);

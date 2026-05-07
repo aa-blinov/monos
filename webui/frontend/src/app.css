@@ -12,20 +12,20 @@
 
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 14px;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: var(--font-size-base, 14px);
   }
 
   h1 {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
     @apply text-xl font-bold tracking-tight;
   }
   h2 {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
     @apply text-lg font-bold tracking-tight;
   }
   h3 {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
     @apply text-base font-bold tracking-tight;
   }
 }
@@ -52,11 +52,11 @@
 }
 
 .font-serif {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
 }
 
 .font-sans {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
 }
 
 .font-mono {
