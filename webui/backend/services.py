@@ -525,7 +525,7 @@ class NotesService:
             name=path.name, is_dir=path.is_dir(),
             size=stat.st_size, size_human=self._humanize_size(stat.st_size),
             modified=datetime.fromtimestamp(stat.st_mtime),
-            created=datetime.fromtimestamp(stat.st_ctime),
+            created=datetime.fromisoformat(metadata.date) if metadata and metadata.date else datetime.fromtimestamp(stat.st_mtime),
             metadata=metadata,
         )
 
