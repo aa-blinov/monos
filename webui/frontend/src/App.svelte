@@ -24,19 +24,12 @@
     }
   }
 
-  function applyFont() {
-    const root = document.documentElement;
-    const font = fontOptions.find(f => f.family.includes($fontFamily) || f.name === $fontFamily);
-    root.style.setProperty('--font-family', font?.family || $fontFamily);
-    const size = fontSizeOptions.find(s => s.value === $fontSize);
-    root.style.setProperty('--font-size-base', size?.base || '14px');
-  }
-
   $: applyTheme($activeTheme, isDarkMode);
-  $: applyFont($fontFamily, $fontSize);
   $: document.documentElement.style.setProperty('--line-height', (lineHeightOptions.find(l => l.value === $lineHeight)?.value_css || '1.625'));
   $: document.documentElement.style.setProperty('--content-width', (contentWidthOptions.find(c => c.value === $contentWidth)?.value_css || '56rem'));
   $: document.documentElement.style.setProperty('--editor-font-size', (editorFontSizeOptions.find(s => s.value === $editorFontSize)?.base || '16px'));
+  $: document.documentElement.style.setProperty('--font-size-base', (fontSizeOptions.find(s => s.value === $fontSize)?.base || '14px'));
+  $: document.documentElement.style.setProperty('--font-family', (fontOptions.find(f => f.family.includes($fontFamily) || f.name === $fontFamily)?.family || $fontFamily));
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;
@@ -69,7 +62,6 @@
     } catch {}
 
     applyTheme();
-    applyFont();
     return () => {
       window.removeEventListener('resize', updateMobileState);
       window.removeEventListener('keydown', handleKeydown);
