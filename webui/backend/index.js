@@ -594,11 +594,32 @@ app.get('/api/git/status', (req, res) => {
     let settings = {};
     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
 
-    const branch = gitExec('git rev-parse --abbrev-ref HEAD', NOTES_DIR);
-    const status = gitExec('git status --porcelain', NOTES_DIR);
-    const hasChanges = status.length > 0;
+    const currentBranch = gitExec('git rev-parse --abbrev-ref HEAD', NOTES_DIR);
+    const statusOut = gitExec('git status --porcelain', NOTES_DIR);
+    const hasChanges = statusOut.length > 0;
 
-    res.json({ initialized: true, branch, repo: settings.repo || '', hasChanges, status });
+    let ahead = 0, behind = 0;
+    try {
+      gitExec('git rev-parse @{u}', NOTES_DIR);
+      const counts = gitExec('git rev-list --left-right --count @{u}...HEAD', NOTES_DIR);
+      const parts = counts.split('\t');
+      behind = parseInt(parts[0]) || 0;
+      ahead = parseInt(parts[1]) || 0;
+    } catch {}
+
+    const status = hasChanges ? 'dirty' : 'clean';
+
+    res.json({
+      initialized: true,
+      current_branch: currentBranch,
+      branch: currentBranch,
+      repo: settings.repo || '',
+      hasChanges,
+      status,
+      ahead,
+      behind,
+      last_sync: settings.last_sync || null,
+    });
   } catch (e) {
     res.status(500).json({ detail: e.message || String(e) });
   }
@@ -726,6 +747,15 @@ app.post('/api/git/sync', (req, res) => {
     try { gitExec('git push', cwd); } catch {}
 
     indexAllFiles();
+
+    // Save last sync time
+    const settingsPath = path.join(ROOT_DIR, '.data', 'git_settings.json');
+    let settings = {};
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
+    settings.last_sync = new Date().toISOString();
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
     res.json({ message: result, conflicts: false });
   } catch (e) {
     res.status(500).json({ detail: e.message || String(e) });
