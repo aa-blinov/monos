@@ -11,7 +11,7 @@
     "chart-bar": Icon.BarChart, "clipboard": Icon.Clipboard, "code": Icon.Code,
     "file-text": Icon.FileText, "globe": Icon.Globe, "heart": Icon.Heart,
     "home": Icon.Home, "inbox": Icon.Inbox, "lightbulb": Icon.Lightbulb,
-    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag
+    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag, "star": Icon.Star
   };
 
   export let node;

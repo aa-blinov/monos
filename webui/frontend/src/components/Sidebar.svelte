@@ -13,7 +13,7 @@
     "chart-bar": Icon.BarChart, "clipboard": Icon.Clipboard, "code": Icon.Code,
     "file-text": Icon.FileText, "globe": Icon.Globe, "heart": Icon.Heart,
     "home": Icon.Home, "inbox": Icon.Inbox, "lightbulb": Icon.Lightbulb,
-    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag
+    "map": Icon.Map, "puzzle": Icon.Puzzle, "rocket": Icon.Rocket, "tag": Icon.Tag, "star": Icon.Star
   };
 
   /** @type {Object} */
@@ -183,9 +183,8 @@
   async function setFolderIcon(icon) {
     if (!iconPickerTarget) return;
     try {
-      const body = {};
-      if (icon !== undefined) body.icon = icon || null;
-      body.color = selectedColor;
+      const body = { icon: icon || null };
+      if (icon) body.color = selectedColor;
       const response = await fetch(`/api/directory/icon?path=${encodeURIComponent(iconPickerTarget)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
