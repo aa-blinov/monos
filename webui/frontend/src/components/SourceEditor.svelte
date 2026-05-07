@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { marked } from 'marked';
 
   const dispatch = createEventDispatcher();
 
@@ -10,6 +11,18 @@
   let previewRef;
   let activePane = null;
   let isSyncScrollEnabled = true;
+
+  function renderMarkdown(md) {
+    let html = md
+      .replace(/\[\[(.*?)\]\]/g, (_, p1) => {
+        const [target, label] = p1.split('|');
+        const t = (label || target).trim();
+        return `<button class="wikilink" data-target="${target.trim()}">${t}</button>`;
+      });
+    return marked.parse(html);
+  }
+
+  $: previewHtml = renderMarkdown(content || '');
 
   function handleEditorScroll() {
     if (!isSyncScrollEnabled || activePane !== 'editor' || !editorRef || !previewRef) return;
@@ -57,37 +70,9 @@
     <div class="hidden lg:flex px-12 py-4 items-center border-b border-[var(--border-subtle)]">
       <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-medium">Reader</span>
     </div>
-    <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12 prose-typography">
-      <div class="max-w-2xl mx-auto">
-        {#each (content || '').split('\n\n') as paragraph}
-          {#if paragraph.startsWith('# ')}
-            <h1 class="text-xl font-bold mb-6">{paragraph.replace(/^#\s+/, '')}</h1>
-          {:else if paragraph.startsWith('## ')}
-            <h2 class="text-lg font-bold mt-8 mb-4">{paragraph.replace(/^##\s+/, '')}</h2>
-          {:else if paragraph.startsWith('### ')}
-            <h3 class="text-base font-bold mt-6 mb-3">{paragraph.replace(/^###\s+/, '')}</h3>
-          {:else if paragraph.startsWith('- ')}
-            <ul class="list-disc ml-6 space-y-1 mb-4">
-              {#each paragraph.split('\n') as item}
-                {#if item.startsWith('- ')}
-                  <li class="text-sm leading-relaxed">{item.replace(/^-\s+/, '')}</li>
-                {/if}
-              {/each}
-            </ul>
-          {:else if paragraph.startsWith('> ')}
-            <blockquote class="border-l-2 border-[var(--text-primary)] pl-6 italic my-6 text-sm text-[var(--text-secondary)]">{paragraph.replace(/^>\s+/, '')}</blockquote>
-          {:else if paragraph.trim()}
-            <p class="text-sm leading-relaxed mb-4">
-              {@html paragraph
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\`(.*?)\`/g, '<code class="bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
-                .replace(/\[\[(.*?)\]\]/g, (_, p1) => { const [t, l] = p1.split('|'); return `<button class="wikilink underline underline-offset-4 decoration-[var(--border-subtle)] hover:decoration-[var(--text-primary)] transition-colors" data-target="${t.trim()}">${(l || t).trim()}</button>`; })
-                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="underline underline-offset-4 decoration-[var(--text-secondary)] hover:decoration-[var(--text-primary)]">$1</a>')}
-            </p>
-          {/if}
-        {/each}
-
+    <div bind:this={previewRef} on:scroll={handlePreviewScroll} on:click={handlePreviewClick} class="flex-1 overflow-y-auto px-6 lg:px-12 py-8 lg:py-12">
+      <div class="max-w-2xl mx-auto prose-preview">
+        {@html previewHtml}
         {#if backlinks.length > 0}
           <div class="mt-20 pt-12 border-t border-[var(--border-subtle)]">
             <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] mb-8">Linked Mentions</h3>
@@ -110,4 +95,25 @@
   textarea { scrollbar-width: none; }
   textarea::-webkit-scrollbar { display: none; }
   :global(.wikilink) { cursor: pointer; background: none; border: none; padding: 0; font: inherit; color: inherit; }
+  :global(.wikilink:hover) { text-decoration: underline; }
+  :global(.prose-preview) { line-height: 1.725; font-size: 0.875rem; }
+  :global(.prose-preview h1) { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; }
+  :global(.prose-preview h2) { font-size: 1.125rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; }
+  :global(.prose-preview h3) { font-size: 1rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+  :global(.prose-preview p) { margin-bottom: 1rem; }
+  :global(.prose-preview ul) { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+  :global(.prose-preview ol) { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
+  :global(.prose-preview li) { margin-bottom: 0.25rem; }
+  :global(.prose-preview blockquote) { border-left: 2px solid var(--text-primary); padding-left: 1.5rem; font-style: italic; margin: 1.5rem 0; color: var(--text-secondary); }
+  :global(.prose-preview pre) { background: var(--bg-secondary); padding: 1rem; border-radius: 0; margin-bottom: 1rem; overflow-x: auto; font-size: 0.75rem; line-height: 1.625; font-family: monospace; }
+  :global(.prose-preview code) { background: var(--bg-secondary); padding: 0.125rem 0.375rem; border-radius: 0; font-size: 0.75rem; font-family: monospace; }
+  :global(.prose-preview pre code) { background: none; padding: 0; font-size: inherit; }
+  :global(.prose-preview table) { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.8125rem; }
+  :global(.prose-preview th) { border-bottom: 1px solid var(--border-subtle); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.05em; color: var(--text-secondary); }
+  :global(.prose-preview td) { border-bottom: 1px solid var(--border-subtle); padding: 0.5rem 0.75rem; }
+  :global(.prose-preview hr) { border: none; border-top: 1px solid var(--border-subtle); margin: 2rem 0; }
+  :global(.prose-preview strong) { font-weight: 600; }
+  :global(.prose-preview em) { font-style: italic; }
+  :global(.prose-preview a) { text-decoration: underline; text-underline-offset: 0.25rem; text-decoration-color: var(--text-secondary); }
+  :global(.prose-preview a:hover) { text-decoration-color: var(--text-primary); }
 </style>

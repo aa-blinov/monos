@@ -29,6 +29,7 @@
     "@tiptap/starter-kit": "^3.22.5",
     "lowlight": "^3.3.0",
     "lucide-svelte": "^0.302.0",
+    "marked": "^18.0.3",
     "svelte-routing": "^2.13.0",
     "tiptap-markdown": "^0.9.0"
   }
