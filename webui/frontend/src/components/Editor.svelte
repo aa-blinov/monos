@@ -279,7 +279,7 @@
         {#if fileInfo}
           <div class="flex items-center gap-x-4 mt-0.5">
             <p class="text-[10px] lg:text-[11px] text-[var(--text-muted)]">
-              Created {new Date(fileInfo.created).toLocaleDateString()} · Modified {new Date(fileInfo.modified).toLocaleDateString()}
+              Created {new Date(fileInfo.created).toLocaleString()} · Modified {new Date(fileInfo.modified).toLocaleString()}
             </p>
             {#if editableTags.length > 0}
               {#each editableTags as tag, i}
