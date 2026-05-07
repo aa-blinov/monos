@@ -7,34 +7,13 @@
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
+  import { highlightExcerpt } from './lib/search.js';
   import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode, searchQuery, searchResults, isSearching } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
   let isMobile = false;
   let sidebarComponent;
-  let searchTimer;
-
-  async function doSearch() {
-    if (!$searchQuery.trim()) {
-      $searchResults = [];
-      return;
-    }
-    $isSearching = true;
-    try {
-      const r = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: $searchQuery, search_content: true })
-      });
-      if (r.ok) $searchResults = await r.json();
-    } catch {} finally { $isSearching = false; }
-  }
-
-  function handleSearchInput() {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(doSearch, 300);
-  }
 
   function applyTheme() {
     const t = themes[$activeTheme];
@@ -154,7 +133,7 @@
                     <div class="text-lg font-serif font-medium group-hover:underline mb-2">{result.name}</div>
                     {#if result.excerpt}
                       <p class="text-xs text-[var(--text-secondary)] leading-relaxed italic line-clamp-3">
-                        {@html result.excerpt.replace(new RegExp($searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), match => `<mark class="bg-[var(--text-primary)] text-[var(--bg-primary)] px-0.5">${match}</mark>`)}
+                        {@html highlightExcerpt(result.excerpt, $searchQuery)}
                       </p>
                     {/if}
                   </button>

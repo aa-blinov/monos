@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check",
-    "lint": "svelte-check"
+    "lint": "svelte-check",
+    "test": "node --test ./src/lib/search.test.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.1",

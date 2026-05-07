@@ -196,7 +196,7 @@ def react_agent(user_query: str, max_iterations: int = 10) -> str:
     """
     messages = []
     system_prompt = """You are a helpful assistant that uses the ReAct framework.
-    
+
 When responding, follow this format:
 Thought: [your reasoning about what to do]
 Action: [tool_name]
@@ -211,7 +211,7 @@ When you have enough information, respond with:
 Final Answer: [your answer]"""
 
     messages.append({"role": "user", "content": user_query})
-    
+
     for iteration in range(max_iterations):
         # LLM генерирует мысль и действие
         response = client.messages.create(
@@ -220,26 +220,26 @@ Final Answer: [your answer]"""
             system=system_prompt,
             messages=messages
         )
-        
+
         assistant_message = response.content[0].text
         messages.append({"role": "assistant", "content": assistant_message})
-        
+
         # Проверяем, есть ли Final Answer
         if "Final Answer:" in assistant_message:
             return assistant_message.split("Final Answer:")[-1].strip()
-        
+
         # Парсим Action и выполняем его
         if "Action:" in assistant_message:
             lines = assistant_message.split("\n")
             action = None
             action_input = None
-            
+
             for i, line in enumerate(lines):
                 if line.startswith("Action:"):
                     action = line.replace("Action:", "").strip()
                 if line.startswith("Action Input:"):
                     action_input = line.replace("Action Input:", "").strip()
-            
+
             if action and action in TOOLS:
                 # Выполняем инструмент
                 observation = TOOLS[action](action_input)
@@ -252,7 +252,7 @@ Final Answer: [your answer]"""
                     "role": "user",
                     "content": "Observation: Tool not found or error occurred"
                 })
-    
+
     return "Max iterations reached"
 
 # Использование
@@ -288,7 +288,7 @@ Action Input: {"ticker": "AAPL", "date": "2007-06-29"}
 
 Observation: Цена закрытия Apple 29 июня 2007 была $119.87.
 
-Final Answer: Цена акции Apple в день запуска первого iPhone 
+Final Answer: Цена акции Apple в день запуска первого iPhone
 (29 июня 2007) была $119.87 за акцию.
 ```
 
@@ -309,7 +309,7 @@ Action Input: 12 / 2
 
 Observation: 6
 
-Thought: Алиса дала Бобу 6 яблок. 
+Thought: Алиса дала Бобу 6 яблок.
 Теперь:
 - У Алисы: 12 - 6 = 6
 - У Боба: 6
@@ -327,7 +327,7 @@ Thought: Боб даёт 2 яблока Кэрол.
 - У Боба: 6 - 2 = 4
 - У Кэрол: 2
 
-Final Answer: 
+Final Answer:
 - Алиса имеет 6 яблок
 - Боб имеет 4 яблока
 - Кэрол имеет 2 яблока
@@ -348,8 +348,8 @@ Final Answer:
 Если агент ошибается на одном шаге, он может исправить себя на следующем:
 
 ```
-Thought: Я думал, что нужно использовать search, но 
-на самом деле у меня уже есть эта информация 
+Thought: Я думал, что нужно использовать search, но
+на самом деле у меня уже есть эта информация
 из Observation. Давайте продолжим.
 ```
 
@@ -435,7 +435,7 @@ class ReActAgentWithMemory:
     def __init__(self):
         self.short_term_memory = []  # текущий диалог
         self.long_term_memory = []   # важные факты
-    
+
     def process_thought(self, thought):
         # Анализируем, стоит ли сохранить мысль
         if self.is_important(thought):
@@ -524,7 +524,7 @@ def react_agent(query, max_iterations=10):
         # ... логика ...
         if should_stop():
             break
-    
+
     if i == max_iterations - 1:
         return "Maximum iterations reached. Partial answer: ..."
 ```
@@ -549,7 +549,7 @@ from langchain.agents import AgentType
 from langchain.llms import OpenAI
 
 tools = [
-    Tool(name="Calculator", func=calculator, 
+    Tool(name="Calculator", func=calculator,
          description="useful for math questions"),
     Tool(name="Search", func=search,
          description="useful for current events")

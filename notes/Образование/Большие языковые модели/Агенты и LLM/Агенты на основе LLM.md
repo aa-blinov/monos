@@ -244,7 +244,7 @@ LLM: "Теперь я знаю погоду. Отвечу пользовател
 Похожий подход — **Chain of Thought** (CoT) — это просто просить модель показать её рассуждения. Метод был предложен Wei et al. в работе "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models" ([arXiv:2201.11903](https://arxiv.org/abs/2201.11903)). CoT существенно улучшает качество рассуждений моделей, особенно на сложных задачах.
 
 ```
-Вопрос: "Если у Мария есть 3 яблока, а у Петра в 2 раза больше, 
+Вопрос: "Если у Мария есть 3 яблока, а у Петра в 2 раза больше,
          сколько яблок у них вместе?"
 
 Без CoT:
@@ -252,7 +252,7 @@ LLM: "Теперь я знаю погоду. Отвечу пользовател
 (Может быть правильно, может быть нет)
 
 С CoT:
-Модель отвечает: 
+Модель отвечает:
 "Давайте подумаем пошагово:
 1. У Мария 3 яблока
 2. У Петра в 2 раза больше: 3 × 2 = 6 яблок
@@ -326,7 +326,7 @@ LLM не имеет встроенной долговременной памят
 ```
 Полная история: 50K токенов (слишком много)
            ↓
-Резюмирование: "Пользователь ищет рейсы Москва-НьюЙорк. 
+Резюмирование: "Пользователь ищет рейсы Москва-НьюЙорк.
                  Нашли KLM за $380 как самый дешевый.
                  Статус: ожидание подтверждения бронирования."
            ↓
@@ -367,7 +367,7 @@ LLM не имеет встроенной долговременной памят
 class Agent:
     def __init__(self):
         self.state = {"messages": [], "facts": {}, "current_task": None}
-    
+
     def step(self):
         # Состояние доступно во всех методах
         pass
@@ -382,7 +382,7 @@ class Agent:
 class Agent:
     def __init__(self, session_id):
         self.session_id = session_id
-    
+
     def step(self):
         # Загружаем состояние из БД
         state = db.get_session(self.session_id)
@@ -437,7 +437,7 @@ def step(messages_history, task):
 ```
 Задача: "Найти сумму цен товаров в БД"
 
-Попытка 1: 
+Попытка 1:
 query = "SELECT * FROM products"
 Результат: 1000 товаров (очень медленно)
 Агент размышляет: "Мне нужна только цена"
@@ -456,7 +456,7 @@ query = "SELECT SUM(price) FROM products"
 ```
 [Главный агент] "Проанализировать квартальные результаты"
       ├→ [SQL агент] "Получи данные из БД"
-      ├→ [Анализ агент] "Сравни с прошлым кварталом"  
+      ├→ [Анализ агент] "Сравни с прошлым кварталом"
       └→ [Письмо агент] "Напиши отчет"
 ```
 
@@ -529,7 +529,7 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
 def run_agent(user_message: str):
     """Запускает агента"""
     messages = [{"role": "user", "content": user_message}]
-    
+
     while True:
         # Запрашиваем ответ от Claude
         response = client.messages.create(
@@ -538,7 +538,7 @@ def run_agent(user_message: str):
             tools=tools,
             messages=messages
         )
-        
+
         # Если модель хочет использовать инструмент
         if response.stop_reason == "tool_use":
             tool_results = []
@@ -550,7 +550,7 @@ def run_agent(user_message: str):
                         "tool_use_id": block.id,
                         "content": tool_result
                     })
-            
+
             # Добавляем ответ модели и результаты инструментов
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
@@ -666,7 +666,7 @@ metrics = {
 
 ```
 ❌ Плохо: "Ответь быстро на вопрос"
-✅ Хорошо: "Подумай пошагово, прежде чем ответить. 
+✅ Хорошо: "Подумай пошагово, прежде чем ответить.
            Объясни свое рассуждение."
 ```
 
@@ -676,7 +676,7 @@ metrics = {
 
 ```
 ❌ Плохо: "Помоги мне найти квартиру"
-✅ Хорошо: "Помоги мне найти квартиру в Москве 
+✅ Хорошо: "Помоги мне найти квартиру в Москве
            в диапазоне 5-10 млн рублей,
            с минимум 2 комнатами,
            рядом с метро.
@@ -732,14 +732,14 @@ assert len(result) > 0
 Рабочий процесс:
 1. SQL агент загружает данные
    SELECT region, SUM(sales) FROM sales GROUP BY region
-   
+
 2. Аналитический агент вычисляет статистику
    - Средние продажи по регионам
    - Стандартное отклонение
    - Тренды
-   
+
 3. Визуальный агент создает графики
-   
+
 4. Финальный агент собирает отчет:
    "Лучший регион - Московская область (500М рублей)"
 ```
@@ -754,11 +754,11 @@ assert len(result) > 0
    - "Какой провайдер?"
    - "Какие устройства подключены?"
    - "Есть ошибки в роутере?"
-   
+
 2. Диагностический агент проверяет:
    - База известных проблем
    - Статус провайдера
-   
+
 3. Решение агента предлагает:
    - Перезагрузить роутер
    - Проверить кабель
@@ -799,10 +799,10 @@ cache = {}
 def call_claude_cached(message):
     # Покажчик для команды
     key = hashlib.md5(message.encode()).hexdigest()
-    
+
     if key in cache:
         return cache[key]  # Не тратим токены!
-    
+
     response = claude.messages.create(
         messages=[{"role": "user", "content": message}]
     )
@@ -822,16 +822,16 @@ class RateLimiter:
     def __init__(self, calls_per_minute=60):
         self.calls_per_minute = calls_per_minute
         self.calls = []
-    
+
     def wait_if_needed(self):
         now = datetime.now()
         # Очистим старые вызовы
         self.calls = [c for c in self.calls if c > now - timedelta(minutes=1)]
-        
+
         if len(self.calls) >= self.calls_per_minute:
             wait_time = (self.calls[0] + timedelta(minutes=1) - now).total_seconds()
             time.sleep(wait_time)
-        
+
         self.calls.append(now)
 
 limiter = RateLimiter(calls_per_minute=60)
@@ -862,7 +862,7 @@ import json
 class AgentLogger:
     def __init__(self):
         self.logs = []
-    
+
     def log_step(self, step_num, action, tool_name=None, tool_args=None, result=None, tokens_used=0):
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -877,7 +877,7 @@ class AgentLogger:
         print(f"[Шаг {step_num}] {action} -> {tool_name}({tool_args})")
         if result:
             print(f"  Результат: {result}")
-    
+
     def save(self, filename):
         with open(filename, "w") as f:
             json.dump(self.logs, f, indent=2, default=str)
@@ -942,14 +942,14 @@ class PersistenceManager:
                 updated_at TIMESTAMP
             )
         """)
-    
+
     def save(self, session_id, state):
         self.conn.execute(
             "INSERT OR REPLACE INTO sessions (id, state, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
             (session_id, json.dumps(state))
         )
         self.conn.commit()
-    
+
     def load(self, session_id):
         row = self.conn.execute(
             "SELECT state FROM sessions WHERE id = ?",
@@ -1002,36 +1002,36 @@ class PromptVersionManager:
         self.prompts_dir = prompts_dir
         self.versions = {}
         self.load_metadata()
-    
+
     def load_metadata(self):
         with open(f"{self.prompts_dir}/metadata.json") as f:
             self.metadata = json.load(f)
-    
+
     def get_prompt(self, version_or_status="production"):
         # Если запрашиваем конкретную версию
         if version_or_status.startswith("v"):
             version = version_or_status
         else:
             # Если запрашиваем по статусу, ищем последнюю
-            version = [v for v, data in self.metadata["prompts"].items() 
+            version = [v for v, data in self.metadata["prompts"].items()
                       if data["status"] == version_or_status][-1]
-        
+
         with open(f"{self.prompts_dir}/{version}.txt") as f:
             return f.read()
-    
+
     def compare_versions(self, v1, v2):
         """Compare performance of two versions"""
         data1 = self.metadata["prompts"][v1]
         data2 = self.metadata["prompts"][v2]
-        
+
         print(f"{v1}: {data1.get('success_rate', 'N/A')}")
         print(f"{v2}: {data2.get('success_rate', 'N/A')}")
-    
+
     def rollback(self, to_version):
         """Rollback to previous version"""
         self.metadata["prompts"]["production"] = self.metadata["prompts"][to_version]
         self.save_metadata()
-    
+
     def save_metadata(self):
         with open(f"{self.prompts_dir}/metadata.json", "w") as f:
             json.dump(self.metadata, f, indent=2)

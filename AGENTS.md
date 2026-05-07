@@ -27,10 +27,13 @@ cd webui/frontend && npm install && npm run dev
 
 ```bash
 # Frontend
+cd webui/frontend && npm test
 cd webui/frontend && npm run check
+cd webui/frontend && npm run build
 
 # Backend
-cd webui/backend && node --check index.js database.js
+cd webui/backend && npm test
+cd webui/backend && node --check index.js search.js database.js
 ```
 
 ## Структура
@@ -38,12 +41,16 @@ cd webui/backend && node --check index.js database.js
 ```
 webui/
   backend/          # Node.js Express API
-    index.js        # Все роуты и бизнес-логика
+    index.js        # Express API и роуты
     database.js     # SQLite (better-sqlite3)
+    search.js       # Логика поиска и ранжирования
+    search.test.js  # Тесты поиска на node:test
   frontend/         # Svelte SPA
     src/
       components/   # Svelte компоненты
-      lib/          # Общие модули (icons.js)
+      lib/          # Общие модули (icons.js, search.js)
+        search.js   # Подсветка и разбор поискового запроса
+        search.test.js # Тесты клиентского поиска на node:test
       stores.js     # Svelte stores (editMode, syncScroll)
       app.css       # Gruvbox тема
   .data/            # SQLite БД, настройки Git

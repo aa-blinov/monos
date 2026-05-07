@@ -5,6 +5,7 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { getDb, closeDb } from './database.js';
+import { parseFrontmatterMetadata, searchEntries } from './search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = process.env.NOTES_ROOT
@@ -20,10 +21,6 @@ app.use(express.json());
 
 function relPath(absolutePath) {
   return path.relative(ROOT_DIR, absolutePath).replace(/\\/g, '/');
-}
-
-function escapeRegExp(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function nowISO() {
@@ -51,18 +48,38 @@ function indexFile(filePath, content) {
   const stats = fs.statSync(filePath);
   const isDir = stats.isDirectory();
   const now = nowISO();
+  const metadata = !isDir ? parseFrontmatterMetadata(content) : { title: '', tags: [] };
 
   const existing = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(rel);
   if (existing) {
     db.prepare(`
-      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, content = ?, last_opened = ?
+      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, content = ?, last_opened = ?
       WHERE path = ?
-    `).run(name, isDir ? 1 : 0, parent, content || '', now, rel);
+    `).run(
+      name,
+      isDir ? 1 : 0,
+      parent,
+      metadata.title || existing.title || '',
+      metadata.tags.length ? JSON.stringify(metadata.tags) : (existing.tags || '[]'),
+      content || '',
+      now,
+      rel
+    );
   } else {
     db.prepare(`
-      INSERT INTO notes_index (path, name, is_dir, parent_path, content, date_created, last_opened)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(rel, name, isDir ? 1 : 0, parent, content || '', now, now);
+      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, date_created, last_opened)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      rel,
+      name,
+      isDir ? 1 : 0,
+      parent,
+      metadata.title,
+      content || '',
+      JSON.stringify(metadata.tags),
+      now,
+      now
+    );
   }
 
   // Update links
@@ -399,44 +416,10 @@ app.post('/api/search', (req, res) => {
   try {
     const { query, search_content } = req.body;
     const db = getDb();
-    const isTagSearch = query.startsWith('#');
-    const cleanQuery = query.replace(/^#/, '').trim();
-    const q = `%${cleanQuery}%`;
-
-    let results;
-    if (isTagSearch) {
-      const tagQ = `%"${cleanQuery}"%`;
-      results = db.prepare(`
-        SELECT * FROM notes_index WHERE is_dir = 0 AND tags LIKE ?
-        ORDER BY last_opened DESC LIMIT 50
-      `).all(tagQ);
-    } else if (search_content) {
-      results = db.prepare(`
-        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR content LIKE ? OR title LIKE ? OR tags LIKE ?)
-        ORDER BY last_opened DESC LIMIT 50
-      `).all(q, q, q, q);
-    } else {
-      results = db.prepare(`
-        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR title LIKE ? OR tags LIKE ?)
-        ORDER BY last_opened DESC LIMIT 50
-      `).all(q, q, q);
-    }
-
-    res.json(results.map(e => {
-      let excerpt = '';
-      if (search_content && e.content) {
-        const idx = e.content.toLowerCase().indexOf(cleanQuery.toLowerCase());
-        if (idx >= 0) {
-          const start = Math.max(0, idx - 60);
-          const end = Math.min(e.content.length, idx + cleanQuery.length + 60);
-          excerpt = (start > 0 ? '...' : '') + e.content.slice(start, end) + (end < e.content.length ? '...' : '');
-        }
-      }
-      return {
-        path: e.path,
-        name: e.name.replace('.md', ''),
-        excerpt,
-      };
+    const entries = db.prepare('SELECT * FROM notes_index WHERE is_dir = 0').all();
+    res.json(searchEntries(entries, {
+      query,
+      searchContent: Boolean(search_content),
     }));
   } catch (e) {
     res.status(500).json({ detail: e.message });

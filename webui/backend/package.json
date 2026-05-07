@@ -2,6 +2,9 @@
   "name": "monos-backend",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "test": "node --test ./search.test.js"
+  },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
