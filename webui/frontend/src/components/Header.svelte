@@ -81,7 +81,7 @@
           <div class="absolute top-full left-0 mt-1 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full">
             {#each filteredTags as tag}
               <button
-                on:click={() => { $searchQuery = `#${tag} `; }}
+                on:click={() => { $searchQuery = `#${tag} `; doSearch(); }}
                 class="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--bg-secondary)] transition"
               >#{tag}</button>
             {/each}
