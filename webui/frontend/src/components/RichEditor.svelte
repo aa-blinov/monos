@@ -3,11 +3,15 @@
   import { Editor } from '@tiptap/core';
   import StarterKit from '@tiptap/starter-kit';
   import Placeholder from '@tiptap/extension-placeholder';
+  import Table from '@tiptap/extension-table';
+  import TableRow from '@tiptap/extension-table-row';
+  import TableCell from '@tiptap/extension-table-cell';
+  import TableHeader from '@tiptap/extension-table-header';
   import { Markdown } from 'tiptap-markdown';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
-    List, ListOrdered, Quote, Code2, Minus, Link
+    List, ListOrdered, Quote, Code2, Minus, Link, Table2
   } from 'lucide-svelte';
 
   export let content = '';
@@ -27,6 +31,10 @@
       extensions: [
         StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
         Placeholder.configure({ placeholder }),
+        Table.configure({ resizable: false }),
+        TableRow,
+        TableCell,
+        TableHeader,
         Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
       ],
       content: content,
@@ -58,6 +66,7 @@
       else if (method === 'hr') c.setHorizontalRule().run();
       else if (method === 'link') { const url = prompt('URL:'); if (url) c.extendMarkRange('link').setLink({ href: url }).run(); }
       else if (method === 'image') { const url = prompt('Image URL:'); if (url) c.setImage({ src: url, alt: '' }).run(); }
+      else if (method === 'table') c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
       else c[method](attrs).run();
     };
   }
@@ -96,6 +105,7 @@
     <button on:click={cmd('toggleBlockquote')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" title="Blockquote"><Quote size="16"/></button>
     <button on:click={cmd('toggleCodeBlock')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition {active.codeBlock ? 'bg-[var(--bg-secondary)]' : ''}" title="Code Block"><Code2 size="16"/></button>
     <button on:click={cmd('hr')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Horizontal Rule"><Minus size="16"/></button>
+    <button on:click={cmd('table')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Insert Table"><Table2 size="16"/></button>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <button on:click={cmd('link')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Add Link"><Link size="16"/></button>
@@ -114,7 +124,10 @@
       [&_.ProseMirror_code]:bg-[var(--bg-secondary)] [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono
       [&_.ProseMirror_pre]:bg-[var(--bg-secondary)] [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded [&_.ProseMirror_pre]:my-4 [&_.ProseMirror_pre]:overflow-x-auto
       [&_.ProseMirror_hr]:border-[var(--border-subtle)] [&_.ProseMirror_hr]:my-6
-      [&_.ProseMirror_a]:underline [&_.ProseMirror_s]:line-through"
+      [&_.ProseMirror_a]:underline [&_.ProseMirror_s]:line-through
+      [&_.ProseMirror_table]:w-full [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:my-4 [&_.ProseMirror_table]:text-sm
+      [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-[var(--border-subtle)] [&_.ProseMirror_th]:px-3 [&_.ProseMirror_th]:py-2 [&_.ProseMirror_th]:text-left [&_.ProseMirror_th]:font-semibold [&_.ProseMirror_th]:bg-[var(--bg-secondary)]
+      [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-[var(--border-subtle)] [&_.ProseMirror_td]:px-3 [&_.ProseMirror_td]:py-2"
   ></div>
 </div>
 
