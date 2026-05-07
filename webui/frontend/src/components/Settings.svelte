@@ -31,7 +31,7 @@
   async function loadSettings() {
     try {
       const r = await fetch('/api/settings');
-    if (r.ok) {
+      if (r.ok) {
         const saved = await r.json();
         settings = { ...settings, ...saved };
         if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
@@ -40,7 +40,6 @@
         if (saved.lineHeight) $lineHeight = saved.lineHeight;
         if (saved.contentWidth) $contentWidth = saved.contentWidth;
         if (saved.editMode) $editMode = saved.editMode;
-      }
       }
     } catch (e) { console.error(e); }
 
