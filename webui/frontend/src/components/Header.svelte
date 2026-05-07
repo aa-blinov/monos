@@ -68,6 +68,7 @@
         </button>
       {/if}
     </div>
+    </div>
   </div>
 
   <div class="flex items-center gap-3 lg:gap-6">
