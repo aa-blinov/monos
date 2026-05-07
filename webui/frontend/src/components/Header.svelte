@@ -53,7 +53,7 @@
   function toggleSidebar() { dispatch('toggleSidebar'); }
 </script>
 
-<header class="bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] px-4 lg:px-8 py-3 flex items-center justify-between">
+<header class="bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] px-4 lg:px-8 py-2 flex items-center justify-between">
   <div class="flex items-center gap-4 lg:gap-6">
     <button on:click={toggleSidebar} class="hover:opacity-60 transition-opacity p-1" title="Toggle Sidebar">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,18 +63,18 @@
     <h1 class="text-xl lg:text-2xl font-serif font-medium tracking-tight whitespace-nowrap">Monos</h1>
   </div>
 
-  <div class="flex items-center gap-3 lg:gap-6">
+  <div class="flex items-center gap-3 lg:gap-6 h-8">
     {#if searchOpen}
-      <div class="relative flex items-center">
+      <div class="relative flex items-center h-full">
         <input
           bind:this={searchInputEl}
           type="text"
-          placeholder="Search notes..."
+          placeholder="Search..."
           bind:value={$searchQuery}
           on:input={handleSearchInput}
           on:keydown={(e) => { if (e.key === 'Escape') closeSearch(); }}
           on:focus={loadTags}
-          class="w-48 lg:w-64 bg-transparent border-b border-[var(--text-primary)] py-1 text-sm outline-none placeholder-[var(--text-secondary)]"
+          class="w-36 sm:w-48 lg:w-64 bg-transparent border-b border-[var(--text-primary)] text-sm outline-none placeholder-[var(--text-secondary)]"
         />
         <button on:click={closeSearch} class="ml-1 p-1 hover:opacity-60"><X size="14"/></button>
         {#if showTagSuggestions}
