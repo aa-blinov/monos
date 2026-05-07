@@ -81,22 +81,29 @@ function indexFile(filePath, content) {
 
 function indexAllFiles() {
   const db = getDb();
-  db.prepare('DELETE FROM notes_index').run();
-  db.prepare('DELETE FROM note_links').run();
+  const indexedPaths = new Set();
 
   function walk(dir) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       const rel = relPath(fullPath);
+      indexedPaths.add(rel);
       if (entry.isDirectory()) {
         if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
         const parent = path.dirname(rel).replace(/\\/g, '/');
         const now = nowISO();
-        db.prepare(`
-          INSERT OR REPLACE INTO notes_index (path, name, is_dir, parent_path, content, date_created, last_opened)
-          VALUES (?, ?, 1, ?, '', ?, ?)
-        `).run(rel, entry.name, parent, now, now);
+        // INSERT OR REPLACE preserves existing columns if not specified, but we want to keep title/tags/category
+        const existing = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(rel);
+        if (!existing) {
+          db.prepare(`
+            INSERT INTO notes_index (path, name, is_dir, parent_path, content, date_created, last_opened)
+            VALUES (?, ?, 1, ?, '', ?, ?)
+          `).run(rel, entry.name, parent, now, now);
+        } else {
+          db.prepare('UPDATE notes_index SET name = ?, parent_path = ?, last_opened = ? WHERE path = ?')
+            .run(entry.name, parent, now, rel);
+        }
         walk(fullPath);
       } else if (entry.name.endsWith('.md') || entry.name.endsWith('.txt')) {
         const content = fs.readFileSync(fullPath, 'utf-8');
@@ -105,6 +112,14 @@ function indexAllFiles() {
     }
   }
   walk(NOTES_DIR);
+
+  // Remove entries for files/dirs that no longer exist on disk
+  const allPaths = db.prepare('SELECT path FROM notes_index').all().map(r => r.path);
+  for (const p of allPaths) {
+    if (!indexedPaths.has(p)) {
+      db.prepare('DELETE FROM notes_index WHERE path = ? OR path LIKE ? || \'/%\'').run(p, p);
+    }
+  }
 }
 
 function getDirectoryChildren(parentRelPath) {
