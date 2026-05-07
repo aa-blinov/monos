@@ -7,6 +7,7 @@ export const fontFamily = writable(localStorage.getItem('fontFamily') || 'JetBra
 export const fontSize = writable(localStorage.getItem('fontSize') || 'medium');
 export const lineHeight = writable(localStorage.getItem('lineHeight') || 'normal');
 export const contentWidth = writable(localStorage.getItem('contentWidth') || 'medium');
+export const editorFontSize = writable(localStorage.getItem('editorFontSize') || 'medium');
 
 editMode.subscribe(value => {
   localStorage.setItem('editMode', value);
@@ -30,4 +31,8 @@ lineHeight.subscribe(value => {
 
 contentWidth.subscribe(value => {
   localStorage.setItem('contentWidth', value);
+});
+
+editorFontSize.subscribe(value => {
+  localStorage.setItem('editorFontSize', value);
 });

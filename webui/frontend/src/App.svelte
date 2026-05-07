@@ -6,8 +6,8 @@
   import NotePage from './components/NotePage.svelte';
   import Settings from './components/Settings.svelte';
   import { themes } from './lib/themes.js';
-  import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions } from './lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editMode } from './stores.js';
+  import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode } from './stores.js';
 
   let isDarkMode = false;
   let sidebarOpen = true;
@@ -36,6 +36,7 @@
   $: applyFont($fontFamily, $fontSize);
   $: document.documentElement.style.setProperty('--line-height', (lineHeightOptions.find(l => l.value === $lineHeight)?.value_css || '1.625'));
   $: document.documentElement.style.setProperty('--content-width', (contentWidthOptions.find(c => c.value === $contentWidth)?.value_css || '56rem'));
+  $: document.documentElement.style.setProperty('--editor-font-size', (editorFontSizeOptions.find(s => s.value === $editorFontSize)?.base || '16px'));
 
   function updateMobileState() {
     isMobile = window.innerWidth < 1024;

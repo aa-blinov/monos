@@ -8,13 +8,13 @@
   import TaskItem from '@tiptap/extension-task-item';
   import { Markdown } from 'tiptap-markdown';
   import { get } from 'svelte/store';
-  import { lineHeight, contentWidth } from '../stores.js';
-  import { lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
+  import { lineHeight, contentWidth, editorFontSize } from '../stores.js';
+  import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    Maximize2, WrapText
+    Maximize2, WrapText, Type
   } from 'lucide-svelte';
 
   export let content = '';
@@ -126,13 +126,14 @@
 
     <button on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Content Width"><Maximize2 size="16"/></button>
     <button on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Line Height"><WrapText size="16"/></button>
+    <button on:click={() => cycleOption(editorFontSize, editorFontSizeOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" title="Font Size"><Type size="16"/></button>
   </div>
 
   <!-- Editor -->
   <div bind:this={editorEl}
     class="flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 py-4 lg:py-10 cursor-text touch-pan-y
       [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:max-w-[var(--content-width,56rem)] [&_.ProseMirror]:mx-auto [&_.ProseMirror_p]:my-2
-      [&_.ProseMirror]:[line-height:var(--line-height,1.625)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[var(--text-secondary)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-30
+      [&_.ProseMirror]:[line-height:var(--line-height,1.625)] [&_.ProseMirror]:[font-size:var(--editor-font-size,16px)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[var(--text-secondary)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-30
       [&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:my-4
       [&_.ProseMirror_h2]:text-xl [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:my-3
       [&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-bold [&_.ProseMirror_h3]:my-2

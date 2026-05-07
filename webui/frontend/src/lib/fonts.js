@@ -35,3 +35,11 @@ export const contentWidthOptions = [
   { name: 'Broad', value: 'broad', value_css: '68rem' },
   { name: 'Wide', value: 'wide', value_css: '80rem' },
 ];
+
+export const editorFontSizeOptions = [
+  { name: 'XS', value: 'xs', base: '13px' },
+  { name: 'Sm', value: 'sm', base: '14px' },
+  { name: 'Md', value: 'md', base: '16px' },
+  { name: 'Lg', value: 'lg', base: '18px' },
+  { name: 'XL', value: 'xl', base: '20px' },
+];

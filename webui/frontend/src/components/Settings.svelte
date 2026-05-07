@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import { navigate } from 'svelte-routing';
   import { themes } from '../lib/themes.js';
-  import { fontOptions, fontSizeOptions } from '../lib/fonts.js';
-  import { activeTheme, fontFamily, fontSize, editMode } from '../stores.js';
+  import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
+  import { activeTheme, fontFamily, fontSize, editorFontSize, editMode } from '../stores.js';
 
   let settings = {
     auto_sync_interval: 0,
@@ -53,7 +53,7 @@
 
   async function saveSettings() {
     try {
-      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, editMode: $editMode };
+      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, editMode: $editMode };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -220,16 +220,30 @@
     <!-- Editor Preferences -->
     <section class="space-y-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">Editor</h2>
-      <div>
-        <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Default Mode</label>
-        <select
-          value={$editMode}
-          on:change={(e) => { $editMode = e.target.value; saveSettings(); }}
-          class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
-        >
-          <option value="rich">Rich</option>
-          <option value="source">Source</option>
-        </select>
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Default Mode</label>
+          <select
+            value={$editMode}
+            on:change={(e) => { $editMode = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            <option value="rich">Rich</option>
+            <option value="source">Source</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-[var(--text-secondary)] mb-1.5">Font Size</label>
+          <select
+            value={$editorFontSize}
+            on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          >
+            {#each editorFontSizeOptions as s}
+              <option value={s.value}>{s.name} ({s.base})</option>
+            {/each}
+          </select>
+        </div>
       </div>
     </section>
 
