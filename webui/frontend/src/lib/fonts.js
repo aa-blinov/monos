@@ -21,13 +21,17 @@ export const fontSizeOptions = [
 ];
 
 export const lineHeightOptions = [
-  { name: 'Compact', value: 'compact', value_css: '1.4' },
+  { name: 'Compact', value: 'compact', value_css: '1.3' },
+  { name: 'Cozy', value: 'cozy', value_css: '1.45' },
   { name: 'Normal', value: 'normal', value_css: '1.625' },
-  { name: 'Relaxed', value: 'relaxed', value_css: '1.9' },
+  { name: 'Spaced', value: 'spaced', value_css: '1.8' },
+  { name: 'Relaxed', value: 'relaxed', value_css: '2.0' },
 ];
 
 export const contentWidthOptions = [
-  { name: 'Narrow', value: 'narrow', value_css: '42rem' },
-  { name: 'Medium', value: 'medium', value_css: '56rem' },
-  { name: 'Wide', value: 'wide', value_css: '72rem' },
+  { name: 'Narrow', value: 'narrow', value_css: '38rem' },
+  { name: 'Snug', value: 'snug', value_css: '48rem' },
+  { name: 'Medium', value: 'medium', value_css: '58rem' },
+  { name: 'Broad', value: 'broad', value_css: '68rem' },
+  { name: 'Wide', value: 'wide', value_css: '80rem' },
 ];
