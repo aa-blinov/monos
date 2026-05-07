@@ -384,11 +384,19 @@ app.post('/api/search', (req, res) => {
   try {
     const { query, search_content } = req.body;
     const db = getDb();
-    const cleanQuery = query.replace(/^#/, '');
+    const isTagSearch = query.startsWith('#');
+    const cleanQuery = query.replace(/^#/, '').trim();
     const q = `%${cleanQuery}%`;
 
     let results;
-    if (search_content) {
+    if (isTagSearch) {
+      // Exact tag match: search for "tagname" within JSON array
+      const tagQ = `%"${cleanQuery}"%`;
+      results = db.prepare(`
+        SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR title LIKE ? OR tags LIKE ?)
+        ORDER BY last_opened DESC LIMIT 50
+      `).all(q, q, tagQ);
+    } else if (search_content) {
       results = db.prepare(`
         SELECT * FROM notes_index WHERE is_dir = 0 AND (name LIKE ? OR content LIKE ? OR title LIKE ? OR tags LIKE ?)
         ORDER BY last_opened DESC LIMIT 50
