@@ -295,10 +295,10 @@
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
           <button
             type="button"
-            class="{mobile ? 'h-36 rounded-2xl px-3 py-3' : 'h-48 rounded-3xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
+            class="{mobile ? 'h-24 rounded-2xl px-3 py-3' : 'h-36 rounded-3xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
             on:click={createNote}
           >
-            <span class="block font-serif text-lg font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)]">
+            <span class="block font-serif text-sm font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)] sm:text-base">
               {$localizedText.app.homeActions.newNote}
             </span>
           </button>

@@ -159,11 +159,21 @@ async function main() {
     await page.getByRole('heading', { name: 'Notes' }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-dashboard.png'), fullPage: false });
 
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await page.getByPlaceholder('Search').fill('sync');
+    await page.getByText('Search Results').waitFor();
+    await page.screenshot({ path: path.join(outputDir, 'monos-search.png'), fullPage: false });
+
     await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
     await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Product/i }).first().click();
     await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Launch Plan/i }).first().click();
     await page.locator('input[placeholder="Note Title"]').waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-editor.png'), fullPage: false });
+
+    await page.goto(`${frontendUrl}/settings`);
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(outputDir, 'monos-settings.png'), fullPage: false });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(frontendUrl);
