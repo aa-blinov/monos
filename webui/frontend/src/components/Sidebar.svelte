@@ -796,7 +796,7 @@
 </script>
 
   <div
-    class="h-full flex flex-col bg-[var(--bg-primary)] relative"
+    class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-primary)]"
     role="presentation"
     on:contextmenu|self={handleBackgroundRightClick}
   >
@@ -817,7 +817,7 @@
 
   <!-- Pinned Notes Section -->
   {#if pinnedNotes.length > 0}
-    <div class="px-4 mb-4">
+    <div class="mb-4 shrink-0 px-4">
       <div class="mb-3 flex min-h-10 items-center justify-between text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">
         <span>{$localizedText.sidebar.pinned}</span>
         <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[10px] tabular-nums">{pinnedNotes.length}</span>
@@ -837,7 +837,7 @@
   {/if}
 
   <!-- Tree View Header -->
-    <div class="mb-2 px-4 lg:mb-4">
+    <div class="mb-2 shrink-0 px-4 lg:mb-4">
       <div class="flex items-center justify-between gap-3 pb-1.5 lg:pb-2">
         <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] opacity-60 lg:text-[11px] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
@@ -851,16 +851,17 @@
     </div>
 
   <!-- Tree View or Search Results -->
-  <div 
-    data-testid="tree-drop-zone"
-    class="flex-1 overflow-y-auto px-3 pb-6 lg:px-4"
-    class:bg-[var(--border-subtle)]={isDragOverRoot}
-    role="presentation"
-    on:contextmenu|self={handleBackgroundRightClick}
-    on:dragover={handleRootDragOver}
-    on:dragleave={handleRootDragLeave}
-    on:drop={handleRootDrop}
-  >
+  <div class="min-h-0 flex-1 overflow-hidden px-3 pb-6 lg:px-4">
+    <div
+      data-testid="tree-drop-zone"
+      class="h-full overflow-y-auto overscroll-contain pr-2"
+      class:bg-[var(--border-subtle)]={isDragOverRoot}
+      role="presentation"
+      on:contextmenu|self={handleBackgroundRightClick}
+      on:dragover={handleRootDragOver}
+      on:dragleave={handleRootDragLeave}
+      on:drop={handleRootDrop}
+    >
     {#if isLoading}
       <div class="flex items-center justify-center h-32">
         <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.sidebar.loading}</span>
@@ -898,10 +899,11 @@
         <span class="text-xs uppercase tracking-widest opacity-40">{$localizedText.sidebar.empty}</span>
       </div>
     {/if}
+    </div>
   </div>
 
   <!-- Stats Footer -->
-  <div class="px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] uppercase tracking-widest">
+  <div class="flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 py-3 text-[11px] uppercase tracking-widest">
       <span class="text-[var(--text-secondary)]">{$localizedText.sidebar.notes(tree ? totalNotes : 0)}</span>
       <div class="flex items-center gap-3">
         <TooltipIconButton

@@ -4,13 +4,7 @@ Monos is a local-first desktop notes app for people who want a fast personal kno
 
 It combines Markdown files, wiki-style links, a clean dashboard inspired by Google Keep, full-text search, and Git sync into one focused workspace.
 
-<p>
-  <a href="https://aa-blinov.github.io/monos/">Website</a>
-  ·
-  <a href="https://github.com/aa-blinov/monos/releases">Downloads</a>
-  ·
-  <a href="docs/ARCHITECTURE.md">Architecture</a>
-</p>
+[Website](https://aa-blinov.github.io/monos/) · [Downloads](https://github.com/aa-blinov/monos/releases) · [Architecture](docs/ARCHITECTURE.md)
 
 ![Monos dashboard with a mock product knowledge base](site/media/monos-dashboard.png)
 
@@ -88,6 +82,16 @@ npm run dist:mac
 ```
 
 CI builds both platforms through GitHub Actions and uploads installers as workflow artifacts.
+
+## Versioning
+
+Monos follows [Semantic Versioning](https://semver.org/):
+
+- **MAJOR** versions include breaking changes to note storage, public APIs, sync behavior, or desktop data layout.
+- **MINOR** versions add backwards-compatible features, UI improvements, or new settings.
+- **PATCH** versions contain backwards-compatible bug fixes, dependency updates, and small polish changes.
+
+Release tags use the `vMAJOR.MINOR.PATCH` format, for example `v1.0.0`.
 
 ## Quality Checks
 

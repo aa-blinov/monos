@@ -8,10 +8,12 @@ test.beforeEach(async ({ page }) => {
 test('opens seeded notes and navigates through the shell', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('button', { name: 'Monos' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Welcome/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Monos', exact: true })).toBeVisible();
+  const welcomeCard = page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).first();
+  await expect(welcomeCard).toBeVisible();
 
-  await page.getByRole('button', { name: /Welcome/i }).first().click();
+  await welcomeCard.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Open note' }).click();
   await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
   await expect(page.getByText(/Welcome to Monos/i)).toBeVisible();
 
@@ -59,17 +61,18 @@ test('changes settings and persists them through the backend', async ({ page }) 
 
 test('board mode is a full-width quick preview workspace', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Welcome/i }).first().click();
+  await page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Open note' }).click();
   await expect(page).toHaveURL(/\/notes\/Welcome/);
+  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
 
   await page.getByRole('button', { name: 'Board view' }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Monos Board' })).toBeVisible();
-  await expect(page.getByText('Tree', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
 
   await page.getByRole('button', { name: '4 columns' }).click();
-  await page.getByRole('button').filter({ hasText: 'Welcome.md' }).click();
+  await page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Welcome to Monos.');
@@ -77,4 +80,104 @@ test('board mode is a full-width quick preview workspace', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/notes\/Welcome/);
   await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
+});
+
+test('board preview keeps note path separated from content panel', async ({ page }) => {
+  const notePath = 'notes/Preview Layout Regression.md';
+  const title = 'Article 2. Measuring ROI Without Turning AI Adoption Into Theater';
+  const content = `---
+title: "${title}"
+tags: ["preview", "layout"]
+---
+
+We already know that AI is not magic. It is probability, math, workflow, and risk management.
+
+## Main rule
+
+Before buying another subscription, inspect the process you are trying to improve.
+`;
+
+  await page.setViewportSize({ width: 768, height: 668 });
+  await page.addInitScript(() => {
+    localStorage.setItem('noteView', 'board');
+    localStorage.setItem('boardColumns', '2');
+  });
+  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}`, {
+    data: { content },
+  });
+
+  await page.goto('/');
+  await page.getByRole('button').filter({ hasText: title }).click();
+
+  const dialog = page.getByRole('dialog');
+  const pathLabel = dialog.getByTestId('note-preview-path');
+  const previewBody = dialog.getByTestId('note-preview-body');
+
+  await expect(dialog.getByRole('heading', { name: title })).toBeVisible();
+  await expect(pathLabel).toHaveText(notePath);
+  await expect(previewBody).toContainText('Main rule');
+
+  const boxes = await Promise.all([
+    pathLabel.boundingBox(),
+    previewBody.boundingBox(),
+  ]);
+  const [pathBox, previewBox] = boxes;
+  expect(pathBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  expect(pathBox.y + pathBox.height).toBeLessThanOrEqual(previewBox.y - 4);
+});
+
+test('sidebar keeps only the tree area scrollable', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 740 });
+  await page.addInitScript(() => {
+    localStorage.setItem('noteView', 'list');
+  });
+
+  for (let index = 0; index < 36; index += 1) {
+    const padded = String(index + 1).padStart(2, '0');
+    await page.request.post(`/api/file?path=${encodeURIComponent(`notes/Scroll Test ${padded}.md`)}`, {
+      data: {
+        content: `---
+title: "Scroll Test ${padded}"
+tags: ["layout"]
+---
+
+Sidebar scroll regression note ${padded}.
+`,
+      },
+    });
+  }
+
+  await page.goto('/');
+  await expect(page.getByTestId('tree-drop-zone')).toBeVisible();
+
+  const metrics = await page.evaluate(() => {
+    const shell = document.querySelector('[data-testid="sidebar-shell"]');
+    const tree = document.querySelector('[data-testid="tree-drop-zone"]');
+    const shellStyle = shell ? getComputedStyle(shell) : null;
+    const treeStyle = tree ? getComputedStyle(tree) : null;
+
+    return {
+      shell: shell && shellStyle ? {
+        clientHeight: shell.clientHeight,
+        scrollHeight: shell.scrollHeight,
+        overflowY: shellStyle.overflowY,
+        right: shell.getBoundingClientRect().right,
+      } : null,
+      tree: tree && treeStyle ? {
+        clientHeight: tree.clientHeight,
+        scrollHeight: tree.scrollHeight,
+        overflowY: treeStyle.overflowY,
+        right: tree.getBoundingClientRect().right,
+      } : null,
+    };
+  });
+
+  expect(metrics.shell).not.toBeNull();
+  expect(metrics.tree).not.toBeNull();
+  expect(metrics.shell.overflowY).toBe('hidden');
+  expect(metrics.shell.scrollHeight - metrics.shell.clientHeight, JSON.stringify(metrics.shell)).toBeLessThanOrEqual(2);
+  expect(metrics.tree.overflowY).toBe('auto');
+  expect(metrics.tree.scrollHeight - metrics.tree.clientHeight, JSON.stringify(metrics.tree)).toBeGreaterThan(40);
+  expect(metrics.shell.right - metrics.tree.right, JSON.stringify(metrics)).toBeGreaterThanOrEqual(10);
 });
