@@ -113,4 +113,4 @@ npm run build:frontend
 
 ## License
 
-MIT
+[MIT](LICENSE)
