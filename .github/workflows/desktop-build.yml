@@ -1,0 +1,69 @@
+name: Desktop Builds
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webui/backend/package-lock.json
+            webui/frontend/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: webui/backend
+      - run: npm ci
+        working-directory: webui/frontend
+      - run: npm run check:backend
+      - run: npm run test:backend
+      - run: npm run check:frontend
+      - run: npm --prefix webui/frontend exec playwright install --with-deps chromium
+      - run: npm run test:scale
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+            artifact: monos-windows
+            paths: |
+              release/*.exe
+          - os: macos-latest
+            script: dist:mac
+            artifact: monos-macos
+            paths: |
+              release/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webui/backend/package-lock.json
+            webui/frontend/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: webui/frontend
+      - run: npm run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.paths }}
+          if-no-files-found: error

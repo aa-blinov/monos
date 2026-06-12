@@ -1,0 +1,48 @@
+# macOS system files
+.DS_Store
+
+# Obsidian system files
+.obsidian/
+
+# Python / uv environment and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.uv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Pre-commit
+.pre-commit/
+.pre-commit-*.yaml.swp
+
+# JavaScript dependencies and build output
+node_modules/
+webui/backend/node_modules/
+webui/frontend/node_modules/
+webui/frontend/dist/
+webui/frontend/.vite/
+webui/frontend/coverage/
+release/
+
+# SQLite database
+.data/
+
+# Local user notes and imported assets are private runtime data
+/notes/
+/assets/
+
+# User-specific assets or temporary files
+*.tmp
+*.log
+
+# Generated Playwright output
+webui/frontend/e2e/artifacts/
+webui/frontend/test-results/
+webui/frontend/playwright-report/
+
+# Sensitive environment variables
+.env
+.env.local

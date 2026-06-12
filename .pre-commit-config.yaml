@@ -1,0 +1,35 @@
+# .pre-commit-config.yaml
+# Конфиг для автоматических проверок перед коммитом
+
+repos:
+  # Форматирование Markdown файлов
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.16
+    hooks:
+      - id: mdformat
+        args: [--wrap, "120", --number]
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-frontmatter
+        files: \.md$
+
+  # Линтинг и форматирование Python
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Базовые проверки
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: check-json
+        exclude: ^assets/
