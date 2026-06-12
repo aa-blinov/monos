@@ -12,6 +12,7 @@
     "test:scale": "npm --prefix webui/frontend run test:e2e -- e2e/04-scale-boundaries.spec.js",
     "check:frontend": "npm --prefix webui/frontend run check",
     "check:backend": "node scripts/check-backend.mjs",
+    "icons": "node scripts/generate-app-icons.mjs",
     "site:screenshots": "node scripts/capture-site-screenshots.mjs",
     "public:snapshot": "node scripts/create-public-snapshot.mjs",
     "electron:dev": "npm run build:frontend && electron .",
@@ -26,6 +27,7 @@
       "output": "release"
     },
     "files": [
+      "build/icon.*",
       "electron/**",
       "webui/backend/**",
       "webui/frontend/dist/**",
@@ -39,11 +41,13 @@
       "node_modules/better-sqlite3/**"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ]
     },
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         "dmg"
       ],

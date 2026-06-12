@@ -495,7 +495,8 @@
         class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'relative shrink-0'}
                {!sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0 border-r-0') : (isMobile ? '' : 'border-r border-[var(--border-subtle)]')}
                {isResizingSidebar ? '' : 'transition-all duration-300 ease-in-out'}
-               overflow-y-auto"
+               overflow-hidden"
+        data-testid="sidebar-shell"
         style={!isMobile && sidebarOpen ? `width: ${sidebarWidth}px;` : ''}
       >
         <Sidebar

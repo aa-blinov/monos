@@ -295,7 +295,7 @@
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
           <button
             type="button"
-            class="{mobile ? 'h-24 rounded-2xl px-3 py-3' : 'h-36 rounded-3xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
+            class="{mobile ? 'h-36 rounded-2xl px-3 py-3' : 'h-48 rounded-3xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
             on:click={createNote}
           >
             <span class="block font-serif text-sm font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)] sm:text-base">
@@ -369,8 +369,16 @@
     closeOnEscape={true}
     on:close={() => previewNote = null}
   >
-    <div class="mb-5 truncate text-[10px] uppercase tracking-[0.16em] text-[var(--text-secondary)]/70">{previewNote.path}</div>
-    <div class="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/20 p-5">
+    <div
+      class="mb-4 min-h-5 shrink-0 truncate text-[10px] uppercase leading-5 tracking-[0.16em] text-[var(--text-secondary)]/70"
+      data-testid="note-preview-path"
+    >
+      {previewNote.path}
+    </div>
+    <div
+      class="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/20 p-5"
+      data-testid="note-preview-body"
+    >
       {#if previewLoading}
         <div class="py-12 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.app.board.loadingPreview}</div>
       {:else if previewHtml}
@@ -383,7 +391,7 @@
         <div class="py-12 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.app.board.emptyNote}</div>
       {/if}
     </div>
-    <div class="mt-6 flex gap-4">
+    <div class="mt-6 flex shrink-0 gap-4">
       <button type="button" class="flex-1 text-sm font-medium transition hover:opacity-60" on:click={() => previewNote = null}>
         {$localizedText.sidebar.modals.cancel}
       </button>

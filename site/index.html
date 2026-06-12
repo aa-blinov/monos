@@ -295,77 +295,84 @@
       }
 
       .feature p,
-      .architecture p {
+      .perk p,
+      .flow-node p {
         color: var(--muted);
         line-height: 1.58;
       }
 
-      .architecture {
+      .perks {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-      }
-
-      .architecture-map {
-        display: grid;
-        grid-template-columns: 0.85fr 1fr 1fr;
         gap: 14px;
-        margin-bottom: 22px;
         align-items: stretch;
       }
 
-      .system-card {
-        min-height: 150px;
+      .perk {
+        min-height: 210px;
         padding: 22px;
         border: 1px solid var(--line);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.035);
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 20% 12%, rgba(216, 166, 87, 0.16), transparent 9rem),
+          rgba(255, 255, 255, 0.035);
       }
 
-      .system-card strong {
+      .perk-mark {
+        display: inline-flex;
+        min-width: 42px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        border: 1px solid rgba(216, 166, 87, 0.32);
+        border-radius: 999px;
+        color: var(--accent);
+        background: rgba(216, 166, 87, 0.08);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .perk strong {
         display: block;
         margin-bottom: 10px;
+        font-size: 18px;
       }
 
-      .system-card p,
-      .system-card li {
-        color: var(--muted);
-        line-height: 1.55;
-      }
-
-      .system-card ul {
+      .perk p {
         margin: 0;
-        padding-left: 1.1rem;
       }
 
-      .trust-strip {
+      .flow-card {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
-        margin: 18px 0 34px;
-      }
-
-      .trust-item {
-        border: 1px solid rgba(142, 192, 124, 0.24);
-        border-radius: 18px;
+        margin-top: 18px;
         padding: 14px;
-        color: var(--accent-2);
-        background: rgba(142, 192, 124, 0.07);
-        font-size: 13px;
-        line-height: 1.45;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(0, 0, 0, 0.12);
       }
 
-      .step {
-        padding: 20px;
+      .flow-node {
+        min-height: 108px;
+        padding: 16px;
         border: 1px solid var(--line);
-        border-radius: 22px;
+        border-radius: 20px;
         background: var(--bg-soft);
       }
 
-      .step span {
+      .flow-node span {
+        display: block;
+        margin-bottom: 8px;
         color: var(--accent-2);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 760;
+      }
+
+      .flow-node p {
+        margin: 0;
+        font-size: 13px;
       }
 
       footer {
@@ -379,9 +386,8 @@
         .mock-body,
         .features,
         .screenshots,
-        .architecture,
-        .architecture-map,
-        .trust-strip {
+        .perks,
+        .flow-card {
           grid-template-columns: 1fr;
         }
 
@@ -515,50 +521,49 @@
         </section>
 
         <section class="section" id="architecture">
-          <h2>Simple architecture, clear ownership.</h2>
+          <h2>Small details that make notes feel safe.</h2>
           <p class="section-intro">
-            Electron hosts a local Express API and a Svelte frontend. Markdown files remain the source of truth, while
-            SQLite stays a rebuildable index.
+            Monos keeps the technical model simple, but the product benefits are visible every day: files stay yours,
+            search stays fast, and sync stays optional.
           </p>
-          <div class="architecture-map" aria-label="Monos technical architecture">
-            <div class="system-card">
-              <strong>Electron Shell</strong>
-              <p>Creates the desktop window, resolves the OS user data directory, and starts the local backend.</p>
-            </div>
-            <div class="system-card">
-              <strong>Local Express API</strong>
-              <p>Runs on localhost only and validates filesystem paths before reading or writing notes.</p>
-            </div>
-            <div class="system-card">
-              <strong>User Data</strong>
-              <ul>
-                <li>Markdown notes in `notes/`</li>
-                <li>SQLite cache in `.data/`</li>
-                <li>Optional Git remote for sync</li>
-              </ul>
-            </div>
+          <div class="perks">
+            <article class="perk">
+              <span class="perk-mark">01</span>
+              <strong>Local-first storage</strong>
+              <p>Notes are plain Markdown files in the OS app data folder, not hidden inside a cloud account.</p>
+            </article>
+            <article class="perk">
+              <span class="perk-mark">02</span>
+              <strong>Rebuildable index</strong>
+              <p>SQLite speeds up search and recents, but Markdown remains the source of truth.</p>
+            </article>
+            <article class="perk">
+              <span class="perk-mark">03</span>
+              <strong>Fast daily capture</strong>
+              <p>The board keeps recent work visible and makes quick notes feel like part of the same workspace.</p>
+            </article>
+            <article class="perk">
+              <span class="perk-mark">04</span>
+              <strong>Optional sync</strong>
+              <p>Git backup is available when you want history, but the app works without remote services.</p>
+            </article>
           </div>
-          <div class="trust-strip">
-            <div class="trust-item">No cloud account is required by default.</div>
-            <div class="trust-item">Personal notes are runtime data, not repository content.</div>
-            <div class="trust-item">The database can be rebuilt from Markdown files.</div>
-          </div>
-          <div class="architecture">
-            <div class="step">
-              <span>01</span>
-              <p>Electron resolves the user data directory and starts the local backend.</p>
+          <div class="flow-card" aria-label="Monos data flow">
+            <div class="flow-node">
+              <span>Electron</span>
+              <p>Owns the desktop window and user data location.</p>
             </div>
-            <div class="step">
-              <span>02</span>
-              <p>Express reads and writes Markdown files and updates the SQLite index.</p>
+            <div class="flow-node">
+              <span>Local API</span>
+              <p>Reads and writes notes through localhost only.</p>
             </div>
-            <div class="step">
-              <span>03</span>
-              <p>Svelte renders the board, editor, search, tree, and settings screens.</p>
+            <div class="flow-node">
+              <span>Markdown</span>
+              <p>Keeps the durable, portable note format.</p>
             </div>
-            <div class="step">
-              <span>04</span>
-              <p>Git sync can commit and push the user's notes directory when configured.</p>
+            <div class="flow-node">
+              <span>Git</span>
+              <p>Adds user-controlled backup and history.</p>
             </div>
           </div>
         </section>

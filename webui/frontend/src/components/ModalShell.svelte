@@ -38,7 +38,7 @@
     on:touchmove|stopPropagation
   >
     {#if title}
-      <h2 class="pr-12 text-2xl font-serif mb-8 tracking-tight">{title}</h2>
+      <h2 class="mb-6 shrink-0 pr-12 font-serif text-2xl leading-tight tracking-tight break-anywhere">{title}</h2>
     {/if}
     <TooltipIconButton
       type="button"
@@ -53,3 +53,10 @@
     <slot />
   </div>
 </div>
+
+<style>
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+</style>
