@@ -1,0 +1,48 @@
+{
+  "name": "monos-webui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Web UI for Monos",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check",
+    "lint": "svelte-check",
+    "test": "node --test ./src/lib/search.test.js ./src/stores.test.js && vitest run ./src/App.test.js ./src/components/*.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "screenshots": "node e2e/capture-responsive-screenshots.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.1",
+    "@testing-library/svelte": "^5.2.8",
+    "autoprefixer": "^10.4.16",
+    "jsdom": "^24.1.1",
+    "postcss": "^8.4.32",
+    "svelte": "^4.2.7",
+    "svelte-check": "^4.4.8",
+    "tailwindcss": "^3.4.0",
+    "vite": "^5.0.8",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.22.5",
+    "@tiptap/extension-code-block-lowlight": "^3.22.5",
+    "@tiptap/extension-image": "^3.22.5",
+    "@tiptap/extension-placeholder": "^3.22.5",
+    "@tiptap/extension-table": "^3.22.5",
+    "@tiptap/extension-task-item": "^3.22.5",
+    "@tiptap/extension-task-list": "^3.22.5",
+    "@tiptap/extension-underline": "^3.22.5",
+    "@tiptap/pm": "^3.22.5",
+    "@tiptap/starter-kit": "^3.22.5",
+    "lowlight": "^3.3.0",
+    "lucide-svelte": "^0.302.0",
+    "marked": "^18.0.3",
+    "svelte-routing": "^2.13.0",
+    "tiptap-markdown": "^0.9.0"
+  }
+}

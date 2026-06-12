@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply transition-none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: var(--font-size-base, 16px);
+  }
+
+  body {
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+  }
+
+  h1 {
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    @apply text-xl font-bold tracking-tight;
+  }
+  h2 {
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    @apply text-lg font-bold tracking-tight;
+  }
+  h3 {
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    @apply text-base font-bold tracking-tight;
+  }
+}
+
+* {
+  @apply transition-colors duration-200;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[var(--bg-tertiary)] rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-[var(--text-muted)];
+}
+
+.font-serif {
+  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+}
+
+.font-sans {
+  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.prose-typography {
+  @apply max-w-none leading-relaxed;
+}
+
+.prose-typography h1 {
+  @apply text-xl mb-6 mt-10;
+}
+
+.prose-typography h2 {
+  @apply text-lg mb-5 mt-8;
+}
+
+.prose-typography h3 {
+  @apply text-base mb-4 mt-6;
+}
+
+.prose-typography p {
+  @apply mb-4;
+}
+
+.prose-typography ul, .prose-typography ol {
+  @apply mb-6 ml-6;
+}
+
+.prose-typography li {
+  @apply mb-2;
+}
+
+.prose-typography blockquote {
+  @apply border-l-2 border-[var(--text-primary)] pl-6 italic my-8;
+}
+
+.prose-typography code {
+  @apply font-mono text-sm bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded;
+}
+
+.prose-typography pre {
+  @apply bg-[var(--bg-secondary)] p-6 rounded-lg overflow-x-auto my-8 border border-[var(--border-subtle)];
+}
+
+.prose-typography a {
+  @apply underline decoration-1 underline-offset-4 hover:decoration-2 transition-all;
+}
+
+input[type="text"],
+textarea {
+  @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none transition-all py-2;
+}
+
+.btn-minimal {
+  @apply px-4 py-2 text-sm font-medium transition-all hover:opacity-70 disabled:opacity-30;
+}
+
+.btn-primary {
+  @apply bg-[var(--text-primary)] text-[var(--bg-primary)] px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all;
+}
+
+.btn-secondary {
+  @apply border border-[var(--border-subtle)] hover:border-[var(--text-primary)] px-6 py-2 rounded-full font-medium transition-all;
+}
+
+.animate-toast-in { animation: toastIn 0.3s ease-out; }
+@keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Hide native number input stepper arrows */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

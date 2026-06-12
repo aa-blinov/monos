@@ -1,0 +1,17 @@
+{
+  "name": "monos-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test ./search.test.js ./api.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "isomorphic-git": "^1.27.0",
+    "marked": "^18.0.0",
+    "multer": "^2.1.1",
+    "uuid": "^10.0.0"
+  }
+}

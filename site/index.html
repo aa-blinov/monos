@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Monos is a local-first desktop notes app with Markdown, wiki links, search, and Git sync."
+    />
+    <title>Monos - Local-first desktop notes</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #171717;
+        --bg-soft: #202020;
+        --card: #262626;
+        --text: #f4efe4;
+        --muted: #b8ad9c;
+        --line: #3d372f;
+        --accent: #d8a657;
+        --accent-2: #8ec07c;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 10%, rgba(216, 166, 87, 0.18), transparent 30rem),
+          radial-gradient(circle at 90% 20%, rgba(142, 192, 124, 0.14), transparent 28rem),
+          var(--bg);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 28px 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 760;
+        letter-spacing: -0.03em;
+      }
+
+      .mark {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: linear-gradient(145deg, #2f2b24, #1f1d1a);
+        color: var(--accent);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr 0.82fr;
+        gap: 56px;
+        align-items: center;
+        min-height: 680px;
+        padding: 56px 0 80px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 18px;
+        padding: 7px 11px;
+        border: 1px solid rgba(216, 166, 87, 0.28);
+        border-radius: 999px;
+        color: var(--accent);
+        background: rgba(216, 166, 87, 0.08);
+        font-size: 13px;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 760px;
+        font-size: clamp(48px, 8vw, 86px);
+        line-height: 0.94;
+        letter-spacing: -0.075em;
+      }
+
+      .lead {
+        max-width: 620px;
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 22px);
+        line-height: 1.58;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 34px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 14px;
+        font-weight: 680;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #1d1a16;
+      }
+
+      .button.secondary {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .mock {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 30px;
+        background: linear-gradient(180deg, #2a2926, #1e1e1c);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .mock-top {
+        display: flex;
+        gap: 8px;
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #665c54;
+      }
+
+      .mock img,
+      .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .mock-body {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 18px;
+        padding: 18px;
+      }
+
+      .sidebar,
+      .note-grid {
+        min-height: 420px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.12);
+      }
+
+      .sidebar {
+        padding: 14px;
+      }
+
+      .side-line {
+        height: 10px;
+        margin-bottom: 12px;
+        border-radius: 999px;
+        background: #504945;
+      }
+
+      .note-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .note {
+        min-height: 124px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+      }
+
+      .note h3 {
+        margin: 0 0 10px;
+        font-size: 15px;
+      }
+
+      .note p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .section {
+        padding: 76px 0;
+      }
+
+      .section h2 {
+        margin: 0 0 14px;
+        font-size: clamp(32px, 5vw, 52px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+
+      .section-intro {
+        max-width: 680px;
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.6;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .screenshots {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .shot {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--bg-soft);
+        box-shadow: var(--shadow);
+      }
+
+      .shot.mobile {
+        max-width: 360px;
+        justify-self: center;
+      }
+
+      .shot-caption {
+        padding: 14px 16px 16px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .feature {
+        min-height: 210px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .feature strong {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 18px;
+      }
+
+      .feature p,
+      .architecture p {
+        color: var(--muted);
+        line-height: 1.58;
+      }
+
+      .architecture {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .step {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--bg-soft);
+      }
+
+      .step span {
+        color: var(--accent-2);
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      footer {
+        padding: 48px 0 64px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+      }
+
+      @media (max-width: 860px) {
+        .hero,
+        .mock-body,
+        .features,
+        .screenshots,
+        .architecture {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          min-height: auto;
+          padding-top: 32px;
+        }
+
+        .shot.mobile {
+          max-width: 100%;
+          justify-self: stretch;
+        }
+
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav" aria-label="Primary">
+        <a class="brand" href="#">
+          <span class="mark">M</span>
+          <span>Monos</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#screenshots">Screenshots</a>
+          <a href="#architecture">Architecture</a>
+          <a href="https://github.com/aa-blinov/monos">GitHub</a>
+        </div>
+      </nav>
+
+      <main>
+        <section class="hero">
+          <div>
+            <div class="eyebrow">Local-first notes for focused thinking</div>
+            <h1>Your knowledge base, on your machine.</h1>
+            <p class="lead">
+              Monos is a desktop notes app built around Markdown, wiki links, fast search, and optional Git sync.
+              It keeps your notes portable while giving you a polished workspace for daily thinking.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/aa-blinov/monos/releases">Download builds</a>
+              <a class="button secondary" href="https://github.com/aa-blinov/monos">View source</a>
+            </div>
+          </div>
+
+          <div class="mock" aria-label="Monos app preview">
+            <div class="mock-top">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <img src="media/monos-dashboard.png" alt="Monos dashboard with a mock product knowledge base" />
+          </div>
+        </section>
+
+        <section class="section" id="features">
+          <h2>Built for private, durable notes.</h2>
+          <p class="section-intro">
+            Monos treats files as the product. The interface is there to make those files easier to create, connect,
+            search, and sync.
+          </p>
+          <div class="features">
+            <article class="feature">
+              <strong>Plain Markdown</strong>
+              <p>Your notes stay readable outside the app. SQLite is only a rebuildable index.</p>
+            </article>
+            <article class="feature">
+              <strong>Wiki links</strong>
+              <p>Connect notes with `[[links]]` and use backlinks to navigate your knowledge graph.</p>
+            </article>
+            <article class="feature">
+              <strong>Desktop storage</strong>
+              <p>User data lives in the operating system's app data directory, not in the source repo.</p>
+            </article>
+            <article class="feature">
+              <strong>Board view</strong>
+              <p>A compact dashboard helps you scan recent notes and create new ones quickly.</p>
+            </article>
+            <article class="feature">
+              <strong>Full-text search</strong>
+              <p>Search titles, tags, and body content with highlighted matches.</p>
+            </article>
+            <article class="feature">
+              <strong>Optional Git sync</strong>
+              <p>Use your own repository for backup and history when you want it.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="screenshots">
+          <h2>Real app screens, seeded with a demo knowledge base.</h2>
+          <p class="section-intro">
+            These screenshots are captured from the current Monos UI using temporary Markdown notes created only for
+            the website.
+          </p>
+          <div class="screenshots">
+            <figure class="shot">
+              <img src="media/monos-editor.png" alt="Monos editor with a mock launch plan note" loading="lazy" />
+              <figcaption class="shot-caption">
+                Rich editor, note tree, wiki link text, and Markdown content in the desktop layout.
+              </figcaption>
+            </figure>
+            <figure class="shot mobile">
+              <img src="media/monos-mobile.png" alt="Monos mobile dashboard with mock knowledge cards" loading="lazy" />
+              <figcaption class="shot-caption">
+                Compact mobile board with real responsive cards and a quick create action.
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="section" id="architecture">
+          <h2>Simple architecture, clear ownership.</h2>
+          <p class="section-intro">
+            Electron hosts a local Express API and a Svelte frontend. Markdown files remain the source of truth.
+          </p>
+          <div class="architecture">
+            <div class="step">
+              <span>01</span>
+              <p>Electron resolves the user data directory and starts the local backend.</p>
+            </div>
+            <div class="step">
+              <span>02</span>
+              <p>Express reads and writes Markdown files and updates the SQLite index.</p>
+            </div>
+            <div class="step">
+              <span>03</span>
+              <p>Svelte renders the board, editor, search, tree, and settings screens.</p>
+            </div>
+            <div class="step">
+              <span>04</span>
+              <p>Git sync can commit and push the user's notes directory when configured.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>Monos is open source and local-first. Your notes belong to you.</p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+{
+  "name": "monos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monos desktop notes app",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "build:frontend": "npm --prefix webui/frontend run build",
+    "test:frontend": "npm --prefix webui/frontend test",
+    "test:backend": "npm --prefix webui/backend test",
+    "test:e2e": "npm --prefix webui/frontend run test:e2e",
+    "test:scale": "npm --prefix webui/frontend run test:e2e -- e2e/04-scale-boundaries.spec.js",
+    "check:frontend": "npm --prefix webui/frontend run check",
+    "check:backend": "node scripts/check-backend.mjs",
+    "site:screenshots": "node scripts/capture-site-screenshots.mjs",
+    "public:snapshot": "node scripts/create-public-snapshot.mjs",
+    "electron:dev": "npm run build:frontend && electron .",
+    "dist": "npm run build:frontend && electron-builder --publish never",
+    "dist:win": "npm run build:frontend && electron-builder --win --publish never",
+    "dist:mac": "npm run build:frontend && electron-builder --mac --publish never"
+  },
+  "build": {
+    "appId": "app.monos.notes",
+    "productName": "Monos",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**",
+      "webui/backend/**",
+      "webui/frontend/dist/**",
+      "package.json",
+      "!webui/backend/node_modules/**",
+      "!webui/frontend/node_modules/**",
+      "!webui/frontend/e2e/**",
+      "!webui/backend/*.test.js"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "isomorphic-git": "^1.38.4",
+    "marked": "^18.0.5",
+    "multer": "^2.1.1",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10",
+    "electron-builder": "^26.15.3"
+  }
+}
