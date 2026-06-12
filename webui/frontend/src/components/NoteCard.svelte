@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
-  import { localizedText } from '../lib/strings.js';
+  import { locale, localizedText } from '../lib/strings.js';
 
   export let note;
   export let query = '';
@@ -27,10 +27,10 @@
     return /^last opened:/i.test(text) ? '' : text;
   }
 
-  function formatOpenedDate(value) {
+  function formatOpenedDate(value, currentLocale = 'en') {
     const date = value ? new Date(value) : null;
     if (!date || Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(currentLocale || 'en', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -50,10 +50,10 @@
   $: hiddenTagCount = Math.max(0, tags.length - visibleTags.length);
   $: excerpt = excerptText(note?.excerpt);
   $: visibleExcerpt = highlight && query ? searchSnippet(excerpt, query, compact ? 56 : 180) : excerpt;
-  $: openedDate = formatOpenedDate(note?.lastOpened);
+  $: openedDate = formatOpenedDate(note?.lastOpened, $locale);
   $: cardStyle = `--note-accent: ${accent}; --note-tint: color-mix(in srgb, ${accent} 13%, transparent); --note-glow: color-mix(in srgb, ${accent} 18%, transparent);`;
   $: cardClass = compact
-    ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
+    ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3.5 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
     : 'note-card group relative flex h-48 w-full flex-col overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-4 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40 sm:px-5 sm:hover:-translate-y-0.5 sm:hover:shadow-xl sm:hover:shadow-black/10';
 </script>
 
@@ -91,7 +91,7 @@
   </span>
 
   {#if compact && visibleTags.length > 0}
-    <span class="relative mt-auto flex min-w-0 shrink-0 gap-1.5 pt-2">
+    <span class="relative mt-auto flex min-w-0 shrink-0 gap-1.5 pt-1.5">
       {#each visibleTags as tag}
         <span class="min-w-0 truncate rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[10px] leading-tight text-[var(--text-secondary)]">
           #{tag}
@@ -99,7 +99,7 @@
       {/each}
     </span>
   {:else if !compact}
-    <span class="relative mt-auto flex min-w-0 shrink-0 flex-col gap-1.5 pt-3">
+    <span class="relative mt-auto flex min-w-0 shrink-0 flex-col gap-2.5 pt-3">
       <span class="flex h-6 min-w-0 flex-wrap gap-1.5 overflow-hidden">
       {#if visibleTags.length > 0}
         {#each visibleTags as tag}
@@ -114,7 +114,7 @@
         {/if}
       {/if}
       </span>
-      <span class="h-4 truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">
+      <span class="min-h-4 truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">
       {#if openedDate || note?.category}
         {#if openedDate}
           {$localizedText.app.board.opened} {openedDate}
@@ -136,8 +136,8 @@
   .compact-excerpt {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     overflow: hidden;
   }
 

@@ -43,7 +43,7 @@
       }
 
       .page {
-        width: min(1120px, calc(100% - 32px));
+        width: min(1180px, calc(100% - 32px));
         margin: 0 auto;
       }
 
@@ -57,20 +57,12 @@
       .brand {
         display: flex;
         align-items: center;
-        gap: 12px;
         font-weight: 760;
         letter-spacing: -0.03em;
       }
 
-      .mark {
-        display: grid;
-        width: 36px;
-        height: 36px;
-        place-items: center;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: linear-gradient(145deg, #2f2b24, #1f1d1a);
-        color: var(--accent);
+      .brand-word {
+        font-size: 18px;
       }
 
       .nav-links {
@@ -81,12 +73,13 @@
       }
 
       .hero {
-        display: grid;
-        grid-template-columns: 1fr 0.82fr;
-        gap: 56px;
-        align-items: center;
-        min-height: 680px;
-        padding: 56px 0 80px;
+        padding: 56px 0 88px;
+        text-align: center;
+      }
+
+      .hero-copy {
+        max-width: 820px;
+        margin: 0 auto;
       }
 
       .eyebrow {
@@ -112,7 +105,7 @@
 
       .lead {
         max-width: 620px;
-        margin: 24px 0 0;
+        margin: 24px auto 0;
         color: var(--muted);
         font-size: clamp(18px, 2vw, 22px);
         line-height: 1.58;
@@ -121,6 +114,7 @@
       .actions {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 12px;
         margin-top: 34px;
       }
@@ -147,6 +141,8 @@
 
       .mock {
         position: relative;
+        margin: 52px auto 0;
+        max-width: 1024px;
         border: 1px solid var(--line);
         border-radius: 30px;
         background: linear-gradient(180deg, #2a2926, #1e1e1c);
@@ -255,7 +251,7 @@
 
       .screenshots {
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 18px;
         align-items: start;
       }
@@ -266,6 +262,10 @@
         border-radius: 26px;
         background: var(--bg-soft);
         box-shadow: var(--shadow);
+      }
+
+      .shot.wide {
+        grid-column: 1 / -1;
       }
 
       .shot.mobile {
@@ -306,6 +306,55 @@
         gap: 12px;
       }
 
+      .architecture-map {
+        display: grid;
+        grid-template-columns: 0.85fr 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 22px;
+        align-items: stretch;
+      }
+
+      .system-card {
+        min-height: 150px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .system-card strong {
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .system-card p,
+      .system-card li {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .system-card ul {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+
+      .trust-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 18px 0 34px;
+      }
+
+      .trust-item {
+        border: 1px solid rgba(142, 192, 124, 0.24);
+        border-radius: 18px;
+        padding: 14px;
+        color: var(--accent-2);
+        background: rgba(142, 192, 124, 0.07);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
       .step {
         padding: 20px;
         border: 1px solid var(--line);
@@ -330,7 +379,9 @@
         .mock-body,
         .features,
         .screenshots,
-        .architecture {
+        .architecture,
+        .architecture-map,
+        .trust-strip {
           grid-template-columns: 1fr;
         }
 
@@ -354,8 +405,7 @@
     <div class="page">
       <nav class="nav" aria-label="Primary">
         <a class="brand" href="#">
-          <span class="mark">M</span>
-          <span>Monos</span>
+          <span class="brand-word">Monos</span>
         </a>
         <div class="nav-links">
           <a href="#features">Features</a>
@@ -367,7 +417,7 @@
 
       <main>
         <section class="hero">
-          <div>
+          <div class="hero-copy">
             <div class="eyebrow">Local-first notes for focused thinking</div>
             <h1>Your knowledge base, on your machine.</h1>
             <p class="lead">
@@ -431,10 +481,28 @@
             the website.
           </p>
           <div class="screenshots">
+            <figure class="shot wide">
+              <img src="media/monos-dashboard.png" alt="Monos dashboard with a mock product knowledge base" loading="lazy" />
+              <figcaption class="shot-caption">
+                Board view keeps recent notes visible as compact cards, including tags, content snippets, and the last opened time.
+              </figcaption>
+            </figure>
             <figure class="shot">
               <img src="media/monos-editor.png" alt="Monos editor with a mock launch plan note" loading="lazy" />
               <figcaption class="shot-caption">
                 Rich editor, note tree, wiki link text, and Markdown content in the desktop layout.
+              </figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="media/monos-search.png" alt="Monos search results over a mock knowledge base" loading="lazy" />
+              <figcaption class="shot-caption">
+                Header search works across titles, tags, and note bodies while keeping the board as the main surface.
+              </figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="media/monos-settings.png" alt="Monos settings screen for theme and typography" loading="lazy" />
+              <figcaption class="shot-caption">
+                Settings expose the practical controls: theme, typography, editor mode, locale, and Git sync.
               </figcaption>
             </figure>
             <figure class="shot mobile">
@@ -449,8 +517,32 @@
         <section class="section" id="architecture">
           <h2>Simple architecture, clear ownership.</h2>
           <p class="section-intro">
-            Electron hosts a local Express API and a Svelte frontend. Markdown files remain the source of truth.
+            Electron hosts a local Express API and a Svelte frontend. Markdown files remain the source of truth, while
+            SQLite stays a rebuildable index.
           </p>
+          <div class="architecture-map" aria-label="Monos technical architecture">
+            <div class="system-card">
+              <strong>Electron Shell</strong>
+              <p>Creates the desktop window, resolves the OS user data directory, and starts the local backend.</p>
+            </div>
+            <div class="system-card">
+              <strong>Local Express API</strong>
+              <p>Runs on localhost only and validates filesystem paths before reading or writing notes.</p>
+            </div>
+            <div class="system-card">
+              <strong>User Data</strong>
+              <ul>
+                <li>Markdown notes in `notes/`</li>
+                <li>SQLite cache in `.data/`</li>
+                <li>Optional Git remote for sync</li>
+              </ul>
+            </div>
+          </div>
+          <div class="trust-strip">
+            <div class="trust-item">No cloud account is required by default.</div>
+            <div class="trust-item">Personal notes are runtime data, not repository content.</div>
+            <div class="trust-item">The database can be rebuilt from Markdown files.</div>
+          </div>
           <div class="architecture">
             <div class="step">
               <span>01</span>
