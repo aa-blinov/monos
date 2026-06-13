@@ -12,10 +12,21 @@ vi.mock('./RichEditor.svelte', async () => ({
 function jsonResponse(data, ok = true) {
   return {
     ok,
+    status: ok ? 200 : 404,
     async json() {
       return data;
     },
   };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, resolve, reject };
 }
 
 function createDefaultResponses(path, overrides = {}) {
@@ -372,4 +383,220 @@ test('Editor не перетирает новые правки после зав
 
   expect(editorInput.value).toBe('Second edit');
   expect(fileLoadCount).toBe(1);
+});
+
+test('Editor сохраняет старую заметку при быстром переключении во время autosave', async () => {
+  const alphaPath = 'notes/Alpha.md';
+  const betaPath = 'notes/Beta.md';
+  const saveAlpha = deferred();
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === `/api/file?path=${encodeURIComponent(alphaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha initial' }));
+    }
+    if (url === `/api/file-info?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-07T10:00:00.000Z',
+        modified: '2026-05-07T12:00:00.000Z',
+        metadata: { title: 'Alpha', tags: [] },
+      }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse([]));
+    }
+    if (url === `/api/file?path=${encodeURIComponent(alphaPath)}` && method === 'POST') {
+      return saveAlpha.promise;
+    }
+
+    if (url === `/api/file?path=${encodeURIComponent(betaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Beta body' }));
+    }
+    if (url === `/api/file-info?path=${encodeURIComponent(betaPath)}`) {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-08T10:00:00.000Z',
+        modified: '2026-05-08T12:00:00.000Z',
+        metadata: { title: 'Beta', tags: [] },
+      }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodeURIComponent(betaPath)}`) {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: alphaPath, name: 'Alpha.md', isDir: false },
+  });
+
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  const editorInput = screen.getByTestId('rich-editor-input');
+
+  vi.useFakeTimers();
+  await fireEvent.input(editorInput, { target: { value: 'Alpha edit before switch' } });
+  await vi.advanceTimersByTimeAsync(1500);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    `/api/file?path=${encodeURIComponent(alphaPath)}`,
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ content: 'Alpha edit before switch' }),
+    })
+  ));
+
+  component.$set({ currentFile: { path: betaPath, name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(editorInput.value).toBe('Beta body'));
+
+  saveAlpha.resolve(jsonResponse({ message: 'Saved' }));
+  await tick();
+  await Promise.resolve();
+
+  expect(editorInput.value).toBe('Beta body');
+  expect(fetchMock.mock.calls.some(([url, init]) =>
+    url === `/api/file?path=${encodeURIComponent(betaPath)}` && init?.method === 'POST'
+  )).toBe(false);
+});
+
+test('Editor не применяет результат смены цвета к новой заметке после переключения', async () => {
+  const alphaPath = 'notes/Alpha.md';
+  const betaPath = 'notes/Beta.md';
+  const saveAlpha = deferred();
+  const colorSave = deferred();
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === `/api/file?path=${encodeURIComponent(alphaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha body' }));
+    }
+    if (url === `/api/file-info?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-07T10:00:00.000Z',
+        modified: '2026-05-07T12:00:00.000Z',
+        color: '#fabd2f',
+        metadata: { title: 'Alpha', tags: [] },
+      }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse([]));
+    }
+    if (url === `/api/file?path=${encodeURIComponent(alphaPath)}` && method === 'POST') {
+      return saveAlpha.promise;
+    }
+    if (url === `/api/directory/icon?path=${encodeURIComponent(alphaPath)}` && method === 'POST') {
+      return colorSave.promise;
+    }
+
+    if (url === `/api/file?path=${encodeURIComponent(betaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Beta body' }));
+    }
+    if (url === `/api/file-info?path=${encodeURIComponent(betaPath)}`) {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-08T10:00:00.000Z',
+        modified: '2026-05-08T12:00:00.000Z',
+        color: '#8ec07c',
+        metadata: { title: 'Beta', tags: [] },
+      }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodeURIComponent(betaPath)}`) {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: alphaPath, name: 'Alpha.md', isDir: false },
+  });
+  const colorChangedHandler = vi.fn();
+  component.$on('noteColorChanged', colorChangedHandler);
+
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  const editorInput = screen.getByTestId('rich-editor-input');
+
+  vi.useFakeTimers();
+  await fireEvent.input(editorInput, { target: { value: 'Alpha edit while recoloring' } });
+  await vi.advanceTimersByTimeAsync(1500);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    `/api/file?path=${encodeURIComponent(alphaPath)}`,
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ content: 'Alpha edit while recoloring' }),
+    })
+  ));
+  vi.useRealTimers();
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.noteColor }));
+  await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#83a598') }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    `/api/directory/icon?path=${encodeURIComponent(alphaPath)}`,
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ color: '#83a598' }),
+    })
+  ));
+
+  component.$set({ currentFile: { path: betaPath, name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
+  saveAlpha.resolve(jsonResponse({ message: 'Saved' }));
+  colorSave.resolve(jsonResponse({ message: 'Icon updated' }));
+  await tick();
+  await Promise.resolve();
+
+  expect(colorChangedHandler).not.toHaveBeenCalled();
+  expect(screen.getByTestId('editor-shell').getAttribute('style')).toContain('--note-accent: #8ec07c');
+});
+
+test('Editor не очищает текущую поверхность, если следующая заметка удалена во время загрузки', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const alphaPath = 'notes/Alpha.md';
+  const betaPath = 'notes/Beta.md';
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === `/api/file?path=${encodeURIComponent(alphaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha body' }));
+    }
+    if (url === `/api/file-info?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-07T10:00:00.000Z',
+        modified: '2026-05-07T12:00:00.000Z',
+        metadata: { title: 'Alpha', tags: [] },
+      }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodeURIComponent(alphaPath)}`) {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    if (url === `/api/file?path=${encodeURIComponent(betaPath)}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ detail: 'Not found' }, false));
+    }
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: alphaPath, name: 'Alpha.md', isDir: false },
+  });
+  const deletedHandler = vi.fn();
+  component.$on('fileDeleted', deletedHandler);
+
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  const editorInput = screen.getByTestId('rich-editor-input');
+  expect(editorInput.value).toBe('Alpha body');
+
+  component.$set({ currentFile: { path: betaPath, name: 'Beta.md', isDir: false } });
+  await tick();
+
+  await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));
+  expect(editorInput.value).toBe('Alpha body');
+  expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull();
+  expect(fetchMock.mock.calls.filter(([url]) => url === `/api/file?path=${encodeURIComponent(betaPath)}`).length).toBe(1);
 });

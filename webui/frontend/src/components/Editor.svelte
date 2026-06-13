@@ -62,6 +62,7 @@
   let displayedFile = null;
   let visibleFile = null;
   let loadRequestId = 0;
+  let failedLoadPath = null;
   let colorPaletteOpen = false;
   let currentNoteColor = '';
   let isColorSaving = false;
@@ -169,10 +170,11 @@
   }
 
   async function handleImageFile(file) {
-    if (!currentFile?.path) return null;
+    const filePath = visibleFile?.path || currentFile?.path;
+    if (!filePath) return null;
     try {
       const converted = await convertImageToWebp(file, { name: defaultImageName() });
-      const uploaded = await uploadAttachment(currentFile.path, converted, converted.name);
+      const uploaded = await uploadAttachment(filePath, converted, converted.name);
       return uploaded;
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -190,9 +192,11 @@
   }
 
   async function saveImageRename() {
-    if (!currentFile?.path || !imageRename?.path || !attachmentNewName.trim()) return;
+    const filePath = visibleFile?.path || loadedFilePath || currentFile?.path;
+    if (!filePath || !imageRename?.path || !attachmentNewName.trim()) return;
     try {
-      const renamed = await renameAttachment(currentFile.path, imageRename.path, attachmentNewName.trim());
+      const renamed = await renameAttachment(filePath, imageRename.path, attachmentNewName.trim());
+      if (loadedFilePath !== filePath) return;
       const nextContent = replaceMarkdownImagePath(
         editedContent,
         renamed.oldRelativePath,
@@ -203,16 +207,18 @@
       if (autosaveTimer) clearTimeout(autosaveTimer);
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      await saveFileContent(currentFile.path, nextContent);
-      content = nextContent;
-      saveMessage = $localizedText.editor.saved;
-      lastSaved = Date.now();
-      if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
-      saveMessageTimeout = setTimeout(() => {
-        if (saveMessage === $localizedText.editor.saved) saveMessage = '';
-      }, 3000);
-      imageRename = null;
-      attachmentNewName = '';
+      await saveFileContent(filePath, nextContent);
+      if (loadedFilePath === filePath) {
+        content = nextContent;
+        saveMessage = $localizedText.editor.saved;
+        lastSaved = Date.now();
+        if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
+        saveMessageTimeout = setTimeout(() => {
+          if (saveMessage === $localizedText.editor.saved) saveMessage = '';
+        }, 3000);
+        imageRename = null;
+        attachmentNewName = '';
+      }
     } catch (error) {
       console.error('Image rename failed:', error);
       formatToast = $localizedText.editor.imageRenameFailed;
@@ -244,6 +250,7 @@
     const requestId = ++loadRequestId;
     const previousFilePath = loadedFilePath;
     loadingFilePath = filePath;
+    failedLoadPath = null;
 
     try {
       if (previousFilePath && previousFilePath !== filePath) {
@@ -274,12 +281,15 @@
     } catch (error) {
       if (!isCurrentLoad(requestId, filePath)) return;
       console.error('Failed to load file:', error);
-      content = '';
-      editedContent = '';
-      title = '';
-      editedTitle = '';
-      fileInfo = null;
-      currentNoteColor = '';
+      failedLoadPath = filePath;
+      if (!displayedFile) {
+        content = '';
+        editedContent = '';
+        title = '';
+        editedTitle = '';
+        fileInfo = null;
+        currentNoteColor = '';
+      }
       dispatch('fileDeleted');
     } finally {
       if (isCurrentLoad(requestId, filePath)) {
@@ -405,12 +415,16 @@
   }
 
   async function deleteFile() {
+    const filePath = currentFile?.path;
+    if (!filePath) return;
     try {
       isDeleting = true;
-      await deleteFileRequest(currentFile.path);
+      await deleteFileRequest(filePath);
       showDeleteConfirm = false;
-      dispatch('fileDeleted');
-      dispatch('syncComplete');
+      if (currentFile?.path === filePath || loadedFilePath === filePath) {
+        dispatch('fileDeleted');
+        dispatch('syncComplete');
+      }
     } catch (error) {
       alert($localizedText.editor.deleteError(error.message));
     } finally {
@@ -420,13 +434,15 @@
 
   async function setNoteColor(color) {
     if (!currentFile?.path || isColorSaving) return;
+    const filePath = currentFile.path;
     const nextColor = color || '';
     try {
       isColorSaving = true;
-      await setItemColorRequest(currentFile.path, nextColor || null);
+      await setItemColorRequest(filePath, nextColor || null);
+      if (currentFile?.path !== filePath || loadedFilePath !== filePath) return;
       currentNoteColor = nextColor;
       fileInfo = fileInfo ? { ...fileInfo, color: nextColor || null } : fileInfo;
-      dispatch('noteColorChanged', { path: currentFile.path, color: nextColor || null });
+      dispatch('noteColorChanged', { path: filePath, color: nextColor || null });
     } catch (error) {
       console.error('Failed to recolor note:', error);
     } finally {
@@ -466,7 +482,7 @@
 
   $: wordCharStats = getWordCharStats(editedContent);
 
-  $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath) loadFile();
+  $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
 
   let ignoreRichUpdate = false;
