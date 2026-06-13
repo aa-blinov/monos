@@ -317,6 +317,28 @@ const enText = {
     editor: 'Editor',
     defaultMode: 'Default Mode',
     fontSize: 'Font Size',
+    backup: 'Backup',
+    backupHint: 'Export all notes as a ZIP, or import a ZIP to merge notes into the current tree.',
+    exportTitle: 'Export notes',
+    exportNotes: 'Download ZIP',
+    exporting: 'Exporting...',
+    exportComplete: 'ZIP export is ready.',
+    exportFailed: 'Export failed',
+    importTitle: 'Import notes',
+    chooseArchive: 'Choose ZIP',
+    noArchiveSelected: 'No archive selected',
+    importing: 'Importing...',
+    importFailed: 'Import failed',
+    importComplete(summary = {}) {
+      const notes = Number(summary.importedNotes || 0);
+      const files = Number(summary.importedFiles || 0);
+      const renamed = Number(summary.renamed || 0);
+      const suffix = renamed ? ` ${renamed} renamed to avoid overwriting.` : '';
+      return `Imported ${notes} note${notes === 1 ? '' : 's'} (${files} file${files === 1 ? '' : 's'}).${suffix}`;
+    },
+    backupError(message) {
+      return `Backup error: ${message}`;
+    },
     githubConnection: 'GitHub Connection',
     tokenHelp: 'How to get a token?',
     tokenHelpUrl: 'github.com/settings/tokens',
@@ -776,6 +798,30 @@ const ruText = {
     editor: 'Редактор',
     defaultMode: 'Режим по умолчанию',
     fontSize: 'Размер шрифта',
+    backup: 'Резервная копия',
+    backupHint: 'Экспортируйте все заметки в ZIP или импортируйте ZIP, чтобы объединить заметки с текущим деревом.',
+    exportTitle: 'Экспорт заметок',
+    exportNotes: 'Скачать ZIP',
+    exporting: 'Экспорт...',
+    exportComplete: 'ZIP-архив готов.',
+    exportFailed: 'Не удалось экспортировать',
+    importTitle: 'Импорт заметок',
+    chooseArchive: 'Выбрать ZIP',
+    noArchiveSelected: 'Архив не выбран',
+    importing: 'Импорт...',
+    importFailed: 'Не удалось импортировать',
+    importComplete(summary = {}) {
+      const notes = Number(summary.importedNotes || 0);
+      const files = Number(summary.importedFiles || 0);
+      const renamed = Number(summary.renamed || 0);
+      const noteWord = notes === 1 ? 'заметка' : notes > 1 && notes < 5 ? 'заметки' : 'заметок';
+      const fileWord = files === 1 ? 'файл' : files > 1 && files < 5 ? 'файла' : 'файлов';
+      const suffix = renamed ? ` ${renamed} переименовано, чтобы не перезаписать существующие.` : '';
+      return `Импортировано: ${notes} ${noteWord} (${files} ${fileWord}).${suffix}`;
+    },
+    backupError(message) {
+      return `Ошибка резервной копии: ${message}`;
+    },
     githubConnection: 'Подключение GitHub',
     tokenHelp: 'Как получить токен?',
     tokenHelpUrl: 'github.com/settings/tokens',
