@@ -8,12 +8,14 @@
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, fontFamily, fontSize, editorFontSize, editMode, editorState } from '../stores.js';
 
+  const DEFAULT_GIT_OWNER = 'Monos';
+
   let settings = {
     auto_sync_interval: 0,
     auto_format_on_save: false,
     git_commit_message: uiText.settings.defaultCommitMessage,
     git_token: '',
-    git_owner: '',
+    git_owner: DEFAULT_GIT_OWNER,
     git_repo: '',
     git_branch: 'main',
     device_name: '',
@@ -345,32 +347,18 @@
     <!-- Editor Preferences -->
     <section class="space-y-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.editor}</h2>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-        <div class="min-w-0">
-          <label for="default-mode" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.defaultMode}</label>
-          <select
-            id="default-mode"
-            value={$editMode}
-            on:change={(e) => { $editMode = e.target.value; saveSettings(); }}
-            class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
-          >
-            <option value="rich">{$localizedText.header.rich}</option>
-            <option value="source">{$localizedText.header.source}</option>
-          </select>
-        </div>
-        <div class="min-w-0">
-          <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
-          <select
-            id="editor-font-size"
-            value={$editorFontSize}
-            on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
-            class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
-          >
-            {#each editorFontSizeOptions as s}
-              <option value={s.value}>{s.name} ({s.base})</option>
-            {/each}
-          </select>
-        </div>
+      <div class="min-w-0">
+        <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
+        <select
+          id="editor-font-size"
+          value={$editorFontSize}
+          on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
+          class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+        >
+          {#each editorFontSizeOptions as s}
+            <option value={s.value}>{s.name} ({s.base})</option>
+          {/each}
+        </select>
       </div>
     </section>
 
@@ -400,7 +388,7 @@
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
           <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" disabled={isAuthenticated} />
           {#if isAuthenticated}
-            <button type="button" on:click={() => { isAuthenticated = false; settings.git_token = ''; settings.git_owner = ''; settings.git_repo = ''; gitRepos = []; gitBranches = []; }} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+            <button type="button" on:click={() => { isAuthenticated = false; settings.git_token = ''; settings.git_owner = DEFAULT_GIT_OWNER; settings.git_repo = ''; gitRepos = []; gitBranches = []; }} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
           {:else}
             <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
               {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}

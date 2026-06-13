@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
@@ -80,7 +81,7 @@ beforeEach(() => {
       const fileName = (body.title || 'Untitled').replace(/[/\\?%*:|"<>]/g, '_') + '.md';
       const dirPath = body.category ? `${body.category}` : '';
       const fullPath = dirPath ? `${dirPath}/${fileName}` : fileName;
-      return jsonResponse({ path: fullPath, name: fileName, isDir: false });
+      return jsonResponse({ path: `notes/${fullPath}`, name: fileName, isDir: false });
     }
     return jsonResponse({}, false);
   });
@@ -113,9 +114,11 @@ test('App показывает результаты поиска и открыв
 
   render(App);
 
-  await waitFor(() => expect(screen.getAllByText('Work/Alpha.md').length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Alpha/ })).toBeTruthy());
+  expect(screen.getByText('Work')).toBeTruthy();
+  expect(screen.queryByText('Work/Alpha.md')).toBeNull();
 
-  await fireEvent.click(screen.getAllByText('Work/Alpha.md').at(-1).closest('button'));
+  await fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
   await waitFor(() => expect(screen.getByRole('button', { name: uiText.app.board.openFull })).toBeTruthy());
   await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.openFull }));
 
@@ -155,12 +158,41 @@ test('App возвращается на главную по клику на ло
   const { default: App } = await import('./App.svelte');
   render(App);
 
+  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
+  await tick();
   await fireEvent.click(screen.getByText('sidebar navigate'));
   await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
 
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(screen.getByText(uiText.app.homeActions.newNote)).toBeTruthy();
+});
+
+test('App показывает дашборд на главной даже при list noteView', async () => {
+  noteView.set('list');
+
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
+  expect(screen.queryByText(uiText.app.emptyMobile)).toBeNull();
+  expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();
+});
+
+test('App после удаления открытой заметки возвращается в dashboard-состояние', async () => {
+  window.history.pushState({}, '', '/notes/FromSidebar.md');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  navigate('/notes/FromSidebar.md', { replace: true });
+  noteView.set('list');
+
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByTestId('note-page-stub')).toBeTruthy());
+  await fireEvent.click(screen.getByText('delete current note'));
+
+  await waitFor(() => expect(window.location.pathname).toBe('/'));
+  expect(get(noteView)).toBe('board');
 });
 
 test('App раскрывает сайдбар и подсвечивает заметку по revealInTree', async () => {
@@ -231,10 +263,31 @@ test('App создаёт today note из центрального действи
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByText(uiText.app.homeActions.today)).toBeTruthy());
-  await fireEvent.click(screen.getByText(uiText.app.homeActions.today));
+  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
+  await fireEvent.click(screen.getByRole('button', { name: /\+ New note/ }));
+  await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.todayNote)).toBeTruthy());
+  await fireEvent.click(screen.getByText(uiText.sidebar.modals.todayNote));
 
   await waitFor(() => expect(window.location.pathname).toMatch(/^\/notes\/Daily\/\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.md$/));
+});
+
+test('App создает заметку в папке из дерева и сразу открывает ее', async () => {
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await fireEvent.click(screen.getByText('create in nested folder'));
+  const titleInput = await waitFor(() => screen.getByLabelText(uiText.sidebar.modals.title));
+  await fireEvent.input(titleInput, { target: { value: 'Nested Note' } });
+  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.modals.create }));
+
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/notes/create', expect.objectContaining({
+    method: 'POST',
+    body: JSON.stringify({ title: 'Nested Note', category: 'Work/Nested', tags: [], content: '' }),
+  })));
+  await waitFor(() => expect(decodeURIComponent(window.location.pathname)).toBe('/notes/Work/Nested/Nested Note.md'));
+  expect(decodeURIComponent(window.location.pathname)).not.toContain('/notes/notes/');
+  expect(get(noteView)).toBe('list');
+  expect(screen.getByText('selected:notes/Work/Nested/Nested Note.md')).toBeTruthy();
 });
 
 test('App позволяет менять ширину сайдбара на desktop', async () => {

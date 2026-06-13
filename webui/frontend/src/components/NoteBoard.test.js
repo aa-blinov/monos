@@ -133,6 +133,64 @@ test('NoteBoard показывает много тегов перед датой
   expect(text.indexOf('+5')).toBeLessThan(text.indexOf(uiText.app.board.opened));
 });
 
+test('NoteBoard показывает путь под названием без имени файла', () => {
+  const nestedNote = {
+    path: 'notes/Projects/Archive/Idea.md',
+    name: 'Idea Title',
+    excerpt: 'Short body',
+    tags: [],
+    lastOpened: '2026-06-03T10:20:00.000Z',
+  };
+
+  render(NoteBoard, { notes: [nestedNote] });
+
+  const card = screen.getByRole('button', { name: /Idea Title/ });
+  const text = card.textContent;
+  expect(text).toContain('Idea Title');
+  expect(text).toContain('Projects/Archive');
+  expect(text).not.toContain('Projects/Archive/Idea.md');
+  expect(text.indexOf('Idea Title')).toBeLessThan(text.indexOf('Projects/Archive'));
+});
+
+test('NoteBoard показывает дату открытия на мобильной карточке коротким форматом', () => {
+  locale.set('en');
+  render(NoteBoard, {
+    mobile: true,
+    notes: [{
+      path: 'notes/Daily/13-06-26-13-16-01.md',
+      name: '13-06-26-13-16-01',
+      excerpt: 'Приветик, как ты, как сам',
+      tags: [],
+      lastOpened: '2026-06-13T13:16:01.000Z',
+    }],
+  });
+
+  const card = screen.getByRole('button', { name: /13-06-26-13-16-01/ });
+  const text = card.textContent.replace(/\s+/g, ' ');
+  expect(text).toContain('Daily');
+  expect(text).not.toContain('Daily/13-06-26-13-16-01.md');
+  expect(text).toContain('06/13');
+});
+
+test('NoteBoard показывает дату открытия в русском формате день-месяц', () => {
+  locale.set('ru');
+  render(NoteBoard, {
+    mobile: true,
+    notes: [{
+      path: 'notes/Daily/13-06-26-13-16-01.md',
+      name: '13-06-26-13-16-01',
+      excerpt: 'Приветик, как ты, как сам',
+      tags: [],
+      lastOpened: '2026-06-13T13:16:01.000Z',
+    }],
+  });
+
+  const card = screen.getByRole('button', { name: /13-06-26-13-16-01/ });
+  const text = card.textContent.replace(/\s+/g, ' ');
+  expect(text).toContain('13.06');
+  expect(text).not.toContain('06/13');
+});
+
 test('NoteBoard показывает псевдо-карточку создания заметки первой', async () => {
   const { component } = render(NoteBoard, { notes, showCreateCard: true });
   const createNote = vi.fn();

@@ -36,6 +36,12 @@ function createTree() {
             children: [],
             metadata: { title: 'Alpha Note', category: 'Work', tags: ['alpha'] },
           },
+          {
+            path: 'notes/Work/Nested',
+            name: 'Nested',
+            is_dir: true,
+            children: [],
+          },
         ],
       },
     ],
@@ -81,7 +87,7 @@ function createFetchMock() {
     }
 
     if (url === '/api/directories') {
-      return jsonResponse(['', 'Work']);
+      return jsonResponse(['', 'Work', 'Work/Nested']);
     }
 
     if (url === '/api/notes/create' && method === 'POST') {
@@ -189,6 +195,26 @@ test('Sidebar диспатчит openCreateNote при клике на + New', a
   await waitFor(() => expect(screen.getByText(uiText.sidebar.knowledgeTree)).toBeTruthy());
   await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.new }));
   expect(handler).toHaveBeenCalled();
+});
+
+test('Sidebar передает выбранную вложенную папку при создании заметки из context menu', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Sidebar);
+  const handler = vi.fn();
+  component.$on('openCreateNote', handler);
+  await component.loadTree();
+
+  await fireEvent.click(screen.getByText('Work'));
+  const nestedButton = await waitFor(() => screen.getByText('Nested').closest('button'));
+  await fireEvent.contextMenu(nestedButton);
+  await fireEvent.click(screen.getByText(uiText.sidebar.context.newNote));
+
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+    detail: { category: 'Work/Nested' },
+  }));
 });
 
 test('Sidebar закрепляет заметку в Pinned через контекстное меню', async () => {
