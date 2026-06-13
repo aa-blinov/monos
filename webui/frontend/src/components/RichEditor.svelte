@@ -39,6 +39,7 @@
   let wikiSuggestionRange = null;
   let activeWikiSuggestionIndex = 0;
   let wikiSuggestionRequestId = 0;
+  let lastWikiSuggestionKey = '';
   let lastAppliedContent = '';
 
   const WIKI_SUGGESTION_LIMIT = 8;
@@ -183,13 +184,18 @@
 
   async function updateWikiSuggestions() {
     const context = wikiLinkContext();
-    wikiSuggestionRange = context;
-    activeWikiSuggestionIndex = 0;
+    const previousKey = lastWikiSuggestionKey;
+    const previousIndex = activeWikiSuggestionIndex;
     if (!context) {
+      wikiSuggestionRange = null;
       wikiSuggestions = [];
+      activeWikiSuggestionIndex = 0;
+      lastWikiSuggestionKey = '';
       return;
     }
 
+    const contextKey = `${context.from}:${context.to}:${context.query}`;
+    wikiSuggestionRange = context;
     const requestId = ++wikiSuggestionRequestId;
     try {
       const params = new URLSearchParams({
@@ -201,9 +207,18 @@
       const suggestions = response.ok ? await response.json() : [];
       if (requestId !== wikiSuggestionRequestId) return;
       wikiSuggestions = Array.isArray(suggestions) ? suggestions : [];
+      lastWikiSuggestionKey = contextKey;
+      activeWikiSuggestionIndex = contextKey === previousKey
+        ? Math.min(previousIndex, Math.max(0, wikiSuggestions.length - 1))
+        : 0;
     } catch {
       if (requestId === wikiSuggestionRequestId) wikiSuggestions = [];
     }
+  }
+
+  function shouldRefreshWikiSuggestions(event) {
+    if (!wikiSuggestionsOpen) return true;
+    return !['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'Tab'].includes(event.key);
   }
 
   function refreshWikiSuggestionsAfterDomUpdate() {
@@ -214,6 +229,7 @@
     wikiSuggestionRange = null;
     wikiSuggestions = [];
     activeWikiSuggestionIndex = 0;
+    lastWikiSuggestionKey = '';
   }
 
   function selectWikiSuggestion(suggestion) {
@@ -406,7 +422,7 @@
     tabindex="-1"
     data-testid="rich-editor-input"
     on:keydown|capture={handleEditorKeydown}
-    on:keyup|capture={(event) => { handleEditorKeyup(event); refreshWikiSuggestionsAfterDomUpdate(); }}
+    on:keyup|capture={(event) => { handleEditorKeyup(event); if (shouldRefreshWikiSuggestions(event)) refreshWikiSuggestionsAfterDomUpdate(); }}
     on:input|capture={refreshWikiSuggestionsAfterDomUpdate}
     on:paste|capture={handlePaste}
     on:dragover|capture={handleDragOver}
