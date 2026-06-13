@@ -7,6 +7,9 @@
   import { iconOptions } from '../lib/icons.js';
   import { buildTemplateContent, getLocalizedTemplates, getTemplateById, getTemplateContext, noteTemplates } from '../lib/note-templates.js';
   import { locale, localizedText } from '../lib/strings.js';
+  
+  export let mobile = false;
+  
   import {
     createFolderRequest,
     createNoteRequest,
@@ -384,8 +387,7 @@
   }
 
   export function openCreateNote() {
-    newNoteCategory = '';
-    showCreateModal = true;
+    dispatch('openCreateNote');
   }
 
   function applyTemplateDefaults(template = selectedTemplate) {
@@ -651,7 +653,7 @@
     
     if (action === 'newNote') {
       newNoteCategory = categoryPath;
-      showCreateModal = true;
+      dispatch('openCreateNote');
     } else if (action === 'newFolder') {
       newFolderName = categoryPath;
       showCreateFolderModal = true;
@@ -836,12 +838,13 @@
     </div>
   {/if}
 
+  {#if !mobile}
   <!-- Tree View Header -->
     <div class="mb-2 shrink-0 px-4 lg:mb-4">
       <div class="flex items-center justify-between gap-3 pb-1.5 lg:pb-2">
         <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] opacity-60 lg:text-[11px] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
-          on:click={() => { newNoteCategory = ''; showCreateModal = true; }}
+          on:click={() => dispatch('openCreateNote')}
           class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-lg lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[10px] lg:tracking-[0.16em]"
         >
           <span class="text-sm leading-none">+</span>
@@ -901,9 +904,28 @@
     {/if}
     </div>
   </div>
+  {/if}
 
   <!-- Stats Footer -->
-  <div class="flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 py-3 text-[11px] uppercase tracking-widest">
+  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 py-3 text-[11px] uppercase tracking-widest'}">
+    {#if mobile}
+      <button on:click={createQuickNoteFromClipboard} disabled={isCreating} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+        <Icon.Clipboard size="20" strokeWidth="1.7" />
+        <span>{$localizedText.sidebar.quickNoteFromClipboard}</span>
+      </button>
+      <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+        {#if isSyncing}
+          <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+        {:else}
+          <Icon.RefreshCw size="20" strokeWidth="1.7" />
+        {/if}
+        <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
+      </button>
+      <button on:click={() => dispatch('openSettings')} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Settings size="20" strokeWidth="1.7" />
+        <span>{$localizedText.sidebar.settings}</span>
+      </button>
+    {:else}
       <span class="text-[var(--text-secondary)]">{$localizedText.sidebar.notes(tree ? totalNotes : 0)}</span>
       <div class="flex items-center gap-3">
         <TooltipIconButton
@@ -944,6 +966,7 @@
           <Icon.Settings class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
       </div>
+    {/if}
     </div>
 
   <!-- Context Menu -->
@@ -1201,50 +1224,6 @@
         </div>
       </div>
     </div>
-  </ModalShell>
-{/if}
-
-<!-- Create Note Modal -->
-{#if showCreateModal}
-  <ModalShell title={$localizedText.sidebar.modals.newNote} widthClass="w-[min(92vw,40rem)]" closeOnEscape={true} on:close={() => showCreateModal = false}>
-      <div class="space-y-7">
-        <section>
-          <div class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
-            {$localizedText.sidebar.modals.createStart}
-          </div>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
-              on:click={createTodayNote}
-              disabled={isCreating}
-            >
-              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
-              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.todayNoteHint}</span>
-            </button>
-            <button
-              type="button"
-              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
-              on:click={openTemplatesFromCreate}
-            >
-              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
-              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.fromTemplateHint}</span>
-            </button>
-          </div>
-        </section>
-
-        <div>
-          <label for="note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
-          <input id="note-title" type="text" bind:value={newNoteTitle} placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newNoteTitle.trim()) createNewNote(); if (e.key === 'Escape') showCreateModal = false; }} />
-          <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-secondary)]/65">{$localizedText.sidebar.modals.titleHint}</p>
-        </div>
-      </div>
-      <div class="flex gap-6 mt-10">
-        <button on:click={() => showCreateModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-        <button on:click={createNewNote} disabled={isCreating || !newNoteTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
-          {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
-        </button>
-      </div>
   </ModalShell>
 {/if}
 

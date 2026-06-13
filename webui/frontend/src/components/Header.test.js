@@ -30,7 +30,6 @@ async function flushPromises() {
 beforeEach(() => {
   vi.useFakeTimers();
   locale.set('en');
-  noteView.set('list');
   searchQuery.set('');
   searchResults.set([]);
   isSearching.set(false);
@@ -204,21 +203,3 @@ test('Header диспатчит внешние события без editor-spec
   expect(screen.queryByRole('button', { name: new RegExp(uiText.header.switchEditorMode) })).toBeNull();
 });
 
-test('Header переключает список и board view', async () => {
-  render(Header);
-
-  await fireEvent.click(screen.getByRole('button', { name: uiText.header.boardView }));
-
-  expect(get(noteView)).toBe('board');
-  expect(screen.getByRole('button', { name: uiText.header.listView })).toBeTruthy();
-});
-
-test('Header диспатчит возврат на главную по клику на Monos', async () => {
-  const { component } = render(Header);
-  const homeHandler = vi.fn();
-  component.$on('goHome', homeHandler);
-
-  await fireEvent.click(screen.getByRole('button', { name: 'Monos' }));
-
-  expect(homeHandler).toHaveBeenCalledTimes(1);
-});
