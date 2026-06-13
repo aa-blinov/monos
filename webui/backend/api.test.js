@@ -881,7 +881,10 @@ apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работа�
 
   const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
   assert.equal(conflicts.response.status, 200);
-  assert.ok(conflicts.data.includes('Conflict.md'));
+  assert.ok(Array.isArray(conflicts.data));
+  assert.ok(conflicts.data.some(c => c.path === 'Conflict.md'));
+  assert.ok(conflicts.data[0].ours !== undefined);
+  assert.ok(conflicts.data[0].theirs !== undefined);
 
   fs.writeFileSync(baseFile, 'resolved\n', 'utf-8');
   const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {

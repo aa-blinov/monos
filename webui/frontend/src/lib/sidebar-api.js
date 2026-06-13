@@ -36,6 +36,8 @@ export const moveItemRequest = (sourcePath, targetPath) => fetchJson(
 
 export const syncRequest = () => fetchJson('/api/git/sync', { method: 'POST' });
 
+export const checkGitStatus = () => fetchJson('/api/git/status');
+
 export const setItemIconRequest = (itemPath, body) => fetchJson(`/api/directory/icon?path=${encodeURIComponent(itemPath)}`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },

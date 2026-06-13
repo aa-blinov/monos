@@ -9,6 +9,8 @@
   import { locale, localizedText } from '../lib/strings.js';
   
   export let mobile = false;
+  export let isDarkMode = false;
+  export let gitConfigured = true;
   
   import {
     createFolderRequest,
@@ -21,6 +23,7 @@
     renameItemRequest,
     setItemIconRequest,
     syncRequest,
+    checkGitStatus,
   } from '../lib/sidebar-api.js';
   import { loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
   import {
@@ -126,9 +129,8 @@
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
   let isDragOverRoot = false;
   let isSyncing = false;
+  let syncError = '';
   let pinnedNotes = loadPinnedNotes();
-  let savedQuickNote = null;
-  let quickNoteIssue = '';
 
   $: filteredTree = tree;
   $: localizedTemplates = getLocalizedTemplates($locale);
@@ -532,13 +534,6 @@
     }
   }
 
-  function openSavedQuickNote() {
-    if (!savedQuickNote) return;
-    const note = savedQuickNote;
-    savedQuickNote = null;
-    dispatch('navigate', note);
-  }
-
   async function createQuickNoteFromImage(file) {
     const title = formatTodayNoteTitle();
     const data = await createNoteRequest({
@@ -556,19 +551,18 @@
 
     await loadTree();
     await loadDirectories();
-    savedQuickNote = { path: data.path, name: title, isDir: false };
+    dispatch('quickNoteSaved', { path: data.path, name: title, isDir: false });
   }
 
   export async function createQuickNoteFromClipboard() {
     if (!navigator?.clipboard?.readText && !navigator?.clipboard?.read) {
-      quickNoteIssue = $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint;
+      dispatch('quickNoteIssue', $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint);
       return;
     }
 
     try {
       isCreating = true;
       error = '';
-      quickNoteIssue = '';
       try {
         const clipboardImage = await firstImageFileFromClipboard();
         if (clipboardImage) {
@@ -577,13 +571,13 @@
         }
       } catch {
         if (!navigator?.clipboard?.readText) {
-          quickNoteIssue = $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint;
+          dispatch('quickNoteIssue', $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint);
           return;
         }
       }
 
       if (!navigator?.clipboard?.readText) {
-        quickNoteIssue = $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint;
+        dispatch('quickNoteIssue', $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint);
         return;
       }
 
@@ -591,12 +585,12 @@
       try {
         clipboardText = await navigator.clipboard.readText();
       } catch {
-        quickNoteIssue = $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint;
+        dispatch('quickNoteIssue', $localizedText.sidebar.modals.quickNoteClipboardUnavailableHint);
         return;
       }
 
       if (!clipboardText.trim()) {
-        quickNoteIssue = $localizedText.sidebar.modals.quickNoteClipboardEmptyHint;
+        dispatch('quickNoteIssue', $localizedText.sidebar.modals.quickNoteClipboardEmptyHint);
         return;
       }
 
@@ -615,7 +609,7 @@
       });
       await loadTree();
       await loadDirectories();
-      savedQuickNote = { path: data.path, name: title, isDir: false };
+      dispatch('quickNoteSaved', { path: data.path, name: title, isDir: false });
     } catch (err) {
       error = $localizedText.sidebar.errors.createNote(err.message);
     } finally {
@@ -765,18 +759,21 @@
   async function handleSync() {
     if (isSyncing) return;
     if ($editorState.saving || $editorState.dirty) {
-      error = $editorState.saving
+      syncError = $editorState.saving
         ? $localizedText.sidebar.waitForSaveBeforeSync
         : $localizedText.sidebar.saveBeforeSync;
       return;
     }
     isSyncing = true;
+    syncError = '';
     try {
       await syncRequest();
       await loadTree();
       await loadDirectories();
+      gitConfigured = true;
     } catch (e) {
-      console.error($localizedText.sidebar.errors.syncFailed, e);
+      syncError = e.message || $localizedText.sidebar.errors.syncFailed;
+      dispatch('syncError', syncError);
     } finally {
       isSyncing = false;
     }
@@ -909,21 +906,31 @@
   <!-- Stats Footer -->
   <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 py-3 text-[11px] uppercase tracking-widest'}">
     {#if mobile}
-      <button on:click={createQuickNoteFromClipboard} disabled={isCreating} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+      <button on:click={() => { createQuickNoteFromClipboard(); dispatch('toggleSidebar'); }} disabled={isCreating} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
         <Icon.Clipboard size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.quickNoteFromClipboard}</span>
       </button>
-      <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
-        {#if isSyncing}
-          <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
-        {:else}
-          <Icon.RefreshCw size="20" strokeWidth="1.7" />
-        {/if}
-        <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
-      </button>
-      <button on:click={() => dispatch('openSettings')} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      {#if gitConfigured}
+        <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+          {#if isSyncing}
+            <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+          {:else}
+            <Icon.RefreshCw size="20" strokeWidth="1.7" />
+          {/if}
+          <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
+        </button>
+      {/if}
+      <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
+      </button>
+      <button on:click={() => dispatch('toggleDarkMode')} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        {#if isDarkMode}
+          <Icon.Sun size="20" strokeWidth="1.7" />
+        {:else}
+          <Icon.Moon size="20" strokeWidth="1.7" />
+        {/if}
+        <span>{$localizedText.header.toggleTheme}</span>
       </button>
     {:else}
       <span class="text-[var(--text-secondary)]">{$localizedText.sidebar.notes(tree ? totalNotes : 0)}</span>
@@ -942,20 +949,22 @@
             <Icon.Clipboard size="16" strokeWidth="1.7" />
           {/if}
         </TooltipIconButton>
-        <TooltipIconButton
-          on:click={handleSync}
-          disabled={isSyncing || $editorState.saving || $editorState.dirty}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30 lg:h-10 lg:w-10"
-          label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
-          tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
-          tooltipAlign="end"
-        >
-          {#if isSyncing}
-            <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
-          {:else}
-            <Icon.RefreshCw class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
-          {/if}
-        </TooltipIconButton>
+        {#if gitConfigured}
+          <TooltipIconButton
+            on:click={handleSync}
+            disabled={isSyncing || $editorState.saving || $editorState.dirty}
+            class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30 lg:h-10 lg:w-10"
+            label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
+            tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
+            tooltipAlign="end"
+          >
+            {#if isSyncing}
+              <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+            {:else}
+              <Icon.RefreshCw class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+            {/if}
+          </TooltipIconButton>
+        {/if}
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}
           class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
@@ -994,42 +1003,6 @@
     </div>
   {/if}
 </div>
-
-<!-- Quick Note Saved Modal -->
-{#if savedQuickNote}
-  <ModalShell title={$localizedText.sidebar.modals.quickNoteSaved} widthClass="w-[min(92vw,28rem)]" closeOnEscape={true} on:close={() => savedQuickNote = null}>
-    <div class="space-y-4">
-      <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
-        {$localizedText.sidebar.modals.quickNoteSavedHint}
-      </p>
-      <div class="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
-        <div class="truncate text-sm font-semibold">{savedQuickNote.name}</div>
-        <div class="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">{savedQuickNote.path.replace(/^notes\//, '')}</div>
-      </div>
-    </div>
-    <div class="mt-8 flex gap-4">
-      <button type="button" on:click={() => savedQuickNote = null} class="flex-1 text-sm font-medium transition hover:opacity-60">
-        {$localizedText.sidebar.modals.stayHere}
-      </button>
-      <button type="button" on:click={openSavedQuickNote} class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60">
-        {$localizedText.sidebar.modals.openNote}
-      </button>
-    </div>
-  </ModalShell>
-{/if}
-
-{#if quickNoteIssue}
-  <ModalShell title={$localizedText.sidebar.modals.quickNoteNotCreated} widthClass="w-[min(92vw,28rem)]" closeOnEscape={true} on:close={() => quickNoteIssue = ''}>
-    <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
-      {quickNoteIssue}
-    </p>
-    <div class="mt-8 flex justify-center">
-      <button type="button" on:click={() => quickNoteIssue = ''} class="text-sm font-bold uppercase tracking-widest transition hover:opacity-60">
-        {$localizedText.sidebar.modals.understood}
-      </button>
-    </div>
-  </ModalShell>
-{/if}
 
 <!-- Rename Modal -->
 {#if showRenameModal}

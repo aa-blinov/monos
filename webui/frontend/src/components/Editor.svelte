@@ -5,7 +5,7 @@
   import RichEditor from './RichEditor.svelte';
   import SourceEditor from './SourceEditor.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editMode, editorState } from '../stores.js';
+  import { editMode, editorState, editorAction } from '../stores.js';
   import {
     deleteFileRequest,
     formatAllNotes,
@@ -445,47 +445,17 @@
     window.addEventListener('resize', updatePhoneEditorMode);
     return () => window.removeEventListener('resize', updatePhoneEditorMode);
   });
+
+  $: if ($editorAction && currentFile) {
+    const action = $editorAction;
+    editorAction.set(null);
+    if (action === 'toggleMode') toggleEditorMode();
+    else if (action === 'format') handleFormat();
+    else if (action === 'delete') showDeleteConfirm = true;
+  }
 </script>
 
 <div class="h-full flex flex-col bg-[var(--bg-primary)] overflow-hidden relative min-h-0">
-  <!-- Note actions (top-right corner) -->
-  <div class="absolute top-2 right-3 lg:top-4 lg:right-12 flex items-center gap-2 z-10">
-    {#if !phoneEditor}
-      <TooltipIconButton
-        on:click={toggleEditorMode}
-        class="group relative inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/50 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)]"
-        label={`${$localizedText.header.switchEditorMode}: ${$editMode === 'rich' ? $localizedText.header.source : $localizedText.header.rich}`}
-        tooltip={`${$localizedText.header.switchEditorMode}: ${$editMode === 'rich' ? $localizedText.header.source : $localizedText.header.rich}`}
-        tooltipAlign="end"
-      >
-        {#if $editMode === 'rich'}
-          <FileCode class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-        {:else}
-          <PencilLine class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-        {/if}
-      </TooltipIconButton>
-    {/if}
-    <TooltipIconButton
-      on:click={handleFormat}
-      disabled={isFormatting}
-      class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--bg-secondary)]/50 hover:opacity-60 transition disabled:opacity-30"
-      label={$localizedText.editor.formatAllNotes}
-      tooltip={$localizedText.editor.formatAllNotes}
-      tooltipAlign="end"
-    >
-      <Wand size="18" class="lg:w-5 lg:h-5" />
-    </TooltipIconButton>
-    <TooltipIconButton
-      on:click={() => showDeleteConfirm = true}
-      class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--bg-secondary)]/50 hover:opacity-60 transition"
-      label={$localizedText.editor.deleteNote}
-      tooltip={$localizedText.editor.deleteNote}
-      tooltipAlign="end"
-    >
-      <Trash2 class="w-4 h-4 lg:w-5 lg:h-5" color="var(--red)" strokeWidth="1.7" aria-hidden="true" />
-    </TooltipIconButton>
-  </div>
-
   <EditorHeader
     bind:editedTitle
     {currentFile}

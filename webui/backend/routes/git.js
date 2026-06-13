@@ -259,7 +259,27 @@ export function registerGitRoutes(app) {
     try {
       if (!isGitRepo()) return res.json([]);
       const status = gitExec(['diff', '--name-only', '--diff-filter=U']);
-      res.json(status.split('\n').filter(Boolean));
+      const files = status.split('\n').filter(Boolean);
+      const details = files.map(filePath => {
+        try {
+          const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
+          const ours = [];
+          const theirs = [];
+          const lines = content.split('\n');
+          let section = 'context';
+          for (const line of lines) {
+            if (line.startsWith('<<<<<<< HEAD')) { section = 'ours'; continue; }
+            if (line.startsWith('=======')) { section = 'theirs'; continue; }
+            if (line.startsWith('>>>>>>> ')) { section = 'context'; continue; }
+            if (section === 'ours') ours.push(line);
+            else if (section === 'theirs') theirs.push(line);
+          }
+          return { path: filePath, ours: ours.join('\n'), theirs: theirs.join('\n'), raw: content };
+        } catch {
+          return { path: filePath, ours: '', theirs: '', raw: '' };
+        }
+      });
+      res.json(details);
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
     }
@@ -267,10 +287,42 @@ export function registerGitRoutes(app) {
 
   app.post('/api/git/conflicts/resolve', (req, res) => {
     try {
-      const { files } = req.body;
+      const { files, resolutions } = req.body;
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
-      for (const file of (files || [])) gitExec(['add', '--', file]);
+      if (resolutions && typeof resolutions === 'object') {
+        for (const [filePath, choice] of Object.entries(resolutions)) {
+          if (choice === 'ours') {
+            const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
+            const ours = [];
+            let section = 'keep';
+            for (const line of content.split('\n')) {
+              if (line.startsWith('<<<<<<< HEAD')) { section = 'skip'; continue; }
+              if (line.startsWith('=======')) { section = 'ours'; continue; }
+              if (line.startsWith('>>>>>>> ')) { section = 'keep'; continue; }
+              if (section === 'keep') ours.push(line);
+              else if (section === 'ours') ours.push(line);
+            }
+            fs.writeFileSync(path.join(NOTES_DIR, filePath), ours.join('\n'), 'utf-8');
+          } else if (choice === 'theirs') {
+            const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
+            const theirs = [];
+            let section = 'skip';
+            for (const line of content.split('\n')) {
+              if (line.startsWith('<<<<<<< HEAD')) { section = 'skip'; continue; }
+              if (line.startsWith('=======')) { section = 'theirs'; continue; }
+              if (line.startsWith('>>>>>>> ')) { section = 'keep'; continue; }
+              if (section === 'keep') theirs.push(line);
+              else if (section === 'theirs') theirs.push(line);
+            }
+            fs.writeFileSync(path.join(NOTES_DIR, filePath), theirs.join('\n'), 'utf-8');
+          }
+          gitExec(['add', '--', filePath]);
+        }
+      } else {
+        for (const file of (files || [])) gitExec(['add', '--', file]);
+      }
       gitExec(['commit', '-m', 'Resolve conflicts']);
+      indexAllFiles();
       res.json({ message: 'Conflicts resolved' });
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
