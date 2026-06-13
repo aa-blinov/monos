@@ -310,7 +310,7 @@
             {highlight}
             compact={mobile}
             draggable={canReorderCards}
-            on:open={(event) => openPreview(event.detail)}
+            on:open={(event) => mobile ? openFull(event.detail) : openPreview(event.detail)}
             on:context={handleCardContext}
             on:dragStart={handleDragStart}
             on:dragOver={handleDragOver}

@@ -406,6 +406,22 @@
   });
 
   onDestroy(() => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (currentFile && hasUnsavedChanges() && !isSaving) {
+      const filePath = currentFile.path;
+      const savedContent = editedContent;
+      const savedTitle = editedTitle;
+      isSaving = true;
+      saveFileContent(filePath, savedContent).then(() => {
+        if (currentFile?.path === filePath && editedContent === savedContent) content = savedContent;
+        if (currentFile?.path === filePath && editedTitle === savedTitle) title = savedTitle;
+        lastSaved = Date.now();
+      }).catch((error) => {
+        console.error('Save on destroy failed:', error);
+      }).finally(() => {
+        isSaving = false;
+      });
+    }
     editorState.set({ path: null, dirty: false, saving: false });
   });
 

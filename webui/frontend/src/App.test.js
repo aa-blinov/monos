@@ -75,6 +75,13 @@ beforeEach(() => {
         { path: 'notes/Work/Recent.md', name: 'Recent Note' },
       ]);
     }
+    if (url.endsWith('/api/notes/create') && init.method === 'POST') {
+      const body = JSON.parse(init.body || '{}');
+      const fileName = (body.title || 'Untitled').replace(/[/\\?%*:|"<>]/g, '_') + '.md';
+      const dirPath = body.category ? `${body.category}` : '';
+      const fullPath = dirPath ? `${dirPath}/${fileName}` : fileName;
+      return jsonResponse({ path: fullPath, name: fileName, isDir: false });
+    }
     return jsonResponse({}, false);
   });
   globalThis.fetch = fetchMock;
@@ -217,7 +224,7 @@ test('App показывает центральные действия на гл
   expect(screen.queryByText(uiText.app.homeActions.today)).toBeNull();
 
   await fireEvent.click(screen.getByRole('button', { name: /\+ New note/ }));
-  await waitFor(() => expect(screen.getByText('create note flow opened')).toBeTruthy());
+  await waitFor(() => expect(screen.getByLabelText(uiText.sidebar.modals.title)).toBeTruthy());
 });
 
 test('App создаёт today note из центрального действия', async () => {
@@ -227,7 +234,7 @@ test('App создаёт today note из центрального действи
   await waitFor(() => expect(screen.getByText(uiText.app.homeActions.today)).toBeTruthy());
   await fireEvent.click(screen.getByText(uiText.app.homeActions.today));
 
-  await waitFor(() => expect(window.location.pathname).toBe('/notes/Daily/02-06-26-12-30-00.md'));
+  await waitFor(() => expect(window.location.pathname).toMatch(/^\/notes\/Daily\/\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.md$/));
 });
 
 test('App позволяет менять ширину сайдбара на desktop', async () => {

@@ -1,13 +1,15 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { searchQuery, searchResults, isSearching, noteView } from '../stores.js';
+  import { searchQuery, searchResults, isSearching } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { LayoutGrid, List, Menu, Moon, Search, Sun, X } from 'lucide-svelte';
+  import { Menu, Moon, Search, Sun, X, ArrowLeft } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
   export let isDarkMode = false;
+  export let mobile = false;
+  export let noteOpen = false;
 
   let searchOpen = false;
   let searchTimer;
@@ -66,30 +68,31 @@
   function toggleDarkMode() { dispatch('toggleDarkMode'); }
   function toggleSidebar() { dispatch('toggleSidebar'); }
   function goHome() { dispatch('goHome'); }
-  function toggleNoteView() {
-    const nextView = $noteView === 'board' ? 'list' : 'board';
-    $noteView = nextView;
-    dispatch('noteViewChange', { view: nextView });
-  }
 </script>
 
 <header class="relative flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 sm:px-4 lg:pl-4 lg:pr-8">
-  <div class="{searchOpen ? 'hidden sm:flex' : 'flex'} items-center gap-3 lg:gap-6 min-w-0">
-    <TooltipIconButton
-      on:click={toggleSidebar}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
-      label={$localizedText.header.toggleSidebar}
-      tooltip={$localizedText.header.toggleSidebar}
-      tooltipAlign="start"
-    >
-      <Menu class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
-    </TooltipIconButton>
-    <button
-      type="button"
-      on:click={goHome}
-      class="min-w-0 text-xl lg:text-2xl font-serif font-medium tracking-tight whitespace-nowrap truncate hover:opacity-70 transition-opacity"
-      aria-label="Monos"
-    >Monos</button>
+  <div class="flex items-center gap-3 lg:gap-6 min-w-0">
+    {#if mobile && noteOpen}
+      <TooltipIconButton
+        on:click={goHome}
+        class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+        label={$localizedText.header.back}
+        tooltip={$localizedText.header.back}
+        tooltipAlign="start"
+      >
+        <ArrowLeft class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      </TooltipIconButton>
+    {:else}
+      <TooltipIconButton
+        on:click={toggleSidebar}
+        class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+        label={$localizedText.header.toggleSidebar}
+        tooltip={$localizedText.header.toggleSidebar}
+        tooltipAlign="start"
+      >
+        <Menu class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      </TooltipIconButton>
+    {/if}
   </div>
 
   <div class="{searchOpen ? 'flex-1 sm:flex-none' : ''} flex h-10 min-w-0 items-center justify-end gap-1.5 sm:gap-3 lg:gap-6">
@@ -142,20 +145,6 @@
         <Search size="18" aria-hidden="true" />
       </TooltipIconButton>
     {/if}
-
-    <TooltipIconButton
-      on:click={toggleNoteView}
-      class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] lg:inline-flex"
-      label={$noteView === 'board' ? $localizedText.header.listView : $localizedText.header.boardView}
-      tooltip={$noteView === 'board' ? $localizedText.header.listView : $localizedText.header.boardView}
-      tooltipAlign="end"
-    >
-      {#if $noteView === 'board'}
-        <List class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
-      {:else}
-        <LayoutGrid class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
-      {/if}
-    </TooltipIconButton>
 
     <TooltipIconButton
       on:click={toggleDarkMode}

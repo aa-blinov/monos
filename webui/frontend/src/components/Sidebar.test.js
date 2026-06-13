@@ -171,105 +171,15 @@ test('Sidebar загружает дерево и открывает заметк
   });
 });
 
-test('Sidebar создаёт заметку и отправляет navigate с правильным именем', async () => {
-  const fetchMock = createFetchMock();
-  globalThis.fetch = fetchMock;
-  window.fetch = fetchMock;
-
+test('Sidebar диспатчит openCreateNote при клике на + New', async () => {
   const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
   await component.loadTree();
+  const handler = vi.fn();
+  component.$on('openCreateNote', handler);
 
   await waitFor(() => expect(screen.getByText(uiText.sidebar.knowledgeTree)).toBeTruthy());
   await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.new }));
-  await fireEvent.input(screen.getByLabelText(uiText.sidebar.modals.title), { target: { value: 'Inbox' } });
-  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.modals.create }));
-
-  await waitFor(() => expect(navigateHandler).toHaveBeenCalled());
-  expect(fetchMock).toHaveBeenCalledWith('/api/notes/create', expect.objectContaining({
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  }));
-
-  const createCall = fetchMock.mock.calls.find(([url]) => url === '/api/notes/create');
-  expect(JSON.parse(createCall[1].body)).toEqual({
-    title: 'Inbox',
-    category: '',
-    tags: [],
-    content: '',
-  });
-  expect(navigateHandler.mock.calls.at(-1)[0].detail).toEqual({
-    path: 'notes/Inbox.md',
-    name: 'Inbox',
-    isDir: false,
-  });
-});
-
-test('Sidebar создаёт заметку из встроенного шаблона', async () => {
-  const fetchMock = createFetchMock();
-  globalThis.fetch = fetchMock;
-  window.fetch = fetchMock;
-
-  const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
-  await component.loadTree();
-
-  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.new }));
-  await fireEvent.click(screen.getByText(uiText.sidebar.modals.fromTemplate));
-  await waitFor(() => expect(screen.getByText(uiText.sidebar.templateLibrary)).toBeTruthy());
-  await fireEvent.click(screen.getByText('Meeting Notes'));
-  await fireEvent.input(screen.getByLabelText(uiText.sidebar.modals.title), { target: { value: 'Client Sync' } });
-  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.useTemplate }));
-
-  await waitFor(() => expect(navigateHandler).toHaveBeenCalled());
-  const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
-  const body = JSON.parse(createCall[1].body);
-
-  expect(body.title).toBe('Client Sync');
-  expect(body.category).toBe('Meetings');
-  expect(body.tags).toEqual(['meeting']);
-  expect(body.content).toContain('# Client Sync');
-  expect(body.content).toContain('## Agenda');
-  expect(navigateHandler.mock.calls.at(-1)[0].detail).toEqual({
-    path: 'notes/Meetings/Client Sync.md',
-    name: 'Client Sync',
-    isDir: false,
-  });
-});
-
-test('Sidebar показывает и создаёт шаблоны на русском языке', async () => {
-  locale.set('ru');
-  const ruText = translations.ru;
-  const fetchMock = createFetchMock();
-  globalThis.fetch = fetchMock;
-  window.fetch = fetchMock;
-
-  const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
-  await component.loadTree();
-
-  await fireEvent.click(screen.getByRole('button', { name: ruText.sidebar.new }));
-  await fireEvent.click(screen.getByText(ruText.sidebar.modals.fromTemplate));
-  await waitFor(() => expect(screen.getByText(ruText.sidebar.templateLibrary)).toBeTruthy());
-  expect(screen.getByText('Быт')).toBeTruthy();
-  expect(screen.getByText('Повседневные домашние заметки: еда, покупки, поездки, обслуживание и дела.')).toBeTruthy();
-  expect(screen.getByText('План питания + покупки')).toBeTruthy();
-  expect(screen.getAllByText('Дневная заметка').length).toBeGreaterThan(0);
-  expect(screen.queryByText('Daily Note')).toBeNull();
-
-  await fireEvent.click(screen.getByText('Заметка встречи'));
-  await fireEvent.input(screen.getByLabelText(ruText.sidebar.modals.title), { target: { value: 'Синк с клиентом' } });
-  await fireEvent.click(screen.getByRole('button', { name: ruText.sidebar.useTemplate }));
-
-  await waitFor(() => expect(navigateHandler).toHaveBeenCalled());
-  const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
-  const body = JSON.parse(createCall[1].body);
-  expect(body.category).toBe('Встречи');
-  expect(body.content).toContain('# Синк с клиентом');
-  expect(body.content).toContain('## Повестка');
+  expect(handler).toHaveBeenCalled();
 });
 
 test('Sidebar закрепляет заметку в Pinned через контекстное меню', async () => {

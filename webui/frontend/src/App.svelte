@@ -15,6 +15,7 @@
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
   import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode, noteView, searchQuery, searchResults, isSearching } from './stores.js';
+  import { createNoteRequest } from './lib/sidebar-api.js';
 
   const SIDEBAR_WIDTH_KEY = 'sidebarWidth';
   const SIDEBAR_DEFAULT_WIDTH = 336;
@@ -33,6 +34,7 @@
   let commandPaletteMode = 'commands';
   let sidebarWidth = getInitialSidebarWidth();
   let isResizingSidebar = false;
+  $: isNoteOpen = typeof window !== 'undefined' && window.location.pathname.startsWith('/notes/');
   let homeRecentNotes = [];
   let homeRecentHasMore = true;
   let homeRecentLoading = false;
@@ -40,6 +42,9 @@
   let searchUrlReady = false;
   let urlSearchQuery = searchParamFromUrl().trim();
   let restoredInitialUrlSearch = false;
+  let showCreateNoteModal = false;
+  let newNoteTitle = '';
+  let isCreating = false;
   if (urlSearchQuery) $searchQuery = urlSearchQuery;
 
   $: applyTheme($activeTheme, isDarkMode, themes);
@@ -89,8 +94,10 @@
   }
 
   function updateMobileState() {
+    const wasMobile = isMobile;
     isMobile = window.innerWidth < 1024;
     if (isMobile && sidebarOpen) sidebarOpen = false;
+    if (wasMobile && !isMobile) sidebarOpen = false;
     if (!isMobile) sidebarWidth = clampSidebarWidth(sidebarWidth);
   }
 
@@ -204,19 +211,50 @@
     void runRestoredSearch(query);
   }
 
-  async function ensureSidebarReady() {
-    if (!sidebarOpen) {
-      sidebarOpen = true;
-      await tick();
-    }
+  async function openNewNoteFlow() {
+    newNoteTitle = '';
+    showCreateNoteModal = true;
   }
 
-  async function openNewNoteFlow() {
-    sidebarComponent?.openCreateNote();
+  function padDatePart(n) { return String(n).padStart(2, '0'); }
+  function formatTodayNoteTitle(date = new Date()) {
+    return [padDatePart(date.getDate()), padDatePart(date.getMonth() + 1), padDatePart(date.getFullYear() % 100), padDatePart(date.getHours()), padDatePart(date.getMinutes()), padDatePart(date.getSeconds())].join('-');
   }
 
   async function createTodayFromHome() {
-    await sidebarComponent?.createTodayNote();
+    try {
+      isCreating = true;
+      const title = formatTodayNoteTitle();
+      const data = await createNoteRequest({ title, category: 'Daily', tags: [], content: '' });
+      showCreateNoteModal = false;
+      if (isMobile) sidebarOpen = false;
+      if (sidebarComponent) await sidebarComponent.loadTree();
+      await loadHomeRecentNotes();
+      navigate(`/notes/${data.path}`);
+    } catch (err) {
+      console.error('Failed to create today note:', err);
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  async function submitCreateNote() {
+    if (!newNoteTitle.trim()) return;
+    try {
+      isCreating = true;
+      const title = newNoteTitle.trim();
+      const data = await createNoteRequest({ title, category: '', tags: [], content: '' });
+      showCreateNoteModal = false;
+      newNoteTitle = '';
+      if (isMobile) sidebarOpen = false;
+      if (sidebarComponent) await sidebarComponent.loadTree();
+      await loadHomeRecentNotes();
+      navigate(`/notes/${data.path}`);
+    } catch (err) {
+      console.error('Failed to create note:', err);
+    } finally {
+      isCreating = false;
+    }
   }
 
   async function loadHomeRecentNotes({ append = false } = {}) {
@@ -311,10 +349,17 @@
   }
 
   function toggleDarkMode() { isDarkMode = !isDarkMode; localStorage.setItem('darkMode', isDarkMode); document.documentElement.classList.toggle('dark', isDarkMode); applyTheme($activeTheme, isDarkMode, themes); }
-  function toggleSidebar() { sidebarOpen = !sidebarOpen; }
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+  }
   function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
   function closeCommandPalette() { commandPaletteOpen = false; }
-  function goHome() { navigate('/'); clearSearch(); }
+  function goHome() {
+    isNoteOpen = false;
+    if (isMobile) noteView.set('board');
+    navigate('/');
+    clearSearch();
+  }
 
   function handleSidebarResize(event) {
     sidebarWidth = clampSidebarWidth(event.clientX);
@@ -375,6 +420,7 @@
   }
 
   function handleNavigate(event) {
+    isNoteOpen = true;
     $noteView = 'list';
     navigate(`/notes/${normalizeNotePath(event.detail.path)}`);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
@@ -407,18 +453,6 @@
     if (event.detail === 'toggleTheme') toggleDarkMode();
   }
 
-  async function handleNoteViewChange(event) {
-    if (event.detail?.view === 'board') {
-      if (!isMobile) sidebarOpen = false;
-      if (window.location.pathname.startsWith('/notes/') || window.location.pathname === '/settings') navigate('/');
-      await tick();
-      void maybeFillBoardViewport();
-      return;
-    }
-
-    if (!isMobile) sidebarOpen = true;
-  }
-
 </script>
 
 <svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} />
@@ -430,8 +464,9 @@
       on:toggleDarkMode={toggleDarkMode}
       on:toggleSidebar={toggleSidebar}
       on:goHome={goHome}
-      on:noteViewChange={handleNoteViewChange}
       {isDarkMode}
+      mobile={isMobile}
+      noteOpen={isNoteOpen}
     />
 
     <CommandPalette
@@ -504,6 +539,8 @@
           on:openSettings={() => navigate('/settings')}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
+          on:openCreateNote={openNewNoteFlow}
+          mobile={isMobile}
         />
         {#if !isMobile && sidebarOpen}
           <TooltipIconButton
@@ -605,14 +642,6 @@
                   {/if}
                 </div>
               {/if}
-              {#if isMobile}
-                <button
-                  on:click={toggleSidebar}
-                  class="mt-8 h-11 px-5 rounded-full border border-[var(--border-subtle)] text-sm font-medium hover:border-[var(--text-primary)] transition"
-                >
-                  {$localizedText.app.openMenu}
-                </button>
-              {/if}
             </div>
           </div>
           {/if}
@@ -621,4 +650,54 @@
       </main>
     </div>
   </div>
+
+  {#if showCreateNoteModal}
+    <ModalShell title={$localizedText.sidebar.modals.newNote} widthClass="w-[min(92vw,40rem)]" closeOnEscape={true} on:close={() => showCreateNoteModal = false}>
+      <div class="space-y-7">
+        <section>
+          <div class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
+            {$localizedText.sidebar.modals.createStart}
+          </div>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
+              on:click={createTodayFromHome}
+              disabled={isCreating}
+            >
+              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
+              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.todayNoteHint}</span>
+            </button>
+            <button
+              type="button"
+              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
+              on:click={async () => {
+                showCreateNoteModal = false;
+                if (isMobile) {
+                  sidebarOpen = true;
+                  await tick();
+                }
+                sidebarComponent?.openTemplates();
+              }}
+            >
+              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
+              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.fromTemplateHint}</span>
+            </button>
+          </div>
+        </section>
+
+        <div>
+          <label for="app-note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
+          <input id="app-note-title" type="text" bind:value={newNoteTitle} placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newNoteTitle.trim()) submitCreateNote(); if (e.key === 'Escape') showCreateNoteModal = false; }} autofocus />
+          <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-secondary)]/65">{$localizedText.sidebar.modals.titleHint}</p>
+        </div>
+      </div>
+      <div class="flex gap-6 mt-10">
+        <button on:click={() => showCreateNoteModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
+        <button on:click={submitCreateNote} disabled={isCreating || !newNoteTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+          {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
+        </button>
+      </div>
+    </ModalShell>
+  {/if}
 </Router>
