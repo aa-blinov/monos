@@ -1,9 +1,14 @@
 {
   "name": "monos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Monos desktop notes app",
+  "author": {
+    "name": "aa-blinov",
+    "email": "aa-blinov@users.noreply.github.com"
+  },
   "main": "electron/main.cjs",
+  "desktopName": "app.monos.notes.desktop",
   "scripts": {
     "build:frontend": "npm --prefix webui/frontend run build",
     "test:frontend": "npm --prefix webui/frontend test",
@@ -64,7 +69,9 @@
       ],
       "category": "Office",
       "synopsis": "Desktop notes app",
-      "description": "Monos desktop notes app"
+      "description": "Monos desktop notes app",
+      "maintainer": "aa-blinov <aa-blinov@users.noreply.github.com>",
+      "syncDesktopName": true
     },
     "nsis": {
       "oneClick": false,
