@@ -1,8 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, test, expect, vi } from 'vitest';
 import Sidebar from './Sidebar.svelte';
 import { locale, translations, uiText } from '../lib/strings.js';
 import { editorState } from '../stores.js';
+
+
+
+async function flushPromises() { await tick(); await tick(); }
 
 function jsonResponse(data, ok = true) {
   return {
@@ -106,6 +111,10 @@ function createFetchMock() {
 
     if (url === '/api/git/sync' && method === 'POST') {
       return jsonResponse({ message: 'Synced', conflicts: false });
+    }
+
+    if (url === '/api/git/status') {
+      return jsonResponse({ initialized: true });
     }
 
     if (url === '/api/file/rename?path=notes%2FWork%2FAlpha.md' && method === 'POST') {
@@ -255,8 +264,8 @@ test('Sidebar создаёт quick note из буфера обмена в Quick 
   });
 
   const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
+  const savedHandler = vi.fn();
+  component.$on('quickNoteSaved', savedHandler);
   await component.loadTree();
 
   await component.createQuickNoteFromClipboard();
@@ -269,12 +278,8 @@ test('Sidebar создаёт quick note из буфера обмена в Quick 
     tags: [],
     content: 'Captured from clipboard',
   });
-  expect(navigateHandler).not.toHaveBeenCalled();
-  await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.quickNoteSaved)).toBeTruthy());
-  await fireEvent.click(screen.getByText(uiText.sidebar.modals.openNote));
-
-  expect(navigateHandler).toHaveBeenCalledTimes(1);
-  expect(navigateHandler.mock.calls.at(-1)[0].detail).toEqual({
+  await waitFor(() => expect(savedHandler).toHaveBeenCalled());
+  expect(savedHandler.mock.calls.at(-1)[0].detail).toEqual({
     path: 'notes/Quick Notes/02-06-26-19-36-39.md',
     name: '02-06-26-19-36-39',
     isDir: false,
@@ -299,6 +304,8 @@ test('Sidebar создаёт quick note из изображения в буфе�
   });
 
   const { component } = render(Sidebar);
+  const savedHandler = vi.fn();
+  component.$on('quickNoteSaved', savedHandler);
   await component.loadTree();
 
   await component.createQuickNoteFromClipboard();
@@ -315,7 +322,7 @@ test('Sidebar создаёт quick note из изображения в буфе�
 
   const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md' && init?.method === 'POST');
   expect(JSON.parse(saveCall[1].body).content).toContain('![image](_attachments/image.webp)');
-  await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.quickNoteSaved)).toBeTruthy());
+  await waitFor(() => expect(savedHandler).toHaveBeenCalled());
 });
 
 test('Sidebar создаёт quick note из base64 image data URL в тексте буфера обмена', async () => {
@@ -332,15 +339,25 @@ test('Sidebar создаёт quick note из base64 image data URL в текст
   });
 
   const { component } = render(Sidebar);
+  const savedHandler = vi.fn();
+  component.$on('quickNoteSaved', savedHandler);
   await component.loadTree();
 
   await component.createQuickNoteFromClipboard();
   vi.useRealTimers();
 
+  const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
+  expect(JSON.parse(createCall[1].body)).toEqual({
+    title: '02-06-26-19-36-39',
+    category: 'Quick Notes',
+    tags: [],
+    content: '',
+  });
   expect(fetchMock.mock.calls.some(([url]) => url.startsWith('/api/attachments?notePath=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md'))).toBe(true);
+
   const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md' && init?.method === 'POST');
   expect(JSON.parse(saveCall[1].body).content).toContain('![image](_attachments/image.webp)');
-  await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.quickNoteSaved)).toBeTruthy());
+  await waitFor(() => expect(savedHandler).toHaveBeenCalled());
 });
 
 test('Sidebar показывает подсказку, если quick note нельзя создать из пустого буфера', async () => {
@@ -355,16 +372,15 @@ test('Sidebar показывает подсказку, если quick note не�
   });
 
   const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
+  const issueHandler = vi.fn();
+  component.$on('quickNoteIssue', issueHandler);
   await component.loadTree();
 
   await component.createQuickNoteFromClipboard();
 
   expect(fetchMock.mock.calls.some(([url, init]) => url === '/api/notes/create' && init?.method === 'POST')).toBe(false);
-  expect(navigateHandler).not.toHaveBeenCalled();
-  await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.quickNoteNotCreated)).toBeTruthy());
-  expect(screen.getByText(uiText.sidebar.modals.quickNoteClipboardEmptyHint)).toBeTruthy();
+  await waitFor(() => expect(issueHandler).toHaveBeenCalled());
+  expect(issueHandler.mock.calls.at(-1)[0].detail).toBe(uiText.sidebar.modals.quickNoteClipboardEmptyHint);
 });
 
 test('Sidebar mobile sheet не показывает крупный quick switcher CTA', async () => {
@@ -378,17 +394,20 @@ test('Sidebar mobile sheet не показывает крупный quick switch
 });
 
 test('Sidebar после sync заново загружает дерево и директории', async () => {
+  vi.useRealTimers();
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  const { component } = render(Sidebar);
+  const { component } = render(Sidebar, { gitConfigured: true });
   await component.loadTree();
+  await tick();
 
   await waitFor(() => expect(screen.getByText((_, node) => node?.textContent === uiText.sidebar.notes(1))).toBeTruthy());
   const treeCallsBeforeSync = fetchMock.mock.calls.filter(([url]) => url === '/api/tree').length;
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.syncWithGit }));
+  const syncButton = await waitFor(() => screen.getByRole('button', { name: uiText.sidebar.syncWithGit }));
+  await fireEvent.click(syncButton);
 
   await waitFor(() => expect(screen.getByText((_, node) => node?.textContent === uiText.sidebar.notes(2))).toBeTruthy());
 
@@ -399,15 +418,17 @@ test('Sidebar после sync заново загружает дерево и д
 });
 
 test('Sidebar блокирует sync при несохранённой текущей заметке', async () => {
+  vi.useRealTimers();
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
   editorState.set({ path: 'notes/Work/Alpha.md', dirty: true, saving: false });
 
-  const { component } = render(Sidebar);
+  const { component } = render(Sidebar, { gitConfigured: true });
   await component.loadTree();
+  await tick();
 
-  const syncButton = screen.getByRole('button', { name: uiText.sidebar.saveBeforeSync });
+  const syncButton = await waitFor(() => screen.getByRole('button', { name: uiText.sidebar.saveBeforeSync }));
   expect(syncButton.disabled).toBe(true);
   await fireEvent.click(syncButton);
 

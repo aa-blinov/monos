@@ -13,6 +13,7 @@ export const searchQuery = writable('');
 export const searchResults = writable([]);
 export const isSearching = writable(false);
 export const editorState = writable({ path: null, dirty: false, saving: false });
+export const editorAction = writable(null);
 
 editMode.subscribe(value => {
   localStorage.setItem('editMode', value);

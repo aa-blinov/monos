@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
-import { editMode } from '../stores.js';
+import { editMode, editorAction } from '../stores.js';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Editor from './Editor.svelte';
 import { locale, uiText } from '../lib/strings.js';
@@ -134,9 +134,8 @@ test('Editor форматирует заметки и диспатчит formatC
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
   await waitFor(() => expect(screen.getByPlaceholderText(uiText.sourceEditor.beginWriting)).toBeTruthy());
 
-  const formatButton = screen.getByRole('button', { name: uiText.editor.formatAllNotes });
-  await waitFor(() => expect(formatButton.disabled).toBe(false));
-  await fireEvent.click(formatButton);
+  editorAction.set('format');
+  await tick();
 
   await waitFor(() => expect(screen.getByText('Formatted. Updated: 3')).toBeTruthy());
   expect(formatHandler).toHaveBeenCalledTimes(1);
@@ -153,11 +152,11 @@ test('Editor показывает переключатель режима без
     currentFile: { path: 'notes/Inbox.md', name: 'Inbox.md', isDir: false },
   });
 
-  const modeButton = await waitFor(() => screen.getByLabelText(`${uiText.header.switchEditorMode}: ${uiText.header.rich}`));
-  await fireEvent.mouseEnter(modeButton);
-  expect(screen.getByRole('tooltip').textContent).toContain(`${uiText.header.switchEditorMode}: ${uiText.header.rich}`);
+  expect(get(editMode)).toBe('source');
 
-  await fireEvent.click(modeButton);
+  editorAction.set('toggleMode');
+  await tick();
+
   expect(get(editMode)).toBe('rich');
   expect(localStorage.getItem('editMode')).toBe('rich');
   expect(fetchMock).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
@@ -234,7 +233,9 @@ test('Editor открывает wiki-link и удаляет заметку', asy
     })
   ));
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.deleteNote }));
+  editorAction.set('delete');
+  await tick();
+  await waitFor(() => expect(screen.getByText(uiText.editor.deletePermanently)).toBeTruthy());
   await fireEvent.click(screen.getByText(uiText.editor.deletePermanently));
 
   await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));

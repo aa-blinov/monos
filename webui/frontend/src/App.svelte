@@ -45,6 +45,10 @@
   let showCreateNoteModal = false;
   let newNoteTitle = '';
   let isCreating = false;
+  let savedQuickNote = null;
+  let quickNoteIssue = '';
+  let syncError = '';
+  let gitConfigured = false;
   if (urlSearchQuery) $searchQuery = urlSearchQuery;
 
   $: applyTheme($activeTheme, isDarkMode, themes);
@@ -461,10 +465,8 @@
   <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">
     <Header
       bind:this={headerComponent}
-      on:toggleDarkMode={toggleDarkMode}
       on:toggleSidebar={toggleSidebar}
       on:goHome={goHome}
-      {isDarkMode}
       mobile={isMobile}
       noteOpen={isNoteOpen}
     />
@@ -540,7 +542,13 @@
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
+          on:toggleDarkMode={toggleDarkMode}
+          on:quickNoteSaved={(e) => { savedQuickNote = e.detail; if (isMobile) sidebarOpen = false; }}
+          on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) sidebarOpen = false; }}
+          on:syncError={(e) => { syncError = e.detail; if (isMobile) sidebarOpen = false; }}
           mobile={isMobile}
+          {isDarkMode}
+          {gitConfigured}
         />
         {#if !isMobile && sidebarOpen}
           <TooltipIconButton
@@ -696,6 +704,54 @@
         <button on:click={() => showCreateNoteModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
         <button on:click={submitCreateNote} disabled={isCreating || !newNoteTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
           {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
+        </button>
+      </div>
+    </ModalShell>
+  {/if}
+
+  {#if savedQuickNote}
+    <ModalShell title={$localizedText.sidebar.modals.quickNoteSaved} widthClass="w-[min(92vw,28rem)]" closeOnEscape={true} on:close={() => savedQuickNote = null}>
+      <div class="space-y-4">
+        <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
+          {$localizedText.sidebar.modals.quickNoteSavedHint}
+        </p>
+        <div class="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+          <div class="truncate text-sm font-semibold">{savedQuickNote.name}</div>
+          <div class="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">{savedQuickNote.path.replace(/^notes\//, '')}</div>
+        </div>
+      </div>
+      <div class="mt-8 flex gap-4">
+        <button type="button" on:click={() => savedQuickNote = null} class="flex-1 text-sm font-medium transition hover:opacity-60">
+          {$localizedText.sidebar.modals.stayHere}
+        </button>
+        <button type="button" on:click={() => { const note = savedQuickNote; savedQuickNote = null; handleNavigate({ detail: note }); }} class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60">
+          {$localizedText.sidebar.modals.openNote}
+        </button>
+      </div>
+    </ModalShell>
+  {/if}
+
+  {#if quickNoteIssue}
+    <ModalShell title={$localizedText.sidebar.modals.quickNoteNotCreated} widthClass="w-[min(92vw,28rem)]" closeOnEscape={true} on:close={() => quickNoteIssue = ''}>
+      <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
+        {quickNoteIssue}
+      </p>
+      <div class="mt-8 flex justify-center">
+        <button type="button" on:click={() => quickNoteIssue = ''} class="text-sm font-bold uppercase tracking-widest transition hover:opacity-60">
+          {$localizedText.sidebar.modals.understood}
+        </button>
+      </div>
+    </ModalShell>
+  {/if}
+
+  {#if syncError}
+    <ModalShell title={$localizedText.sidebar.errors.syncFailed} widthClass="w-[min(92vw,28rem)]" closeOnEscape={true} on:close={() => syncError = ''}>
+      <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
+        {syncError}
+      </p>
+      <div class="mt-8 flex justify-center">
+        <button type="button" on:click={() => syncError = ''} class="text-sm font-bold uppercase tracking-widest transition hover:opacity-60">
+          {$localizedText.sidebar.modals.understood}
         </button>
       </div>
     </ModalShell>

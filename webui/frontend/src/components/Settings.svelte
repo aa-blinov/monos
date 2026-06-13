@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import ConflictResolver from './ConflictResolver.svelte';
   import { ChevronLeft } from 'lucide-svelte';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
@@ -23,6 +24,9 @@
   let gitRepos = [];
   let gitBranches = [];
   let gitConflicts = [];
+  let conflictDetails = [];
+  let showConflictResolver = false;
+  let conflictIndex = 0;
   let isLoadingRepos = false;
   let isLoadingBranches = false;
   let isConnecting = false;
@@ -202,22 +206,40 @@
   async function loadConflicts() {
     try {
       const r = await fetch('/api/git/conflicts');
-      if (r.ok) gitConflicts = normalizeConflictList(await r.json());
+      if (r.ok) {
+        const data = await r.json();
+        if (data.length > 0 && data[0].ours !== undefined) {
+          conflictDetails = data;
+          gitConflicts = data.map(d => d.path);
+        } else {
+          gitConflicts = normalizeConflictList(data);
+          conflictDetails = gitConflicts.map(p => ({ path: p, ours: '', theirs: '' }));
+        }
+      }
     } catch (e) { console.error(e); }
   }
 
-  async function resolveConflicts() {
+  async function handleConflictResolve(event) {
+    const { path: filePath, choice } = event.detail;
     try {
-      const files = gitConflicts.map(getConflictLabel).filter(Boolean);
       await fetch('/api/git/conflicts/resolve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files })
+        body: JSON.stringify({ resolutions: { [filePath]: choice } })
       });
-      gitConflicts = [];
-      await checkGitStatus();
-    }
-    catch (e) { console.error(e); }
+      conflictDetails = conflictDetails.filter(c => c.path !== filePath);
+      gitConflicts = gitConflicts.filter(p => p !== filePath);
+      if (conflictIndex >= conflictDetails.length) conflictIndex = Math.max(0, conflictDetails.length - 1);
+      if (conflictDetails.length === 0) {
+        showConflictResolver = false;
+        await checkGitStatus();
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  function openConflictResolver() {
+    conflictIndex = 0;
+    showConflictResolver = true;
   }
 
   function initSettingsPage() {
@@ -227,6 +249,7 @@
     statusSectionOpen = true;
     loadSettings();
     checkGitStatus();
+    loadConflicts();
   }
 
   onMount(initSettingsPage);
@@ -519,11 +542,20 @@
             </div>
           {/each}
         </div>
-        <button on:click={resolveConflicts} class="text-xs uppercase tracking-widest font-bold text-[var(--red)] hover:opacity-60">
-          {$localizedText.settings.markResolved}
+        <button on:click={openConflictResolver} class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-secondary)] transition">
+          Resolve Conflicts
         </button>
       </section>
     {/if}
 
   </div>
 </div>
+
+{#if showConflictResolver && conflictDetails.length > 0}
+  <ConflictResolver
+    conflicts={conflictDetails}
+    currentIndex={conflictIndex}
+    on:resolve={handleConflictResolve}
+    on:done={() => { showConflictResolver = false; }}
+  />
+{/if}
