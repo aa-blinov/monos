@@ -7,6 +7,7 @@ import https from 'node:https';
 import { syncBuiltinESMExports } from 'node:module';
 import os from 'os';
 import path from 'path';
+import AdmZip from 'adm-zip';
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-api-'));
 const notesDir = path.join(tempRoot, 'notes');
@@ -814,6 +815,55 @@ apiTest('rename, move и delete обновляют файловое дерево
 
   const missing = await requestJson(buildUrl('/api/file-info', { path: notePath }));
   assert.equal(missing.response.status, 404);
+});
+
+apiTest('GET /api/backup/export возвращает ZIP с видимой иерархией заметок', async () => {
+  fs.mkdirSync(path.join(notesDir, '.monos'), { recursive: true });
+  fs.writeFileSync(path.join(notesDir, '.monos', 'templates.json'), '{"customTemplates":[]}', 'utf-8');
+
+  const response = await fetch(buildUrl('/api/backup/export'));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'application/zip');
+  assert.match(response.headers.get('content-disposition'), /monos-notes-\d{4}-\d{2}-\d{2}\.zip/);
+
+  const zip = new AdmZip(Buffer.from(await response.arrayBuffer()));
+  const entryNames = zip.getEntries().map(entry => entry.entryName);
+  assert.ok(entryNames.includes('Topic/Alpha.md'));
+  assert.ok(entryNames.includes('Beta.md'));
+  assert.ok(!entryNames.includes('.monos/templates.json'));
+  assert.ok(!entryNames.includes('.secret/Hidden.md'));
+});
+
+apiTest('POST /api/backup/import мержит ZIP без перезаписи существующих файлов', async () => {
+  const zip = new AdmZip();
+  zip.addFile('Imported/Nested.md', Buffer.from('# Imported\n\nHello import.\n'));
+  zip.addFile('Topic/Alpha.md', Buffer.from('# Imported duplicate\n'));
+  zip.addFile('Imported/_attachments/image.png', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  zip.addFile('Imported/unsafe.exe', Buffer.from('skip'));
+  zip.addFile('__MACOSX/Junk.md', Buffer.from('# Junk\n'));
+  zip.addFile('.monos/templates.json', Buffer.from('{}'));
+
+  const form = new FormData();
+  form.append('archive', new Blob([zip.toBuffer()], { type: 'application/zip' }), 'notes.zip');
+
+  const imported = await requestJson(buildUrl('/api/backup/import'), {
+    method: 'POST',
+    body: form,
+  });
+
+  assert.equal(imported.response.status, 200);
+  assert.equal(imported.data.importedNotes, 2);
+  assert.equal(imported.data.importedAttachments, 1);
+  assert.equal(imported.data.renamed, 1);
+  assert.equal(fs.existsSync(path.join(notesDir, 'Imported', 'Nested.md')), true);
+  assert.equal(fs.existsSync(path.join(notesDir, 'Topic', 'Alpha 2.md')), true);
+  assert.equal(fs.existsSync(path.join(notesDir, 'Imported', '_attachments', 'image.png')), true);
+  assert.equal(fs.existsSync(path.join(notesDir, 'Imported', 'unsafe.exe')), false);
+
+  const tree = await requestJson(buildUrl('/api/tree'));
+  assert.equal(tree.response.status, 200);
+  assert.ok(JSON.stringify(tree.data).includes('Nested.md'));
+  assert.ok(JSON.stringify(tree.data).includes('Alpha 2.md'));
 });
 
 apiTest('GET /api/git/status и /api/git/log работают с локальным git-репозиторием', async () => {

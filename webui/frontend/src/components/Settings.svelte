@@ -1,11 +1,12 @@
 <script>
-  import { onMount } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
 
+  const dispatch = createEventDispatcher();
   const DEFAULT_GIT_OWNER = 'Monos';
   const themeModeOptions = [
     { value: 'system', label: () => $localizedText.settings.themeModeSystem },
@@ -39,6 +40,11 @@
   let isAuthenticated = false;
   let isSyncing = false;
   let isCheckingStatus = false;
+  let isExporting = false;
+  let isImporting = false;
+  let backupStatus = '';
+  let backupError = '';
+  let selectedArchiveName = '';
   let gitError = '';
 
   function getSelectedRepoFullName() {
@@ -196,11 +202,83 @@
     finally { isSyncing = false; }
   }
 
+  function downloadNameFromResponse(response) {
+    const disposition = response.headers?.get?.('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/i);
+    return match?.[1] || `monos-notes-${new Date().toISOString().slice(0, 10)}.zip`;
+  }
+
+  async function exportNotes() {
+    isExporting = true;
+    backupStatus = '';
+    backupError = '';
+    try {
+      const response = await fetch('/api/backup/export');
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.detail || $localizedText.settings.exportFailed);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadNameFromResponse(response);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      backupStatus = $localizedText.settings.exportComplete;
+    } catch (error) {
+      backupError = $localizedText.settings.backupError(error.message);
+    } finally {
+      isExporting = false;
+    }
+  }
+
+  async function importArchive(file) {
+    if (!file) return;
+    isImporting = true;
+    backupStatus = '';
+    backupError = '';
+    try {
+      const body = new FormData();
+      body.append('archive', file);
+      const response = await fetch('/api/backup/import', { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || $localizedText.settings.importFailed);
+      backupStatus = $localizedText.settings.importComplete(data);
+      dispatch('notesImported', data);
+    } catch (error) {
+      backupError = $localizedText.settings.backupError(error.message);
+    } finally {
+      isImporting = false;
+    }
+  }
+
+  async function handleImportChange(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    selectedArchiveName = file?.name || '';
+    await importArchive(file);
+    input.value = '';
+    if (!isImporting) selectedArchiveName = '';
+  }
+
   async function checkGitStatus() {
     isCheckingStatus = true;
     try {
       const r = await fetch('/api/git/status');
-      if (r.ok) gitStatus = await r.json();
+      if (r.ok) {
+        gitStatus = await r.json();
+        if (gitStatus?.status === 'conflict') {
+          await loadConflicts();
+        } else {
+          gitConflicts = [];
+          conflictDetails = [];
+          showConflictResolver = false;
+        }
+      }
     } catch (e) { console.error(e); }
     finally { isCheckingStatus = false; }
   }
@@ -247,7 +325,6 @@
   function initSettingsPage() {
     loadSettings();
     checkGitStatus();
-    loadConflicts();
   }
 
   onMount(initSettingsPage);
@@ -503,7 +580,9 @@
 
       <div class="flex gap-4 text-xs">
         <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
-        <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
+        {#if gitConflicts.length > 0}
+          <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
+        {/if}
       </div>
     </section>
 
@@ -523,6 +602,56 @@
         </button>
       </section>
     {/if}
+
+    <!-- Backup -->
+    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
+      <div>
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.backup}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.backupHint}</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        <div class="min-w-0">
+          <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
+          <button
+            type="button"
+            on:click={exportNotes}
+            disabled={isExporting}
+            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          >
+            {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
+          </button>
+        </div>
+
+        <div class="min-w-0">
+          <label for="notes-import-archive" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.importTitle}</label>
+          <div class="flex flex-wrap items-center gap-3">
+            <input
+              id="notes-import-archive"
+              type="file"
+              accept=".zip,application/zip,application/x-zip-compressed"
+              disabled={isImporting}
+              on:change={handleImportChange}
+              class="sr-only"
+            />
+            <label
+              for="notes-import-archive"
+              class="cursor-pointer text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition {isImporting ? 'pointer-events-none opacity-30' : ''}"
+            >
+              {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
+            </label>
+            <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>
+          </div>
+        </div>
+      </div>
+
+      {#if backupStatus}
+        <div class="text-xs text-[var(--green)]">{backupStatus}</div>
+      {/if}
+      {#if backupError}
+        <div class="text-xs text-[var(--red)]">{backupError}</div>
+      {/if}
+    </section>
 
   </div>
 </div>

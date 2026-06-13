@@ -679,7 +679,7 @@
           <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
-          <Settings />
+          <Settings on:notesImported={() => { sidebarComponent?.loadTree?.(); void loadHomeRecentNotes(); }} />
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
