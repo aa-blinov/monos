@@ -18,7 +18,10 @@
     "electron:dev": "npm run build:frontend && electron .",
     "dist": "npm run build:frontend && electron-builder --publish never",
     "dist:win": "npm run build:frontend && electron-builder --win --publish never",
-    "dist:mac": "npm run build:frontend && electron-builder --mac --publish never"
+    "dist:mac": "npm run build:frontend && electron-builder --mac --publish never",
+    "dist:mac:arm64": "npm run build:frontend && electron-builder --mac --arm64 --publish never",
+    "dist:mac:x64": "npm run build:frontend && electron-builder --mac --x64 --publish never",
+    "dist:linux": "npm run build:frontend && electron-builder --linux --publish never"
   },
   "build": {
     "appId": "app.monos.notes",
@@ -52,6 +55,16 @@
         "dmg"
       ],
       "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "icon": "build/icon.svg",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "synopsis": "Desktop notes app",
+      "description": "Monos desktop notes app"
     },
     "nsis": {
       "oneClick": false,

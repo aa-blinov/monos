@@ -403,7 +403,7 @@ const enText = {
     conflictsRemaining(count) {
       return `${count} more conflict${count > 1 ? 's' : ''} remaining`;
     },
-    allConflictsResolved: 'All conflicts resolved!',
+    chooseConflictVersion: 'Choose local or remote to resolve this conflict.',
     empty: '(empty)',
     saveBeforeSync: 'Save the current note before syncing.',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
@@ -888,7 +888,7 @@ const ruText = {
       const form = count === 1 ? 'конфликт' : count > 1 && count < 5 ? 'конфликта' : 'конфликтов';
       return `Осталось ${count} ${form}`;
     },
-    allConflictsResolved: 'Все конфликты разрешены!',
+    chooseConflictVersion: 'Выберите локальную или удалённую версию, чтобы разрешить конфликт.',
     empty: '(пусто)',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией.',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',

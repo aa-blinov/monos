@@ -5,7 +5,12 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   test:
@@ -42,11 +47,22 @@ jobs:
             artifact: monos-windows
             paths: |
               release/*.exe
-          - os: macos-latest
-            script: dist:mac
-            artifact: monos-macos
+          - os: macos-15
+            script: dist:mac:arm64
+            artifact: monos-macos-arm64
             paths: |
               release/*.dmg
+          - os: macos-15-intel
+            script: dist:mac:x64
+            artifact: monos-macos-x64
+            paths: |
+              release/*.dmg
+          - os: ubuntu-latest
+            script: dist:linux
+            artifact: monos-linux
+            paths: |
+              release/*.AppImage
+              release/*.deb
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -67,3 +83,23 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.paths }}
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Monos ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release-artifacts/*.exe
+            release-artifacts/*.dmg
+            release-artifacts/*.AppImage
+            release-artifacts/*.deb

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,13 +44,13 @@ tags: ["product", "release", "desktop"]
 category: "Product"
 ---
 
-## Monos 1.0
+## Monos desktop builds
 
 Ship a calm local-first notes app for people who want ownership, speed, and a clean daily dashboard.
 
-- Package Windows and macOS builds
+- Package Windows, macOS Apple Silicon, macOS Intel, and Linux builds
 - Publish the landing page
-- Prepare a crisp demo knowledge base
+- Verify Git sync and conflict resolution
 
 Related: [[Design Principles]]
 `);
@@ -65,9 +65,24 @@ Monos should feel private, quiet, and direct. The UI stays out of the way until 
 
 ## Principles
 
-- Local files are the source of truth
+- Local Markdown files are the source of truth
 - Search should work across title, tags, and body
-- Cards should be compact, readable, and predictable
+- Cards should be compact, readable, colored, and predictable
+`);
+
+  writeNote('Product/Release Checklist.md', `---
+title: "Release Checklist"
+tags: ["release", "github", "builds"]
+category: "Product"
+---
+
+## Packages
+
+- Windows installer
+- macOS Apple Silicon DMG
+- macOS Intel DMG
+- Ubuntu DEB
+- Linux AppImage
 `);
 
   writeNote('Research/Local-first Apps.md', `---
@@ -79,6 +94,17 @@ category: "Research"
 Local-first software keeps user data available offline and treats sync as an optional layer.
 
 Monos follows this approach with Markdown files, a rebuildable SQLite index, and optional Git sync.
+
+When sync conflicts happen, Monos shows local and remote versions side by side before resolving.
+`);
+
+  writeNote('Research/Sync Conflict.md', `---
+title: "Sync Conflict"
+tags: ["sync", "conflict", "git"]
+category: "Research"
+---
+
+Base version for a sync conflict demo.
 `);
 
   writeNote('Research/Markdown Workflow.md', `---
@@ -88,6 +114,15 @@ category: "Research"
 ---
 
 Markdown keeps notes readable in any editor. Frontmatter adds just enough metadata for filtering without trapping the user in a proprietary format.
+`);
+
+  writeNote('Research/Import Export.md', `---
+title: "Import Export"
+tags: ["backup", "zip", "recovery"]
+category: "Research"
+---
+
+Export creates one ZIP archive of the visible notes tree. Import merges a ZIP into the current hierarchy without overwriting existing files.
 `);
 
   writeNote('Daily/Weekly Review.md', `---
@@ -103,6 +138,15 @@ category: "Daily"
 - Kept the dashboard clean enough to scan at a glance
 `);
 
+  writeNote('Templates/Weekly Planning Template.md', `---
+title: "Weekly Planning Template"
+tags: ["templates", "planning"]
+category: "Templates"
+---
+
+Custom templates can include placeholders like {{title}}, {{date}}, {{shortDate}}, and {{time}}.
+`);
+
   writeNote('Ideas/Knowledge Garden.md', `---
 title: "Knowledge Garden"
 tags: ["ideas", "writing", "links"]
@@ -111,10 +155,81 @@ category: "Ideas"
 
 A knowledge base should reward small notes. Start with a quick capture, then connect it when the pattern becomes clear.
 `);
+
+  const templateSettingsDir = path.join(notesDir, '.monos');
+  fs.mkdirSync(templateSettingsDir, { recursive: true });
+  fs.writeFileSync(path.join(templateSettingsDir, 'templates.json'), JSON.stringify({
+    customTemplates: [
+      {
+        id: 'custom-site-launch',
+        title: 'Launch Retro',
+        description: 'A reusable retrospective template for releases and product experiments.',
+        category: 'Product',
+        tags: ['release', 'retro'],
+        content: '# {{title}}\n\nDate: {{date}}\n\n## What shipped\n- \n\n## Signals\n- \n\n## Follow-ups\n- [ ] ',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ],
+    hiddenLibraryTemplateIds: [],
+  }, null, 2), 'utf-8');
+}
+
+function git(args) {
+  return execFileSync('git', args, {
+    cwd: notesDir,
+    encoding: 'utf-8',
+    stdio: 'pipe',
+  }).trim();
+}
+
+function seedGitConflict() {
+  const conflictPath = path.join(notesDir, 'Research', 'Sync Conflict.md');
+  const remoteDir = path.join(tmpRoot, 'remote.git');
+  git(['init']);
+  git(['checkout', '-B', 'master']);
+  git(['config', 'user.name', 'Monos Site']);
+  git(['config', 'user.email', 'site@monos.local']);
+  git(['add', '-A']);
+  git(['commit', '-m', 'Seed site notes']);
+  execFileSync('git', ['init', '--bare', remoteDir], { encoding: 'utf-8', stdio: 'pipe' });
+  git(['remote', 'add', 'origin', remoteDir]);
+  git(['push', '-u', 'origin', 'master']);
+
+  git(['checkout', '-b', 'remote-conflict']);
+  fs.writeFileSync(conflictPath, `---
+title: "Sync Conflict"
+tags: ["sync", "conflict", "git"]
+category: "Research"
+---
+
+Remote version keeps the incoming Git history from another device.
+`, 'utf-8');
+  git(['add', 'Research/Sync Conflict.md']);
+  git(['commit', '-m', 'Remote sync conflict version']);
+
+  git(['checkout', 'master']);
+  fs.writeFileSync(conflictPath, `---
+title: "Sync Conflict"
+tags: ["sync", "conflict", "git"]
+category: "Research"
+---
+
+Local version keeps the current device edits before syncing.
+`, 'utf-8');
+  git(['add', 'Research/Sync Conflict.md']);
+  git(['commit', '-m', 'Local sync conflict version']);
+
+  try {
+    git(['merge', 'remote-conflict']);
+  } catch {
+    // The conflict is intentional so the website can show the resolver UI.
+  }
 }
 
 async function main() {
   seedNotes();
+  seedGitConflict();
   fs.mkdirSync(outputDir, { recursive: true });
 
   process.env.NOTES_ROOT = tmpRoot;
@@ -156,22 +271,36 @@ async function main() {
 
     await page.goto(frontendUrl);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('heading', { name: 'Notes' }).waitFor();
+    await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-dashboard.png'), fullPage: false });
 
     await page.getByPlaceholder('Search').fill('sync');
     await page.getByText('Search Results').waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-search.png'), fullPage: false });
 
-    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+    const openSidebar = page.getByRole('button', { name: 'Open sidebar' });
+    if (await openSidebar.isVisible()) await openSidebar.click();
     await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Product/i }).first().click();
     await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Launch Plan/i }).first().click();
     await page.locator('input[placeholder="Note Title"]').waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-editor.png'), fullPage: false });
 
+    await page.goto(`${frontendUrl}/templates`);
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('heading', { name: 'Templates', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(outputDir, 'monos-templates.png'), fullPage: false });
+
     await page.goto(`${frontendUrl}/settings`);
     await page.waitForLoadState('networkidle');
     await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'View Conflicts' }).waitFor();
+    await page.getByRole('button', { name: 'View Conflicts' }).click();
+    await page.getByRole('button', { name: 'Resolve Conflicts' }).waitFor();
+    await page.getByRole('button', { name: 'Resolve Conflicts' }).click();
+    await page.getByRole('dialog').getByText('Research/Sync Conflict.md').waitFor();
+    await page.screenshot({ path: path.join(outputDir, 'monos-conflicts.png'), fullPage: false });
+    await page.keyboard.press('Escape');
+    await page.getByText('Backup', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(outputDir, 'monos-settings.png'), fullPage: false });
 
     await page.setViewportSize({ width: 390, height: 844 });
