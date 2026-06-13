@@ -34,6 +34,13 @@ export const saveFileMetadata = (filePath, payload) => fetchJson(`/api/file/meta
 export const deleteFileRequest = (filePath) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}`, {
   method: 'DELETE',
 });
+export const deleteFilePermanentlyRequest = (filePath) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}&permanent=1`, {
+  method: 'DELETE',
+});
+export const loadTrashNotesRequest = () => fetchJson('/api/notes/trash?limit=200');
+export const restoreNoteRequest = (filePath) => fetchJson(`/api/notes/restore?path=${encodeURIComponent(filePath)}`, {
+  method: 'POST',
+});
 export const formatAllNotes = () => fetchJson('/api/format', { method: 'POST' });
 export const uploadAttachment = (notePath, file, name = file?.name) => {
   const form = new FormData();

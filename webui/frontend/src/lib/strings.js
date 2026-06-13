@@ -182,6 +182,7 @@ const enText = {
     saveBeforeSync: 'Save the current note before syncing',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
     settings: 'Settings',
+    trash: 'Trash',
     context: {
       newNote: 'New Note',
       newFolder: 'New Folder',
@@ -252,8 +253,20 @@ const enText = {
       },
       syncFailed: 'Sync failed:',
     },
-    confirmDelete(name) {
-      return `Are you sure you want to delete ${name}?`;
+    confirmDelete(name, isDir = false) {
+      return isDir ? `Delete ${name}?` : `Move ${name} to trash?`;
+    },
+  },
+  trash: {
+    title: 'Trash',
+    hint: 'Notes in trash are hidden from search, dashboard, and the tree until restored.',
+    loading: 'Loading trash',
+    emptyTitle: 'Trash is empty',
+    emptyHint: 'Deleted notes will appear here before they are removed forever.',
+    restore: 'Restore',
+    deleteForever: 'Delete forever',
+    deleteForeverConfirm(name) {
+      return `Delete ${name} forever? This cannot be undone.`;
     },
   },
   settings: {
@@ -347,13 +360,13 @@ const enText = {
     deleteNote: 'Delete note',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
-    archiveTitle: 'Archive this thought?',
+    archiveTitle: 'Move this note to trash?',
     archiveConfirm(name) {
-      return `Are you sure you want to remove ${name}? This path cannot be retraced.`;
+      return `${name} will disappear from notes, search, and the tree. You can restore it from Trash.`;
     },
     cancel: 'Cancel',
-    archiving: 'Archiving...',
-    deletePermanently: 'Delete Permanently',
+    archiving: 'Moving...',
+    deletePermanently: 'Move to trash',
     formatFailed: 'Format failed',
     saving: 'Saving…',
     saved: 'Saved',
@@ -597,6 +610,7 @@ const ruText = {
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
     settings: 'Настройки',
+    trash: 'Корзина',
     context: {
       newNote: 'Новая заметка',
       newFolder: 'Новая папка',
@@ -667,8 +681,20 @@ const ruText = {
       },
       syncFailed: 'Ошибка синхронизации:',
     },
-    confirmDelete(name) {
-      return `Удалить ${name}?`;
+    confirmDelete(name, isDir = false) {
+      return isDir ? `Удалить ${name}?` : `Переместить ${name} в корзину?`;
+    },
+  },
+  trash: {
+    title: 'Корзина',
+    hint: 'Заметки в корзине скрыты из поиска, дашборда и дерева, пока вы их не восстановите.',
+    loading: 'Загрузка корзины',
+    emptyTitle: 'Корзина пуста',
+    emptyHint: 'Удалённые заметки будут появляться здесь перед окончательным удалением.',
+    restore: 'Восстановить',
+    deleteForever: 'Удалить навсегда',
+    deleteForeverConfirm(name) {
+      return `Удалить ${name} навсегда? Это действие нельзя отменить.`;
     },
   },
   settings: {
@@ -763,13 +789,13 @@ const ruText = {
     deleteNote: 'Удалить заметку',
     gatheringThoughts: 'Собираем мысли',
     beginWriting: 'Начните писать...',
-    archiveTitle: 'Архивировать эту мысль?',
+    archiveTitle: 'Переместить заметку в корзину?',
     archiveConfirm(name) {
-      return `Удалить ${name}? Этот путь нельзя будет восстановить.`;
+      return `${name} исчезнет из заметок, поиска и дерева. Её можно будет восстановить из корзины.`;
     },
     cancel: 'Отмена',
-    archiving: 'Архивация...',
-    deletePermanently: 'Удалить навсегда',
+    archiving: 'Перемещение...',
+    deletePermanently: 'В корзину',
     formatFailed: 'Не удалось отформатировать',
     saving: 'Сохранение…',
     saved: 'Сохранено',

@@ -8,6 +8,8 @@
   const dispatch = createEventDispatcher();
 
   export let noteOpen = false;
+  export let showBack = false;
+  export let showSearch = true;
   export let isFormatting = false;
 
   let searchTimer;
@@ -59,10 +61,14 @@
   function toggleSidebar() { dispatch('toggleSidebar'); }
   function goHome() { dispatch('goHome'); }
   function createQuickNote() { dispatch('createQuickNote'); }
+  export function openSearch() {
+    if (!showSearch) return;
+    searchInputEl?.focus();
+  }
 </script>
 
 <header class="relative flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 sm:px-4 lg:px-4">
-  {#if noteOpen}
+  {#if showBack}
     <TooltipIconButton
       on:click={goHome}
       class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
@@ -84,7 +90,7 @@
     </TooltipIconButton>
   {/if}
 
-  {#if !noteOpen}
+  {#if showSearch}
   <div class="relative min-w-0 flex-1">
     <Search size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
     <input
@@ -127,7 +133,7 @@
   >
     <Clipboard class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
   </TooltipIconButton>
-  {:else}
+  {:else if noteOpen}
     <div class="flex-1"></div>
     <TooltipIconButton
       on:click={() => editorAction.set('format')}
@@ -148,5 +154,7 @@
     >
       <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
+  {:else}
+    <div class="flex-1"></div>
   {/if}
 </header>

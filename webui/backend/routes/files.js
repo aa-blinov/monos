@@ -15,6 +15,8 @@ export function registerFileRoutes(app) {
       const fullPath = resolveNotesPath(filePath);
       if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
       if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
+      const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+      if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
 
       const content = fs.readFileSync(fullPath, 'utf-8');
       getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?').run(nowISO(), filePath);
@@ -30,6 +32,8 @@ export function registerFileRoutes(app) {
       requireBodyFields(req, 'content');
       const { content } = req.body;
       const fullPath = resolveNotesPath(filePath);
+      const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+      if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       fs.writeFileSync(fullPath, content, 'utf-8');
       indexFile(fullPath, content);
       res.json({ message: 'Saved' });
@@ -41,10 +45,22 @@ export function registerFileRoutes(app) {
   app.delete('/api/file', (req, res) => {
     try {
       const { path: filePath } = req.query;
+      const permanent = req.query.permanent === '1' || req.query.permanent === 'true';
       const fullPath = resolveNotesPath(filePath);
       if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
+      const isDir = fs.statSync(fullPath).isDirectory();
 
-      if (fs.statSync(fullPath).isDirectory()) fs.rmSync(fullPath, { recursive: true });
+      if (!permanent && !isDir) {
+        const trashedAt = nowISO();
+        const db = getDb();
+        const changed = db.prepare('UPDATE notes_index SET trashed_at = ?, board_order = NULL WHERE path = ? AND is_dir = 0')
+          .run(trashedAt, filePath);
+        if (changed.changes === 0) return res.status(404).json({ detail: 'File not found' });
+        res.json({ message: 'Moved to trash', trashedAt });
+        return;
+      }
+
+      if (isDir) fs.rmSync(fullPath, { recursive: true });
       else fs.unlinkSync(fullPath);
 
       const db = getDb();
@@ -110,6 +126,7 @@ export function registerFileRoutes(app) {
 
       const stats = fs.statSync(fullPath);
       const meta = getDb().prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
+      if (!stats.isDirectory() && meta?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       const config = getDb().prepare('SELECT icon, color FROM folder_config WHERE path = ?').get(filePath);
 
       res.json({
@@ -139,6 +156,8 @@ export function registerFileRoutes(app) {
       const { path: filePath } = req.query;
       const fullPath = resolveNotesPath(filePath);
       const { title, tags, category, content } = req.body;
+      const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+      if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       const originalContent = typeof content === 'string'
         ? content
         : fs.readFileSync(fullPath, 'utf-8');

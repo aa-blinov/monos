@@ -6,6 +6,7 @@
   import NotePage from './components/NotePage.svelte';
   import NoteBoard from './components/NoteBoard.svelte';
   import Settings from './components/Settings.svelte';
+  import TrashView from './components/TrashView.svelte';
   import SearchResults from './components/SearchResults.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import ModalShell from './components/ModalShell.svelte';
@@ -35,7 +36,10 @@
   let sidebarWidth = getInitialSidebarWidth();
   let isResizingSidebar = false;
   let systemThemeSignal = 0;
-  $: isNoteOpen = typeof window !== 'undefined' && window.location.pathname.startsWith('/notes/');
+  let routePath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  $: isDashboardRoute = routePath === '/';
+  $: isNoteOpen = routePath.startsWith('/notes/');
+  $: showHeaderBack = !isDashboardRoute;
   let homeRecentNotes = [];
   let homeRecentHasMore = true;
   let homeRecentLoading = false;
@@ -68,8 +72,8 @@
     fontSizeOptions,
     fontOptions,
   });
-  $: activeSearchQuery = $searchQuery.trim() || urlSearchQuery;
-  $: if (!searchUrlReady && urlSearchQuery && !restoredInitialUrlSearch) {
+  $: activeSearchQuery = isDashboardRoute ? ($searchQuery.trim() || urlSearchQuery) : '';
+  $: if (!searchUrlReady && isDashboardRoute && urlSearchQuery && !restoredInitialUrlSearch) {
     restoredInitialUrlSearch = true;
     $searchQuery = urlSearchQuery;
     void runRestoredSearch(urlSearchQuery);
@@ -130,7 +134,7 @@
       toggleSidebar();
       return;
     }
-    if (((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'f') || (!isTypingTarget && key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey)) {
+    if (isDashboardRoute && (((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'f') || (!isTypingTarget && key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey))) {
       e.preventDefault();
       headerComponent?.openSearch?.();
     }
@@ -138,24 +142,34 @@
 
   onMount(() => {
     updateMobileState();
+    routePath = window.location.pathname;
     if (window.location.pathname === '/') $noteView = 'board';
-    if ($noteView === 'board' && !isMobile) sidebarOpen = false;
-    if ($noteView === 'board' && window.location.pathname.startsWith('/notes/')) navigate('/');
+    if (window.location.pathname === '/' && $noteView === 'board' && !isMobile) sidebarOpen = false;
+    if ($noteView === 'board' && window.location.pathname.startsWith('/notes/')) {
+      routePath = '/';
+      navigate('/');
+    }
     void loadHomeRecentNotes();
     void loadShellSettings();
     restoreSearchFromUrl();
     searchUrlReady = true;
+    const handlePopState = () => {
+      routePath = window.location.pathname;
+      if (routePath !== '/') clearSearch();
+    };
+    window.addEventListener('popstate', handlePopState);
     const systemThemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
     const handleSystemThemeChange = () => { systemThemeSignal += 1; };
     systemThemeQuery?.addEventListener?.('change', handleSystemThemeChange);
     systemThemeQuery?.addListener?.(handleSystemThemeChange);
     return () => {
+      window.removeEventListener('popstate', handlePopState);
       systemThemeQuery?.removeEventListener?.('change', handleSystemThemeChange);
       systemThemeQuery?.removeListener?.(handleSystemThemeChange);
     };
   });
 
-  $: if (searchUrlReady) syncSearchUrl($searchQuery);
+  $: if (searchUrlReady && isDashboardRoute) syncSearchUrl($searchQuery);
 
   async function loadShellSettings() {
     // Load theme from server
@@ -217,6 +231,7 @@
   }
 
   function restoreSearchFromUrl() {
+    if (!isDashboardRoute) return;
     if (restoredInitialUrlSearch) return;
     const query = ($searchQuery || urlSearchQuery || searchParamFromUrl()).trim();
     if (!query) return;
@@ -379,16 +394,26 @@
   }
   function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
   function closeCommandPalette() { commandPaletteOpen = false; }
-  function showDashboard({ refreshTree = false, replace = false } = {}) {
-    isNoteOpen = false;
+  function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
     $noteView = 'board';
-    sidebarOpen = false;
+    if (closeSidebar) sidebarOpen = false;
+    routePath = '/';
     navigate('/', { replace });
     clearSearch();
     void loadHomeRecentNotes();
     if (refreshTree && sidebarComponent) sidebarComponent.loadTree();
   }
   function goHome() { showDashboard(); }
+  function openSettings() {
+    routePath = '/settings';
+    clearSearch();
+    navigate('/settings');
+  }
+  function openTrash() {
+    routePath = '/trash';
+    clearSearch();
+    navigate('/trash');
+  }
 
   function createQuickNoteFromHeader() {
     sidebarComponent?.createQuickNoteFromClipboard?.();
@@ -453,9 +478,10 @@
   }
 
   function handleNavigate(event) {
-    isNoteOpen = true;
     $noteView = 'list';
-    navigate(`/notes/${normalizeNotePath(event.detail.path)}`);
+    const nextPath = `/notes/${normalizeNotePath(event.detail.path)}`;
+    routePath = nextPath;
+    navigate(nextPath);
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
     clearSearch();
@@ -488,8 +514,34 @@
       return;
     }
     commandPaletteOpen = false;
-    if (event.detail === 'openSettings') navigate('/settings');
+    if (event.detail === 'openSettings') openSettings();
     if (event.detail === 'toggleSidebar') toggleSidebar();
+  }
+
+  function refreshAfterTrashChange() {
+    void loadHomeRecentNotes();
+    sidebarComponent?.loadTree?.();
+  }
+
+  async function handleTrashRestored(event) {
+    const note = event.detail;
+    if (!note?.path) {
+      refreshAfterTrashChange();
+      return;
+    }
+
+    handleNavigate({
+      detail: {
+        path: note.path,
+        name: note.name || note.path.split('/').pop(),
+        isDir: false,
+      },
+    });
+    void loadHomeRecentNotes();
+    if (sidebarComponent) {
+      await sidebarComponent.loadTree();
+      sidebarComponent.setSelected(note.path);
+    }
   }
 
 </script>
@@ -504,6 +556,8 @@
       on:goHome={goHome}
       on:createQuickNote={createQuickNoteFromHeader}
       noteOpen={isNoteOpen}
+      showBack={showHeaderBack}
+      showSearch={isDashboardRoute}
     />
 
     <CommandPalette
@@ -572,8 +626,9 @@
         <Sidebar
           bind:this={sidebarComponent}
           on:navigate={handleNavigate}
-          on:fileDeleted={() => showDashboard({ replace: true })}
-          on:openSettings={() => navigate('/settings')}
+          on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
+          on:openSettings={openSettings}
+          on:openTrash={openTrash}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
@@ -611,10 +666,13 @@
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings />
+        </Route>
+        <Route path="/trash">
+          <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
         </Route>
         <Route path="/">
           <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>

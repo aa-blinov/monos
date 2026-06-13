@@ -9,9 +9,12 @@ export function registerTreeRoutes(app) {
       function buildNode(relativePath) {
         const name = relativePath === 'notes' ? 'notes' : path.basename(relativePath);
         const folderConfig = db.prepare('SELECT * FROM folder_config WHERE path = ?').get(relativePath);
-        const children = db.prepare(
-          'SELECT * FROM notes_index WHERE parent_path = ? ORDER BY is_dir DESC, name COLLATE NOCASE ASC'
-        ).all(relativePath);
+        const children = db.prepare(`
+          SELECT * FROM notes_index
+          WHERE parent_path = ?
+            AND (trashed_at IS NULL OR trashed_at = '')
+          ORDER BY is_dir DESC, name COLLATE NOCASE ASC
+        `).all(relativePath);
 
         return {
           path: relativePath,

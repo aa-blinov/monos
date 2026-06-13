@@ -1,8 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import TooltipIconButton from './TooltipIconButton.svelte';
   import ConflictResolver from './ConflictResolver.svelte';
-  import { ChevronLeft } from 'lucide-svelte';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
@@ -42,9 +40,6 @@
   let isSyncing = false;
   let isCheckingStatus = false;
   let gitError = '';
-  let gitSectionOpen = true;
-  let syncSectionOpen = true;
-  let statusSectionOpen = true;
 
   function getSelectedRepoFullName() {
     if (!settings.git_repo) return '';
@@ -250,10 +245,6 @@
   }
 
   function initSettingsPage() {
-    const compact = window.innerWidth < 640;
-    gitSectionOpen = !compact;
-    syncSectionOpen = !compact;
-    statusSectionOpen = true;
     loadSettings();
     checkGitStatus();
     loadConflicts();
@@ -262,20 +253,10 @@
   onMount(initSettingsPage);
 </script>
 
-<div class="h-full overflow-y-auto">
-  <div class="max-w-2xl mx-auto px-5 sm:px-6 lg:px-12 py-10 lg:py-16 space-y-10">
+<div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8">
+  <div class="mx-auto w-full max-w-5xl space-y-10">
 
-    <!-- Header -->
-    <div class="flex items-center gap-4">
-      <TooltipIconButton
-        on:click={() => history.back()}
-        class="p-1 hover:opacity-60 transition-opacity"
-        label={$localizedText.settings.back}
-        tooltip={$localizedText.settings.back}
-        tooltipAlign="start"
-      >
-        <ChevronLeft class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
-      </TooltipIconButton>
+    <div>
       <h1 class="text-3xl lg:text-4xl font-serif tracking-tight">{$localizedText.settings.title}</h1>
     </div>
 
@@ -385,15 +366,11 @@
     </section>
 
     <!-- GitHub Connection -->
-    <details bind:open={gitSectionOpen} class="group border-t border-[var(--border-subtle)] pt-5">
-      <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
-        <span class="text-xs text-[var(--text-secondary)] transition-transform group-open:rotate-90">›</span>
-      </summary>
-      <section class="space-y-5 pt-4">
+    <section class="space-y-5 pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
-      <details class="text-xs text-[var(--text-secondary)] group mb-4">
+      <details class="text-xs text-[var(--text-secondary)] group">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 p-3 border border-[var(--border-subtle)] rounded leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
@@ -404,7 +381,7 @@
         </div>
       </details>
 
-      <form on:submit|preventDefault={authenticate} class="contents">
+      <form on:submit|preventDefault={authenticate} class="mt-8 space-y-1.5">
         <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
         <div class="flex gap-3">
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
@@ -470,16 +447,11 @@
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
         </button>
       </div>
-      </section>
-    </details>
+    </section>
 
     <!-- Sync Settings -->
-    <details bind:open={syncSectionOpen} class="group border-t border-[var(--border-subtle)] pt-5">
-      <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
-        <span class="text-xs text-[var(--text-secondary)] transition-transform group-open:rotate-90">›</span>
-      </summary>
-      <section class="space-y-5 pt-4">
+    <section class="space-y-5 border-t border-[var(--border-subtle)] pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
 
       <div class="grid grid-cols-2 gap-6">
         <div>
@@ -497,16 +469,11 @@
         <input type="checkbox" id="auto-format" bind:checked={settings.auto_format_on_save} on:change={saveSettings} class="accent-[var(--text-primary)]" />
         <label for="auto-format" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.autoFormatOnSave}</label>
       </div>
-      </section>
-    </details>
+    </section>
 
     <!-- Status & Sync -->
-    <details bind:open={statusSectionOpen} class="group border-t border-[var(--border-subtle)] pt-5">
-      <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
-        <span class="text-xs text-[var(--text-secondary)] transition-transform group-open:rotate-90">›</span>
-      </summary>
-      <section class="space-y-4 pt-4">
+    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
 
       <div class="border border-[var(--border-subtle)] rounded p-5">
         {#if isCheckingStatus}
@@ -538,8 +505,7 @@
         <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
         <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
       </div>
-      </section>
-    </details>
+    </section>
 
     <!-- Conflicts -->
     {#if gitConflicts.length > 0}

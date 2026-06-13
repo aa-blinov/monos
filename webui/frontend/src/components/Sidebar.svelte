@@ -381,7 +381,6 @@
   let expandedPaths = new Set();
 
   export function setSelected(path) {
-    if (path === selectedPath) return;
     expandToPath(tree, path);
     selectedPath = path;
     treeKey++;
@@ -662,7 +661,7 @@
     } else if (action === 'unpin') {
       unpinNote(path, true);
     } else if (action === 'delete') {
-      if (confirm($localizedText.sidebar.confirmDelete(name))) {
+      if (confirm($localizedText.sidebar.confirmDelete(name, contextMenu.isDir))) {
         deleteItem(path);
       }
     }
@@ -911,6 +910,10 @@
           <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
         </button>
       {/if}
+      <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Trash2 size="20" strokeWidth="1.7" />
+        <span>{$localizedText.sidebar.trash}</span>
+      </button>
       <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
@@ -934,6 +937,15 @@
             {/if}
           </TooltipIconButton>
         {/if}
+        <TooltipIconButton
+          on:click={() => dispatch('openTrash')}
+          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          label={$localizedText.sidebar.trash}
+          tooltip={$localizedText.sidebar.trash}
+          tooltipAlign="end"
+        >
+          <Icon.Trash2 class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}
           class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
