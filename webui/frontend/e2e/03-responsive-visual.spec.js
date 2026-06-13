@@ -87,11 +87,8 @@ test.describe('responsive visual component audit', () => {
 
       await page.goto('/');
       await expectCoreControlsVisible(page);
-      if (isMobileLayout) {
-        await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
-      } else {
-        await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
-      }
+      await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+      await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await screenshot(page, viewport.name, '01-home');
 
@@ -119,7 +116,8 @@ test.describe('responsive visual component audit', () => {
         await expect(page.getByRole('button', { name: 'Close sidebar' }).nth(1)).toBeVisible();
         await page.waitForTimeout(350);
       } else {
-        await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+        await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
       }
       await expectNoHorizontalOverflow(page);
       await screenshot(page, viewport.name, isMobileLayout ? '04-sidebar-overlay' : '04-board');
