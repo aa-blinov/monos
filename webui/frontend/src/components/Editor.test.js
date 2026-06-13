@@ -159,6 +159,7 @@ test('Editor позволяет перекрасить открытую заме
 
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
+  expect(screen.getByTestId('editor-shell').getAttribute('style')).toContain('--note-accent: #fabd2f');
   await fireEvent.click(screen.getByRole('button', { name: uiText.editor.noteColor }));
   await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#8ec07c') }));
 
@@ -169,6 +170,72 @@ test('Editor позволяет перекрасить открытую заме
   expect(colorChangedHandler).toHaveBeenCalledWith(expect.objectContaining({
     detail: { path: 'notes/Inbox.md', color: '#8ec07c' },
   }));
+  await waitFor(() => expect(screen.getByTestId('editor-shell').getAttribute('style')).toContain('--note-accent: #8ec07c'));
+});
+
+test('Editor сохраняет текущую поверхность при переходе на другую заметку', async () => {
+  let resolveBetaContent;
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === '/api/file?path=notes%2FAlpha.md' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha body' }));
+    }
+
+    if (url === '/api/file-info?path=notes%2FAlpha.md') {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-07T10:00:00.000Z',
+        modified: '2026-05-07T12:00:00.000Z',
+        metadata: { title: 'Alpha', tags: [] },
+      }));
+    }
+
+    if (url === '/api/notes/backlinks?path=notes%2FAlpha.md') {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    if (url === '/api/file?path=notes%2FBeta.md' && method === 'GET') {
+      return new Promise((resolve) => {
+        resolveBetaContent = () => resolve(jsonResponse({ content: 'Beta body' }));
+      });
+    }
+
+    if (url === '/api/file-info?path=notes%2FBeta.md') {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-08T10:00:00.000Z',
+        modified: '2026-05-08T12:00:00.000Z',
+        metadata: { title: 'Beta', tags: [] },
+      }));
+    }
+
+    if (url === '/api/notes/backlinks?path=notes%2FBeta.md') {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  const editorInput = screen.getByTestId('rich-editor-input');
+  expect(editorInput.value).toBe('Alpha body');
+
+  component.$set({ currentFile: { path: 'notes/Beta.md', name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === '/api/file?path=notes%2FBeta.md')).toBe(true));
+
+  expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull();
+  expect(editorInput.value).toBe('Alpha body');
+  expect(editorInput.getAttribute('placeholder')).toBe('');
+
+  resolveBetaContent();
+  await waitFor(() => expect(editorInput.value).toBe('Beta body'));
+  await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
 });
 
 test('Editor переименовывает вложение и обновляет markdown-ссылку', async () => {

@@ -58,6 +58,9 @@
   let metadataTimer;
   const METADATA_DELAY = 1200;
   let loadedFilePath = null;
+  let loadingFilePath = null;
+  let displayedFile = null;
+  let visibleFile = null;
   let loadRequestId = 0;
   let colorPaletteOpen = false;
   let currentNoteColor = '';
@@ -130,13 +133,18 @@
     return editedTitle !== title || !tagsEqual(editableTags, currentTags);
   }
 
-  async function loadBacklinks(filePath = currentFile?.path) {
-    if (!filePath || currentFile?.isDir) return;
+  async function fetchBacklinks(filePath = currentFile?.path) {
+    if (!filePath || currentFile?.isDir) return [];
     try {
-      backlinks = await loadBacklinksRequest(filePath);
+      return await loadBacklinksRequest(filePath);
     } catch (error) {
       console.error('Failed to load backlinks:', error);
+      return [];
     }
+  }
+
+  async function loadBacklinks(filePath = currentFile?.path) {
+    backlinks = await fetchBacklinks(filePath);
   }
 
   function openLinkedNote(item) {
@@ -153,11 +161,11 @@
   }
 
   function resolveEditorImageSrc(src) {
-    return displayImageSrc(currentFile?.path, src);
+    return displayImageSrc(visibleFile?.path, src);
   }
 
   function resolveEditorImagePath(src) {
-    return resolveMarkdownImagePath(currentFile?.path, src);
+    return resolveMarkdownImagePath(visibleFile?.path, src);
   }
 
   async function handleImageFile(file) {
@@ -234,25 +242,34 @@
     const filePath = currentFile.path;
     const fileName = currentFile.name;
     const requestId = ++loadRequestId;
-    loadedFilePath = filePath;
+    const previousFilePath = loadedFilePath;
+    loadingFilePath = filePath;
 
     try {
+      if (previousFilePath && previousFilePath !== filePath) {
+        await savePendingLoadedFile(previousFilePath);
+        if (!isCurrentLoad(requestId, filePath)) return;
+      }
       isLoading = true;
       const data = await loadFileContent(filePath);
       if (!isCurrentLoad(requestId, filePath)) return;
-      content = data.content;
-      editedContent = content;
+      const nextContent = data.content;
 
       const nextFileInfo = await loadFileInfo(filePath);
       if (!isCurrentLoad(requestId, filePath)) return;
+      const nextBacklinks = await fetchBacklinks(filePath);
+      if (!isCurrentLoad(requestId, filePath)) return;
+
+      content = nextContent;
+      editedContent = nextContent;
       fileInfo = nextFileInfo;
       currentNoteColor = nextFileInfo.color || '';
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
       editedTitle = title;
       editableTags = fileInfo.metadata?.tags || [];
-      
-      await loadBacklinks(filePath);
-      if (!isCurrentLoad(requestId, filePath)) return;
+      backlinks = nextBacklinks;
+      loadedFilePath = filePath;
+      displayedFile = { ...currentFile };
       dispatch('fileOpened', filePath);
     } catch (error) {
       if (!isCurrentLoad(requestId, filePath)) return;
@@ -265,22 +282,47 @@
       currentNoteColor = '';
       dispatch('fileDeleted');
     } finally {
-      if (isCurrentLoad(requestId, filePath)) isLoading = false;
+      if (isCurrentLoad(requestId, filePath)) {
+        isLoading = false;
+        loadingFilePath = null;
+      }
+    }
+  }
+
+  async function savePendingLoadedFile(filePath) {
+    if (!filePath || !hasUnsavedChanges() || isSaving) return;
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
+    const savedContent = editedContent;
+
+    try {
+      isSaving = true;
+      saveMessage = $localizedText.editor.saving;
+      await saveFileContent(filePath, savedContent);
+      if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
+    } catch (error) {
+      console.error('Save before note switch failed:', error);
+      saveMessage = $localizedText.editor.saveFailed;
+      saveMessageTimeout = setTimeout(() => {
+        if (saveMessage === $localizedText.editor.saveFailed) saveMessage = '';
+      }, 5000);
+    } finally {
+      isSaving = false;
     }
   }
 
   function scheduleAutosave() {
-    if (!currentFile || !hasUnsavedChanges() || isSaving) return;
+    if (!loadedFilePath || !hasUnsavedChanges() || isSaving) return;
     if (autosaveTimer) clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(saveContent, AUTOSAVE_DELAY);
   }
 
   async function saveContent() {
-    if (!currentFile || !hasUnsavedChanges() || isSaving) return;
+    const filePath = loadedFilePath || currentFile?.path;
+    if (!filePath || !hasUnsavedChanges() || isSaving) return;
 
     if (autosaveTimer) clearTimeout(autosaveTimer);
     if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
-    const filePath = currentFile.path;
     const savedContent = editedContent;
     const savedTitle = editedTitle;
 
@@ -289,8 +331,8 @@
       saveMessage = $localizedText.editor.saving;
       await saveFileContent(filePath, savedContent);
 
-      if (currentFile?.path === filePath && editedContent === savedContent) content = savedContent;
-      if (currentFile?.path === filePath && editedTitle === savedTitle) title = savedTitle;
+      if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
+      if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
       saveMessage = $localizedText.editor.saved;
       lastSaved = Date.now();
       saveMessageTimeout = setTimeout(() => {
@@ -404,14 +446,14 @@
 
   onDestroy(() => {
     if (autosaveTimer) clearTimeout(autosaveTimer);
-    if (currentFile && hasUnsavedChanges() && !isSaving) {
-      const filePath = currentFile.path;
+    if (loadedFilePath && hasUnsavedChanges() && !isSaving) {
+      const filePath = loadedFilePath;
       const savedContent = editedContent;
       const savedTitle = editedTitle;
       isSaving = true;
       saveFileContent(filePath, savedContent).then(() => {
-        if (currentFile?.path === filePath && editedContent === savedContent) content = savedContent;
-        if (currentFile?.path === filePath && editedTitle === savedTitle) title = savedTitle;
+        if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
+        if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
         lastSaved = Date.now();
       }).catch((error) => {
         console.error('Save on destroy failed:', error);
@@ -424,7 +466,8 @@
 
   $: wordCharStats = getWordCharStats(editedContent);
 
-  $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath) loadFile();
+  $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath) loadFile();
+  $: visibleFile = displayedFile || currentFile;
 
   let ignoreRichUpdate = false;
   $: richContentForEditor = richEditorBody(editedContent);
@@ -436,6 +479,10 @@
     }
   }
 
+  $: noteSurfaceStyle = currentNoteColor
+    ? `--note-accent: ${currentNoteColor}; --note-page-bg: color-mix(in srgb, ${currentNoteColor} 12%, var(--bg-primary)); --note-page-panel: color-mix(in srgb, ${currentNoteColor} 9%, var(--bg-primary)); --note-page-soft: color-mix(in srgb, ${currentNoteColor} 16%, transparent); --note-page-border: color-mix(in srgb, ${currentNoteColor} 30%, var(--border-subtle));`
+    : '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-soft: transparent; --note-page-border: var(--border-subtle);';
+
   $: if ($editorAction && currentFile) {
     const action = $editorAction;
     editorAction.set(null);
@@ -444,16 +491,20 @@
   }
 </script>
 
-<div class="h-full flex flex-col bg-[var(--bg-primary)] overflow-hidden relative min-h-0">
+<div
+  class="h-full flex flex-col bg-[var(--note-page-bg)] overflow-hidden relative min-h-0"
+  style={noteSurfaceStyle}
+  data-testid="editor-shell"
+>
   <EditorHeader
     bind:editedTitle
-    {currentFile}
+    currentFile={visibleFile}
     {fileInfo}
     {wordCharStats}
   />
-  <div class="border-b border-[var(--border-subtle)]"></div>
+  <div class="border-b border-[var(--note-page-border)]"></div>
   {#if !isLoading && backlinks.length > 0}
-    <div class="border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/20 px-4 py-2 lg:px-12" data-testid="local-navigation">
+    <div class="border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="local-navigation">
       <div class="flex items-center gap-3 overflow-x-auto">
         <span class="shrink-0 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
           {$localizedText.editor.localNavigation}
@@ -474,7 +525,7 @@
   {/if}
 
   <!-- Content Area -->
-  {#if isLoading}
+  {#if isLoading && !displayedFile}
     <div class="flex-1 flex items-center justify-center">
       <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.editor.gatheringThoughts}</span>
     </div>
@@ -483,8 +534,8 @@
       <RichEditor
         bind:this={richEditor}
         content={richContentForEditor}
-        placeholder={$localizedText.editor.beginWriting}
-        notePath={currentFile?.path}
+        placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
+        notePath={visibleFile?.path}
         onImageFile={handleImageFile}
         resolveImageSrc={resolveEditorImageSrc}
         resolveImagePath={resolveEditorImagePath}
@@ -495,7 +546,7 @@
   {/if}
 
   {#if !isLoading && currentFile && !currentFile.isDir}
-    <div class="h-16 shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/95 px-3 sm:px-4 lg:px-8">
+    <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8">
       <div class="flex h-full items-center gap-2">
         <TooltipIconButton
           type="button"
