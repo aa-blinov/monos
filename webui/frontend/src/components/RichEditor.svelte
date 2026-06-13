@@ -2,9 +2,9 @@
   import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
-  import { get } from 'svelte/store';
   import { defaultMarkdownParser } from 'prosemirror-markdown';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import TooltipIconSelect from './TooltipIconSelect.svelte';
   import { lineHeight, contentWidth, editorFontSize } from '../stores.js';
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
@@ -56,13 +56,6 @@
     { id: 'table', run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { id: 'horizontalRule', run: () => editor.chain().focus().setHorizontalRule().run() },
   ];
-
-  function cycleOption(store, options) {
-    const current = get(store);
-    const idx = options.findIndex(o => o.value === current);
-    const next = options[(idx + 1) % options.length];
-    store.set(next.value);
-  }
 
   function markdownToEditorContent(markdown) {
     const source = String(markdown || '');
@@ -432,9 +425,30 @@
     <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={() => cycleOption(contentWidth, contentWidthOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.contentWidth}><Maximize2 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={() => cycleOption(lineHeight, lineHeightOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.lineHeight}><WrapText size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={() => cycleOption(editorFontSize, editorFontSizeOptions)} class="p-1.5 rounded hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.fontSize}><Type size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconSelect
+      bind:value={$contentWidth}
+      options={contentWidthOptions}
+      label={$localizedText.richEditor.contentWidth}
+      class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+    >
+      <Maximize2 size="16" aria-hidden="true" />
+    </TooltipIconSelect>
+    <TooltipIconSelect
+      bind:value={$lineHeight}
+      options={lineHeightOptions}
+      label={$localizedText.richEditor.lineHeight}
+      class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+    >
+      <WrapText size="16" aria-hidden="true" />
+    </TooltipIconSelect>
+    <TooltipIconSelect
+      bind:value={$editorFontSize}
+      options={editorFontSizeOptions}
+      label={$localizedText.richEditor.fontSize}
+      class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+    >
+      <Type size="16" aria-hidden="true" />
+    </TooltipIconSelect>
   </div>
 
   <!-- Editor -->

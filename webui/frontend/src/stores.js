@@ -9,12 +9,20 @@ function initialThemeMode() {
   return 'system';
 }
 
+function initialContentWidth() {
+  const saved = localStorage.getItem('contentWidth');
+  const migrated = localStorage.getItem('contentWidthDefaultWide') === 'true';
+  if (!saved) return 'wide';
+  if (!migrated && saved === 'medium') return 'wide';
+  return saved;
+}
+
 export const activeTheme = writable(localStorage.getItem('theme') || 'gruvbox');
 export const themeMode = writable(initialThemeMode());
 export const fontFamily = writable(localStorage.getItem('fontFamily') || 'JetBrains Mono');
 export const fontSize = writable(localStorage.getItem('fontSize') || 'medium');
 export const lineHeight = writable(localStorage.getItem('lineHeight') || 'normal');
-export const contentWidth = writable(localStorage.getItem('contentWidth') || 'medium');
+export const contentWidth = writable(initialContentWidth());
 export const editorFontSize = writable(localStorage.getItem('editorFontSize') || 'md');
 export const noteView = writable(localStorage.getItem('noteView') || 'board');
 export const boardColumns = writable(localStorage.getItem('boardColumns') || '3');
@@ -50,6 +58,7 @@ lineHeight.subscribe(value => {
 
 contentWidth.subscribe(value => {
   localStorage.setItem('contentWidth', value);
+  localStorage.setItem('contentWidthDefaultWide', 'true');
 });
 
 editorFontSize.subscribe(value => {

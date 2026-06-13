@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, tick } from 'svelte';
-  import { getLocalizedTemplates } from '../lib/note-templates.js';
+  import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
   import { locale, localizedText } from '../lib/strings.js';
 
@@ -95,7 +95,7 @@
   }
 
   function templateItems() {
-    return getLocalizedTemplates($locale).map((template) => ({
+    return getTemplateCatalog($locale, $hiddenLibraryTemplateIds, $customNoteTemplates).map((template) => ({
       id: template.id,
       type: 'template',
       section: 'templates',

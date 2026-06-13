@@ -26,6 +26,10 @@ vi.mock('./components/TrashView.svelte', async () => ({
   default: (await import('./components/__mocks__/TrashViewStub.svelte')).default,
 }));
 
+vi.mock('./components/TemplateManager.svelte', async () => ({
+  default: (await import('./components/__mocks__/TemplateManagerStub.svelte')).default,
+}));
+
 function jsonResponse(data, ok = true) {
   return {
     ok,
@@ -173,6 +177,11 @@ test('App показывает поиск только на dashboard и общ�
 
   await fireEvent.click(screen.getByText('open settings'));
   await waitFor(() => expect(window.location.pathname).toBe('/settings'));
+  expect(screen.getByText('back visible')).toBeTruthy();
+  expect(screen.queryByText('search visible')).toBeNull();
+
+  await fireEvent.click(screen.getByText('open templates'));
+  await waitFor(() => expect(window.location.pathname).toBe('/templates'));
   expect(screen.getByText('back visible')).toBeTruthy();
   expect(screen.queryByText('search visible')).toBeNull();
 });

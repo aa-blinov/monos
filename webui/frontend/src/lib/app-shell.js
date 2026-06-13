@@ -23,7 +23,7 @@ export function applyTypographyVars({
 }) {
   const root = document.documentElement;
   root.style.setProperty('--line-height', lineHeightOptions.find((item) => item.value === lineHeight)?.value_css || '1.625');
-  root.style.setProperty('--content-width', contentWidthOptions.find((item) => item.value === contentWidth)?.value_css || '56rem');
+  root.style.setProperty('--content-width', contentWidthOptions.find((item) => item.value === contentWidth)?.value_css || '80rem');
   root.style.setProperty('--editor-font-size', editorFontSizeOptions.find((item) => item.value === editorFontSize)?.base || '16px');
   root.style.setProperty('--font-size-base', fontSizeOptions.find((item) => item.value === fontSize)?.base || '14px');
   root.style.setProperty('--font-family', fontOptions.find((item) => item.family.includes(fontFamily) || item.name === fontFamily)?.family || fontFamily);

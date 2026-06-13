@@ -60,8 +60,9 @@ beforeEach(async () => {
   storage.setItem('fontFamily', 'JetBrains Mono');
   storage.setItem('fontSize', 'medium');
   storage.setItem('lineHeight', 'normal');
-  storage.setItem('contentWidth', 'medium');
-  storage.setItem('editorFontSize', 'medium');
+  storage.setItem('contentWidth', 'wide');
+  storage.setItem('contentWidthDefaultWide', 'true');
+  storage.setItem('editorFontSize', 'md');
 
   const fetchMock = vi.fn();
   globalThis.fetch = fetchMock;
@@ -76,8 +77,8 @@ beforeEach(async () => {
   stores.fontFamily.set('JetBrains Mono');
   stores.fontSize.set('medium');
   stores.lineHeight.set('normal');
-  stores.contentWidth.set('medium');
-  stores.editorFontSize.set('medium');
+  stores.contentWidth.set('wide');
+  stores.editorFontSize.set('md');
   stores.searchQuery.set('');
   stores.searchResults.set([]);
   stores.isSearching.set(false);

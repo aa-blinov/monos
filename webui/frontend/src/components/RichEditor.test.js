@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, expect, test } from 'vitest';
+import { get } from 'svelte/store';
 import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
 import { locale, uiText } from '../lib/strings.js';
+import { contentWidth, editorFontSize, lineHeight } from '../stores.js';
 import RichEditor from './RichEditor.svelte';
 
 beforeEach(() => {
@@ -49,6 +51,27 @@ test('RichEditor keeps scrolling inside the editor body', () => {
   expect(screen.getByTestId('rich-editor-surface').className).toContain('overflow-hidden');
   expect(screen.getByTestId('rich-editor-input').className).toContain('h-full');
   expect(screen.getByTestId('rich-editor-input').className).toContain('overflow-y-auto');
+});
+
+test('RichEditor exposes dropdowns for editor layout settings', async () => {
+  render(RichEditor, {
+    content: 'Line one',
+    onUpdate: () => {},
+  });
+
+  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.contentWidth }), {
+    target: { value: 'narrow' },
+  });
+  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.lineHeight }), {
+    target: { value: 'relaxed' },
+  });
+  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.fontSize }), {
+    target: { value: 'xl' },
+  });
+
+  expect(get(contentWidth)).toBe('narrow');
+  expect(get(lineHeight)).toBe('relaxed');
+  expect(get(editorFontSize)).toBe('xl');
 });
 
 test('RichEditor configures the attachment image extension', () => {
