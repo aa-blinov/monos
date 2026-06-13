@@ -6,9 +6,14 @@
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
-  import { activeTheme, fontFamily, fontSize, editorFontSize, editMode, editorState } from '../stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
 
   const DEFAULT_GIT_OWNER = 'Monos';
+  const themeModeOptions = [
+    { value: 'system', label: () => $localizedText.settings.themeModeSystem },
+    { value: 'light', label: () => $localizedText.settings.themeModeLight },
+    { value: 'dark', label: () => $localizedText.settings.themeModeDark },
+  ];
 
   let settings = {
     auto_sync_interval: 0,
@@ -86,9 +91,9 @@
         const saved = await r.json();
         settings = { ...settings, ...saved };
         if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
+        if (['system', 'light', 'dark'].includes(saved.themeMode)) $themeMode = saved.themeMode;
         if (saved.fontFamily) $fontFamily = saved.fontFamily;
         if (saved.fontSize) $fontSize = saved.fontSize;
-        if (saved.editMode) $editMode = saved.editMode;
         if (isSupportedLocale(saved.locale)) $locale = saved.locale;
       }
     } catch (e) { console.error(e); }
@@ -104,7 +109,7 @@
 
   async function saveSettings() {
     try {
-      const payload = { ...settings, theme: $activeTheme, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, editMode: $editMode, locale: $locale };
+      const payload = { ...settings, theme: $activeTheme, themeMode: $themeMode, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, locale: $locale };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -295,6 +300,22 @@
     <!-- Theme -->
     <section class="space-y-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
+      <div>
+        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
+        <div class="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
+          {#each themeModeOptions as option}
+            <button
+              type="button"
+              on:click={() => { $themeMode = option.value; saveSettings(); }}
+              class="min-h-9 rounded-xl px-3 text-xs font-bold uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+            >
+              {option.label()}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <div>
+        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {#each Object.entries(themes) as [key, t]}
           <button
@@ -308,6 +329,7 @@
             <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
           </button>
         {/each}
+      </div>
       </div>
     </section>
 

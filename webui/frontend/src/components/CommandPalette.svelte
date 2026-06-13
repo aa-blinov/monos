@@ -130,13 +130,6 @@
         detail: $localizedText.commandPalette.commandDetails.toggleSidebar,
         shortcut: '⌘B',
       },
-      {
-        id: 'toggleTheme',
-        type: 'command',
-        section: 'commands',
-        label: $localizedText.commandPalette.commands.toggleTheme,
-        detail: $localizedText.commandPalette.commandDetails.toggleTheme,
-      },
     ];
   }
 

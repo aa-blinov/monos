@@ -1,10 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { get } from 'svelte/store';
-import { editMode, editorAction } from '../stores.js';
+import { editorAction } from '../stores.js';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Editor from './Editor.svelte';
 import { locale, uiText } from '../lib/strings.js';
+
+vi.mock('./RichEditor.svelte', async () => ({
+  default: (await import('./__mocks__/RichEditorStub.svelte')).default,
+}));
 
 function jsonResponse(data, ok = true) {
   return {
@@ -47,7 +50,6 @@ function installFetchMock(responses) {
 
 beforeEach(() => {
   locale.set('en');
-  editMode.set('source');
   globalThis.alert = vi.fn();
   globalThis.confirm = vi.fn(() => true);
   Object.defineProperty(globalThis.navigator, 'sendBeacon', {
@@ -61,7 +63,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('Editor загружает заметку и показывает backlinks в source-режиме', async () => {
+test('Editor загружает заметку и показывает local navigation', async () => {
   installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
     '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: 'Alpha body' }),
     '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
@@ -81,13 +83,10 @@ test('Editor загружает заметку и показывает backlinks
 
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
-  expect(screen.getByPlaceholderText(uiText.sourceEditor.beginWriting).value).toBe('Alpha body');
+  expect(screen.getByTestId('rich-editor-input').value).toBe('Alpha body');
   expect(screen.queryByText('#alpha')).toBeNull();
-  expect(screen.getByText(uiText.sourceEditor.linkedMentions)).toBeTruthy();
   expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Gamma').length).toBeGreaterThan(0);
-  expect(screen.getAllByText(uiText.sourceEditor.backlink).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(uiText.sourceEditor.mention).length).toBeGreaterThan(0);
   const localNavigation = screen.getByTestId('local-navigation');
   expect(within(localNavigation).getByText(uiText.editor.localNavigation)).toBeTruthy();
   await fireEvent.click(within(localNavigation).getByRole('button', { name: /Beta/ }));
@@ -132,7 +131,7 @@ test('Editor форматирует заметки и диспатчит formatC
   component.$on('formatComplete', formatHandler);
 
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
-  await waitFor(() => expect(screen.getByPlaceholderText(uiText.sourceEditor.beginWriting)).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
 
   editorAction.set('format');
   await tick();
@@ -142,31 +141,37 @@ test('Editor форматирует заметки и диспатчит formatC
   expect(fetchMock).toHaveBeenCalledWith('/api/format', { method: 'POST' });
 });
 
-test('Editor показывает переключатель режима без кнопки синхронной прокрутки', async () => {
-  editMode.set('source');
+test('Editor позволяет перекрасить открытую заметку из нижней палитры', async () => {
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
-    'POST /api/settings': jsonResponse({ message: 'Saved' }),
+    '/api/file-info?path=notes%2FInbox.md': jsonResponse({
+      created: '2026-05-07T10:00:00.000Z',
+      modified: '2026-05-07T12:00:00.000Z',
+      color: '#fabd2f',
+      metadata: { title: 'Inbox', tags: [] },
+    }),
+    'POST /api/directory/icon?path=notes%2FInbox.md': jsonResponse({ message: 'Icon updated' }),
   }));
-
-  render(Editor, {
+  const { component } = render(Editor, {
     currentFile: { path: 'notes/Inbox.md', name: 'Inbox.md', isDir: false },
   });
+  const colorChangedHandler = vi.fn();
+  component.$on('noteColorChanged', colorChangedHandler);
 
-  expect(get(editMode)).toBe('source');
+  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
+  await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.noteColor }));
+  await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#8ec07c') }));
 
-  editorAction.set('toggleMode');
-  await tick();
-
-  expect(get(editMode)).toBe('rich');
-  expect(localStorage.getItem('editMode')).toBe('rich');
-  expect(fetchMock).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/directory/icon?path=notes%2FInbox.md', expect.objectContaining({
     method: 'POST',
-    body: JSON.stringify({ editMode: 'rich' }),
+    body: JSON.stringify({ color: '#8ec07c' }),
+  })));
+  expect(colorChangedHandler).toHaveBeenCalledWith(expect.objectContaining({
+    detail: { path: 'notes/Inbox.md', color: '#8ec07c' },
   }));
 });
 
 test('Editor переименовывает вложение и обновляет markdown-ссылку', async () => {
-  editMode.set('source');
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
     '/api/file?path=notes%2FInbox.md': jsonResponse({ content: '![old](_attachments/old.webp)' }),
     'POST /api/attachments/rename': jsonResponse({
@@ -202,16 +207,15 @@ test('Editor переименовывает вложение и обновляе
     path: 'notes/_attachments/old.webp',
     newName: 'new.webp',
   });
-  await waitFor(() => expect(screen.getByPlaceholderText(uiText.sourceEditor.beginWriting).value).toContain('![new](_attachments/new.webp)'));
+  await waitFor(() => expect(screen.getByTestId('rich-editor-input').value).toContain('![new](_attachments/new.webp)'));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FInbox.md', expect.objectContaining({
     method: 'POST',
     body: JSON.stringify({ content: '![new](_attachments/new.webp)' }),
   })));
 });
 
-test('Editor открывает wiki-link и удаляет заметку', async () => {
+test('Editor удаляет заметку', async () => {
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
-    '/api/notes/resolve-link?name=Alpha': jsonResponse({ path: 'notes/Alpha.md', name: 'Alpha' }),
     'DELETE /api/file?path=notes%2FInbox.md': jsonResponse({ message: 'Deleted' }),
   }));
 
@@ -219,19 +223,9 @@ test('Editor открывает wiki-link и удаляет заметку', asy
     currentFile: { path: 'notes/Inbox.md', name: 'Inbox.md', isDir: false },
   });
   const deletedHandler = vi.fn();
-  const navigateHandler = vi.fn();
   component.$on('fileDeleted', deletedHandler);
-  component.$on('navigate', navigateHandler);
 
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Alpha' })).toBeTruthy());
-
-  await fireEvent.click(screen.getByRole('button', { name: 'Alpha' }));
-  await waitFor(() => expect(navigateHandler).toHaveBeenCalledWith(
-    expect.objectContaining({
-      detail: { path: 'notes/Alpha.md', name: 'Alpha', isDir: false },
-    })
-  ));
 
   editorAction.set('delete');
   await tick();
@@ -286,11 +280,11 @@ test('Editor не перетирает новые правки после зав
 
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
-  const textarea = screen.getByPlaceholderText(uiText.sourceEditor.beginWriting);
-  expect(textarea.value).toBe('Initial body');
+  const editorInput = screen.getByTestId('rich-editor-input');
+  expect(editorInput.value).toBe('Initial body');
 
   vi.useFakeTimers();
-  await fireEvent.input(textarea, { target: { value: 'First edit' } });
+  await fireEvent.input(editorInput, { target: { value: 'First edit' } });
   await vi.advanceTimersByTimeAsync(1500);
 
   await waitFor(() => {
@@ -303,12 +297,12 @@ test('Editor не перетирает новые правки после зав
     );
   });
 
-  await fireEvent.input(textarea, { target: { value: 'Second edit' } });
+  await fireEvent.input(editorInput, { target: { value: 'Second edit' } });
   saveResolve();
   await tick();
   await Promise.resolve();
   await tick();
 
-  expect(textarea.value).toBe('Second edit');
+  expect(editorInput.value).toBe('Second edit');
   expect(fileLoadCount).toBe(1);
 });

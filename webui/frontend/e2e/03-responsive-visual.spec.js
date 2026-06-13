@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { prepareMonos } from './support/monos.js';
+import { openBoardCard, prepareMonos } from './support/monos.js';
 
 const auditDir = path.resolve(process.env.E2E_VISUAL_AUDIT_DIR || 'e2e/artifacts/responsive-visual');
 
@@ -19,7 +19,7 @@ test.beforeAll(() => {
 });
 
 test.beforeEach(async ({ page }) => {
-  await prepareMonos(page, { editMode: 'rich' });
+  await prepareMonos(page);
   await page.addInitScript(() => {
     localStorage.setItem('noteView', 'board');
     localStorage.setItem('boardColumns', '3');
@@ -49,40 +49,17 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 async function expectCoreControlsVisible(page) {
-  await expect(page.getByRole('button', { name: 'Monos', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
-  const viewportWidth = await page.evaluate(() => window.innerWidth);
-  if (viewportWidth >= 1024) {
-    await expect(page.getByRole('button', { name: 'List view' })).toBeVisible();
-  }
+  await expect(page.getByRole('button', { name: /Open menu|Toggle Sidebar/ })).toBeVisible();
+  await expect(page.getByPlaceholder('Search')).toBeVisible();
 }
 
 async function openWelcomeNote(page) {
-  await page.goto('/');
-
-  const viewportWidth = await page.evaluate(() => window.innerWidth);
-  const sidebarToggle = page.getByRole('button', { name: /Open menu|Toggle Sidebar/ });
-  if (viewportWidth < 1024) {
-    await sidebarToggle.click();
-  } else {
-    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
-  }
-  await page.waitForTimeout(350);
-
-  const treeZone = page.getByTestId('tree-drop-zone');
-  const treeBox = await treeZone.boundingBox();
-  if (!treeBox || treeBox.width < 40 || treeBox.x < 0) {
-    await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
-    await expect(treeZone).toBeVisible();
-  }
-
-  await treeZone.getByRole('button', { name: /Welcome/i }).first().click();
-  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
+  await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
   await page.waitForTimeout(350);
 }
 
 async function verifyBoardCardRecolor(page) {
-  const card = page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).first();
+  const card = page.locator('main').getByRole('button', { name: /^Welcome\b/ }).first();
   try {
     await card.click({ button: 'right' });
     await expect(page.getByRole('menu')).toBeVisible();
@@ -90,10 +67,11 @@ async function verifyBoardCardRecolor(page) {
     const colorResponse = page.waitForResponse((response) =>
       response.url().includes('/api/directory/icon') && response.request().method() === 'POST'
     );
-    await page.getByRole('button', { name: 'Apply #8ec07c' }).click();
+    await page.getByRole('button', { name: 'Apply Aqua' }).click();
     await colorResponse;
     await expect(page.getByRole('menu')).toHaveCount(0);
-    await expect(page.getByText('Color #8ec07c')).toBeVisible();
+    await page.getByRole('button', { name: 'Group by color' }).click();
+    await expect(page.getByText('Aqua')).toBeVisible();
   } finally {
     await page.request.post(`/api/directory/icon?path=${encodeURIComponent('notes/Welcome.md')}`, {
       data: { icon: null, color: null },
@@ -109,19 +87,22 @@ test.describe('responsive visual component audit', () => {
 
       await page.goto('/');
       await expectCoreControlsVisible(page);
-      await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+      if (isMobileLayout) {
+        await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+      } else {
+        await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+      }
       await expectNoHorizontalOverflow(page);
       await screenshot(page, viewport.name, '01-home');
 
       await openWelcomeNote(page);
       await expect(page.getByTestId('rich-editor-input')).toBeVisible();
-      if (viewport.width < 640) {
-        await expect(page.getByRole('button', { name: /Switch editor mode/i })).toHaveCount(0);
-      }
+      await expect(page.getByRole('button', { name: /Switch editor mode/i })).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
       await screenshot(page, viewport.name, '02-note-editor');
 
-      await page.getByRole('button', { name: 'Search', exact: true }).click();
+      await page.getByRole('button', { name: 'Back to notes' }).click();
+      await expect(page).toHaveURL(/\/$/);
       const searchResponse = page.waitForResponse((response) =>
         response.url().endsWith('/api/search') && response.request().method() === 'POST'
       );
@@ -136,7 +117,6 @@ test.describe('responsive visual component audit', () => {
       if (isMobileLayout) {
         await page.getByRole('button', { name: /Open menu|Toggle Sidebar/ }).click();
         await expect(page.getByRole('button', { name: 'Close sidebar' }).nth(1)).toBeVisible();
-        await expect(page.getByText('Tree', { exact: true })).toBeVisible();
         await page.waitForTimeout(350);
       } else {
         await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
@@ -151,7 +131,7 @@ test.describe('responsive visual component audit', () => {
       await page.goto('/settings');
       await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
       await expect(page.locator('#font-size')).toBeVisible();
-      await expect(page.locator('#default-mode')).toBeVisible();
+      await expect(page.locator('#editor-font-size')).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await screenshot(page, viewport.name, '05-settings');
     });

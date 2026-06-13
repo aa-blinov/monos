@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { prepareMonos } from './support/monos.js';
+import { openBoardCard, prepareMonos } from './support/monos.js';
 
 const testViewports = [
   { w: 280, h: 400, label: 'tiny-280x400' },
@@ -66,7 +66,7 @@ async function checkLayoutIssues(page) {
 
 test.describe('window size boundaries', () => {
   test.beforeEach(async ({ page }) => {
-    await prepareMonos(page, { editMode: 'rich' });
+    await prepareMonos(page);
     await page.addInitScript(() => {
       localStorage.setItem('noteView', 'board');
       localStorage.setItem('boardColumns', '3');
@@ -82,8 +82,7 @@ test.describe('window size boundaries', () => {
       const homeIssues = await checkLayoutIssues(page);
       console.log(`HOME  ${vp.label}: ${homeIssues.length ? homeIssues.join(' | ') : 'OK'}`);
 
-      const isDesktop = vp.w >= 1024;
-      if (isDesktop) {
+      if (vp.w >= 1024) {
         const toggle = page.getByRole('button', { name: 'Toggle Sidebar' });
         if (await toggle.isVisible().catch(() => false)) {
           await toggle.click();
@@ -93,14 +92,8 @@ test.describe('window size boundaries', () => {
         }
       }
 
-      const sidebarBtn = isDesktop
-        ? page.getByTestId('tree-drop-zone').locator('button').filter({ hasText: /Welcome/i }).first()
-        : page.getByRole('button', { name: /Open menu|Toggle Sidebar/i }).first();
-
-      if (await sidebarBtn.isVisible().catch(() => false)) {
-        await sidebarBtn.click();
-        await page.waitForTimeout(300);
-      }
+      await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
+      await page.waitForTimeout(300);
 
       const noteIssues = await checkLayoutIssues(page);
       console.log(`NOTE  ${vp.label}: ${noteIssues.length ? noteIssues.join(' | ') : 'OK'}`);

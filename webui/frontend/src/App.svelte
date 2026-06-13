@@ -14,7 +14,7 @@
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
-  import { activeTheme, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, editMode, noteView, searchQuery, searchResults, isSearching } from './stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching } from './stores.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
 
   const SIDEBAR_WIDTH_KEY = 'sidebarWidth';
@@ -27,13 +27,14 @@
 
   let isDarkMode = false;
   let sidebarOpen = true;
-  let isMobile = false;
+  let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   let headerComponent;
   let sidebarComponent;
   let commandPaletteOpen = false;
   let commandPaletteMode = 'commands';
   let sidebarWidth = getInitialSidebarWidth();
   let isResizingSidebar = false;
+  let systemThemeSignal = 0;
   $: isNoteOpen = typeof window !== 'undefined' && window.location.pathname.startsWith('/notes/');
   let homeRecentNotes = [];
   let homeRecentHasMore = true;
@@ -52,6 +53,8 @@
   let gitConfigured = false;
   if (urlSearchQuery) $searchQuery = urlSearchQuery;
 
+  $: isDarkMode = typeof window !== 'undefined' ? (systemThemeSignal, detectDarkMode($themeMode)) : false;
+  $: if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', isDarkMode);
   $: applyTheme($activeTheme, isDarkMode, themes);
   $: applyTypographyVars({
     lineHeight: $lineHeight,
@@ -135,8 +138,6 @@
 
   onMount(() => {
     updateMobileState();
-    isDarkMode = detectDarkMode();
-    document.documentElement.classList.toggle('dark', isDarkMode);
     if (window.location.pathname === '/') $noteView = 'board';
     if ($noteView === 'board' && !isMobile) sidebarOpen = false;
     if ($noteView === 'board' && window.location.pathname.startsWith('/notes/')) navigate('/');
@@ -144,7 +145,14 @@
     void loadShellSettings();
     restoreSearchFromUrl();
     searchUrlReady = true;
-    applyTheme($activeTheme, isDarkMode, themes);
+    const systemThemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = () => { systemThemeSignal += 1; };
+    systemThemeQuery?.addEventListener?.('change', handleSystemThemeChange);
+    systemThemeQuery?.addListener?.(handleSystemThemeChange);
+    return () => {
+      systemThemeQuery?.removeEventListener?.('change', handleSystemThemeChange);
+      systemThemeQuery?.removeListener?.(handleSystemThemeChange);
+    };
   });
 
   $: if (searchUrlReady) syncSearchUrl($searchQuery);
@@ -156,7 +164,7 @@
       if (r.ok) {
         const s = await r.json();
         if (s.theme && themes[s.theme]) $activeTheme = s.theme;
-        if (s.editMode) $editMode = s.editMode;
+        if (['system', 'light', 'dark'].includes(s.themeMode)) $themeMode = s.themeMode;
       }
     } catch {}
 
@@ -324,7 +332,6 @@
     if (!note?.path) return;
     continueWorkOpen = false;
     $noteView = 'list';
-    if (!isMobile) sidebarOpen = true;
     handleNavigate({
       detail: {
         path: note.path,
@@ -367,7 +374,6 @@
     openCommandPalette('notes');
   }
 
-  function toggleDarkMode() { isDarkMode = !isDarkMode; localStorage.setItem('darkMode', isDarkMode); document.documentElement.classList.toggle('dark', isDarkMode); applyTheme($activeTheme, isDarkMode, themes); }
   function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
   }
@@ -383,6 +389,10 @@
     if (refreshTree && sidebarComponent) sidebarComponent.loadTree();
   }
   function goHome() { showDashboard(); }
+
+  function createQuickNoteFromHeader() {
+    sidebarComponent?.createQuickNoteFromClipboard?.();
+  }
 
   function handleSidebarResize(event) {
     sidebarWidth = clampSidebarWidth(event.clientX);
@@ -448,7 +458,6 @@
     navigate(`/notes/${normalizeNotePath(event.detail.path)}`);
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
-    else if (!isMobile && !event.detail.isDir) sidebarOpen = true;
     clearSearch();
   }
 
@@ -460,6 +469,13 @@
       await tick();
     }
     sidebarComponent?.setSelected(path);
+  }
+
+  function handleNoteColorChanged(event) {
+    const { path, color } = event.detail || {};
+    if (!path) return;
+    homeRecentNotes = homeRecentNotes.map((note) => note.path === path ? { ...note, color } : note);
+    if (sidebarComponent) sidebarComponent.loadTree();
   }
 
   function handlePaletteCommand(event) {
@@ -474,7 +490,6 @@
     commandPaletteOpen = false;
     if (event.detail === 'openSettings') navigate('/settings');
     if (event.detail === 'toggleSidebar') toggleSidebar();
-    if (event.detail === 'toggleTheme') toggleDarkMode();
   }
 
 </script>
@@ -487,7 +502,7 @@
       bind:this={headerComponent}
       on:toggleSidebar={toggleSidebar}
       on:goHome={goHome}
-      mobile={isMobile}
+      on:createQuickNote={createQuickNoteFromHeader}
       noteOpen={isNoteOpen}
     />
 
@@ -562,12 +577,10 @@
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
-          on:toggleDarkMode={toggleDarkMode}
           on:quickNoteSaved={(e) => { savedQuickNote = e.detail; if (isMobile) sidebarOpen = false; }}
           on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) sidebarOpen = false; }}
           on:syncError={(e) => { syncError = e.detail; if (isMobile) sidebarOpen = false; }}
           mobile={isMobile}
-          {isDarkMode}
           {gitConfigured}
         />
         {#if !isMobile && sidebarOpen}
@@ -598,7 +611,7 @@
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings />
@@ -606,10 +619,12 @@
         <Route path="/">
           <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
             <div class="mx-auto max-w-6xl">
-              <div class="mb-5 sm:mb-7">
-                <h1 class="truncate font-serif text-2xl tracking-tight sm:text-3xl">{$localizedText.app.board.title}</h1>
-                <p class="mt-2 hidden max-w-xl truncate whitespace-nowrap text-sm leading-relaxed text-[var(--text-secondary)] sm:block">{$localizedText.app.board.hint}</p>
-              </div>
+              {#if !isMobile}
+                <div class="mb-7">
+                  <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.app.board.title}</h1>
+                  <p class="mt-2 max-w-xl truncate whitespace-nowrap text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.app.board.hint}</p>
+                </div>
+              {/if}
               <NoteBoard
                 notes={homeRecentNotes}
                 mobile={isMobile}

@@ -1,14 +1,12 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { searchQuery, searchResults, isSearching, editMode, editorAction } from '../stores.js';
+  import { searchQuery, searchResults, isSearching, editorAction } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Menu, Search, ArrowLeft, X, FileCode, PencilLine, Wand, Trash2 } from 'lucide-svelte';
+  import { Clipboard, Menu, Search, ArrowLeft, X, Wand, Trash2 } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
-  export let isDarkMode = false;
-  export let mobile = false;
   export let noteOpen = false;
   export let isFormatting = false;
 
@@ -60,10 +58,11 @@
 
   function toggleSidebar() { dispatch('toggleSidebar'); }
   function goHome() { dispatch('goHome'); }
+  function createQuickNote() { dispatch('createQuickNote'); }
 </script>
 
-<header class="relative flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 sm:px-4 lg:pl-4 lg:pr-8">
-  {#if mobile && noteOpen}
+<header class="relative flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 sm:px-4 lg:px-4">
+  {#if noteOpen}
     <TooltipIconButton
       on:click={goHome}
       class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
@@ -86,7 +85,7 @@
   {/if}
 
   {#if !noteOpen}
-  <div class="relative flex-1 min-w-0 max-w-xl">
+  <div class="relative min-w-0 flex-1">
     <Search size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
     <input
       bind:this={searchInputEl}
@@ -119,21 +118,17 @@
       </div>
     {/if}
   </div>
+  <TooltipIconButton
+    on:click={createQuickNote}
+    class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+    label={$localizedText.sidebar.quickNoteFromClipboard}
+    tooltip={$localizedText.sidebar.quickNoteFromClipboard}
+    tooltipAlign="end"
+  >
+    <Clipboard class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+  </TooltipIconButton>
   {:else}
     <div class="flex-1"></div>
-    <TooltipIconButton
-      on:click={() => editorAction.set('toggleMode')}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/50 hover:text-[var(--text-primary)]"
-      label={$localizedText.header.switchEditorMode}
-      tooltip={$localizedText.header.switchEditorMode}
-      tooltipAlign="end"
-    >
-      {#if $editMode === 'rich'}
-        <FileCode class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
-      {:else}
-        <PencilLine class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
-      {/if}
-    </TooltipIconButton>
     <TooltipIconButton
       on:click={() => editorAction.set('format')}
       disabled={isFormatting}

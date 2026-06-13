@@ -159,7 +159,6 @@ async function main() {
     await page.getByRole('heading', { name: 'Notes' }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-dashboard.png'), fullPage: false });
 
-    await page.getByRole('button', { name: 'Search', exact: true }).click();
     await page.getByPlaceholder('Search').fill('sync');
     await page.getByText('Search Results').waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-search.png'), fullPage: false });
@@ -178,7 +177,7 @@ async function main() {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(frontendUrl);
     await page.waitForLoadState('networkidle');
-    await page.getByRole('heading', { name: 'Notes' }).waitFor();
+    await page.getByRole('button', { name: 'Group by color' }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-mobile.png'), fullPage: false });
 
     await browser.close();

@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import NoteBoard from './NoteBoard.svelte';
 import { locale, uiText } from '../lib/strings.js';
-import { boardColumns } from '../stores.js';
+import { boardColumns, boardGroupByColor } from '../stores.js';
 
 function jsonResponse(data, ok = true) {
   return {
@@ -35,8 +36,10 @@ const notes = [
 ];
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1024 });
   locale.set('en');
   boardColumns.set('3');
+  boardGroupByColor.set(false);
   const fetchMock = vi.fn(async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
     const method = init.method || 'GET';
@@ -80,20 +83,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('NoteBoard открывает карточку в preview popup и затем полную заметку', async () => {
+test('NoteBoard открывает карточку сразу в полную заметку', async () => {
   const { component } = render(NoteBoard, { notes });
   const openFull = vi.fn();
   component.$on('openFull', openFull);
 
   await fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
 
-  await waitFor(() => expect(screen.getByRole('heading', { name: 'Alpha heading' })).toBeTruthy());
-  await waitFor(() => expect(screen.getByText('Alpha body preview')).toBeTruthy());
-  await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.openFull }));
-
   expect(openFull).toHaveBeenCalledWith(expect.objectContaining({
     detail: expect.objectContaining({ path: 'notes/Work/Alpha.md' }),
   }));
+  expect(screen.queryByTestId('note-preview-body')).toBeNull();
 });
 
 test('NoteBoard context menu может перекрасить карточку', async () => {
@@ -101,6 +101,7 @@ test('NoteBoard context menu может перекрасить карточку'
 
   await fireEvent.contextMenu(screen.getByRole('button', { name: /Beta/ }), { clientX: 20, clientY: 30 });
   expect(screen.queryByRole('menuitem', { name: /Bring to top/ })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: /Preview/ })).toBeNull();
   await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#8ec07c') }));
 
   await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/directory/icon?path=notes%2FWork%2FBeta.md', expect.objectContaining({
@@ -109,11 +110,42 @@ test('NoteBoard context menu может перекрасить карточку'
   })));
 });
 
-test('NoteBoard группирует главный board по цветам', () => {
+test('NoteBoard группирует board по цветам только после включения переключателя', async () => {
   render(NoteBoard, { notes });
+
+  expect(screen.queryByText(uiText.app.board.colorGroup('#8ec07c'))).toBeNull();
+  await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.groupByColor }));
 
   expect(screen.getByText(uiText.app.board.colorGroup('#8ec07c'))).toBeTruthy();
   expect(screen.getByText(uiText.app.board.colorGroup('#fabd2f'))).toBeTruthy();
+});
+
+test('NoteBoard показывает переключатель группировки по цветам на мобильном', async () => {
+  render(NoteBoard, { notes, mobile: true });
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.groupByColor }));
+
+  expect(screen.getByText(uiText.app.board.colorGroup('#8ec07c'))).toBeTruthy();
+  expect(screen.getByText(uiText.app.board.colorGroup('#fabd2f'))).toBeTruthy();
+});
+
+test('NoteBoard на laptop ширине показывает только 2 и 3 колонки', async () => {
+  boardColumns.set('4');
+  render(NoteBoard, { notes });
+
+  await waitFor(() => expect(get(boardColumns)).toBe('3'));
+  expect(screen.getByRole('button', { name: uiText.app.board.columns(2) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.board.columns(3) })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: uiText.app.board.columns(4) })).toBeNull();
+});
+
+test('NoteBoard на широкой ширине показывает 2, 3 и 4 колонки', () => {
+  window.innerWidth = 1440;
+  render(NoteBoard, { notes });
+
+  expect(screen.getByRole('button', { name: uiText.app.board.columns(2) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.board.columns(3) })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.board.columns(4) })).toBeTruthy();
 });
 
 test('NoteBoard показывает много тегов перед датой открытия в desktop карточке', () => {

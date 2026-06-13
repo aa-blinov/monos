@@ -57,7 +57,6 @@ Object.defineProperty(window, 'scrollTo', {
 beforeEach(async () => {
   storage.clear();
   storage.setItem('theme', 'gruvbox');
-  storage.setItem('editMode', 'rich');
   storage.setItem('fontFamily', 'JetBrains Mono');
   storage.setItem('fontSize', 'medium');
   storage.setItem('lineHeight', 'normal');
@@ -73,7 +72,6 @@ beforeEach(async () => {
   window.history.pushState({}, '', '/');
 
   const stores = await import('../stores.js');
-  stores.editMode.set('rich');
   stores.activeTheme.set('gruvbox');
   stores.fontFamily.set('JetBrains Mono');
   stores.fontSize.set('medium');

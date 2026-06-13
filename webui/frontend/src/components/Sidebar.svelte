@@ -9,7 +9,6 @@
   import { locale, localizedText } from '../lib/strings.js';
   
   export let mobile = false;
-  export let isDarkMode = false;
   export let gitConfigured = true;
   
   import {
@@ -847,7 +846,7 @@
     </div>
 
   <!-- Tree View or Search Results -->
-  <div class="min-h-0 flex-1 overflow-hidden px-3 pb-6 lg:px-4">
+  <div class="min-h-0 flex-1 overflow-hidden px-3 pb-2 lg:px-4">
     <div
       data-testid="tree-drop-zone"
       class="h-full overflow-y-auto overscroll-contain pr-2"
@@ -900,12 +899,8 @@
   {/if}
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 py-3 text-[11px] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex h-16 shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 text-[11px] uppercase tracking-widest'}">
     {#if mobile}
-      <button on:click={() => { createQuickNoteFromClipboard(); dispatch('toggleSidebar'); }} disabled={isCreating} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
-        <Icon.Clipboard size="20" strokeWidth="1.7" />
-        <span>{$localizedText.sidebar.quickNoteFromClipboard}</span>
-      </button>
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
           {#if isSyncing}
@@ -920,31 +915,9 @@
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
       </button>
-      <button on:click={() => dispatch('toggleDarkMode')} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        {#if isDarkMode}
-          <Icon.Sun size="20" strokeWidth="1.7" />
-        {:else}
-          <Icon.Moon size="20" strokeWidth="1.7" />
-        {/if}
-        <span>{$localizedText.header.toggleTheme}</span>
-      </button>
     {:else}
       <span class="text-[var(--text-secondary)]">{$localizedText.sidebar.notes(tree ? totalNotes : 0)}</span>
       <div class="flex items-center gap-3">
-        <TooltipIconButton
-          on:click={createQuickNoteFromClipboard}
-          disabled={isCreating}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30 lg:h-10 lg:w-10"
-          label={$localizedText.sidebar.quickNoteFromClipboard}
-          tooltip={$localizedText.sidebar.quickNoteFromClipboard}
-          tooltipAlign="end"
-        >
-          {#if isCreating}
-            <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
-          {:else}
-            <Icon.Clipboard size="16" strokeWidth="1.7" />
-          {/if}
-        </TooltipIconButton>
         {#if gitConfigured}
           <TooltipIconButton
             on:click={handleSync}

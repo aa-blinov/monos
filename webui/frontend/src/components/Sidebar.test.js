@@ -430,6 +430,17 @@ test('Sidebar mobile sheet не показывает крупный quick switch
   expect(screen.queryByText(uiText.commandPalette.quickSwitcher)).toBeNull();
 });
 
+test('Sidebar не дублирует quick note action из navbar', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Sidebar);
+  await component.loadTree();
+
+  expect(screen.queryByRole('button', { name: uiText.sidebar.quickNoteFromClipboard })).toBeNull();
+});
+
 test('Sidebar после sync заново загружает дерево и директории', async () => {
   vi.useRealTimers();
   const fetchMock = createFetchMock();

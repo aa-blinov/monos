@@ -1,11 +1,10 @@
 <script>
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { onDestroy, createEventDispatcher } from 'svelte';
   import EditorHeader from './EditorHeader.svelte';
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
-  import SourceEditor from './SourceEditor.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editMode, editorState, editorAction } from '../stores.js';
+  import { editorState, editorAction } from '../stores.js';
   import {
     deleteFileRequest,
     formatAllNotes,
@@ -14,10 +13,9 @@
     loadFileContent,
     loadFileInfo,
     renameAttachment,
-    resolveWikiLink,
     saveFileContent,
     saveFileMetadata,
-    saveSettingsRequest,
+    setItemColorRequest,
     uploadAttachment,
   } from '../lib/editor-api.js';
   import {
@@ -28,7 +26,7 @@
     resolveMarkdownImagePath,
   } from '../lib/attachments.js';
   import { localizedText } from '../lib/strings.js';
-  import { FileCode, PencilLine, Trash2, Wand } from 'lucide-svelte';
+  import { Palette, Trash2, Wand } from 'lucide-svelte';
 
   let richEditor;
 
@@ -61,7 +59,14 @@
   const METADATA_DELAY = 1200;
   let loadedFilePath = null;
   let loadRequestId = 0;
-  let phoneEditor = typeof window !== 'undefined' && window.innerWidth < 640;
+  let colorPaletteOpen = false;
+  let currentNoteColor = '';
+  let isColorSaving = false;
+
+  const colorOptions = [
+    '#a89984', '#928374', '#fb4934', '#fe8019', '#fabd2f',
+    '#b8bb26', '#8ec07c', '#83a598', '#458588', '#d3869b'
+  ];
 
   function isCurrentLoad(requestId, filePath) {
     return requestId === loadRequestId && currentFile?.path === filePath;
@@ -134,19 +139,6 @@
     }
   }
 
-  async function handleWikiLinkClick(target) {
-    try {
-      const data = await resolveWikiLink(target);
-      if (data && data.path) {
-        dispatch('navigate', { path: data.path, name: data.name, isDir: false });
-      } else {
-        alert($localizedText.editor.noteNotFound(target));
-      }
-    } catch (error) {
-      console.error('Error resolving wiki-link:', error);
-    }
-  }
-
   function openLinkedNote(item) {
     if (!item?.path) return;
     dispatch('navigate', { path: item.path, name: item.name, isDir: false });
@@ -199,7 +191,7 @@
         renamed.relativePath,
       );
       editedContent = nextContent;
-      if (richEditor && $editMode === 'rich') richEditor.setMarkdown(richEditorBody(nextContent));
+      if (richEditor) richEditor.setMarkdown(richEditorBody(nextContent));
       if (autosaveTimer) clearTimeout(autosaveTimer);
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
@@ -221,19 +213,6 @@
     } finally {
       isSaving = false;
     }
-  }
-
-  function toggleEditorMode() {
-    if (phoneEditor) return;
-    const nextMode = $editMode === 'rich' ? 'source' : 'rich';
-    $editMode = nextMode;
-    saveSettingsRequest({ editMode: nextMode }).catch((error) => {
-      console.error('Failed to save editor mode:', error);
-    });
-  }
-
-  function updatePhoneEditorMode() {
-    phoneEditor = window.innerWidth < 640;
   }
 
   async function handleFormat() {
@@ -267,6 +246,7 @@
       const nextFileInfo = await loadFileInfo(filePath);
       if (!isCurrentLoad(requestId, filePath)) return;
       fileInfo = nextFileInfo;
+      currentNoteColor = nextFileInfo.color || '';
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
       editedTitle = title;
       editableTags = fileInfo.metadata?.tags || [];
@@ -282,6 +262,7 @@
       title = '';
       editedTitle = '';
       fileInfo = null;
+      currentNoteColor = '';
       dispatch('fileDeleted');
     } finally {
       if (isCurrentLoad(requestId, filePath)) isLoading = false;
@@ -395,6 +376,22 @@
     }
   }
 
+  async function setNoteColor(color) {
+    if (!currentFile?.path || isColorSaving) return;
+    const nextColor = color || '';
+    try {
+      isColorSaving = true;
+      await setItemColorRequest(currentFile.path, nextColor || null);
+      currentNoteColor = nextColor;
+      fileInfo = fileInfo ? { ...fileInfo, color: nextColor || null } : fileInfo;
+      dispatch('noteColorChanged', { path: currentFile.path, color: nextColor || null });
+    } catch (error) {
+      console.error('Failed to recolor note:', error);
+    } finally {
+      isColorSaving = false;
+    }
+  }
+
   function hasUnsavedChanges() {
     return editedContent !== content || editedTitle !== title;
   }
@@ -426,31 +423,23 @@
   });
 
   $: wordCharStats = getWordCharStats(editedContent);
-  $: effectiveEditMode = phoneEditor ? 'rich' : $editMode;
 
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath) loadFile();
 
   let ignoreRichUpdate = false;
   $: richContentForEditor = richEditorBody(editedContent);
 
-  $: if (richEditor && effectiveEditMode === 'rich' && !ignoreRichUpdate) {
+  $: if (richEditor && !ignoreRichUpdate) {
     const md = richEditor.getMarkdown();
     if (md !== richContentForEditor) {
       richEditor.setMarkdown(richContentForEditor);
     }
   }
 
-  onMount(() => {
-    updatePhoneEditorMode();
-    window.addEventListener('resize', updatePhoneEditorMode);
-    return () => window.removeEventListener('resize', updatePhoneEditorMode);
-  });
-
   $: if ($editorAction && currentFile) {
     const action = $editorAction;
     editorAction.set(null);
-    if (action === 'toggleMode') toggleEditorMode();
-    else if (action === 'format') handleFormat();
+    if (action === 'format') handleFormat();
     else if (action === 'delete') showDeleteConfirm = true;
   }
 </script>
@@ -490,31 +479,59 @@
       <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.editor.gatheringThoughts}</span>
     </div>
   {:else}
-    {#if effectiveEditMode === 'rich'}
-      <!-- Rich mode: full-width editor, no reader -->
-      <div class="flex-1 flex flex-col min-w-0 min-h-0">
-        <RichEditor
-          bind:this={richEditor}
-          content={richContentForEditor}
-          placeholder={$localizedText.editor.beginWriting}
-          onImageFile={handleImageFile}
-          resolveImageSrc={resolveEditorImageSrc}
-          resolveImagePath={resolveEditorImagePath}
-          onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
-          on:imageClick={openImageRename}
-        />
-      </div>
-    {:else}
-      <!-- Source mode: split editor + preview -->
-      <SourceEditor
-        bind:content={editedContent}
-        {backlinks}
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
+      <RichEditor
+        bind:this={richEditor}
+        content={richContentForEditor}
+        placeholder={$localizedText.editor.beginWriting}
         notePath={currentFile?.path}
         onImageFile={handleImageFile}
-        on:wikiLinkClick={(e) => handleWikiLinkClick(e.detail)}
+        resolveImageSrc={resolveEditorImageSrc}
+        resolveImagePath={resolveEditorImagePath}
+        onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
         on:imageClick={openImageRename}
       />
-    {/if}
+    </div>
+  {/if}
+
+  {#if !isLoading && currentFile && !currentFile.isDir}
+    <div class="h-16 shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/95 px-3 sm:px-4 lg:px-8">
+      <div class="flex h-full items-center gap-2">
+        <TooltipIconButton
+          type="button"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {colorPaletteOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          label={$localizedText.editor.noteColor}
+          tooltip={$localizedText.editor.noteColor}
+          tooltipAlign="start"
+          on:click={() => colorPaletteOpen = !colorPaletteOpen}
+        >
+          <Palette class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+
+        {#if colorPaletteOpen}
+          <div class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" aria-label={$localizedText.editor.noteColor}>
+            <button
+              type="button"
+              class="flex h-8 shrink-0 items-center rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+              disabled={isColorSaving}
+              on:click={() => setNoteColor('')}
+            >
+              {$localizedText.editor.noColor}
+            </button>
+            {#each colorOptions as color}
+              <button
+                type="button"
+                class="h-8 w-8 shrink-0 rounded-full border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
+                style="background: {color};"
+                disabled={isColorSaving}
+                aria-label={$localizedText.app.board.applyColor(color)}
+                on:click={() => setNoteColor(color)}
+              ></button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
   {/if}
 </div>
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { prepareMonos } from './support/monos.js';
+import { openBoardCard, prepareMonos } from './support/monos.js';
 
 const scaleViewports = [
   { name: 'electron-minimum', width: 360, height: 640 },
@@ -23,16 +23,12 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 async function openWelcomeNote(page) {
-  await page.goto('/');
-  const isDesktop = await page.evaluate(() => window.innerWidth >= 1024);
-  await page.getByRole('button', { name: isDesktop ? 'Toggle Sidebar' : /Open menu|Toggle Sidebar/ }).click();
-  await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Welcome/i }).first().click();
-  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
+  await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
 }
 
 test.describe('application scale boundaries', () => {
   test.beforeEach(async ({ page }) => {
-    await prepareMonos(page, { editMode: 'rich' });
+    await prepareMonos(page);
     await page.addInitScript(() => {
       localStorage.setItem('noteView', 'board');
       localStorage.setItem('boardColumns', '3');
@@ -44,7 +40,11 @@ test.describe('application scale boundaries', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+      if (viewport.width >= 1024) {
+        await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+      } else {
+        await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+      }
       await expect(page.getByRole('button', { name: /New note/i })).toBeVisible();
       await expectNoHorizontalOverflow(page);
 
