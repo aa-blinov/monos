@@ -49,7 +49,7 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 async function expectCoreControlsVisible(page) {
-  await expect(page.getByRole('button', { name: /Open menu|Toggle Sidebar/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
   await expect(page.getByPlaceholder('Search')).toBeVisible();
 }
 
@@ -115,7 +115,7 @@ test.describe('responsive visual component audit', () => {
 
       await page.goto('/');
       if (isMobileLayout) {
-        await page.getByRole('button', { name: /Open menu|Toggle Sidebar/ }).click();
+        await page.getByRole('button', { name: 'Open sidebar' }).click();
         await expect(page.getByRole('button', { name: 'Close sidebar' }).nth(1)).toBeVisible();
         await page.waitForTimeout(350);
       } else {

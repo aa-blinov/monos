@@ -43,7 +43,7 @@ test('settings navigation remains clickable at compact desktop width', async ({ 
 test('settings remains clickable after opening from compact sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 680 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+  await page.getByRole('button', { name: 'Open sidebar' }).click();
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
 

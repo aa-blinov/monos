@@ -83,11 +83,11 @@ test.describe('window size boundaries', () => {
       console.log(`HOME  ${vp.label}: ${homeIssues.length ? homeIssues.join(' | ') : 'OK'}`);
 
       if (vp.w >= 1024) {
-        const toggle = page.getByRole('button', { name: 'Toggle Sidebar' });
-        if (await toggle.isVisible().catch(() => false)) {
-          await toggle.click();
+        const openSidebar = page.getByRole('button', { name: 'Open sidebar' });
+        if (await openSidebar.isVisible().catch(() => false)) {
+          await openSidebar.click();
           await page.waitForTimeout(100);
-          await toggle.click();
+          await page.getByRole('button', { name: 'Close sidebar' }).click();
           await page.waitForTimeout(100);
         }
       }

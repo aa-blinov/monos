@@ -9,6 +9,7 @@
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { firstImageFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
+  import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { localizedText } from '../lib/strings.js';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
@@ -73,6 +74,16 @@
     }
   }
 
+  function normalizeWikiLinkMarkdown(markdown) {
+    return String(markdown || '')
+      .replace(/\\\[\\\[/g, '[[')
+      .replace(/\\\]\\\]/g, ']]');
+  }
+
+  function editorMarkdown(ed = editor) {
+    return normalizeWikiLinkMarkdown(ed?.storage.markdown?.getMarkdown?.() || '');
+  }
+
   function createEditor() {
     if (editor) return;
     editor = new Editor({
@@ -83,7 +94,7 @@
       }),
       content: markdownToEditorContent(content),
       onUpdate: ({ editor: ed }) => {
-        const md = ed.storage.markdown?.getMarkdown?.() || '';
+        const md = editorMarkdown(ed);
         onUpdate(md);
         updateActive(ed);
       },
@@ -138,13 +149,49 @@
     await insertImageFile(file);
   }
 
+  function draggedNotePayload(dataTransfer) {
+    const rawPayload = dataTransfer?.getData?.(NOTE_LINK_DRAG_TYPE);
+    if (!rawPayload) return null;
+    try {
+      return JSON.parse(rawPayload);
+    } catch {
+      return null;
+    }
+  }
+
+  function insertTextAtDropPosition(event, text) {
+    if (!editor || !text) return false;
+    const dropPosition = Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+      ? editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
+      : null;
+    const chain = editor.chain().focus();
+    if (Number.isFinite(dropPosition)) chain.setTextSelection(dropPosition);
+    chain.insertContent(text).run();
+    return true;
+  }
+
+  export function insertNoteLink(note, event = {}) {
+    return insertTextAtDropPosition(event, wikiLinkForNote(note));
+  }
+
   function handleDragOver(event) {
-    if (!firstImageFileFromDataTransfer(event.dataTransfer)) return;
+    const hasNoteLink = Boolean(wikiLinkForNote(draggedNotePayload(event.dataTransfer)));
+    if (!hasNoteLink && !firstImageFileFromDataTransfer(event.dataTransfer)) return;
     event.preventDefault();
-    isImageDragging = true;
+    if (event.dataTransfer) event.dataTransfer.dropEffect = hasNoteLink ? 'copy' : 'copy';
+    isImageDragging = !hasNoteLink;
   }
 
   async function handleDrop(event) {
+    const notePayload = draggedNotePayload(event.dataTransfer);
+    if (wikiLinkForNote(notePayload)) {
+      event.preventDefault();
+      event.stopPropagation();
+      isImageDragging = false;
+      insertNoteLink(notePayload, event);
+      return;
+    }
+
     const file = firstImageFileFromDataTransfer(event.dataTransfer);
     isImageDragging = false;
     if (!file) return;
@@ -321,7 +368,7 @@
     executeSlashCommand(slashCommands[activeSlashIndex]);
   }
 
-  export function getMarkdown() { return editor?.storage.markdown?.getMarkdown?.() || content; }
+  export function getMarkdown() { return editor ? editorMarkdown(editor) : content; }
   export function setMarkdown(md) {
     const nextContent = md || '';
     if (!editor) {
@@ -336,7 +383,7 @@
   $: if (editor) {
     const nextContent = content || '';
     if (nextContent !== lastAppliedContent) {
-      const currentMarkdown = editor.storage.markdown?.getMarkdown?.() || '';
+      const currentMarkdown = editorMarkdown(editor);
       if (currentMarkdown !== nextContent) {
         editor.commands.setContent(markdownToEditorContent(nextContent));
         updateActive(editor);

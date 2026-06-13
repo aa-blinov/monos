@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { expect, test, vi } from 'vitest';
+import { NOTE_LINK_DRAG_TYPE } from '../lib/drag-data.js';
 import FileTree from './FileTree.svelte';
 
 function createDataTransfer() {
@@ -140,4 +141,24 @@ test('FileTree диспатчит moveFile при переносе файла в
       },
     })
   );
+});
+
+test('FileTree добавляет payload для создания wiki-link при drag заметки', async () => {
+  render(FileTree, {
+    node: {
+      path: 'notes/Daily/Inbox.md',
+      name: 'Inbox.md',
+      is_dir: false,
+    },
+  });
+  const dataTransfer = createDataTransfer();
+
+  await fireEvent.dragStart(screen.getByRole('button', { name: 'Inbox' }), { dataTransfer });
+
+  expect(dataTransfer.getData('text/plain')).toBe('notes/Daily/Inbox.md');
+  expect(JSON.parse(dataTransfer.getData(NOTE_LINK_DRAG_TYPE))).toEqual({
+    path: 'notes/Daily/Inbox.md',
+    name: 'Inbox',
+  });
+  expect(dataTransfer.effectAllowed).toBe('copyMove');
 });

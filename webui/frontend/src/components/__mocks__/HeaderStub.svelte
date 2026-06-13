@@ -4,6 +4,7 @@
   export let noteOpen = false;
   export let showBack = false;
   export let showSearch = true;
+  export let sidebarOpen = false;
 
   const dispatch = createEventDispatcher();
 </script>
@@ -13,6 +14,9 @@
   <button on:click={() => dispatch('toggleSidebar')}>toggle sidebar</button>
   {#if showBack}
     <span>back visible</span>
+  {/if}
+  {#if sidebarOpen}
+    <span>sidebar open</span>
   {/if}
   {#if showSearch}
     <span>search visible</span>
