@@ -153,7 +153,7 @@ test('App возвращается на главную по клику на ло
 
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
-  expect(screen.getByText(uiText.app.emptyDesktop)).toBeTruthy();
+  expect(screen.getByText(uiText.app.homeActions.newNote)).toBeTruthy();
 });
 
 test('App раскрывает сайдбар и подсвечивает заметку по revealInTree', async () => {
