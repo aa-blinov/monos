@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, test, expect, vi } from 'vitest';
 import Settings from './Settings.svelte';
 import { locale, uiText } from '../lib/strings.js';
-import { editorState } from '../stores.js';
+import { editorState, themeMode } from '../stores.js';
 
 function jsonResponse(data, ok = true) {
   return {
@@ -32,7 +32,6 @@ function createFetchMock(overrides = {}) {
     if (url === '/api/settings') {
       return jsonResponse(overrides.settings ?? {
         theme: 'nord',
-        editMode: 'source',
         git_token: 'ghp_test',
         git_owner: 'alice',
         git_repo: 'alice/notes',
@@ -85,6 +84,7 @@ function createFetchMock(overrides = {}) {
 beforeEach(() => {
   localStorage.clear();
   locale.set('en');
+  themeMode.set('system');
   editorState.set({ path: null, dirty: false, saving: false });
 });
 
@@ -160,6 +160,26 @@ test('Settings переключает язык интерфейса и сохр�
   expect(fetchMock).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
     method: 'POST',
     body: expect.stringContaining('"locale":"ru"'),
+  }));
+});
+
+test('Settings переносит режим темы над выбором цветовой темы', async () => {
+  const fetchMock = createFetchMock({ settings: {} });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Settings);
+
+  await waitFor(() => expect(screen.getByText(uiText.settings.themeMode)).toBeTruthy());
+  expect(screen.getByText(uiText.settings.colorTheme)).toBeTruthy();
+  expect(screen.getByText(uiText.settings.themeMode).compareDocumentPosition(screen.getByText(uiText.settings.colorTheme)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.themeModeDark }));
+
+  await waitFor(() => expect(localStorage.getItem('themeMode')).toBe('dark'));
+  expect(fetchMock).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+    method: 'POST',
+    body: expect.stringContaining('"themeMode":"dark"'),
   }));
 });
 

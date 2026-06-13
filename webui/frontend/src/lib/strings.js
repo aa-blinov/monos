@@ -24,6 +24,32 @@ locale.subscribe(value => {
   }
 });
 
+const enColorNames = {
+  '#a89984': 'Stone',
+  '#928374': 'Gray',
+  '#fb4934': 'Red',
+  '#fe8019': 'Orange',
+  '#fabd2f': 'Yellow',
+  '#b8bb26': 'Green',
+  '#8ec07c': 'Aqua',
+  '#83a598': 'Blue',
+  '#458588': 'Deep blue',
+  '#d3869b': 'Purple',
+};
+
+const ruColorNames = {
+  '#a89984': 'Камень',
+  '#928374': 'Серый',
+  '#fb4934': 'Красный',
+  '#fe8019': 'Оранжевый',
+  '#fabd2f': 'Жёлтый',
+  '#b8bb26': 'Зелёный',
+  '#8ec07c': 'Аква',
+  '#83a598': 'Голубой',
+  '#458588': 'Синий',
+  '#d3869b': 'Фиолетовый',
+};
+
 const enText = {
   app: {
     closeSidebar: 'Close sidebar',
@@ -59,21 +85,21 @@ const enText = {
       columns(count) {
         return `${count} columns`;
       },
-      preview: 'Preview',
-      loadingPreview: 'Loading preview',
+      groupByColor: 'Group by color',
+      ungroupByColor: 'Ungroup colors',
       emptyNote: 'Note is empty',
-      previewFailed(message) {
-        return `Failed to load preview: ${message}`;
-      },
       openFull: 'Open note',
       copyPath: 'Copy path',
       color: 'Color',
       noColorGroup: 'No color',
+      colorName(color) {
+        return enColorNames[color] || color;
+      },
       colorGroup(color) {
-        return `Color ${color}`;
+        return enColorNames[color] || color;
       },
       applyColor(color) {
-        return `Apply ${color}`;
+        return `Apply ${enColorNames[color] || color}`;
       },
     },
   },
@@ -81,15 +107,11 @@ const enText = {
     search: 'Search',
     closeSearch: 'Close search',
     toggleSidebar: 'Toggle Sidebar',
-    switchEditorMode: 'Switch editor mode',
     toggleTheme: 'Toggle Theme',
     dashboard: 'Dashboard',
     back: 'Back to notes',
     boardView: 'Board view',
     listView: 'List view',
-    rich: 'Rich',
-    source: 'Source',
-    sourceShort: 'Src',
   },
   searchResults: {
     heading: 'Search Results',
@@ -240,6 +262,11 @@ const enText = {
     language: 'Language',
     interfaceLanguage: 'Interface Language',
     theme: 'Theme',
+    themeMode: 'Theme mode',
+    themeModeSystem: 'System',
+    themeModeLight: 'Light',
+    themeModeDark: 'Dark',
+    colorTheme: 'Color theme',
     typography: 'Typography',
     font: 'Font',
     size: 'Size',
@@ -343,6 +370,8 @@ const enText = {
     renameImageTitle: 'Rename image',
     renameImageHint: 'The file will be renamed on disk and the Markdown link in this note will be updated.',
     renameImage: 'Rename',
+      noteColor: 'Note color',
+      noColor: 'No',
   },
   editorHeader: {
     noteTitle: 'Note Title',
@@ -353,9 +382,10 @@ const enText = {
   },
   sourceEditor: {
     beginWriting: 'Begin writing...',
-    linkedMentions: 'Linked Mentions',
+    linkedMentions: 'Linked notes',
     backlink: 'Backlink',
     mention: 'Mention',
+    wikiSuggestions: 'Note suggestions',
     resizeContent: 'Resize source content',
   },
   richEditor: {
@@ -462,21 +492,21 @@ const ruText = {
       columns(count) {
         return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
       },
-      preview: 'Просмотр',
-      loadingPreview: 'Загрузка просмотра',
+      groupByColor: 'Группировать по цветам',
+      ungroupByColor: 'Без группировки по цветам',
       emptyNote: 'Заметка пустая',
-      previewFailed(message) {
-        return `Не удалось загрузить просмотр: ${message}`;
-      },
       openFull: 'Открыть заметку',
       copyPath: 'Скопировать путь',
       color: 'Цвет',
       noColorGroup: 'Без цвета',
+      colorName(color) {
+        return ruColorNames[color] || color;
+      },
       colorGroup(color) {
-        return `Цвет ${color}`;
+        return ruColorNames[color] || color;
       },
       applyColor(color) {
-        return `Применить ${color}`;
+        return `Применить ${ruColorNames[color] || color}`;
       },
     },
   },
@@ -484,15 +514,11 @@ const ruText = {
     search: 'Поиск',
     closeSearch: 'Закрыть поиск',
     toggleSidebar: 'Показать или скрыть боковую панель',
-    switchEditorMode: 'Переключить режим редактора',
     toggleTheme: 'Переключить тему',
     dashboard: 'Дашборд',
     back: 'Назад к заметкам',
     boardView: 'Вид карточками',
     listView: 'Вид списком',
-    rich: 'Визуальный',
-    source: 'Markdown',
-    sourceShort: 'MD',
   },
   searchResults: {
     heading: 'Результаты поиска',
@@ -651,6 +677,11 @@ const ruText = {
     language: 'Язык',
     interfaceLanguage: 'Язык интерфейса',
     theme: 'Тема',
+    themeMode: 'Режим темы',
+    themeModeSystem: 'Система',
+    themeModeLight: 'Светлая',
+    themeModeDark: 'Тёмная',
+    colorTheme: 'Цветовая тема',
     typography: 'Типографика',
     font: 'Шрифт',
     size: 'Размер',
@@ -755,6 +786,8 @@ const ruText = {
     renameImageTitle: 'Переименовать изображение',
     renameImageHint: 'Файл будет переименован на диске, а Markdown-ссылка в этой заметке обновится.',
     renameImage: 'Переименовать',
+      noteColor: 'Цвет заметки',
+      noColor: 'Нет',
   },
   editorHeader: {
     noteTitle: 'Заголовок заметки',
@@ -765,9 +798,10 @@ const ruText = {
   },
   sourceEditor: {
     beginWriting: 'Начните писать...',
-    linkedMentions: 'Связанные упоминания',
+    linkedMentions: 'Связанные заметки',
     backlink: 'Обратная ссылка',
     mention: 'Упоминание',
+    wikiSuggestions: 'Подсказки заметок',
     resizeContent: 'Изменить ширину source-контента',
   },
   richEditor: {

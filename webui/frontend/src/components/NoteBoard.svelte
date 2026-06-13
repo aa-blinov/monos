@@ -1,13 +1,12 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop } from 'lucide-svelte';
-  import ModalShell from './ModalShell.svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { loadFileContent, reorderBoardNotesRequest, setItemColorRequest } from '../lib/editor-api.js';
-  import { renderMarkdownPreview, stripFrontmatter } from '../lib/preview-html.js';
+  import { stripFrontmatter } from '../lib/preview-html.js';
   import { localizedText } from '../lib/strings.js';
-  import { boardColumns } from '../stores.js';
+  import { boardColumns, boardGroupByColor } from '../stores.js';
 
   export let notes = [];
   export let query = '';
@@ -20,11 +19,8 @@
   let orderedNotes = [];
   let notesSignature = '';
   let draggedNote = null;
-  let previewNote = null;
-  let previewHtml = '';
-  let previewEmpty = false;
-  let previewLoading = false;
   let contextMenu = { show: false, x: 0, y: 0, note: null };
+  let wideBoard = typeof window !== 'undefined' ? window.innerWidth >= 1280 : false;
   const hydratedExcerptPaths = new Set();
 
   const colorOptions = [
@@ -46,11 +42,14 @@
     : $boardColumns === '2'
       ? 'grid items-start gap-4 lg:grid-cols-2'
       : $boardColumns === '4'
-      ? 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+      ? 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
         : 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3';
+  $: availableColumnCounts = wideBoard ? [2, 3, 4] : [2, 3];
+  $: if (!mobile && !wideBoard && $boardColumns === '4') $boardColumns = '3';
   $: visibleNotes = orderedNotes;
-  $: canReorderCards = !mobile && !query.trim();
-  $: visibleGroups = groupNotesByColor(visibleNotes, canReorderCards);
+  $: shouldGroupByColor = $boardGroupByColor && !query.trim();
+  $: canReorderCards = !mobile && !query.trim() && !shouldGroupByColor;
+  $: visibleGroups = groupNotesByColor(visibleNotes, shouldGroupByColor);
   $: displayGroups = visibleGroups.length > 0
     ? visibleGroups
     : [{ id: 'empty', color: null, label: '', notes: [], showHeading: false }];
@@ -104,7 +103,6 @@
   function groupNotesByColor(items, shouldGroup) {
     if (!shouldGroup) return [{ id: 'all', color: null, label: '', notes: items, showHeading: false }];
 
-    const groups = [];
     const seen = new Map();
     for (const note of items) {
       const color = note?.color || '';
@@ -117,11 +115,16 @@
           showHeading: true,
         };
         seen.set(color, group);
-        groups.push(group);
       }
       seen.get(color).notes.push(note);
     }
-    return groups;
+    const order = ['', ...colorOptions];
+    return [...seen.values()].sort((a, b) => {
+      const aIndex = order.includes(a.color) ? order.indexOf(a.color) : order.length;
+      const bIndex = order.includes(b.color) ? order.indexOf(b.color) : order.length;
+      if (aIndex !== bIndex) return aIndex - bIndex;
+      return a.id.localeCompare(b.id);
+    });
   }
 
   async function persistBoardOrder() {
@@ -140,29 +143,9 @@
     }
   }
 
-  async function openPreview(note) {
+  function openFull(note) {
     if (!note?.path) return;
     closeContextMenu();
-    previewNote = note;
-    previewHtml = '';
-    previewEmpty = false;
-    previewLoading = true;
-    try {
-      const data = await loadFileContent(note.path);
-      previewEmpty = stripFrontmatter(data.content).length === 0;
-      previewHtml = renderMarkdownPreview(data.content);
-      updateLocalNote({ ...note, excerpt: cardExcerptFromContent(data.content) });
-    } catch (error) {
-      previewHtml = renderMarkdownPreview($localizedText.app.board.previewFailed(error.message));
-    } finally {
-      previewLoading = false;
-    }
-  }
-
-  function openFull(note = previewNote) {
-    if (!note?.path) return;
-    closeContextMenu();
-    previewNote = null;
     dispatch('openFull', note);
   }
 
@@ -253,26 +236,51 @@
     draggedNote = null;
     if (note?.path) await persistBoardOrder();
   }
+
+  function updateWideBoard() {
+    wideBoard = typeof window !== 'undefined' && window.innerWidth >= 1280;
+  }
+
+  onMount(() => {
+    updateWideBoard();
+    window.addEventListener('resize', updateWideBoard);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('resize', updateWideBoard);
+  });
 </script>
 
 <svelte:window on:click={closeContextMenu} />
 
-{#if !mobile && !query.trim()}
+{#if !query.trim()}
 <div class="mb-4 flex justify-end">
   <div class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/65 p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
-    <span class="flex h-7 w-7 items-center justify-center text-[var(--text-secondary)]/70" aria-hidden="true">
-      <LayoutGrid size="14" strokeWidth="1.7" />
-    </span>
-    {#each [2, 3, 4] as columnCount}
-      <TooltipIconButton
-        class="h-7 min-w-8 rounded-full px-2 text-[11px] font-bold tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
-        label={$localizedText.app.board.columns(columnCount)}
-        tooltip={$localizedText.app.board.columns(columnCount)}
-        on:click={() => $boardColumns = String(columnCount)}
-      >
-        {columnCount}
-      </TooltipIconButton>
-    {/each}
+    <TooltipIconButton
+      class="h-7 min-w-8 rounded-full px-2 transition {$boardGroupByColor ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+      label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
+      tooltip={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
+      tooltipAlign="end"
+      on:click={() => $boardGroupByColor = !$boardGroupByColor}
+    >
+      <Palette size="14" strokeWidth="1.7" aria-hidden="true" />
+    </TooltipIconButton>
+    {#if !mobile}
+      <span class="flex h-7 w-7 items-center justify-center text-[var(--text-secondary)]/70" aria-hidden="true">
+        <LayoutGrid size="14" strokeWidth="1.7" />
+      </span>
+      {#each availableColumnCounts as columnCount}
+        <TooltipIconButton
+          class="h-7 min-w-8 rounded-full px-2 text-[11px] font-bold tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+          label={$localizedText.app.board.columns(columnCount)}
+          tooltip={$localizedText.app.board.columns(columnCount)}
+          tooltipAlign="end"
+          on:click={() => $boardColumns = String(columnCount)}
+        >
+          {columnCount}
+        </TooltipIconButton>
+      {/each}
+    {/if}
   </div>
 </div>
 {/if}
@@ -310,7 +318,7 @@
             {highlight}
             compact={mobile}
             draggable={canReorderCards}
-            on:open={(event) => mobile ? openFull(event.detail) : openPreview(event.detail)}
+            on:open={(event) => openFull(event.detail)}
             on:context={handleCardContext}
             on:dragStart={handleDragStart}
             on:dragOver={handleDragOver}
@@ -331,9 +339,6 @@
     on:click|stopPropagation
     on:keydown={(event) => event.key === 'Escape' && closeContextMenu()}
   >
-    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => openPreview(contextMenu.note)}>
-      <PanelTop size="14" aria-hidden="true" /> {$localizedText.app.board.preview}
-    </button>
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => openFull(contextMenu.note)}>
       <ExternalLink size="14" aria-hidden="true" /> {$localizedText.app.board.openFull}
     </button>
@@ -361,76 +366,3 @@
     </div>
   </div>
 {/if}
-
-{#if previewNote}
-  <ModalShell
-    title={previewNote.name}
-    widthClass="w-[min(94vw,48rem)] max-h-[86vh] overflow-hidden flex flex-col"
-    closeOnEscape={true}
-    on:close={() => previewNote = null}
-  >
-    <div
-      class="mb-4 min-h-5 shrink-0 truncate text-[10px] uppercase leading-5 tracking-[0.16em] text-[var(--text-secondary)]/70"
-      data-testid="note-preview-path"
-    >
-      {previewNote.path}
-    </div>
-    <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/20 p-5"
-      data-testid="note-preview-body"
-    >
-      {#if previewLoading}
-        <div class="py-12 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.app.board.loadingPreview}</div>
-      {:else if previewHtml}
-        <div class="prose-preview text-sm leading-relaxed text-[var(--text-primary)]">
-          {@html previewHtml}
-        </div>
-      {:else if previewEmpty}
-        <div class="py-12 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.app.board.emptyNote}</div>
-      {:else}
-        <div class="py-12 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.app.board.emptyNote}</div>
-      {/if}
-    </div>
-    <div class="mt-6 flex shrink-0 gap-4">
-      <button type="button" class="flex-1 text-sm font-medium transition hover:opacity-60" on:click={() => previewNote = null}>
-        {$localizedText.sidebar.modals.cancel}
-      </button>
-      <button type="button" class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60" on:click={() => openFull(previewNote)}>
-        {$localizedText.app.board.openFull}
-      </button>
-    </div>
-  </ModalShell>
-{/if}
-
-<style>
-  .prose-preview :global(h1),
-  .prose-preview :global(h2),
-  .prose-preview :global(h3) {
-    font-family: var(--font-serif, Georgia, serif);
-    margin: 0.8rem 0 0.35rem;
-  }
-
-  .prose-preview :global(p) {
-    margin: 0.65rem 0;
-  }
-
-  .prose-preview :global(ul),
-  .prose-preview :global(ol) {
-    margin: 0.65rem 0;
-    padding-left: 1.2rem;
-  }
-
-  .prose-preview :global(code) {
-    border: 1px solid var(--border-subtle);
-    border-radius: 0.35rem;
-    padding: 0.05rem 0.25rem;
-    font-size: 0.9em;
-  }
-
-  .prose-preview :global(pre) {
-    overflow-x: auto;
-    border: 1px solid var(--border-subtle);
-    border-radius: 1rem;
-    padding: 1rem;
-  }
-</style>

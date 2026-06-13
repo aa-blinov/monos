@@ -1,8 +1,9 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
   import { get } from 'svelte/store';
+  import { defaultMarkdownParser } from 'prosemirror-markdown';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { lineHeight, contentWidth, editorFontSize } from '../stores.js';
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
@@ -22,6 +23,7 @@
   export let onImageFile = null;
   export let resolveImageSrc = (src) => src;
   export let resolveImagePath = () => '';
+  export let notePath = '';
 
   const dispatch = createEventDispatcher();
 
@@ -33,6 +35,13 @@
   let slashMenuOpen = false;
   let activeSlashIndex = 0;
   let isImageDragging = false;
+  let wikiSuggestions = [];
+  let wikiSuggestionRange = null;
+  let activeWikiSuggestionIndex = 0;
+  let wikiSuggestionRequestId = 0;
+  let lastAppliedContent = '';
+
+  const WIKI_SUGGESTION_LIMIT = 8;
 
   const slashCommands = [
     { id: 'heading1', run: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
@@ -53,15 +62,25 @@
     store.set(next.value);
   }
 
+  function markdownToEditorContent(markdown) {
+    const source = String(markdown || '');
+    try {
+      return defaultMarkdownParser.parse(source).toJSON();
+    } catch (error) {
+      console.error('Failed to parse markdown:', error);
+      return source;
+    }
+  }
+
   function createEditor() {
     if (editor) return;
     editor = new Editor({
-      element: editorEl,
+      element: null,
       extensions: createRichEditorExtensions(placeholder || $localizedText.richEditor.beginWriting, {
         resolveImageSrc,
         resolveImagePath,
       }),
-      content: content,
+      content: markdownToEditorContent(content),
       onUpdate: ({ editor: ed }) => {
         const md = ed.storage.markdown?.getMarkdown?.() || '';
         onUpdate(md);
@@ -69,6 +88,8 @@
       },
       onSelectionUpdate: ({ editor: ed }) => updateActive(ed),
     });
+    editor.mount(editorEl);
+    lastAppliedContent = content || '';
   }
 
   function updateActive(ed) {
@@ -140,6 +161,71 @@
     });
   }
 
+  $: wikiSuggestionsOpen = wikiSuggestionRange && wikiSuggestions.length > 0;
+
+  function wikiLinkContext() {
+    if (!editor) return null;
+    const { from } = editor.state.selection;
+    const selectionHead = editor.state.selection.$from;
+    const beforeCursor = selectionHead.parent.textBetween(0, selectionHead.parentOffset, '\n', '\n');
+    const openIndex = beforeCursor.lastIndexOf('[[');
+    if (openIndex === -1) return null;
+
+    const query = beforeCursor.slice(openIndex + 2);
+    if (query.includes(']]') || query.includes('\n') || query.includes('[') || query.includes('|')) return null;
+
+    return {
+      from: from - query.length,
+      to: from,
+      query,
+    };
+  }
+
+  async function updateWikiSuggestions() {
+    const context = wikiLinkContext();
+    wikiSuggestionRange = context;
+    activeWikiSuggestionIndex = 0;
+    if (!context) {
+      wikiSuggestions = [];
+      return;
+    }
+
+    const requestId = ++wikiSuggestionRequestId;
+    try {
+      const params = new URLSearchParams({
+        query: context.query.trim(),
+        limit: String(WIKI_SUGGESTION_LIMIT),
+      });
+      if (notePath) params.set('exclude', notePath);
+      const response = await fetch(`/api/notes/suggest?${params.toString()}`);
+      const suggestions = response.ok ? await response.json() : [];
+      if (requestId !== wikiSuggestionRequestId) return;
+      wikiSuggestions = Array.isArray(suggestions) ? suggestions : [];
+    } catch {
+      if (requestId === wikiSuggestionRequestId) wikiSuggestions = [];
+    }
+  }
+
+  function refreshWikiSuggestionsAfterDomUpdate() {
+    tick().then(updateWikiSuggestions);
+  }
+
+  function closeWikiSuggestions() {
+    wikiSuggestionRange = null;
+    wikiSuggestions = [];
+    activeWikiSuggestionIndex = 0;
+  }
+
+  function selectWikiSuggestion(suggestion) {
+    if (!editor || !suggestion || !wikiSuggestionRange) return;
+    const insertText = suggestion.insertText || suggestion.name || '';
+    if (!insertText) return;
+    const hasClosing = editor.state.doc.textBetween(wikiSuggestionRange.to, wikiSuggestionRange.to + 2) === ']]';
+    const to = hasClosing ? wikiSuggestionRange.to + 2 : wikiSuggestionRange.to;
+    editor.chain().focus().deleteRange({ from: wikiSuggestionRange.from, to }).insertContent(`${insertText}]]`).run();
+    closeWikiSuggestions();
+  }
+
   function deleteSlashTrigger() {
     if (!editor) return;
     const { from } = editor.state.selection;
@@ -159,6 +245,29 @@
   }
 
   function handleEditorKeydown(event) {
+    if (wikiSuggestionsOpen) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeWikiSuggestions();
+        return;
+      }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        activeWikiSuggestionIndex = (activeWikiSuggestionIndex + 1) % wikiSuggestions.length;
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        activeWikiSuggestionIndex = (activeWikiSuggestionIndex - 1 + wikiSuggestions.length) % wikiSuggestions.length;
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        selectWikiSuggestion(wikiSuggestions[activeWikiSuggestionIndex]);
+        return;
+      }
+    }
+
     if (slashMenuOpen) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -197,10 +306,33 @@
   }
 
   export function getMarkdown() { return editor?.storage.markdown?.getMarkdown?.() || content; }
-  export function setMarkdown(md) { if (editor) editor.commands.setContent(md || ''); }
+  export function setMarkdown(md) {
+    const nextContent = md || '';
+    if (!editor) {
+      lastAppliedContent = nextContent;
+      return;
+    }
+    editor.commands.setContent(markdownToEditorContent(nextContent));
+    lastAppliedContent = nextContent;
+    updateActive(editor);
+  }
 
-  onMount(createEditor);
-  onDestroy(() => editor?.destroy());
+  $: if (editor) {
+    const nextContent = content || '';
+    if (nextContent !== lastAppliedContent) {
+      const currentMarkdown = editor.storage.markdown?.getMarkdown?.() || '';
+      if (currentMarkdown !== nextContent) {
+        editor.commands.setContent(markdownToEditorContent(nextContent));
+        updateActive(editor);
+      }
+      lastAppliedContent = nextContent;
+    }
+  }
+
+  onMount(() => {
+    tick().then(createEditor);
+    return () => editor?.destroy();
+  });
 </script>
 
 <div class="flex flex-col flex-1 min-h-0">
@@ -274,12 +406,13 @@
     tabindex="-1"
     data-testid="rich-editor-input"
     on:keydown|capture={handleEditorKeydown}
-    on:keyup|capture={handleEditorKeyup}
+    on:keyup|capture={(event) => { handleEditorKeyup(event); refreshWikiSuggestionsAfterDomUpdate(); }}
+    on:input|capture={refreshWikiSuggestionsAfterDomUpdate}
     on:paste|capture={handlePaste}
     on:dragover|capture={handleDragOver}
     on:dragleave={() => isImageDragging = false}
     on:drop|capture={handleDrop}
-    on:click={handleClick}
+    on:click={(event) => { handleClick(event); refreshWikiSuggestionsAfterDomUpdate(); }}
     class="min-h-0 h-full flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 py-4 lg:py-10 cursor-text touch-pan-y
       {isImageDragging ? 'ring-1 ring-inset ring-[var(--text-secondary)]/35' : ''}
       [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:max-w-[var(--content-width,56rem)] [&_.ProseMirror]:mx-auto [&_.ProseMirror_p]:my-2
@@ -301,6 +434,32 @@
       [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-[var(--border-subtle)] [&_.ProseMirror_th]:px-3 [&_.ProseMirror_th]:py-2 [&_.ProseMirror_th]:text-left [&_.ProseMirror_th]:font-semibold [&_.ProseMirror_th]:bg-[var(--bg-secondary)]
       [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-[var(--border-subtle)] [&_.ProseMirror_td]:px-3 [&_.ProseMirror_td]:py-2"
   ></div>
+  {#if wikiSuggestionsOpen}
+    <div
+      class="absolute left-4 right-4 top-14 z-20 max-h-56 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-2xl shadow-black/15 sm:right-auto sm:w-[min(32rem,calc(100%-2rem))] lg:left-12 lg:top-20 lg:w-[min(34rem,calc(100%-6rem))]"
+      role="listbox"
+      aria-label={$localizedText.sourceEditor.wikiSuggestions}
+      tabindex="-1"
+      on:mousedown|preventDefault
+    >
+      <div class="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]/70">
+        {$localizedText.sourceEditor.wikiSuggestions}
+      </div>
+      {#each wikiSuggestions as suggestion, index}
+        <button
+          type="button"
+          role="option"
+          aria-selected={activeWikiSuggestionIndex === index}
+          class="flex !min-h-0 w-full flex-col !items-start !justify-start gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition hover:bg-[var(--bg-secondary)] {activeWikiSuggestionIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
+          on:mouseenter={() => activeWikiSuggestionIndex = index}
+          on:click={() => selectWikiSuggestion(suggestion)}
+        >
+          <span class="max-w-full truncate text-xs font-medium leading-tight">{suggestion.name}</span>
+          <span class="max-w-full truncate text-[9px] uppercase leading-tight tracking-[0.1em] text-[var(--text-secondary)]/65">{suggestion.path?.startsWith('notes/') ? suggestion.path.slice(6) : suggestion.path}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
   </div>
 </div>
 

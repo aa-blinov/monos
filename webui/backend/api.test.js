@@ -529,8 +529,12 @@ apiTest('POST /api/notes/create, resolve-link и backlinks работают вм
   assert.ok(backlinks.data.some((entry) => (
     entry.path === 'notes/Work/Ideas/Gamma.md' && entry.type === 'backlink'
   )));
-  assert.ok(backlinks.data.some((entry) => (
-    entry.path === 'notes/Work/Ideas/Delta.md' && entry.type === 'mention'
+  assert.ok(!backlinks.data.some((entry) => entry.path === 'notes/Work/Ideas/Delta.md'));
+
+  const suggestions = await requestJson(buildUrl('/api/notes/suggest', { query: 'gam' }));
+  assert.equal(suggestions.response.status, 200);
+  assert.ok(suggestions.data.some((entry) => (
+    entry.path === 'notes/Work/Ideas/Gamma.md' && entry.insertText === 'Gamma'
   )));
 });
 
@@ -666,6 +670,17 @@ apiTest('POST /api/directory/icon отражается в дереве дире�
   const topicDir = tree.data.children.find((child) => child.path === 'notes/Topic');
   assert.equal(topicDir.icon, 'folder-open');
   assert.equal(topicDir.color, '#ff9900');
+
+  const noteColor = await requestJson(buildUrl('/api/directory/icon', { path: 'notes/Topic/Alpha.md' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ color: '#8ec07c' }),
+  });
+  assert.equal(noteColor.response.status, 200);
+
+  const info = await requestJson(buildUrl('/api/file-info', { path: 'notes/Topic/Alpha.md' }));
+  assert.equal(info.response.status, 200);
+  assert.equal(info.data.color, '#8ec07c');
 });
 
 apiTest('POST /api/directory/icon очищает иконку и цвет', async () => {

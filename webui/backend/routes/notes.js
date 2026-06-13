@@ -6,7 +6,7 @@ import { NOTES_DIR } from '../config.js';
 import { nowISO, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
-import { hasPlainMention, noteCardPayload, parseTags } from './helpers.js';
+import { noteCardPayload, parseTags } from './helpers.js';
 import { requireBodyFields, requireStringField } from './validate.js';
 
 export function registerNoteRoutes(app) {
@@ -141,7 +141,6 @@ export function registerNoteRoutes(app) {
       if (!note) return res.json([]);
 
       const targetName = path.basename(filePath, '.md');
-      const candidates = Array.from(new Set([targetName, note.title].filter(Boolean)));
       const backlinks = db.prepare(`
         SELECT ni.* FROM notes_index ni
         JOIN note_links nl ON nl.source_path = ni.path
@@ -153,21 +152,58 @@ export function registerNoteRoutes(app) {
         linked.set(entry.path, { entry, type: 'backlink' });
       }
 
-      const mentionCandidates = db.prepare(
-        'SELECT * FROM notes_index WHERE is_dir = 0 AND path != ?'
-      ).all(filePath);
-
-      for (const entry of mentionCandidates) {
-        if (!linked.has(entry.path) && hasPlainMention(entry, candidates)) {
-          linked.set(entry.path, { entry, type: 'mention' });
-        }
-      }
-
       res.json([...linked.values()].map(({ entry, type }) => ({
         path: entry.path,
         name: entry.title?.trim() || entry.name.replace('.md', ''),
         type,
       })));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/notes/suggest', (req, res) => {
+    try {
+      const query = String(req.query.query || '').toLowerCase().trim();
+      const excludePath = String(req.query.exclude || '').trim();
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 8, 1), 25);
+      const entries = getDb().prepare(`
+        SELECT path, name, title, last_opened
+        FROM notes_index
+        WHERE is_dir = 0
+        ORDER BY last_opened DESC
+        LIMIT 250
+      `).all();
+
+      const suggestions = entries
+        .filter((entry) => entry.path !== excludePath)
+        .map((entry) => {
+          const fileName = entry.name.replace(/\.md$/i, '');
+          const fields = [fileName, entry.title, entry.path]
+            .map((value) => String(value || '').toLowerCase());
+          return {
+            path: entry.path,
+            name: fileName,
+            title: entry.title || '',
+            insertText: fileName,
+            lastOpened: entry.last_opened,
+            matches: !query || fields.some((field) => field.includes(query)),
+          };
+        })
+        .filter((entry) => entry.matches)
+        .sort((a, b) => {
+          const aExact = a.name.toLowerCase() === query || a.title.toLowerCase() === query;
+          const bExact = b.name.toLowerCase() === query || b.title.toLowerCase() === query;
+          if (aExact !== bExact) return aExact ? -1 : 1;
+          const aPrefix = a.name.toLowerCase().startsWith(query) || a.title.toLowerCase().startsWith(query);
+          const bPrefix = b.name.toLowerCase().startsWith(query) || b.title.toLowerCase().startsWith(query);
+          if (aPrefix !== bPrefix) return aPrefix ? -1 : 1;
+          return (Date.parse(b.lastOpened) || 0) - (Date.parse(a.lastOpened) || 0);
+        })
+        .slice(0, limit)
+        .map(({ matches, lastOpened, ...entry }) => entry);
+
+      res.json(suggestions);
     } catch (error) {
       res.status(500).json({ detail: error.message });
     }

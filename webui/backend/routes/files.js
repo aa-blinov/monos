@@ -110,11 +110,14 @@ export function registerFileRoutes(app) {
 
       const stats = fs.statSync(fullPath);
       const meta = getDb().prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
+      const config = getDb().prepare('SELECT icon, color FROM folder_config WHERE path = ?').get(filePath);
 
       res.json({
         path: filePath,
         name: path.basename(filePath),
         is_dir: stats.isDirectory(),
+        icon: config?.icon || null,
+        color: config?.color || null,
         size: stats.size,
         size_human: humanSize(stats.size),
         modified: stats.mtime.toISOString(),

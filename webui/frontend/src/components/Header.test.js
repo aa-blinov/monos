@@ -122,6 +122,23 @@ test('Header показывает восстановленный запрос', 
   expect(input.value).toBe('alpha body');
 });
 
+test('Header растягивает поиск и показывает quick note справа', async () => {
+  const { component } = render(Header);
+  const quickNoteHandler = vi.fn();
+  component.$on('createQuickNote', quickNoteHandler);
+
+  const header = screen.getByRole('banner');
+  expect(header.className).toContain('lg:px-4');
+  expect(header.className).not.toContain('lg:pr-8');
+  const input = screen.getByPlaceholderText(uiText.header.search);
+  expect(input.parentElement.className).toContain('flex-1');
+  expect(input.parentElement.className).not.toContain('max-w-xl');
+  expect(screen.queryByText('Quick')).toBeNull();
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.quickNoteFromClipboard }));
+  expect(quickNoteHandler).toHaveBeenCalledTimes(1);
+});
+
 test('Header не даёт старому поисковому ответу перезаписать новый', async () => {
   const alpha = deferred();
   const beta = deferred();
@@ -183,4 +200,14 @@ test('Header диспатчит toggleSidebar', async () => {
 
   await fireEvent.click(screen.getByRole('button', { name: uiText.header.toggleSidebar }));
   expect(sidebarHandler).toHaveBeenCalledTimes(1);
+});
+
+test('Header показывает стрелку назад из открытой заметки на desktop', async () => {
+  const { component } = render(Header, { noteOpen: true });
+  const homeHandler = vi.fn();
+  component.$on('goHome', homeHandler);
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.header.back }));
+  expect(homeHandler).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: uiText.header.toggleSidebar })).toBeNull();
 });

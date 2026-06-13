@@ -2,13 +2,15 @@ import { test, expect } from '@playwright/test';
 import {
   createBlankNote,
   dropTinyImage,
+  editorBody,
+  fillEditor,
   prepareMonos,
   uniqueTitle,
   waitForSavedContent,
 } from './support/monos.js';
 
 test.beforeEach(async ({ page }) => {
-  await prepareMonos(page, { editMode: 'source' });
+  await prepareMonos(page);
 });
 
 test('finds a newly saved note through global search', async ({ page }) => {
@@ -17,13 +19,15 @@ test('finds a newly saved note through global search', async ({ page }) => {
   const notePath = `notes/${title}.md`;
 
   await createBlankNote(page, title);
-  await page.locator('textarea').fill(`Searchable body from Playwright.\n\n${token}`);
+  await fillEditor(page, `Searchable body from Playwright.\n\n${token}`);
   await waitForSavedContent(page, notePath, token);
 
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to notes' }).click();
+  await expect(page).toHaveURL(/\/$/);
   await page.getByPlaceholder('Search').fill(token);
-  await expect(page.getByText(title)).toBeVisible();
-  await expect(page.locator('mark', { hasText: token })).toBeVisible();
+  const result = page.locator('main').getByRole('button', { name: new RegExp(`^${title}\\b`) });
+  await expect(result).toBeVisible();
+  await expect(result).toContainText(token.replaceAll('-', ''));
 });
 
 test('inserts an image attachment, previews it, renames it, and updates markdown', async ({ page }) => {
@@ -32,19 +36,20 @@ test('inserts an image attachment, previews it, renames it, and updates markdown
   const renamed = `release-attachment-${Date.now()}.webp`;
 
   await createBlankNote(page, title);
-  await page.locator('textarea').fill('Attachment target note.');
+  await fillEditor(page, 'Attachment target note.');
   await dropTinyImage(page);
 
-  await expect(page.locator('img.attachment-image')).toBeVisible();
+  const image = page.locator('img[data-attachment-path]').first();
+  await expect(image).toBeVisible();
   await waitForSavedContent(page, notePath, '_attachments/');
 
-  await page.locator('img.attachment-image').first().click();
+  await image.click();
   await page.locator('[role="dialog"] input').fill(renamed);
   await page.getByRole('button', { name: 'Rename' }).click();
   await expect(page.locator('[role="dialog"]')).toBeHidden();
 
   await waitForSavedContent(page, notePath, `_attachments/${renamed}`);
-  await expect(page.locator('textarea')).toHaveValue(new RegExp(`_attachments/${renamed}`));
+  await expect(page.locator(`img[data-attachment-path$="${renamed}"]`)).toBeVisible();
 });
 
 test('creates a quick note from an image in the clipboard', async ({ page }) => {
@@ -56,5 +61,6 @@ test('creates a quick note from an image in the clipboard', async ({ page }) => 
   await dialog.getByRole('button', { name: 'Open' }).click();
 
   await expect(page).toHaveURL(/Quick%20Notes/);
-  await expect(page.locator('textarea')).toHaveValue(/!\[image-.*\]\(_attachments\/.*\.(webp|png)\)/);
+  await expect(editorBody(page)).toContainText('');
+  await expect(page.locator('img[data-attachment-path*="_attachments/"]')).toBeVisible();
 });

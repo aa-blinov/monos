@@ -29,9 +29,10 @@ export function applyTypographyVars({
   root.style.setProperty('--font-family', fontOptions.find((item) => item.family.includes(fontFamily) || item.name === fontFamily)?.family || fontFamily);
 }
 
-export function detectDarkMode() {
-  return localStorage.getItem('darkMode') === 'true'
-    || (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+export function detectDarkMode(themeMode = localStorage.getItem('themeMode') || 'system') {
+  if (themeMode === 'dark') return true;
+  if (themeMode === 'light') return false;
+  return Boolean(window.matchMedia?.('(prefers-color-scheme: dark)')?.matches);
 }
 
 export function normalizeNotePath(filePath) {

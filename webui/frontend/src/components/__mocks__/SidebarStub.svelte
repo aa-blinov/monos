@@ -15,6 +15,9 @@
   export function createTodayNote() {
     dispatch('navigate', { path: 'notes/Daily/02-06-26-12-30-00.md', name: '02-06-26-12-30-00', isDir: false });
   }
+  export function createQuickNoteFromClipboard() {
+    dispatch('quickNoteSaved', { path: 'notes/Quick Notes/Quick.md', name: 'Quick', isDir: false });
+  }
 </script>
 
 <div data-testid="sidebar-stub">

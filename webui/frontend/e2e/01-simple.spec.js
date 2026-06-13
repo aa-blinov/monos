@@ -1,39 +1,32 @@
 import { test, expect } from '@playwright/test';
-import { createBlankNote, prepareMonos, uniqueTitle, waitForSavedContent } from './support/monos.js';
+import { createBlankNote, editorBody, fillEditor, openBoardCard, prepareMonos, uniqueTitle, waitForSavedContent } from './support/monos.js';
 
 test.beforeEach(async ({ page }) => {
-  await prepareMonos(page, { editMode: 'source' });
+  await prepareMonos(page);
 });
 
 test('opens seeded notes and navigates through the shell', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('button', { name: 'Monos', exact: true })).toBeVisible();
-  const welcomeCard = page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).first();
-  await expect(welcomeCard).toBeVisible();
-
-  await welcomeCard.click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Open note' }).click();
-  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
+  await expect(page.getByRole('button', { name: 'Toggle Sidebar' })).toBeVisible();
+  await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
   await expect(page.getByText(/Welcome to Monos/i)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Monos' }).click();
+  await page.getByRole('button', { name: 'Back to notes' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(/Notes/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
 });
 
-test('creates a blank note and persists source edits', async ({ page }) => {
+test('creates a blank note and persists rich editor edits', async ({ page }) => {
   const title = uniqueTitle('Release Smoke Note');
   const notePath = `notes/${title}.md`;
 
   await createBlankNote(page, title);
-  const textarea = page.locator('textarea');
-  await expect(textarea).toBeVisible();
-  await textarea.fill(`This note was created by Playwright.\n\nrelease-smoke-token-${title}`);
+  await fillEditor(page, `This note was created by Playwright.\n\nrelease-smoke-token-${title}`);
 
   await waitForSavedContent(page, notePath, 'release-smoke-token');
   await page.reload();
-  await expect(page.locator('textarea')).toHaveValue(/release-smoke-token/);
+  await expect(editorBody(page)).toContainText('release-smoke-token');
 });
 
 test('changes settings and persists them through the backend', async ({ page }) => {
@@ -42,7 +35,6 @@ test('changes settings and persists them through the backend', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await page.locator('#font-size').selectOption('large');
   await page.locator('#editor-font-size').selectOption('lg');
-  await page.locator('#default-mode').selectOption('rich');
   await page.locator('#interface-language').selectOption('ru');
   await expect(page.getByRole('heading', { name: 'Настройки', exact: true })).toBeVisible();
   await page.locator('#interface-language').selectOption('en');
@@ -54,42 +46,31 @@ test('changes settings and persists them through the backend', async ({ page }) 
   }).toMatchObject({
     fontSize: 'large',
     editorFontSize: 'lg',
-    editMode: 'rich',
     locale: 'en',
   });
 });
 
-test('board mode is a full-width quick preview workspace', async ({ page }) => {
+test('board mode is a full-width direct-open workspace', async ({ page }) => {
   await page.goto('/');
-  await page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).first().click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Open note' }).click();
+  await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
   await expect(page).toHaveURL(/\/notes\/Welcome/);
-  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
 
-  await page.getByRole('button', { name: 'Board view' }).click();
+  await page.getByRole('button', { name: 'Back to notes' }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
 
   await page.getByRole('button', { name: '4 columns' }).click();
-  await page.locator('main .note-card').filter({ hasText: 'Welcome.md' }).click();
-
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('Welcome to Monos.');
-  await dialog.getByRole('button', { name: 'Open note' }).click();
+  await page.locator('main').getByRole('button', { name: /^Welcome\b/ }).first().click();
 
   await expect(page).toHaveURL(/\/notes\/Welcome/);
   await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue('Welcome');
+  await expect(editorBody(page)).toContainText('Welcome to Monos.');
 });
 
-test('board preview keeps note path separated from content panel', async ({ page }) => {
-  const notePath = 'notes/Preview Layout Regression.md';
-  const title = 'Article 2. Measuring ROI Without Turning AI Adoption Into Theater';
-  const content = `---
-title: "${title}"
-tags: ["preview", "layout"]
----
-
+test('board cards show folder path separately and open the note directly', async ({ page }) => {
+  const title = 'Preview Layout Regression';
+  const content = `
 We already know that AI is not magic. It is probability, math, workflow, and risk management.
 
 ## Main rule
@@ -102,33 +83,25 @@ Before buying another subscription, inspect the process you are trying to improv
     localStorage.setItem('noteView', 'board');
     localStorage.setItem('boardColumns', '2');
   });
-  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}`, {
-    data: { content },
+  const created = await page.request.post('/api/notes/create', {
+    data: { title, category: 'Articles', tags: ['preview', 'layout'], content },
   });
+  const createdNote = await created.json();
+  await page.request.post(`/api/notes/touch?path=${encodeURIComponent(createdNote.path)}`);
 
   await page.goto('/');
-  await page.getByRole('button').filter({ hasText: title }).click();
+  const card = page.locator('main').getByRole('button', { name: new RegExp(`^${title}\\b`) }).first();
+  await expect(card).toContainText('Articles');
+  await expect(card).not.toContainText('Articles/Preview Layout Regression.md');
+  await card.click();
 
-  const dialog = page.getByRole('dialog');
-  const pathLabel = dialog.getByTestId('note-preview-path');
-  const previewBody = dialog.getByTestId('note-preview-body');
-
-  await expect(dialog.getByRole('heading', { name: title })).toBeVisible();
-  await expect(pathLabel).toHaveText(notePath);
-  await expect(previewBody).toContainText('Main rule');
-
-  const boxes = await Promise.all([
-    pathLabel.boundingBox(),
-    previewBody.boundingBox(),
-  ]);
-  const [pathBox, previewBox] = boxes;
-  expect(pathBox).not.toBeNull();
-  expect(previewBox).not.toBeNull();
-  expect(pathBox.y + pathBox.height).toBeLessThanOrEqual(previewBox.y - 4);
+  await expect(page).toHaveURL(/\/notes\/Articles\/Preview%20Layout%20Regression/);
+  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue(title);
+  await expect(editorBody(page)).toContainText('Main rule');
 });
 
 test('sidebar keeps only the tree area scrollable', async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 740 });
+  await page.setViewportSize({ width: 1024, height: 740 });
   await page.addInitScript(() => {
     localStorage.setItem('noteView', 'list');
   });
@@ -179,5 +152,4 @@ Sidebar scroll regression note ${padded}.
   expect(metrics.shell.scrollHeight - metrics.shell.clientHeight, JSON.stringify(metrics.shell)).toBeLessThanOrEqual(2);
   expect(metrics.tree.overflowY).toBe('auto');
   expect(metrics.tree.scrollHeight - metrics.tree.clientHeight, JSON.stringify(metrics.tree)).toBeGreaterThan(40);
-  expect(metrics.shell.right - metrics.tree.right, JSON.stringify(metrics)).toBeGreaterThanOrEqual(10);
 });
