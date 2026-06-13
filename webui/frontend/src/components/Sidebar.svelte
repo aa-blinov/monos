@@ -719,16 +719,12 @@
     const { sourcePath, targetPath } = event.detail;
     try {
       const newSourcePath = movedPath(sourcePath, targetPath);
-      const affectedSelectedPath = selectedPath && isSameOrDescendant(selectedPath, sourcePath)
-        ? replacePathPrefix(selectedPath, sourcePath, newSourcePath)
-        : null;
       await moveItemRequest(sourcePath, targetPath);
       updatePinnedPath(sourcePath, newSourcePath);
+      pendingSelectedPath = newSourcePath;
       await loadTree();
       await loadDirectories();
-      if (affectedSelectedPath) {
-        navigateToPath(affectedSelectedPath, false);
-      }
+      navigateToPath(newSourcePath, false);
     } catch (err) {
       console.error('Failed to move file:', err);
     }

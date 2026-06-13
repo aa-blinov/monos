@@ -60,8 +60,19 @@ function createFetchMock() {
 
     if (url === '/api/tree') {
       const tree = createTree();
-      tree.children[0].children[0].path = alphaPath;
-      tree.children[0].children[0].name = alphaName;
+      if (alphaPath === 'notes/Alpha.md') {
+        tree.children[0].children = tree.children[0].children.slice(1);
+        tree.children.push({
+          path: alphaPath,
+          name: alphaName,
+          is_dir: false,
+          children: [],
+          metadata: { title: 'Alpha Note', category: '', tags: ['alpha'] },
+        });
+      } else {
+        tree.children[0].children[0].path = alphaPath;
+        tree.children[0].children[0].name = alphaName;
+      }
       if (deletedAlpha) tree.children[0].children = [];
       if (treeVersion > 0) {
         tree.children[0].children.push({
@@ -502,7 +513,7 @@ test('Sidebar после удаления открытой заметки сбр
   expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FWork%2FAlpha.md', { method: 'DELETE' });
 });
 
-test('Sidebar после перемещения открытой заметки навигирует на новый путь', async () => {
+test('Sidebar после перемещения заметки открывает ее и выделяет новый путь', async () => {
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
@@ -511,8 +522,8 @@ test('Sidebar после перемещения открытой заметки 
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
   await component.loadTree();
-  component.setSelected('notes/Work/Alpha.md');
 
+  await fireEvent.click(screen.getByText('Work').closest('button'));
   const alphaButton = await waitFor(() => screen.getByText('Alpha').closest('button'));
   const rootDrop = screen.getByTestId('tree-drop-zone');
   const dataTransfer = {
@@ -529,4 +540,5 @@ test('Sidebar после перемещения открытой заметки 
   await waitFor(() => expect(navigateHandler).toHaveBeenCalledWith(expect.objectContaining({
     detail: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
   })));
+  await waitFor(() => expect(screen.getByText('Alpha').closest('button').className).toContain('bg-[var(--border-subtle)]'));
 });
