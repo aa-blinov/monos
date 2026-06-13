@@ -43,5 +43,6 @@ export function noteCardPayload(entry) {
     tags: parseTags(entry.tags),
     lastOpened: entry.last_opened,
     boardOrder: entry.board_order ?? null,
+    trashedAt: entry.trashed_at || null,
   };
 }

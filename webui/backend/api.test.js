@@ -743,12 +743,39 @@ apiTest('rename, move и delete обновляют файловое дерево
   const movedInfo = await requestJson(buildUrl('/api/file-info', { path: 'notes/NewDir/Sub/Temp Renamed.md' }));
   assert.equal(movedInfo.response.status, 200);
 
-  const deleted = await requestJson(buildUrl('/api/file', { path: 'notes/NewDir/Sub/Temp Renamed.md' }), {
+  const notePath = 'notes/NewDir/Sub/Temp Renamed.md';
+  const deleted = await requestJson(buildUrl('/api/file', { path: notePath }), {
     method: 'DELETE',
   });
   assert.equal(deleted.response.status, 200);
+  assert.equal(deleted.data.message, 'Moved to trash');
 
-  const missing = await requestJson(buildUrl('/api/file-info', { path: 'notes/NewDir/Sub/Temp Renamed.md' }));
+  const trashedInfo = await requestJson(buildUrl('/api/file-info', { path: notePath }));
+  assert.equal(trashedInfo.response.status, 410);
+
+  const trash = await requestJson(buildUrl('/api/notes/trash'));
+  assert.equal(trash.response.status, 200);
+  assert.ok(trash.data.some((note) => note.path === notePath));
+
+  const tree = await requestJson(buildUrl('/api/tree'));
+  assert.equal(tree.response.status, 200);
+  assert.ok(!JSON.stringify(tree.data).includes('Temp Renamed.md'));
+
+  const restored = await requestJson(buildUrl('/api/notes/restore', { path: notePath }), {
+    method: 'POST',
+  });
+  assert.equal(restored.response.status, 200);
+  assert.equal(restored.data.path, notePath);
+
+  const restoredInfo = await requestJson(buildUrl('/api/file-info', { path: notePath }));
+  assert.equal(restoredInfo.response.status, 200);
+
+  const permanent = await requestJson(buildUrl('/api/file', { path: notePath, permanent: '1' }), {
+    method: 'DELETE',
+  });
+  assert.equal(permanent.response.status, 200);
+
+  const missing = await requestJson(buildUrl('/api/file-info', { path: notePath }));
   assert.equal(missing.response.status, 404);
 });
 

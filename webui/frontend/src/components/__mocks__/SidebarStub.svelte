@@ -2,8 +2,12 @@
   import { createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
+  export let mobile = false;
+  export let gitConfigured = true;
   let createFlowOpen = false;
   let selectedPath = '';
+  $: void mobile;
+  $: void gitConfigured;
 
   export function loadTree() {}
   export function setSelected(path) {
@@ -32,5 +36,6 @@
   </button>
   <button on:click={() => dispatch('openCreateNote', { category: 'Work/Nested' })}>create in nested folder</button>
   <button on:click={() => dispatch('openSettings')}>open settings</button>
+  <button on:click={() => dispatch('openTrash')}>open trash</button>
   <button on:click={() => dispatch('toggleSidebar')}>close sidebar</button>
 </div>

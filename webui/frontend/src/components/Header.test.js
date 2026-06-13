@@ -203,7 +203,7 @@ test('Header диспатчит toggleSidebar', async () => {
 });
 
 test('Header показывает стрелку назад из открытой заметки на desktop', async () => {
-  const { component } = render(Header, { noteOpen: true });
+  const { component } = render(Header, { noteOpen: true, showBack: true, showSearch: false });
   const homeHandler = vi.fn();
   component.$on('goHome', homeHandler);
 

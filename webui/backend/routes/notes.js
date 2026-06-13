@@ -25,6 +25,7 @@ export function registerNoteRoutes(app) {
 
       const relativePath = relPath(filePath);
       indexFile(filePath, noteContent);
+      getDb().prepare('UPDATE notes_index SET trashed_at = NULL WHERE path = ?').run(relativePath);
 
       res.json({ path: relativePath, name: fileName, isDir: false });
     } catch (error) {
@@ -41,6 +42,7 @@ export function registerNoteRoutes(app) {
          FROM notes_index
          LEFT JOIN folder_config ON folder_config.path = notes_index.path
          WHERE notes_index.is_dir = 0
+           AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
          ORDER BY notes_index.board_order IS NULL ASC,
                   notes_index.board_order ASC,
                   notes_index.last_opened DESC
@@ -53,12 +55,61 @@ export function registerNoteRoutes(app) {
     }
   });
 
+  app.get('/api/notes/trash', (req, res) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 100, 1), 200);
+      const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+      const entries = getDb().prepare(`
+        SELECT notes_index.*, folder_config.color
+        FROM notes_index
+        LEFT JOIN folder_config ON folder_config.path = notes_index.path
+        WHERE notes_index.is_dir = 0
+          AND notes_index.trashed_at IS NOT NULL
+          AND notes_index.trashed_at != ''
+        ORDER BY notes_index.trashed_at DESC
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+
+      res.json(entries.map(noteCardPayload));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/notes/restore', (req, res) => {
+    try {
+      const { path: filePath } = req.query;
+      const fullPath = resolveNotesPath(filePath);
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
+      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
+
+      const restoredAt = nowISO();
+      const db = getDb();
+      const changed = db.prepare('UPDATE notes_index SET trashed_at = NULL, last_opened = ? WHERE path = ? AND is_dir = 0')
+        .run(restoredAt, filePath);
+      if (changed.changes === 0) return res.status(404).json({ detail: 'File not found' });
+
+      const entry = db.prepare(`
+        SELECT notes_index.*, folder_config.color
+        FROM notes_index
+        LEFT JOIN folder_config ON folder_config.path = notes_index.path
+        WHERE notes_index.path = ? AND notes_index.is_dir = 0
+      `).get(filePath);
+
+      res.json(entry ? noteCardPayload(entry) : { path: filePath });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
+    }
+  });
+
   app.post('/api/notes/touch', (req, res) => {
     try {
       const { path: filePath } = req.query;
       const fullPath = resolveNotesPath(filePath);
       if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
       if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
+      const current = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+      if (current?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
 
       const openedAt = nowISO();
       const db = getDb();
@@ -67,7 +118,9 @@ export function registerNoteRoutes(app) {
         SELECT notes_index.*, folder_config.color
         FROM notes_index
         LEFT JOIN folder_config ON folder_config.path = notes_index.path
-        WHERE notes_index.path = ? AND notes_index.is_dir = 0
+        WHERE notes_index.path = ?
+          AND notes_index.is_dir = 0
+          AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
       `).get(filePath);
 
       res.json(entry ? noteCardPayload(entry) : { path: filePath, lastOpened: openedAt });
@@ -88,6 +141,8 @@ export function registerNoteRoutes(app) {
         const fullPath = resolveNotesPath(filePath);
         if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: `File not found: ${filePath}` });
         if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: `Path is a directory: ${filePath}` });
+        const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+        if (note?.trashed_at) return res.status(410).json({ detail: `File is in trash: ${filePath}` });
       }
 
       const db = getDb();
@@ -102,7 +157,9 @@ export function registerNoteRoutes(app) {
         SELECT notes_index.*, folder_config.color
         FROM notes_index
         LEFT JOIN folder_config ON folder_config.path = notes_index.path
-        WHERE notes_index.path IN (${placeholders}) AND notes_index.is_dir = 0
+        WHERE notes_index.path IN (${placeholders})
+          AND notes_index.is_dir = 0
+          AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
         ORDER BY notes_index.board_order ASC
       `).all(...uniquePaths);
 
@@ -123,6 +180,7 @@ export function registerNoteRoutes(app) {
         FROM notes_index
         LEFT JOIN folder_config ON folder_config.path = notes_index.path
         WHERE notes_index.is_dir = 0
+          AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
       `).all();
       res.json(searchEntries(entries, {
         query,
@@ -138,13 +196,14 @@ export function registerNoteRoutes(app) {
       const { path: filePath } = req.query;
       const db = getDb();
       const note = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
-      if (!note) return res.json([]);
+      if (!note || note.trashed_at) return res.json([]);
 
       const targetName = path.basename(filePath, '.md');
       const backlinks = db.prepare(`
         SELECT ni.* FROM notes_index ni
         JOIN note_links nl ON nl.source_path = ni.path
-        WHERE nl.target_name = ? OR nl.target_name = ?
+        WHERE (nl.target_name = ? OR nl.target_name = ?)
+          AND (ni.trashed_at IS NULL OR ni.trashed_at = '')
       `).all(targetName, note.title || targetName);
 
       const linked = new Map();
@@ -171,6 +230,7 @@ export function registerNoteRoutes(app) {
         SELECT path, name, title, last_opened
         FROM notes_index
         WHERE is_dir = 0
+          AND (trashed_at IS NULL OR trashed_at = '')
         ORDER BY last_opened DESC
         LIMIT 250
       `).all();
@@ -213,7 +273,11 @@ export function registerNoteRoutes(app) {
     try {
       const { name } = req.query;
       const entry = getDb().prepare(
-        'SELECT * FROM notes_index WHERE is_dir = 0 AND (title = ? OR name = ? OR name = ?) LIMIT 1'
+        `SELECT * FROM notes_index
+         WHERE is_dir = 0
+           AND (trashed_at IS NULL OR trashed_at = '')
+           AND (title = ? OR name = ? OR name = ?)
+         LIMIT 1`
       ).get(name, name, name + '.md');
 
       res.json(entry
@@ -227,7 +291,11 @@ export function registerNoteRoutes(app) {
   app.get('/api/tags', (req, res) => {
     try {
       const rows = getDb().prepare(
-        'SELECT tags FROM notes_index WHERE tags IS NOT NULL AND tags != \'[]\' AND tags != \'\''
+        `SELECT tags FROM notes_index
+         WHERE tags IS NOT NULL
+           AND tags != '[]'
+           AND tags != ''
+           AND (trashed_at IS NULL OR trashed_at = '')`
       ).all();
       const tagSet = new Set();
 

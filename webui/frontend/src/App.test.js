@@ -22,6 +22,10 @@ vi.mock('./components/Settings.svelte', async () => ({
   default: (await import('./components/__mocks__/SettingsStub.svelte')).default,
 }));
 
+vi.mock('./components/TrashView.svelte', async () => ({
+  default: (await import('./components/__mocks__/TrashViewStub.svelte')).default,
+}));
+
 function jsonResponse(data, ok = true) {
   return {
     ok,
@@ -151,6 +155,28 @@ test('App открывает экран настроек и заметку из 
   await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
 });
 
+test('App показывает поиск только на dashboard и общую стрелку назад вне dashboard', async () => {
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByText('search visible')).toBeTruthy());
+  expect(screen.queryByText('back visible')).toBeNull();
+
+  await fireEvent.click(screen.getByText('open trash'));
+  await waitFor(() => expect(window.location.pathname).toBe('/trash'));
+  expect(screen.getByText('back visible')).toBeTruthy();
+  expect(screen.queryByText('search visible')).toBeNull();
+
+  await fireEvent.click(screen.getByText('go home'));
+  await waitFor(() => expect(window.location.pathname).toBe('/'));
+  expect(screen.getByText('search visible')).toBeTruthy();
+
+  await fireEvent.click(screen.getByText('open settings'));
+  await waitFor(() => expect(window.location.pathname).toBe('/settings'));
+  expect(screen.getByText('back visible')).toBeTruthy();
+  expect(screen.queryByText('search visible')).toBeNull();
+});
+
 test('App возвращается на главную по клику на логотип', async () => {
   const { default: App } = await import('./App.svelte');
   render(App);
@@ -197,11 +223,15 @@ test('App после удаления открытой заметки возвр
   const { default: App } = await import('./App.svelte');
   render(App);
 
+  const sidebar = await waitFor(() => screen.getByTestId('sidebar-stub'));
+  const sidebarShell = sidebar.parentElement;
+  expect(sidebarShell.className).not.toContain('w-0');
   await waitFor(() => expect(screen.getByTestId('note-page-stub')).toBeTruthy());
   await fireEvent.click(screen.getByText('delete current note'));
 
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(get(noteView)).toBe('board');
+  expect(sidebarShell.className).not.toContain('w-0');
 });
 
 test('App раскрывает сайдбар и подсвечивает заметку по revealInTree', async () => {

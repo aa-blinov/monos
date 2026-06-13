@@ -31,7 +31,8 @@ function initTables() {
       category TEXT DEFAULT '',
       date_created TEXT NOT NULL,
       last_opened TEXT NOT NULL,
-      board_order REAL
+      board_order REAL,
+      trashed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS note_links (
@@ -57,8 +58,12 @@ function initTables() {
   if (!noteColumns.includes('board_order')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN board_order REAL');
   }
+  if (!noteColumns.includes('trashed_at')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN trashed_at TEXT');
+  }
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_board_order ON notes_index(board_order)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notes_trashed_at ON notes_index(trashed_at)');
 
   // Migrate: add settings table
   db.exec(`
