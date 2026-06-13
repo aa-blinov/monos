@@ -19,7 +19,7 @@ test('opens seeded notes and navigates through the shell', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Monos' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(/Open a note from the sidebar/i)).toBeVisible();
+  await expect(page.getByText(/Notes/i).first()).toBeVisible();
 });
 
 test('creates a blank note and persists source edits', async ({ page }) => {

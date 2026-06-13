@@ -7,6 +7,9 @@ import { closeDb } from './database.js';
 import { ROOT_DIR, NOTES_DIR } from './config.js';
 import { indexAllFiles } from './indexing.js';
 import { registerFileRoutes } from './routes/files.js';
+import { registerTreeRoutes } from './routes/tree.js';
+import { registerNoteRoutes } from './routes/notes.js';
+import { registerDirectoryRoutes } from './routes/directories.js';
 import { registerAttachmentRoutes } from './routes/attachments.js';
 import { registerGitRoutes } from './routes/git.js';
 
@@ -45,6 +48,9 @@ app.get('/health', (req, res) => {
 });
 
 registerFileRoutes(app);
+registerTreeRoutes(app);
+registerNoteRoutes(app);
+registerDirectoryRoutes(app);
 registerAttachmentRoutes(app);
 registerGitRoutes(app);
 

@@ -1,12 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { ROOT_DIR } from './config.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = process.env.NOTES_ROOT
-  ? path.resolve(process.env.NOTES_ROOT)
-  : path.resolve(__dirname, '..', '..');
 const DB_PATH = path.join(ROOT_DIR, '.data', 'notes.db');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 

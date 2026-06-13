@@ -1,0 +1,280 @@
+import fs from 'fs';
+import path from 'path';
+import { getDb } from '../database.js';
+import { parseFrontmatterMetadata, searchEntries } from '../search.js';
+import { NOTES_DIR } from '../config.js';
+import { nowISO, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
+import { upsertFrontmatter } from '../frontmatter.js';
+import { hasPlainMention, noteCardPayload, parseTags } from './helpers.js';
+import { requireBodyFields, requireStringField } from './validate.js';
+
+export function registerNoteRoutes(app) {
+  app.post('/api/notes/create', (req, res) => {
+    try {
+      requireBodyFields(req, 'title');
+      const { title, category, tags, content } = req.body;
+      const fileName = title.replace(/[/\\?%*:|"<>]/g, '_') + '.md';
+      const dirPath = category ? resolveNotesChildPath(category) : NOTES_DIR;
+      fs.mkdirSync(dirPath, { recursive: true });
+      if (category) indexDirectoryTree(dirPath);
+
+      const filePath = path.join(dirPath, fileName);
+      const noteContent = upsertFrontmatter(content || '', { title, category, tags: tags || [] });
+      fs.writeFileSync(filePath, noteContent, 'utf-8');
+
+      const relativePath = relPath(filePath);
+      indexFile(filePath, noteContent);
+
+      res.json({ path: relativePath, name: fileName, isDir: false });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/notes/recent', (req, res) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+      const entries = getDb().prepare(
+        `SELECT notes_index.*, folder_config.color
+         FROM notes_index
+         LEFT JOIN folder_config ON folder_config.path = notes_index.path
+         WHERE notes_index.is_dir = 0
+         ORDER BY notes_index.board_order IS NULL ASC,
+                  notes_index.board_order ASC,
+                  notes_index.last_opened DESC
+         LIMIT ? OFFSET ?`
+      ).all(limit, offset);
+
+      res.json(entries.map(noteCardPayload));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/notes/touch', (req, res) => {
+    try {
+      const { path: filePath } = req.query;
+      const fullPath = resolveNotesPath(filePath);
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
+      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
+
+      const openedAt = nowISO();
+      const db = getDb();
+      db.prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?').run(openedAt, filePath);
+      const entry = db.prepare(`
+        SELECT notes_index.*, folder_config.color
+        FROM notes_index
+        LEFT JOIN folder_config ON folder_config.path = notes_index.path
+        WHERE notes_index.path = ? AND notes_index.is_dir = 0
+      `).get(filePath);
+
+      res.json(entry ? noteCardPayload(entry) : { path: filePath, lastOpened: openedAt });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/notes/reorder', (req, res) => {
+    try {
+      const paths = Array.isArray(req.body?.paths)
+        ? req.body.paths.map((item) => String(item || '').trim()).filter(Boolean)
+        : [];
+      const uniquePaths = [...new Set(paths)].slice(0, 200);
+      if (uniquePaths.length === 0) return res.status(400).json({ detail: 'Paths required' });
+
+      for (const filePath of uniquePaths) {
+        const fullPath = resolveNotesPath(filePath);
+        if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: `File not found: ${filePath}` });
+        if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: `Path is a directory: ${filePath}` });
+      }
+
+      const db = getDb();
+      const updateOrder = db.prepare('UPDATE notes_index SET board_order = ? WHERE path = ? AND is_dir = 0');
+      const transaction = db.transaction((orderedPaths) => {
+        orderedPaths.forEach((filePath, index) => updateOrder.run(index + 1, filePath));
+      });
+      transaction(uniquePaths);
+
+      const placeholders = uniquePaths.map(() => '?').join(',');
+      const entries = db.prepare(`
+        SELECT notes_index.*, folder_config.color
+        FROM notes_index
+        LEFT JOIN folder_config ON folder_config.path = notes_index.path
+        WHERE notes_index.path IN (${placeholders}) AND notes_index.is_dir = 0
+        ORDER BY notes_index.board_order ASC
+      `).all(...uniquePaths);
+
+      res.json(entries.map(noteCardPayload));
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/search', (req, res) => {
+    try {
+      const { query, search_content } = req.body;
+      if (query !== undefined && typeof query !== 'string') {
+        return res.status(400).json({ detail: 'query must be a string' });
+      }
+      const entries = getDb().prepare(`
+        SELECT notes_index.*, folder_config.color
+        FROM notes_index
+        LEFT JOIN folder_config ON folder_config.path = notes_index.path
+        WHERE notes_index.is_dir = 0
+      `).all();
+      res.json(searchEntries(entries, {
+        query,
+        searchContent: Boolean(search_content),
+      }));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/notes/backlinks', (req, res) => {
+    try {
+      const { path: filePath } = req.query;
+      const db = getDb();
+      const note = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
+      if (!note) return res.json([]);
+
+      const targetName = path.basename(filePath, '.md');
+      const candidates = Array.from(new Set([targetName, note.title].filter(Boolean)));
+      const backlinks = db.prepare(`
+        SELECT ni.* FROM notes_index ni
+        JOIN note_links nl ON nl.source_path = ni.path
+        WHERE nl.target_name = ? OR nl.target_name = ?
+      `).all(targetName, note.title || targetName);
+
+      const linked = new Map();
+      for (const entry of backlinks) {
+        linked.set(entry.path, { entry, type: 'backlink' });
+      }
+
+      const mentionCandidates = db.prepare(
+        'SELECT * FROM notes_index WHERE is_dir = 0 AND path != ?'
+      ).all(filePath);
+
+      for (const entry of mentionCandidates) {
+        if (!linked.has(entry.path) && hasPlainMention(entry, candidates)) {
+          linked.set(entry.path, { entry, type: 'mention' });
+        }
+      }
+
+      res.json([...linked.values()].map(({ entry, type }) => ({
+        path: entry.path,
+        name: entry.title?.trim() || entry.name.replace('.md', ''),
+        type,
+      })));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/notes/resolve-link', (req, res) => {
+    try {
+      const { name } = req.query;
+      const entry = getDb().prepare(
+        'SELECT * FROM notes_index WHERE is_dir = 0 AND (title = ? OR name = ? OR name = ?) LIMIT 1'
+      ).get(name, name, name + '.md');
+
+      res.json(entry
+        ? { path: entry.path, name: entry.name.replace('.md', ''), isDir: false }
+        : {});
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/tags', (req, res) => {
+    try {
+      const rows = getDb().prepare(
+        'SELECT tags FROM notes_index WHERE tags IS NOT NULL AND tags != \'[]\' AND tags != \'\''
+      ).all();
+      const tagSet = new Set();
+
+      for (const row of rows) {
+        try {
+          for (const tag of JSON.parse(row.tags)) tagSet.add(tag);
+        } catch {}
+      }
+
+      res.json([...tagSet].sort());
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/format', (req, res) => {
+    try {
+      const excluded = new Set(['README.md', 'AGENTS.md']);
+      let count = 0;
+
+      function walk(dir) {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory() && !entry.name.startsWith('.')) {
+            walk(fullPath);
+            continue;
+          }
+
+          if (entry.name.endsWith('.md') && !excluded.has(entry.name)) {
+            const original = fs.readFileSync(fullPath, 'utf-8');
+            const formatted = original
+              .replace(/[ \t]+$/gm, '')
+              .replace(/\r\n/g, '\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim() + '\n';
+
+            if (original !== formatted) {
+              fs.writeFileSync(fullPath, formatted, 'utf-8');
+              count++;
+            }
+          }
+        }
+      }
+
+      walk(NOTES_DIR);
+      if (count > 0) indexAllFiles();
+      res.json({ success: true, message: `Formatted. Updated: ${count}` });
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.get('/api/settings', (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT key, value FROM settings').all();
+      const settings = {};
+      for (const row of rows) {
+        try { settings[row.key] = JSON.parse(row.value); }
+        catch { settings[row.key] = row.value; }
+      }
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  app.post('/api/settings', (req, res) => {
+    try {
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ detail: 'Request body must be an object' });
+      }
+      const db = getDb();
+      const transaction = db.transaction((data) => {
+        const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+        for (const [key, value] of Object.entries(data)) {
+          upsert.run(key, typeof value === 'string' ? value : JSON.stringify(value));
+        }
+      });
+      transaction(req.body);
+      res.json({ message: 'Saved' });
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+}

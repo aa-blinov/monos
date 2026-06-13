@@ -212,12 +212,10 @@
   }
 
   async function openNewNoteFlow() {
-    await ensureSidebarReady();
     sidebarComponent?.openCreateNote();
   }
 
   async function createTodayFromHome() {
-    await ensureSidebarReady();
     await sidebarComponent?.createTodayNote();
   }
 
@@ -561,10 +559,6 @@
                 {#if homeRecentLoading && homeRecentNotes.length > 0}
                   <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
                     {$localizedText.searchResults.searching}
-                  </div>
-                {:else if !homeRecentLoading && homeRecentNotes.length === 0}
-                  <div class="rounded-3xl border border-dashed border-[var(--border-subtle)] px-5 py-10 text-center">
-                    <p class="font-serif text-lg italic text-[var(--text-secondary)]">{isMobile ? $localizedText.app.emptyMobile : $localizedText.app.emptyDesktop}</p>
                   </div>
                 {/if}
               </div>
