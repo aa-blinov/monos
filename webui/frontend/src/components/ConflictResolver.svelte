@@ -75,14 +75,8 @@
       </div>
     </div>
 
-    {#if hasMore}
-      <p class="mt-4 text-xs text-center text-[var(--text-secondary)]">
-        {$localizedText.settings.conflictsRemaining(remaining)}
-      </p>
-    {:else}
-      <p class="mt-4 text-xs text-center text-[var(--green)]">
-        {$localizedText.settings.allConflictsResolved}
-      </p>
-    {/if}
+    <p class="mt-4 text-xs text-center text-[var(--text-secondary)]">
+      {hasMore ? $localizedText.settings.conflictsRemaining(remaining) : $localizedText.settings.chooseConflictVersion}
+    </p>
   </ModalShell>
 {/if}

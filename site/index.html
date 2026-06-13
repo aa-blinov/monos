@@ -119,6 +119,57 @@
         margin-top: 34px;
       }
 
+      .platforms {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 18px;
+        color: var(--muted);
+      }
+
+      .platform-pill {
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.035);
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .strengths {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 34px auto 0;
+        max-width: 940px;
+        text-align: left;
+      }
+
+      .strength {
+        padding: 18px;
+        border: 1px solid rgba(216, 166, 87, 0.22);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .strength span {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 760;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .strength p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
       .button {
         display: inline-flex;
         align-items: center;
@@ -247,6 +298,32 @@
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 16px;
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .feature-row {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      .feature-row strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .feature-row p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
       }
 
       .screenshots {
@@ -385,8 +462,10 @@
         .hero,
         .mock-body,
         .features,
+        .strengths,
         .screenshots,
         .perks,
+        .feature-list,
         .flow-card {
           grid-template-columns: 1fr;
         }
@@ -424,15 +503,35 @@
       <main>
         <section class="hero">
           <div class="hero-copy">
-            <div class="eyebrow">Local-first notes for focused thinking</div>
-            <h1>Your knowledge base, on your machine.</h1>
+            <div class="eyebrow">Local-first notes with real recovery paths</div>
+            <h1>A calm notes app that does not trap your knowledge.</h1>
             <p class="lead">
-              Monos is a desktop notes app built around Markdown, wiki links, fast search, and optional Git sync.
-              It keeps your notes portable while giving you a polished workspace for daily thinking.
+              Monos keeps notes as Markdown files, gives them a polished desktop workspace, and adds the safety net
+              people usually miss: ZIP backup, import merge, Git history, and conflict resolution when devices disagree.
             </p>
             <div class="actions">
-              <a class="button primary" href="https://github.com/aa-blinov/monos/releases">Download builds</a>
+              <a class="button primary" href="https://github.com/aa-blinov/monos/actions/workflows/desktop-build.yml">Download CI builds</a>
               <a class="button secondary" href="https://github.com/aa-blinov/monos">View source</a>
+            </div>
+            <div class="platforms" aria-label="Available desktop builds">
+              <span class="platform-pill">macOS Apple Silicon</span>
+              <span class="platform-pill">macOS Intel</span>
+              <span class="platform-pill">Windows</span>
+              <span class="platform-pill">Ubuntu / Linux</span>
+            </div>
+            <div class="strengths">
+              <div class="strength">
+                <span>Portable</span>
+                <p>Markdown files remain usable outside Monos. The database is only a fast, rebuildable index.</p>
+              </div>
+              <div class="strength">
+                <span>Recoverable</span>
+                <p>Trash, ZIP export, merge import, and Git sync give multiple ways back from mistakes.</p>
+              </div>
+              <div class="strength">
+                <span>Focused</span>
+                <p>A compact board, rich editor, templates, color cues, and backlinks keep writing direct.</p>
+              </div>
             </div>
           </div>
 
@@ -447,27 +546,27 @@
         </section>
 
         <section class="section" id="features">
-          <h2>Built for private, durable notes.</h2>
+          <h2>The strengths are ownership, speed, and recovery.</h2>
           <p class="section-intro">
-            Monos treats files as the product. The interface is there to make those files easier to create, connect,
-            search, and sync.
+            The product is not just another editor. It is a local-first workflow for writing, connecting, backing up,
+            restoring, and moving notes without giving up plain files.
           </p>
           <div class="features">
             <article class="feature">
               <strong>Plain Markdown</strong>
-              <p>Your notes stay readable outside the app. SQLite is only a rebuildable index.</p>
+              <p>Open notes in any editor, version them in Git, or archive them as files. No proprietary lock-in.</p>
             </article>
             <article class="feature">
-              <strong>Wiki links</strong>
-              <p>Connect notes with `[[links]]` and use backlinks to navigate your knowledge graph.</p>
+              <strong>Rich Markdown editor</strong>
+              <p>Write in a calm TipTap editor, keep Markdown on disk, and use source mode when you need it.</p>
             </article>
             <article class="feature">
-              <strong>Desktop storage</strong>
-              <p>User data lives in the operating system's app data directory, not in the source repo.</p>
+              <strong>Wiki links and backlinks</strong>
+              <p>Connect notes with `[[links]]`, drag notes into the editor, and jump through local backlinks.</p>
             </article>
             <article class="feature">
               <strong>Board view</strong>
-              <p>A compact dashboard helps you scan recent notes and create new ones quickly.</p>
+              <p>A compact dashboard helps you scan recent notes, group by color, and create new notes quickly.</p>
             </article>
             <article class="feature">
               <strong>Full-text search</strong>
@@ -475,28 +574,40 @@
             </article>
             <article class="feature">
               <strong>Optional Git sync</strong>
-              <p>Use your own repository for backup and history when you want it.</p>
+              <p>Use your own repository for backup and history, with tested conflict handling before push.</p>
+            </article>
+            <article class="feature">
+              <strong>Templates</strong>
+              <p>Hide built-in templates, create personal templates, and use placeholders for date, time, and title.</p>
+            </article>
+            <article class="feature">
+              <strong>Import and export</strong>
+              <p>Export a ZIP backup or import another archive into the current hierarchy without overwrites.</p>
+            </article>
+            <article class="feature">
+              <strong>Attachments and images</strong>
+              <p>Paste or upload images, keep attachments next to notes, and rename linked files safely.</p>
             </article>
           </div>
         </section>
 
         <section class="section" id="screenshots">
-          <h2>Real app screens, seeded with a demo knowledge base.</h2>
+          <h2>Screenshots that map to real product strengths.</h2>
           <p class="section-intro">
-            These screenshots are captured from the current Monos UI using temporary Markdown notes created only for
-            the website.
+            These are captured from the current Monos UI with temporary Markdown notes, template data, backup controls,
+            and an intentional Git conflict created only for the website.
           </p>
           <div class="screenshots">
             <figure class="shot wide">
               <img src="media/monos-dashboard.png" alt="Monos dashboard with a mock product knowledge base" loading="lazy" />
               <figcaption class="shot-caption">
-                Board view keeps recent notes visible as compact cards, including tags, content snippets, and the last opened time.
+                Board view keeps recent notes visible as compact cards, including tags, color accents, content snippets, and quick creation.
               </figcaption>
             </figure>
             <figure class="shot">
               <img src="media/monos-editor.png" alt="Monos editor with a mock launch plan note" loading="lazy" />
               <figcaption class="shot-caption">
-                Rich editor, note tree, wiki link text, and Markdown content in the desktop layout.
+                Rich editor, note tree, wiki link text, local backlinks, attachment support, and color-tinted note surfaces.
               </figcaption>
             </figure>
             <figure class="shot">
@@ -506,15 +617,27 @@
               </figcaption>
             </figure>
             <figure class="shot">
+              <img src="media/monos-templates.png" alt="Monos templates manager with custom and library templates" loading="lazy" />
+              <figcaption class="shot-caption">
+                Template management lets users create personal note patterns and hide built-in templates they do not use.
+              </figcaption>
+            </figure>
+            <figure class="shot wide">
+              <img src="media/monos-conflicts.png" alt="Monos Git conflict resolver showing local and remote versions" loading="lazy" />
+              <figcaption class="shot-caption">
+                Git sync is conflict-aware: local and remote versions are shown side by side before choosing what to keep.
+              </figcaption>
+            </figure>
+            <figure class="shot">
               <img src="media/monos-settings.png" alt="Monos settings screen for theme and typography" loading="lazy" />
               <figcaption class="shot-caption">
-                Settings expose the practical controls: theme, typography, editor mode, locale, and Git sync.
+                Backup controls live in Settings: export a ZIP or import an archive into the existing notes tree.
               </figcaption>
             </figure>
             <figure class="shot mobile">
               <img src="media/monos-mobile.png" alt="Monos mobile dashboard with mock knowledge cards" loading="lazy" />
               <figcaption class="shot-caption">
-                Compact mobile board with real responsive cards and a quick create action.
+                Compact mobile board with responsive cards, quick create, search, and sidebar navigation.
               </figcaption>
             </figure>
           </div>
@@ -524,7 +647,7 @@
           <h2>Small details that make notes feel safe.</h2>
           <p class="section-intro">
             Monos keeps the technical model simple, but the product benefits are visible every day: files stay yours,
-            search stays fast, and sync stays optional.
+            search stays fast, sync stays optional, and backups are easy to create.
           </p>
           <div class="perks">
             <article class="perk">
@@ -547,6 +670,24 @@
               <strong>Optional sync</strong>
               <p>Git backup is available when you want history, but the app works without remote services.</p>
             </article>
+          </div>
+          <div class="feature-list" aria-label="Feature checklist">
+            <div class="feature-row">
+              <strong>Conflict-aware sync</strong>
+              <p>Monos detects diverged edits, delete/modify conflicts, binary conflicts, and rename conflicts before pushing.</p>
+            </div>
+            <div class="feature-row">
+              <strong>Recoverable changes</strong>
+              <p>Trash, restore, import, export, and Git history make it harder to lose work.</p>
+            </div>
+            <div class="feature-row">
+              <strong>Personal templates</strong>
+              <p>Custom templates appear first when creating from a template, while built-in templates can be hidden.</p>
+            </div>
+            <div class="feature-row">
+              <strong>Desktop packages</strong>
+              <p>CI builds Windows, macOS Apple Silicon, macOS Intel, Ubuntu `.deb`, and Linux AppImage artifacts.</p>
+            </div>
           </div>
           <div class="flow-card" aria-label="Monos data flow">
             <div class="flow-node">
