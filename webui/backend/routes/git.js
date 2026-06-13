@@ -29,13 +29,65 @@ function gitExec(args, options = {}) {
   } catch (error) {
     const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
     const stdout = typeof error.stdout === 'string' ? error.stdout.trim() : error.stdout?.toString?.().trim();
-    const message = stderr || stdout || error.message || String(error);
+    const message = [stderr, stdout].filter(Boolean).join('\n') || 'Git command failed';
     const gitError = new Error(message);
     gitError.status = error.status;
     gitError.stderr = stderr || '';
     gitError.stdout = stdout || '';
     throw gitError;
   }
+}
+
+function gitExecBuffer(args, options = {}) {
+  const cwd = typeof options === 'string' ? options : options.cwd || NOTES_DIR;
+  const token = typeof options === 'string' ? '' : options.token || '';
+
+  try {
+    return execFileSync('git', gitArgsWithAuth(args, token), {
+      cwd,
+      timeout: 30000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    });
+  } catch (error) {
+    const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
+    const stdout = typeof error.stdout === 'string' ? error.stdout.trim() : error.stdout?.toString?.().trim();
+    const message = [stderr, stdout].filter(Boolean).join('\n') || 'Git command failed';
+    const gitError = new Error(message);
+    gitError.status = error.status;
+    gitError.stderr = stderr || '';
+    gitError.stdout = stdout || '';
+    throw gitError;
+  }
+}
+
+function listUnmergedFiles() {
+  try {
+    return gitExec(['diff', '--name-only', '--diff-filter=U']).split('\n').filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function hasUnmergedFiles() {
+  return listUnmergedFiles().length > 0;
+}
+
+function assertSafeGitPath(filePath) {
+  if (typeof filePath !== 'string' || !filePath) {
+    const error = new Error('Invalid conflict path');
+    error.status = 400;
+    throw error;
+  }
+
+  const normalized = path.posix.normalize(filePath.replace(/\\/g, '/'));
+  if (path.isAbsolute(filePath) || normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) {
+    const error = new Error('Invalid conflict path');
+    error.status = 400;
+    throw error;
+  }
+
+  return normalized;
 }
 
 function readStoredGitToken() {
@@ -54,6 +106,23 @@ function readStoredGitToken() {
   }
 }
 
+function commitStagedChanges(message) {
+  try {
+    gitExec(['diff', '--cached', '--quiet']);
+  } catch {
+    gitExec(['commit', '-m', message]);
+  }
+}
+
+function hasCommits() {
+  try {
+    gitExec(['rev-parse', '--verify', 'HEAD']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isGitRepo() {
   try {
     if (!fs.existsSync(path.join(NOTES_DIR, '.git'))) return false;
@@ -62,6 +131,64 @@ function isGitRepo() {
   } catch {
     return false;
   }
+}
+
+function branchExistsOnRemote(branch, token) {
+  try {
+    gitExec(['fetch', 'origin', branch], { token });
+    gitExec(['rev-parse', '--verify', `origin/${branch}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getConflictStages(filePath) {
+  const safePath = assertSafeGitPath(filePath);
+  const output = gitExec(['ls-files', '-u', '--', safePath]);
+  const stages = new Set();
+
+  for (const line of output.split('\n').filter(Boolean)) {
+    const match = line.match(/^\d+\s+[0-9a-f]+\s+([123])\t/);
+    if (match) stages.add(Number(match[1]));
+  }
+
+  return stages;
+}
+
+function readConflictStage(filePath, stage) {
+  const safePath = assertSafeGitPath(filePath);
+  try {
+    return gitExecBuffer(['show', `:${stage}:${safePath}`]);
+  } catch {
+    return null;
+  }
+}
+
+function isProbablyBinary(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.includes(0);
+}
+
+function conflictPreview(buffer) {
+  if (!buffer) return '';
+  if (isProbablyBinary(buffer)) return '[Binary file]';
+  const text = buffer.toString('utf-8').replace(/\n$/, '');
+  return text.length > 20000 ? `${text.slice(0, 20000)}\n...` : text;
+}
+
+function resolveConflictPath(filePath, choice) {
+  const safePath = assertSafeGitPath(filePath);
+  const stage = choice === 'ours' ? 2 : 3;
+  const checkoutFlag = choice === 'ours' ? '--ours' : '--theirs';
+  const stages = getConflictStages(safePath);
+
+  if (!stages.has(stage)) {
+    gitExec(['rm', '--ignore-unmatch', '--', safePath]);
+    return;
+  }
+
+  gitExec(['checkout', checkoutFlag, '--', safePath]);
+  gitExec(['add', '--', safePath]);
 }
 
 function readGitSettings() {
@@ -124,16 +251,33 @@ export function registerGitRoutes(app) {
 
       gitExec(['config', 'user.name', device_name || 'Monos']);
       gitExec(['config', 'user.email', `${device_name || 'user'}@monos.local`]);
-      gitExec(['fetch', '--depth=1', 'origin', branch], { token: authToken });
-      gitExec(['checkout', '-B', branch, `origin/${branch}`]);
-
       writeGitSettings({ repo, branch, device_name });
 
+      gitExec(['checkout', '-B', branch]);
       gitExec(['add', '-A']);
-      try { gitExec(['commit', '-m', `Init from ${device_name || 'Monos'}`]); } catch {}
-      try { gitExec(['push', 'origin', branch], { token: authToken }); } catch {}
+      commitStagedChanges(`Init from ${device_name || 'Monos'}`);
 
-      res.json({ message: `Connected to ${repo}/${branch}` });
+      const remoteBranchExists = branchExistsOnRemote(branch, authToken);
+      if (remoteBranchExists) {
+        gitExec(['branch', '--set-upstream-to', `origin/${branch}`, branch]);
+        if (hasCommits()) {
+          try {
+            gitExec(['merge', '--no-edit', '--allow-unrelated-histories', `origin/${branch}`]);
+          } catch (error) {
+            const errorText = error.stderr || error.message || '';
+            if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
+              return res.json({ message: 'Conflicts detected during setup', conflicts: true });
+            }
+            throw error;
+          }
+        } else {
+          gitExec(['checkout', '-B', branch, `origin/${branch}`]);
+        }
+      }
+
+      gitExec(['push', '-u', 'origin', branch], { token: authToken });
+
+      res.json({ message: `Connected to ${repo}/${branch}`, conflicts: false });
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
     }
@@ -147,6 +291,7 @@ export function registerGitRoutes(app) {
       const currentBranch = gitExec(['rev-parse', '--abbrev-ref', 'HEAD']);
       const statusOut = gitExec(['status', '--porcelain']);
       const hasChanges = statusOut.length > 0;
+      const hasConflicts = hasUnmergedFiles();
       let ahead = 0;
       let behind = 0;
 
@@ -163,7 +308,7 @@ export function registerGitRoutes(app) {
         branch: currentBranch,
         repo: settings.repo || '',
         hasChanges,
-        status: hasChanges ? 'dirty' : 'clean',
+        status: hasConflicts ? 'conflict' : (hasChanges ? 'dirty' : 'clean'),
         ahead,
         behind,
         last_sync: settings.last_sync || null,
@@ -209,22 +354,21 @@ export function registerGitRoutes(app) {
   app.post('/api/git/sync', (req, res) => {
     try {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
 
       const authToken = readStoredGitToken();
+      gitExec(['add', '-A']);
+      commitStagedChanges('Auto-sync from Monos');
+
       let result = 'Synced';
       try {
-        result = gitExec(['pull', '--no-edit'], { token: authToken });
+        result = gitExec(['pull', '--no-rebase', '--no-edit'], { token: authToken });
       } catch (error) {
         const errorText = error.stderr || error.message || '';
-        if (errorText.includes('CONFLICT')) return res.json({ message: 'Conflicts detected', conflicts: true });
+        if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
+          return res.json({ message: 'Conflicts detected', conflicts: true });
+        }
         throw error;
-      }
-
-      gitExec(['add', '-A']);
-      try {
-        gitExec(['diff', '--cached', '--quiet']);
-      } catch {
-        gitExec(['commit', '-m', 'Auto-sync from Monos']);
       }
 
       gitExec(['push'], { token: authToken });
@@ -258,26 +402,21 @@ export function registerGitRoutes(app) {
   app.get('/api/git/conflicts', (req, res) => {
     try {
       if (!isGitRepo()) return res.json([]);
-      const status = gitExec(['diff', '--name-only', '--diff-filter=U']);
-      const files = status.split('\n').filter(Boolean);
+      const files = listUnmergedFiles();
       const details = files.map(filePath => {
-        try {
-          const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
-          const ours = [];
-          const theirs = [];
-          const lines = content.split('\n');
-          let section = 'context';
-          for (const line of lines) {
-            if (line.startsWith('<<<<<<< HEAD')) { section = 'ours'; continue; }
-            if (line.startsWith('=======')) { section = 'theirs'; continue; }
-            if (line.startsWith('>>>>>>> ')) { section = 'context'; continue; }
-            if (section === 'ours') ours.push(line);
-            else if (section === 'theirs') theirs.push(line);
-          }
-          return { path: filePath, ours: ours.join('\n'), theirs: theirs.join('\n'), raw: content };
-        } catch {
-          return { path: filePath, ours: '', theirs: '', raw: '' };
-        }
+        const safePath = assertSafeGitPath(filePath);
+        const oursBuffer = readConflictStage(safePath, 2);
+        const theirsBuffer = readConflictStage(safePath, 3);
+        const binary = isProbablyBinary(oursBuffer) || isProbablyBinary(theirsBuffer);
+        return {
+          path: safePath,
+          ours: conflictPreview(oursBuffer),
+          theirs: conflictPreview(theirsBuffer),
+          oursExists: Boolean(oursBuffer),
+          theirsExists: Boolean(theirsBuffer),
+          binary,
+          raw: binary ? '[Binary file]' : '',
+        };
       });
       res.json(details);
     } catch (error) {
@@ -291,35 +430,14 @@ export function registerGitRoutes(app) {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
       if (resolutions && typeof resolutions === 'object') {
         for (const [filePath, choice] of Object.entries(resolutions)) {
-          if (choice === 'ours') {
-            const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
-            const ours = [];
-            let section = 'keep';
-            for (const line of content.split('\n')) {
-              if (line.startsWith('<<<<<<< HEAD')) { section = 'skip'; continue; }
-              if (line.startsWith('=======')) { section = 'ours'; continue; }
-              if (line.startsWith('>>>>>>> ')) { section = 'keep'; continue; }
-              if (section === 'keep') ours.push(line);
-              else if (section === 'ours') ours.push(line);
-            }
-            fs.writeFileSync(path.join(NOTES_DIR, filePath), ours.join('\n'), 'utf-8');
-          } else if (choice === 'theirs') {
-            const content = fs.readFileSync(path.join(NOTES_DIR, filePath), 'utf-8');
-            const theirs = [];
-            let section = 'skip';
-            for (const line of content.split('\n')) {
-              if (line.startsWith('<<<<<<< HEAD')) { section = 'skip'; continue; }
-              if (line.startsWith('=======')) { section = 'theirs'; continue; }
-              if (line.startsWith('>>>>>>> ')) { section = 'keep'; continue; }
-              if (section === 'keep') theirs.push(line);
-              else if (section === 'theirs') theirs.push(line);
-            }
-            fs.writeFileSync(path.join(NOTES_DIR, filePath), theirs.join('\n'), 'utf-8');
+          if (choice === 'ours' || choice === 'theirs') {
+            resolveConflictPath(filePath, choice);
+          } else {
+            gitExec(['add', '--', assertSafeGitPath(filePath)]);
           }
-          gitExec(['add', '--', filePath]);
         }
       } else {
-        for (const file of (files || [])) gitExec(['add', '--', file]);
+        for (const file of (files || [])) gitExec(['add', '--', assertSafeGitPath(file)]);
       }
       gitExec(['commit', '-m', 'Resolve conflicts']);
       indexAllFiles();
