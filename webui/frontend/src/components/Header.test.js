@@ -198,16 +198,28 @@ test('Header диспатчит toggleSidebar', async () => {
   const sidebarHandler = vi.fn();
   component.$on('toggleSidebar', sidebarHandler);
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.header.toggleSidebar }));
+  await fireEvent.click(screen.getByRole('button', { name: uiText.header.openSidebar }));
   expect(sidebarHandler).toHaveBeenCalledTimes(1);
 });
 
 test('Header показывает стрелку назад из открытой заметки на desktop', async () => {
   const { component } = render(Header, { noteOpen: true, showBack: true, showSearch: false });
   const homeHandler = vi.fn();
+  const sidebarHandler = vi.fn();
   component.$on('goHome', homeHandler);
+  component.$on('toggleSidebar', sidebarHandler);
 
   await fireEvent.click(screen.getByRole('button', { name: uiText.header.back }));
   expect(homeHandler).toHaveBeenCalledTimes(1);
-  expect(screen.queryByRole('button', { name: uiText.header.toggleSidebar })).toBeNull();
+  await fireEvent.click(screen.getByRole('button', { name: uiText.header.openSidebar }));
+  expect(sidebarHandler).toHaveBeenCalledTimes(1);
+});
+
+test('Header показывает действие закрытия панели, когда сайдбар открыт', async () => {
+  const { component } = render(Header, { showBack: true, showSearch: false, sidebarOpen: true });
+  const sidebarHandler = vi.fn();
+  component.$on('toggleSidebar', sidebarHandler);
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.header.closeSidebar }));
+  expect(sidebarHandler).toHaveBeenCalledTimes(1);
 });

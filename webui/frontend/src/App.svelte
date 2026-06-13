@@ -558,6 +558,7 @@
       noteOpen={isNoteOpen}
       showBack={showHeaderBack}
       showSearch={isDashboardRoute}
+      {sidebarOpen}
     />
 
     <CommandPalette

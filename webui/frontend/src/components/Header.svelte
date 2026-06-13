@@ -3,13 +3,14 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { searchQuery, searchResults, isSearching, editorAction } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Clipboard, Menu, Search, ArrowLeft, X, Wand, Trash2 } from 'lucide-svelte';
+  import { Clipboard, Search, ArrowLeft, X, Wand, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
   export let noteOpen = false;
   export let showBack = false;
   export let showSearch = true;
+  export let sidebarOpen = false;
   export let isFormatting = false;
 
   let searchTimer;
@@ -61,6 +62,7 @@
   function toggleSidebar() { dispatch('toggleSidebar'); }
   function goHome() { dispatch('goHome'); }
   function createQuickNote() { dispatch('createQuickNote'); }
+  $: sidebarToggleLabel = sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
   export function openSearch() {
     if (!showSearch) return;
     searchInputEl?.focus();
@@ -78,15 +80,32 @@
     >
       <ArrowLeft class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
+    <TooltipIconButton
+      on:click={toggleSidebar}
+      class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      label={sidebarToggleLabel}
+      tooltip={sidebarToggleLabel}
+      tooltipAlign="start"
+    >
+      {#if sidebarOpen}
+        <PanelLeftClose class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      {:else}
+        <PanelLeftOpen class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      {/if}
+    </TooltipIconButton>
   {:else}
     <TooltipIconButton
       on:click={toggleSidebar}
       class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
-      label={$localizedText.header.toggleSidebar}
-      tooltip={$localizedText.header.toggleSidebar}
+      label={sidebarToggleLabel}
+      tooltip={sidebarToggleLabel}
       tooltipAlign="start"
     >
-      <Menu class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      {#if sidebarOpen}
+        <PanelLeftClose class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      {:else}
+        <PanelLeftOpen class="w-5 h-5" strokeWidth="1.7" aria-hidden="true" />
+      {/if}
     </TooltipIconButton>
   {/if}
 

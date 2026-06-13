@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import * as Icon from 'lucide-svelte';
+  import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
 
   const dispatch = createEventDispatcher();
 
@@ -84,7 +85,10 @@
     hideFileTooltip();
     isDragging = true;
     e.dataTransfer.setData('text/plain', node.path);
-    e.dataTransfer.effectAllowed = 'move';
+    if (!node.is_dir) {
+      e.dataTransfer.setData(NOTE_LINK_DRAG_TYPE, JSON.stringify(noteLinkPayload(node)));
+    }
+    e.dataTransfer.effectAllowed = node.is_dir ? 'move' : 'copyMove';
   }
 
   function handleDragEnd() {

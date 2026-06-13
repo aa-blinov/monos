@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 test('opens seeded notes and navigates through the shell', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('button', { name: 'Toggle Sidebar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
   await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
   await expect(page.getByText(/Welcome to Monos/i)).toBeVisible();
 
