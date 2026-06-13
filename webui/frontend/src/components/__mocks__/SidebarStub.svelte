@@ -36,6 +36,7 @@
   </button>
   <button on:click={() => dispatch('openCreateNote', { category: 'Work/Nested' })}>create in nested folder</button>
   <button on:click={() => dispatch('openSettings')}>open settings</button>
+  <button on:click={() => dispatch('openTemplatesManager')}>open templates</button>
   <button on:click={() => dispatch('openTrash')}>open trash</button>
   <button on:click={() => dispatch('toggleSidebar')}>close sidebar</button>
 </div>

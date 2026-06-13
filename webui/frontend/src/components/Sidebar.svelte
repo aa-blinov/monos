@@ -5,7 +5,14 @@
   import ModalShell from './ModalShell.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { iconOptions } from '../lib/icons.js';
-  import { buildTemplateContent, getLocalizedTemplates, getTemplateById, getTemplateContext, noteTemplates } from '../lib/note-templates.js';
+  import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
+  import {
+    buildRuntimeTemplateContent,
+    customNoteTemplates,
+    getTemplateCatalog,
+    getTemplateCatalogById,
+    hiddenLibraryTemplateIds,
+  } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
   
   export let mobile = false;
@@ -132,8 +139,8 @@
   let pinnedNotes = loadPinnedNotes();
 
   $: filteredTree = tree;
-  $: localizedTemplates = getLocalizedTemplates($locale);
-  $: selectedTemplate = getTemplateById(selectedTemplateId, $locale);
+  $: localizedTemplates = getTemplateCatalog($locale, $hiddenLibraryTemplateIds, $customNoteTemplates);
+  $: selectedTemplate = getTemplateCatalogById(selectedTemplateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates);
   $: normalizedTemplateQuery = templateQuery.trim().toLowerCase();
   $: filteredTemplates = localizedTemplates.filter((template) => {
     if (!normalizedTemplateQuery) return true;
@@ -163,12 +170,12 @@
     ...directoryList,
   ].filter((dir) => dir !== undefined)));
   $: templatePreview = selectedTemplate
-    ? buildTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title)
+    ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title)
     : '';
   $: templatePreviewHtml = renderTemplateMarkdown(templatePreview);
   $: if (showTemplatesModal && templateLocale !== $locale) {
     templateLocale = $locale;
-    applyTemplateDefaults(getTemplateById(selectedTemplateId, $locale));
+    applyTemplateDefaults(getTemplateCatalogById(selectedTemplateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates));
   }
 
   function isSameOrDescendant(itemPath, parentPath) {
@@ -400,8 +407,8 @@
   export function openTemplates(templateId = selectedTemplateId) {
     templateQuery = '';
     templateLocale = $locale;
-    const template = getTemplateById(templateId, $locale) || selectedTemplate;
-    selectedTemplateId = template.id;
+    const template = getTemplateCatalogById(templateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates) || selectedTemplate;
+    selectedTemplateId = template?.id;
     applyTemplateDefaults(template);
     showTemplatesModal = true;
   }
@@ -496,7 +503,7 @@
         title,
         category: templateCategory,
         tags: selectedTemplate.tags || [],
-        content: buildTemplateContent(selectedTemplate, title),
+        content: buildRuntimeTemplateContent(selectedTemplate, title),
       });
       showTemplatesModal = false;
       templateTitle = '';
@@ -910,6 +917,10 @@
           <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
         </button>
       {/if}
+      <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.LayoutTemplate size="20" strokeWidth="1.7" />
+        <span>{$localizedText.sidebar.templates}</span>
+      </button>
       <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Trash2 size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.trash}</span>
@@ -937,6 +948,15 @@
             {/if}
           </TooltipIconButton>
         {/if}
+        <TooltipIconButton
+          on:click={() => dispatch('openTemplatesManager')}
+          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          label={$localizedText.sidebar.templates}
+          tooltip={$localizedText.sidebar.templates}
+          tooltipAlign="end"
+        >
+          <Icon.LayoutTemplate class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
           class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"

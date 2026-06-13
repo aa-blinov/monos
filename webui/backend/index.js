@@ -12,6 +12,7 @@ import { registerNoteRoutes } from './routes/notes.js';
 import { registerDirectoryRoutes } from './routes/directories.js';
 import { registerAttachmentRoutes } from './routes/attachments.js';
 import { registerGitRoutes } from './routes/git.js';
+import { registerTemplateRoutes } from './routes/templates.js';
 
 const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
@@ -53,6 +54,7 @@ registerNoteRoutes(app);
 registerDirectoryRoutes(app);
 registerAttachmentRoutes(app);
 registerGitRoutes(app);
+registerTemplateRoutes(app);
 
 let server = null;
 let signalHandlersRegistered = false;

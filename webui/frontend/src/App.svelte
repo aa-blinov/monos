@@ -7,6 +7,7 @@
   import NoteBoard from './components/NoteBoard.svelte';
   import Settings from './components/Settings.svelte';
   import TrashView from './components/TrashView.svelte';
+  import TemplateManager from './components/TemplateManager.svelte';
   import SearchResults from './components/SearchResults.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import ModalShell from './components/ModalShell.svelte';
@@ -17,6 +18,7 @@
   import { localizedText } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching } from './stores.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
+  import { loadTemplateSettings } from './lib/template-library.js';
 
   const SIDEBAR_WIDTH_KEY = 'sidebarWidth';
   const SIDEBAR_DEFAULT_WIDTH = 336;
@@ -151,6 +153,7 @@
     }
     void loadHomeRecentNotes();
     void loadShellSettings();
+    void loadTemplateSettings();
     restoreSearchFromUrl();
     searchUrlReady = true;
     const handlePopState = () => {
@@ -414,6 +417,11 @@
     clearSearch();
     navigate('/trash');
   }
+  function openTemplatesManager() {
+    routePath = '/templates';
+    clearSearch();
+    navigate('/templates');
+  }
 
   function createQuickNoteFromHeader() {
     sidebarComponent?.createQuickNoteFromClipboard?.();
@@ -630,6 +638,7 @@
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
+          on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
@@ -674,6 +683,9 @@
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
+        </Route>
+        <Route path="/templates">
+          <TemplateManager />
         </Route>
         <Route path="/">
           <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>

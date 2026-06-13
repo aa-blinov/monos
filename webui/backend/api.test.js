@@ -597,6 +597,43 @@ apiTest('POST /api/settings и GET /api/settings сохраняют настро
   assert.deepEqual(settings.data.featureFlags, { searchTests: true });
 });
 
+apiTest('PUT /api/templates сохраняет пользовательские шаблоны на диск', async () => {
+  const payload = {
+    customTemplates: [
+      {
+        id: 'custom-research',
+        title: 'Research Template',
+        description: 'Personal research flow',
+        category: 'Research',
+        tags: ['research', 'personal'],
+        content: '# {{title}}\n\n## Notes\n-',
+      },
+    ],
+    hiddenLibraryTemplateIds: ['daily-note'],
+  };
+
+  const saved = await requestJson(buildUrl('/api/templates'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  assert.equal(saved.response.status, 200);
+  assert.equal(saved.data.customTemplates[0].title, 'Research Template');
+  assert.deepEqual(saved.data.hiddenLibraryTemplateIds, ['daily-note']);
+
+  const templateFile = path.join(notesDir, '.monos', 'templates.json');
+  assert.ok(fs.existsSync(templateFile));
+  const disk = JSON.parse(fs.readFileSync(templateFile, 'utf-8'));
+  assert.equal(disk.customTemplates[0].id, 'custom-research');
+
+  const loaded = await requestJson(buildUrl('/api/templates'));
+  assert.equal(loaded.response.status, 200);
+  assert.equal(loaded.data.customTemplates[0].category, 'Research');
+  assert.deepEqual(loaded.data.customTemplates[0].tags, ['research', 'personal']);
+  assert.deepEqual(loaded.data.hiddenLibraryTemplateIds, ['daily-note']);
+});
+
 apiTest('git-маршруты валидируют обязательные параметры до инициализации репозитория', async () => {
   const setup = await requestJson(buildUrl('/api/git/setup'), {
     method: 'POST',
