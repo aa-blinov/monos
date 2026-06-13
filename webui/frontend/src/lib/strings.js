@@ -301,6 +301,16 @@ const enText = {
       return `Conflicts (${count})`;
     },
     markResolved: 'Mark Resolved (delete _conflicts/)',
+    resolveConflicts: 'Resolve Conflicts',
+    conflictOurs: 'Ours (Local)',
+    conflictTheirs: 'Theirs (Remote)',
+    keepLocal: 'Keep Local',
+    keepRemote: 'Keep Remote',
+    conflictsRemaining(count) {
+      return `${count} more conflict${count > 1 ? 's' : ''} remaining`;
+    },
+    allConflictsResolved: 'All conflicts resolved!',
+    empty: '(empty)',
     saveBeforeSync: 'Save the current note before syncing.',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
     defaultCommitMessage: 'Sync from Monos WebUI',
@@ -702,6 +712,17 @@ const ruText = {
       return `Конфликты (${count})`;
     },
     markResolved: 'Отметить решёнными (удалить _conflicts/)',
+    resolveConflicts: 'Разрешить конфликты',
+    conflictOurs: 'Наши (Локальные)',
+    conflictTheirs: 'Их (Удалённые)',
+    keepLocal: 'Оставить локальные',
+    keepRemote: 'Оставить удалённые',
+    conflictsRemaining(count) {
+      const form = count === 1 ? 'конфликт' : count > 1 && count < 5 ? 'конфликта' : 'конфликтов';
+      return `Осталось ${count} ${form}`;
+    },
+    allConflictsResolved: 'Все конфликты разрешены!',
+    empty: '(пусто)',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией.',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
     defaultCommitMessage: 'Sync from Monos WebUI',

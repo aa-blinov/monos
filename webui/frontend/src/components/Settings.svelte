@@ -383,7 +383,7 @@
       <section class="space-y-5 pt-4">
 
       <!-- Help -->
-      <details class="text-xs text-[var(--text-secondary)] group">
+      <details class="text-xs text-[var(--text-secondary)] group mb-4">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 p-3 border border-[var(--border-subtle)] rounded leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
