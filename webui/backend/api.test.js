@@ -929,6 +929,62 @@ apiTest('POST /api/git/sync коммитит локальные изменени
   assert.ok(settings.last_sync);
 });
 
+apiTest('POST /api/git/sync превращает diverged edits в разрешаемый конфликт', async () => {
+  const conflictRemoteDir = path.join(tempRoot, 'conflict-remote.git');
+  const peerDir = path.join(tempRoot, 'conflict-peer');
+  execSync(`git init --bare "${conflictRemoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  execSync(`git remote set-url origin "${conflictRemoteDir}"`, { cwd: notesDir, stdio: 'pipe' });
+
+  const branch = execSync('git branch --show-current', {
+    cwd: notesDir,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  }).trim();
+  execSync(`git push -u origin ${branch}`, { cwd: notesDir, stdio: 'pipe' });
+
+  const baseFile = path.join(notesDir, 'SyncConflict.md');
+  fs.writeFileSync(baseFile, 'base\n', 'utf-8');
+  const baseSync = await requestJson(buildUrl('/api/git/sync'), { method: 'POST' });
+  assert.equal(baseSync.response.status, 200);
+  assert.equal(baseSync.data.conflicts, false);
+
+  execSync(`git clone "${conflictRemoteDir}" "${peerDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  execSync('git config user.name "Monos Peer"', { cwd: peerDir, stdio: 'pipe' });
+  execSync('git config user.email "peer@monos.local"', { cwd: peerDir, stdio: 'pipe' });
+  fs.writeFileSync(path.join(peerDir, 'SyncConflict.md'), 'remote version\n', 'utf-8');
+  execSync('git add SyncConflict.md', { cwd: peerDir, stdio: 'pipe' });
+  execSync('git commit -m "Peer edits sync conflict"', { cwd: peerDir, stdio: 'pipe' });
+  execSync(`git push origin ${branch}`, { cwd: peerDir, stdio: 'pipe' });
+
+  fs.writeFileSync(baseFile, 'local version\n', 'utf-8');
+  const conflictSync = await requestJson(buildUrl('/api/git/sync'), { method: 'POST' });
+  assert.equal(conflictSync.response.status, 200, JSON.stringify(conflictSync.data));
+  assert.equal(conflictSync.data.conflicts, true);
+
+  const conflictStatus = await requestJson(buildUrl('/api/git/status'));
+  assert.equal(conflictStatus.response.status, 200);
+  assert.equal(conflictStatus.data.status, 'conflict');
+
+  const repeatedSync = await requestJson(buildUrl('/api/git/sync'), { method: 'POST' });
+  assert.equal(repeatedSync.response.status, 200);
+  assert.equal(repeatedSync.data.conflicts, true);
+
+  const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
+  assert.equal(conflicts.response.status, 200);
+  const conflict = conflicts.data.find(item => item.path === 'SyncConflict.md');
+  assert.ok(conflict);
+  assert.equal(conflict.ours, 'local version');
+  assert.equal(conflict.theirs, 'remote version');
+
+  const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resolutions: { 'SyncConflict.md': 'ours' } }),
+  });
+  assert.equal(resolved.response.status, 200);
+  assert.equal(fs.readFileSync(baseFile, 'utf-8'), 'local version\n');
+});
+
 apiTest('POST /api/git/sync возвращает ошибку и не обновляет last_sync при failed push', async () => {
   const rejectRemoteDir = path.join(tempRoot, 'reject-remote.git');
   execSync(`git init --bare "${rejectRemoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });
@@ -982,8 +1038,10 @@ apiTest('git remote URL не содержит GitHub token', () => {
   assert.equal(remoteUrl.includes('@github.com'), false);
 });
 
-apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работают с merge-конфликтом', async () => {
-  const baseFile = path.join(notesDir, 'Conflict.md');
+apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работают с theirs в подпапке', async () => {
+  const conflictPath = 'Nested/Conflict.md';
+  const baseFile = path.join(notesDir, conflictPath);
+  fs.mkdirSync(path.dirname(baseFile), { recursive: true });
   const currentBranch = execSync('git branch --show-current', {
     cwd: notesDir,
     stdio: 'pipe',
@@ -991,17 +1049,17 @@ apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работа�
   }).trim();
 
   fs.writeFileSync(baseFile, 'base\n', 'utf-8');
-  execSync('git add Conflict.md', { cwd: notesDir, stdio: 'pipe' });
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
   execSync('git commit -m "Add conflict base"', { cwd: notesDir, stdio: 'pipe' });
 
   execSync('git checkout -b conflict-branch', { cwd: notesDir, stdio: 'pipe' });
   fs.writeFileSync(baseFile, 'branch version\n', 'utf-8');
-  execSync('git add Conflict.md', { cwd: notesDir, stdio: 'pipe' });
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
   execSync('git commit -m "Branch change"', { cwd: notesDir, stdio: 'pipe' });
 
   execSync(`git checkout ${currentBranch}`, { cwd: notesDir, stdio: 'pipe' });
   fs.writeFileSync(baseFile, 'main version\n', 'utf-8');
-  execSync('git add Conflict.md', { cwd: notesDir, stdio: 'pipe' });
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
   execSync('git commit -m "Main change"', { cwd: notesDir, stdio: 'pipe' });
 
   try {
@@ -1011,20 +1069,221 @@ apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работа�
   const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
   assert.equal(conflicts.response.status, 200);
   assert.ok(Array.isArray(conflicts.data));
-  assert.ok(conflicts.data.some(c => c.path === 'Conflict.md'));
-  assert.ok(conflicts.data[0].ours !== undefined);
-  assert.ok(conflicts.data[0].theirs !== undefined);
+  assert.ok(conflicts.data.some(c => c.path === conflictPath));
+  const conflict = conflicts.data.find(c => c.path === conflictPath);
+  assert.equal(conflict.ours, 'main version');
+  assert.equal(conflict.theirs, 'branch version');
 
-  fs.writeFileSync(baseFile, 'resolved\n', 'utf-8');
   const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ files: ['Conflict.md'] }),
+    body: JSON.stringify({ resolutions: { [conflictPath]: 'theirs' } }),
   });
 
   assert.equal(resolved.response.status, 200);
+  assert.equal(fs.readFileSync(baseFile, 'utf-8'), 'branch version\n');
 
   const afterResolve = await requestJson(buildUrl('/api/git/conflicts'));
   assert.equal(afterResolve.response.status, 200);
   assert.deepEqual(afterResolve.data, []);
+});
+
+apiTest('POST /api/git/setup мержит remote с локальными заметками и показывает конфликт пересечения', async () => {
+  const branch = execSync('git branch --show-current', {
+    cwd: notesDir,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  }).trim();
+  const remoteDir = path.join(tempRoot, 'setup-overlap-remote.git');
+  const seedDir = path.join(tempRoot, 'setup-overlap-seed');
+  const localPath = 'SetupOverlap.md';
+  const remoteUrl = 'https://github.com/test/setup-overlap.git';
+
+  execSync(`git init --bare "${remoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  fs.mkdirSync(seedDir, { recursive: true });
+  execSync('git init', { cwd: seedDir, stdio: 'pipe' });
+  execSync('git config user.name "Remote Seed"', { cwd: seedDir, stdio: 'pipe' });
+  execSync('git config user.email "seed@monos.local"', { cwd: seedDir, stdio: 'pipe' });
+  fs.writeFileSync(path.join(seedDir, localPath), 'remote setup version\n', 'utf-8');
+  execSync(`git add "${localPath}"`, { cwd: seedDir, stdio: 'pipe' });
+  execSync('git commit -m "Remote setup seed"', { cwd: seedDir, stdio: 'pipe' });
+  execSync(`git branch -M ${branch}`, { cwd: seedDir, stdio: 'pipe' });
+  execSync(`git remote add origin "${remoteDir}"`, { cwd: seedDir, stdio: 'pipe' });
+  execSync(`git push -u origin ${branch}`, { cwd: seedDir, stdio: 'pipe' });
+
+  fs.writeFileSync(path.join(notesDir, localPath), 'local setup version\n', 'utf-8');
+  execSync(`git config url."${remoteDir}".insteadOf "${remoteUrl}"`, { cwd: notesDir, stdio: 'pipe' });
+
+  const setup = await requestJson(buildUrl('/api/git/setup'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token: 'test-token',
+      repo: 'test/setup-overlap',
+      branch,
+      device_name: 'Monos Setup Test',
+    }),
+  });
+  assert.equal(setup.response.status, 200, JSON.stringify(setup.data));
+  assert.equal(setup.data.conflicts, true);
+
+  const status = await requestJson(buildUrl('/api/git/status'));
+  assert.equal(status.response.status, 200);
+  assert.equal(status.data.status, 'conflict');
+
+  const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
+  const conflict = conflicts.data.find(item => item.path === localPath);
+  assert.ok(conflict);
+  assert.equal(conflict.ours, 'local setup version');
+  assert.equal(conflict.theirs, 'remote setup version');
+
+  const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resolutions: { [localPath]: 'theirs' } }),
+  });
+  assert.equal(resolved.response.status, 200);
+  assert.equal(fs.readFileSync(path.join(notesDir, localPath), 'utf-8'), 'remote setup version\n');
+
+  const synced = await requestJson(buildUrl('/api/git/sync'), { method: 'POST' });
+  assert.equal(synced.response.status, 200, JSON.stringify(synced.data));
+  assert.equal(synced.data.conflicts, false);
+});
+
+apiTest('conflict resolver корректно выбирает remote-версию при local delete / remote modify', async () => {
+  const conflictPath = 'DeleteModify.md';
+  const baseFile = path.join(notesDir, conflictPath);
+  const currentBranch = execSync('git branch --show-current', {
+    cwd: notesDir,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  }).trim();
+
+  fs.writeFileSync(baseFile, 'delete modify base\n', 'utf-8');
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Add delete modify base"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync('git checkout -b delete-modify-branch', { cwd: notesDir, stdio: 'pipe' });
+  fs.writeFileSync(baseFile, 'remote modified content\n', 'utf-8');
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Modify delete conflict file"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync(`git checkout ${currentBranch}`, { cwd: notesDir, stdio: 'pipe' });
+  fs.rmSync(baseFile, { force: true });
+  execSync(`git rm "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Delete conflict file"', { cwd: notesDir, stdio: 'pipe' });
+
+  try {
+    execSync('git merge delete-modify-branch', { cwd: notesDir, stdio: 'pipe' });
+  } catch {}
+
+  const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
+  const conflict = conflicts.data.find(item => item.path === conflictPath);
+  assert.ok(conflict);
+  assert.equal(conflict.oursExists, false);
+  assert.equal(conflict.theirsExists, true);
+  assert.equal(conflict.theirs, 'remote modified content');
+
+  const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resolutions: { [conflictPath]: 'theirs' } }),
+  });
+  assert.equal(resolved.response.status, 200);
+  assert.equal(fs.readFileSync(baseFile, 'utf-8'), 'remote modified content\n');
+});
+
+apiTest('conflict resolver обрабатывает binary attachment conflicts', async () => {
+  const conflictPath = '_attachments/binary-conflict.bin';
+  const baseFile = path.join(notesDir, conflictPath);
+  const currentBranch = execSync('git branch --show-current', {
+    cwd: notesDir,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  }).trim();
+  const remoteBytes = Buffer.from([0, 1, 2, 3, 4, 5]);
+
+  fs.mkdirSync(path.dirname(baseFile), { recursive: true });
+  fs.writeFileSync(baseFile, Buffer.from([0, 0, 0]));
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Add binary conflict base"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync('git checkout -b binary-conflict-branch', { cwd: notesDir, stdio: 'pipe' });
+  fs.writeFileSync(baseFile, remoteBytes);
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Remote binary edit"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync(`git checkout ${currentBranch}`, { cwd: notesDir, stdio: 'pipe' });
+  fs.writeFileSync(baseFile, Buffer.from([0, 9, 9, 9]));
+  execSync(`git add "${conflictPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Local binary edit"', { cwd: notesDir, stdio: 'pipe' });
+
+  try {
+    execSync('git merge binary-conflict-branch', { cwd: notesDir, stdio: 'pipe' });
+  } catch {}
+
+  const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
+  const conflict = conflicts.data.find(item => item.path === conflictPath);
+  assert.ok(conflict);
+  assert.equal(conflict.binary, true);
+  assert.equal(conflict.ours, '[Binary file]');
+  assert.equal(conflict.theirs, '[Binary file]');
+
+  const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resolutions: { [conflictPath]: 'theirs' } }),
+  });
+  assert.equal(resolved.response.status, 200);
+  assert.deepEqual(fs.readFileSync(baseFile), remoteBytes);
+});
+
+apiTest('conflict resolver закрывает rename/rename conflict выбором local rename', async () => {
+  const basePath = 'RenameMe.md';
+  const localPath = 'LocalRenamed.md';
+  const remotePath = 'RemoteRenamed.md';
+  const currentBranch = execSync('git branch --show-current', {
+    cwd: notesDir,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  }).trim();
+
+  fs.writeFileSync(path.join(notesDir, basePath), 'rename base\n', 'utf-8');
+  execSync(`git add "${basePath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Add rename conflict base"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync('git checkout -b rename-conflict-branch', { cwd: notesDir, stdio: 'pipe' });
+  execSync(`git mv "${basePath}" "${remotePath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Remote rename conflict file"', { cwd: notesDir, stdio: 'pipe' });
+
+  execSync(`git checkout ${currentBranch}`, { cwd: notesDir, stdio: 'pipe' });
+  execSync(`git mv "${basePath}" "${localPath}"`, { cwd: notesDir, stdio: 'pipe' });
+  execSync('git commit -m "Local rename conflict file"', { cwd: notesDir, stdio: 'pipe' });
+
+  try {
+    execSync('git merge rename-conflict-branch', { cwd: notesDir, stdio: 'pipe' });
+  } catch {}
+
+  const conflicts = await requestJson(buildUrl('/api/git/conflicts'));
+  assert.equal(conflicts.response.status, 200);
+  assert.ok(conflicts.data.some(item => item.path === localPath));
+  assert.ok(conflicts.data.some(item => item.path === remotePath));
+  assert.ok(conflicts.data.some(item => item.path === basePath));
+
+  const resolved = await requestJson(buildUrl('/api/git/conflicts/resolve'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      resolutions: {
+        [localPath]: 'ours',
+        [remotePath]: 'ours',
+        [basePath]: 'ours',
+      },
+    }),
+  });
+
+  assert.equal(resolved.response.status, 200);
+  assert.equal(fs.existsSync(path.join(notesDir, localPath)), true);
+  assert.equal(fs.existsSync(path.join(notesDir, remotePath)), false);
+  assert.equal(fs.existsSync(path.join(notesDir, basePath)), false);
 });
