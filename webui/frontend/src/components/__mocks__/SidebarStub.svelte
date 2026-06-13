@@ -27,6 +27,7 @@
   <button on:click={() => dispatch('navigate', { path: 'notes/FromSidebar.md', name: 'FromSidebar.md', isDir: false })}>
     sidebar navigate
   </button>
+  <button on:click={() => dispatch('openCreateNote', { category: 'Work/Nested' })}>create in nested folder</button>
   <button on:click={() => dispatch('openSettings')}>open settings</button>
   <button on:click={() => dispatch('toggleSidebar')}>close sidebar</button>
 </div>

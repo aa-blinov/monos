@@ -647,7 +647,7 @@
     
     if (action === 'newNote') {
       newNoteCategory = categoryPath;
-      dispatch('openCreateNote');
+      dispatch('openCreateNote', { category: categoryPath });
     } else if (action === 'newFolder') {
       newFolderName = categoryPath;
       showCreateFolderModal = true;

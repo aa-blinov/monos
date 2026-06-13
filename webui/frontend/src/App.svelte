@@ -44,6 +44,7 @@
   let restoredInitialUrlSearch = false;
   let showCreateNoteModal = false;
   let newNoteTitle = '';
+  let newNoteCategory = '';
   let isCreating = false;
   let savedQuickNote = null;
   let quickNoteIssue = '';
@@ -136,6 +137,7 @@
     updateMobileState();
     isDarkMode = detectDarkMode();
     document.documentElement.classList.toggle('dark', isDarkMode);
+    if (window.location.pathname === '/') $noteView = 'board';
     if ($noteView === 'board' && !isMobile) sidebarOpen = false;
     if ($noteView === 'board' && window.location.pathname.startsWith('/notes/')) navigate('/');
     void loadHomeRecentNotes();
@@ -215,14 +217,26 @@
     void runRestoredSearch(query);
   }
 
-  async function openNewNoteFlow() {
+  async function openNewNoteFlow(event = null) {
     newNoteTitle = '';
+    newNoteCategory = event?.detail?.category || '';
     showCreateNoteModal = true;
   }
 
   function padDatePart(n) { return String(n).padStart(2, '0'); }
   function formatTodayNoteTitle(date = new Date()) {
     return [padDatePart(date.getDate()), padDatePart(date.getMonth() + 1), padDatePart(date.getFullYear() % 100), padDatePart(date.getHours()), padDatePart(date.getMinutes()), padDatePart(date.getSeconds())].join('-');
+  }
+
+  function openCreatedNote(data, fallbackTitle) {
+    if (!data?.path) return;
+    handleNavigate({
+      detail: {
+        path: data.path,
+        name: data.name || fallbackTitle,
+        isDir: false,
+      },
+    });
   }
 
   async function createTodayFromHome() {
@@ -234,7 +248,7 @@
       if (isMobile) sidebarOpen = false;
       if (sidebarComponent) await sidebarComponent.loadTree();
       await loadHomeRecentNotes();
-      navigate(`/notes/${data.path}`);
+      openCreatedNote(data, title);
     } catch (err) {
       console.error('Failed to create today note:', err);
     } finally {
@@ -247,13 +261,14 @@
     try {
       isCreating = true;
       const title = newNoteTitle.trim();
-      const data = await createNoteRequest({ title, category: '', tags: [], content: '' });
+      const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
       showCreateNoteModal = false;
       newNoteTitle = '';
+      newNoteCategory = '';
       if (isMobile) sidebarOpen = false;
       if (sidebarComponent) await sidebarComponent.loadTree();
       await loadHomeRecentNotes();
-      navigate(`/notes/${data.path}`);
+      openCreatedNote(data, title);
     } catch (err) {
       console.error('Failed to create note:', err);
     } finally {
@@ -358,12 +373,16 @@
   }
   function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
   function closeCommandPalette() { commandPaletteOpen = false; }
-  function goHome() {
+  function showDashboard({ refreshTree = false, replace = false } = {}) {
     isNoteOpen = false;
-    if (isMobile) noteView.set('board');
-    navigate('/');
+    $noteView = 'board';
+    sidebarOpen = false;
+    navigate('/', { replace });
     clearSearch();
+    void loadHomeRecentNotes();
+    if (refreshTree && sidebarComponent) sidebarComponent.loadTree();
   }
+  function goHome() { showDashboard(); }
 
   function handleSidebarResize(event) {
     sidebarWidth = clampSidebarWidth(event.clientX);
@@ -427,6 +446,7 @@
     isNoteOpen = true;
     $noteView = 'list';
     navigate(`/notes/${normalizeNotePath(event.detail.path)}`);
+    if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
     else if (!isMobile && !event.detail.isDir) sidebarOpen = true;
     clearSearch();
@@ -537,7 +557,7 @@
         <Sidebar
           bind:this={sidebarComponent}
           on:navigate={handleNavigate}
-          on:fileDeleted={() => navigate('/')}
+          on:fileDeleted={() => showDashboard({ replace: true })}
           on:openSettings={() => navigate('/settings')}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
@@ -578,81 +598,35 @@
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => { navigate('/'); if (sidebarComponent) sidebarComponent.loadTree(); }} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings />
         </Route>
         <Route path="/">
-          {#if $noteView === 'board'}
-            <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
-              <div class="mx-auto max-w-6xl">
-                <div class="mb-5 sm:mb-7">
-                  <h1 class="truncate font-serif text-2xl tracking-tight sm:text-3xl">{$localizedText.app.board.title}</h1>
-                  <p class="mt-2 hidden max-w-xl truncate whitespace-nowrap text-sm leading-relaxed text-[var(--text-secondary)] sm:block">{$localizedText.app.board.hint}</p>
-                </div>
-                <NoteBoard
-                  notes={homeRecentNotes}
-                  mobile={isMobile}
-                  showCreateCard={true}
-                  on:createNote={openNewNoteFlow}
-                  on:openFull={(e) => openRecentNote(e.detail)}
-                  on:reveal={revealInTree}
-                  on:noteTouched={(e) => promoteRecentNote(e.detail)}
-                  on:notesReordered={(e) => homeRecentNotes = e.detail.notes}
-                />
-                {#if homeRecentLoading && homeRecentNotes.length > 0}
-                  <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
-                    {$localizedText.searchResults.searching}
-                  </div>
-                {/if}
+          <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
+            <div class="mx-auto max-w-6xl">
+              <div class="mb-5 sm:mb-7">
+                <h1 class="truncate font-serif text-2xl tracking-tight sm:text-3xl">{$localizedText.app.board.title}</h1>
+                <p class="mt-2 hidden max-w-xl truncate whitespace-nowrap text-sm leading-relaxed text-[var(--text-secondary)] sm:block">{$localizedText.app.board.hint}</p>
               </div>
-            </div>
-          {:else}
-          <div class="h-full flex items-center justify-center px-8">
-            <div class="text-center max-w-2xl">
-              <p class="select-none text-lg lg:text-xl text-[var(--text-secondary)] leading-relaxed font-serif italic">
-                {isMobile
-                  ? $localizedText.app.emptyMobile
-                  : $localizedText.app.emptyDesktop}
-              </p>
-              {#if !isMobile}
-                <div class="mt-10 grid grid-cols-2 gap-3 max-w-xl mx-auto text-left">
-                  <button
-                    on:click={openNewNoteFlow}
-                    class="group min-h-20 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 px-5 py-4 transition hover:-translate-y-0.5 hover:border-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                  >
-                    <span class="block text-sm font-semibold tracking-tight">{$localizedText.app.homeActions.newNote}</span>
-                    <span class="mt-1 block text-xs text-[var(--text-secondary)]">{$localizedText.app.homeActions.newNoteHint}</span>
-                  </button>
-                  <button
-                    on:click={createTodayFromHome}
-                    class="group min-h-20 rounded-2xl border border-[var(--border-subtle)] bg-transparent px-5 py-4 transition hover:-translate-y-0.5 hover:border-[var(--text-primary)] hover:bg-[var(--bg-secondary)]/50"
-                  >
-                    <span class="block text-sm font-semibold tracking-tight">{$localizedText.app.homeActions.today}</span>
-                    <span class="mt-1 block text-xs text-[var(--text-secondary)]">{$localizedText.app.homeActions.todayHint}</span>
-                  </button>
-                  <button
-                    on:click={() => openCommandPalette('commands')}
-                    class="group min-h-20 rounded-2xl border border-[var(--border-subtle)] bg-transparent px-5 py-4 transition hover:-translate-y-0.5 hover:border-[var(--text-primary)] hover:bg-[var(--bg-secondary)]/50"
-                  >
-                    <span class="block text-sm font-semibold tracking-tight">{$localizedText.app.homeActions.commandPalette}</span>
-                    <span class="mt-1 block text-xs text-[var(--text-secondary)]">{$localizedText.app.homeActions.commandPaletteHint}</span>
-                  </button>
-                  {#if homeRecentNotes.length > 0}
-                    <button
-                      on:click={openContinueWork}
-                      class="group min-h-20 rounded-2xl border border-[var(--border-subtle)] bg-transparent px-5 py-4 transition hover:-translate-y-0.5 hover:border-[var(--text-primary)] hover:bg-[var(--bg-secondary)]/50"
-                    >
-                      <span class="block text-sm font-semibold tracking-tight">{$localizedText.app.homeActions.continueWork}</span>
-                      <span class="mt-1 block text-xs text-[var(--text-secondary)]">{$localizedText.app.homeActions.continueWorkHint}</span>
-                    </button>
-                  {/if}
+              <NoteBoard
+                notes={homeRecentNotes}
+                mobile={isMobile}
+                showCreateCard={true}
+                on:createNote={openNewNoteFlow}
+                on:openFull={(e) => openRecentNote(e.detail)}
+                on:reveal={revealInTree}
+                on:noteTouched={(e) => promoteRecentNote(e.detail)}
+                on:notesReordered={(e) => homeRecentNotes = e.detail.notes}
+              />
+              {#if homeRecentLoading && homeRecentNotes.length > 0}
+                <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
+                  {$localizedText.searchResults.searching}
                 </div>
               {/if}
             </div>
           </div>
-          {/if}
         </Route>
         {/if}
       </main>
