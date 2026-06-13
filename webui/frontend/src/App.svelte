@@ -690,12 +690,6 @@
         <Route path="/">
           <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
             <div class="mx-auto max-w-6xl">
-              {#if !isMobile}
-                <div class="mb-7">
-                  <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.app.board.title}</h1>
-                  <p class="mt-2 max-w-xl truncate whitespace-nowrap text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.app.board.hint}</p>
-                </div>
-              {/if}
               <NoteBoard
                 notes={homeRecentNotes}
                 mobile={isMobile}

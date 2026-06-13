@@ -302,6 +302,7 @@ const enText = {
   },
   settings: {
     title: 'Settings',
+    hint: 'Adjust the interface, editor, sync, templates, and backup behavior.',
     back: 'Back',
     language: 'Language',
     interfaceLanguage: 'Interface Language',
@@ -783,6 +784,7 @@ const ruText = {
   },
   settings: {
     title: 'Настройки',
+    hint: 'Настройте интерфейс, редактор, синхронизацию, шаблоны и резервные копии.',
     back: 'Назад',
     language: 'Язык',
     interfaceLanguage: 'Язык интерфейса',

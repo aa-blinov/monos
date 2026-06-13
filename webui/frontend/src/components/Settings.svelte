@@ -331,11 +331,16 @@
 </script>
 
 <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8">
-  <div class="mx-auto w-full max-w-5xl space-y-10">
+  <div class="mx-auto w-full max-w-5xl">
 
-    <div>
-      <h1 class="text-3xl lg:text-4xl font-serif tracking-tight">{$localizedText.settings.title}</h1>
+    <div class="mb-7">
+      <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.settings.title}</h1>
+      <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
+        {$localizedText.settings.hint}
+      </p>
     </div>
+
+    <div class="space-y-10">
 
     <!-- Language -->
     <section class="space-y-5">
@@ -652,6 +657,8 @@
         <div class="text-xs text-[var(--red)]">{backupError}</div>
       {/if}
     </section>
+
+    </div>
 
   </div>
 </div>

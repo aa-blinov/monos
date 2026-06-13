@@ -33,7 +33,6 @@
   $: filteredLibraryTemplates = filterTemplates(libraryTemplates, normalizedQuery);
   $: filteredCustomTemplates = filterTemplates($customNoteTemplates, normalizedQuery);
   $: libraryGroups = groupTemplates(filteredLibraryTemplates, (template) => template.approach || 'system');
-  $: hiddenCount = libraryTemplates.filter((template) => template.hidden).length;
   function filterTemplates(templates, searchQuery) {
     if (!searchQuery) return templates;
     return templates.filter((template) => [
@@ -107,12 +106,12 @@
 
 <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8">
   <div class="mx-auto max-w-5xl">
-    <div class="mb-5 flex items-center justify-between gap-4">
+    <div class="mb-7">
       <div class="min-w-0">
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.templates.title}</h1>
-      </div>
-      <div class="shrink-0 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-        {$customNoteTemplates.length} / {hiddenCount}
+        <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
+          {$localizedText.templates.hint}
+        </p>
       </div>
     </div>
 
