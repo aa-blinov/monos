@@ -406,7 +406,7 @@
     void loadHomeRecentNotes();
     if (refreshTree && sidebarComponent) sidebarComponent.loadTree();
   }
-  function goHome() { showDashboard(); }
+  function goHome() { showDashboard({ closeSidebar: false }); }
   function openSettings() {
     routePath = '/settings';
     clearSearch();
@@ -626,8 +626,7 @@
 
       <div
         class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'relative shrink-0'}
-               {!sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0 border-r-0') : (isMobile ? '' : 'border-r border-[var(--border-subtle)]')}
-               {isResizingSidebar ? '' : 'transition-all duration-300 ease-in-out'}
+               {!sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
         data-testid="sidebar-shell"
         style={!isMobile && sidebarOpen ? `width: ${sidebarWidth}px;` : ''}
@@ -649,6 +648,7 @@
           {gitConfigured}
         />
         {#if !isMobile && sidebarOpen}
+          <span class="pointer-events-none absolute inset-y-0 right-0 z-10 w-px bg-[var(--border-subtle)]"></span>
           <TooltipIconButton
             type="button"
             label={$localizedText.app.resizeSidebar}
