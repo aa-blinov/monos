@@ -37,15 +37,22 @@ export function registerNoteRoutes(app) {
     try {
       const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
       const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+      const sort = String(req.query.sort || '').trim();
+      const orderBy = sort === 'modified'
+        ? `notes_index.modified_at DESC,
+                  notes_index.last_opened DESC,
+                  notes_index.path COLLATE NOCASE ASC`
+        : `notes_index.board_order IS NULL ASC,
+                  notes_index.board_order ASC,
+                  notes_index.last_opened DESC,
+                  notes_index.path COLLATE NOCASE ASC`;
       const entries = getDb().prepare(
         `SELECT notes_index.*, folder_config.color
          FROM notes_index
          LEFT JOIN folder_config ON folder_config.path = notes_index.path
          WHERE notes_index.is_dir = 0
            AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
-         ORDER BY notes_index.board_order IS NULL ASC,
-                  notes_index.board_order ASC,
-                  notes_index.last_opened DESC
+         ORDER BY ${orderBy}
          LIMIT ? OFFSET ?`
       ).all(limit, offset);
 

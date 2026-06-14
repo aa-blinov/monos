@@ -31,12 +31,13 @@ export function indexFile(filePath, content) {
   const parentPath = path.dirname(relativePath).replace(/\\/g, '/');
   const stats = fs.statSync(filePath);
   const isDir = stats.isDirectory();
+  const modifiedAt = stats.mtime.toISOString();
   const metadata = !isDir ? parseFrontmatterMetadata(content) : { title: '', tags: [], category: '' };
   const existing = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(relativePath);
 
   if (existing) {
     db.prepare(`
-      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?
+      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?
       WHERE path = ?
     `).run(
       name,
@@ -46,12 +47,13 @@ export function indexFile(filePath, content) {
       JSON.stringify(metadata.tags),
       metadata.category || '',
       content || '',
+      modifiedAt,
       relativePath
     );
   } else {
     db.prepare(`
-      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, category, date_created, last_opened)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       relativePath,
       name,
@@ -62,6 +64,7 @@ export function indexFile(filePath, content) {
       JSON.stringify(metadata.tags),
       metadata.category || '',
       nowISO(),
+      modifiedAt,
       nowISO()
     );
   }
@@ -148,13 +151,15 @@ export function indexAllFiles() {
         const parentPath = path.dirname(relativePath).replace(/\\/g, '/');
 
         if (!existing) {
+          const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
           db.prepare(`
-            INSERT INTO notes_index (path, name, is_dir, parent_path, content, date_created, last_opened)
-            VALUES (?, ?, 1, ?, '', ?, ?)
-          `).run(relativePath, entry.name, parentPath, nowISO(), nowISO());
+            INSERT INTO notes_index (path, name, is_dir, parent_path, content, date_created, modified_at, last_opened)
+            VALUES (?, ?, 1, ?, '', ?, ?, ?)
+          `).run(relativePath, entry.name, parentPath, nowISO(), modifiedAt, nowISO());
         } else {
-          db.prepare('UPDATE notes_index SET name = ?, parent_path = ? WHERE path = ?')
-            .run(entry.name, parentPath, relativePath);
+          const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
+          db.prepare('UPDATE notes_index SET name = ?, parent_path = ?, modified_at = ? WHERE path = ?')
+            .run(entry.name, parentPath, modifiedAt, relativePath);
         }
 
         walk(fullPath);

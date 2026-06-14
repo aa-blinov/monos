@@ -4,7 +4,7 @@
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal } from '../stores.js';
   import {
     deleteFileRequest,
     getWordCharStats,
@@ -167,6 +167,16 @@
     return resolveMarkdownImagePath(visibleFile?.path, src);
   }
 
+  function markFileSaved(filePath, response = {}) {
+    const modified = response?.modified || new Date().toISOString();
+    if (loadedFilePath === filePath) {
+      fileInfo = fileInfo ? { ...fileInfo, modified } : fileInfo;
+    }
+    const detail = { path: filePath, modified, savedAt: Date.now() };
+    noteSaveSignal.set(detail);
+    dispatch('fileSaved', detail);
+  }
+
   async function handleImageFile(file) {
     const filePath = visibleFile?.path || currentFile?.path;
     if (!filePath) return null;
@@ -202,12 +212,16 @@
       );
       editedContent = nextContent;
       if (richEditor) richEditor.setMarkdown(richEditorBody(nextContent));
-      if (autosaveTimer) clearTimeout(autosaveTimer);
+      if (autosaveTimer) {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+      }
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      await saveFileContent(filePath, nextContent);
+      const saved = await saveFileContent(filePath, nextContent);
       if (loadedFilePath === filePath) {
         content = nextContent;
+        markFileSaved(filePath, saved);
         saveMessage = $localizedText.editor.saved;
         lastSaved = Date.now();
         if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
@@ -285,15 +299,19 @@
 
   async function savePendingLoadedFile(filePath) {
     if (!filePath || !hasUnsavedChanges() || isSaving) return;
-    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
     if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
     const savedContent = editedContent;
 
     try {
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      await saveFileContent(filePath, savedContent);
+      const saved = await saveFileContent(filePath, savedContent);
       if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
+      markFileSaved(filePath, saved);
     } catch (error) {
       console.error('Save before note switch failed:', error);
       saveMessage = $localizedText.editor.saveFailed;
@@ -307,15 +325,21 @@
 
   function scheduleAutosave() {
     if (!loadedFilePath || !hasUnsavedChanges() || isSaving) return;
-    if (autosaveTimer) clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(saveContent, AUTOSAVE_DELAY);
+    if (autosaveTimer) return;
+    autosaveTimer = setTimeout(() => {
+      autosaveTimer = null;
+      void saveContent();
+    }, AUTOSAVE_DELAY);
   }
 
   async function saveContent() {
     const filePath = loadedFilePath || currentFile?.path;
     if (!filePath || !hasUnsavedChanges() || isSaving) return;
 
-    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
     if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
     const savedContent = editedContent;
     const savedTitle = editedTitle;
@@ -323,10 +347,11 @@
     try {
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      await saveFileContent(filePath, savedContent);
+      const saved = await saveFileContent(filePath, savedContent);
 
       if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
       if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
+      markFileSaved(filePath, saved);
       saveMessage = $localizedText.editor.saved;
       lastSaved = Date.now();
       saveMessageTimeout = setTimeout(() => {
@@ -445,15 +470,19 @@
   });
 
   onDestroy(() => {
-    if (autosaveTimer) clearTimeout(autosaveTimer);
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
     if (loadedFilePath && hasUnsavedChanges() && !isSaving) {
       const filePath = loadedFilePath;
       const savedContent = editedContent;
       const savedTitle = editedTitle;
       isSaving = true;
-      saveFileContent(filePath, savedContent).then(() => {
+      saveFileContent(filePath, savedContent).then((saved) => {
         if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
         if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
+        markFileSaved(filePath, saved);
         lastSaved = Date.now();
       }).catch((error) => {
         console.error('Save on destroy failed:', error);

@@ -1,4 +1,6 @@
 <script>
+  import { locale, localizedText } from '../lib/strings.js';
+
   /**
    * @typedef {Object} FileInfoData
    * @property {string} path - File path
@@ -20,9 +22,9 @@
    * @returns {string}
    */
   function formatDate(dateString) {
-    if (!dateString) return 'Unknown';
+    if (!dateString) return $localizedText.fileInfo.unknown;
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString($locale === 'ru' ? 'ru-RU' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -37,7 +39,7 @@
     <div class="space-y-10">
       <!-- File Name -->
       <div>
-        <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Identifier</span>
+        <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.identifier}</span>
         <p class="text-xl font-serif font-medium tracking-tight break-words">
           {fileInfo.name}
         </p>
@@ -46,15 +48,15 @@
       <!-- File Size and Type -->
       <div class="grid grid-cols-2 gap-8">
         <div>
-          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Dimensions</span>
+          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.dimensions}</span>
           <p class="text-sm font-medium">
             {fileInfo.size_human}
           </p>
         </div>
         <div>
-          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Nature</span>
+          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.nature}</span>
           <p class="text-sm font-medium">
-            {fileInfo.is_dir ? 'Collection' : 'Thought'}
+            {fileInfo.is_dir ? $localizedText.fileInfo.collection : $localizedText.fileInfo.thought}
           </p>
         </div>
       </div>
@@ -62,13 +64,13 @@
       <!-- Dates -->
       <div class="space-y-6">
         <div>
-          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Conceived</span>
+          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.conceived}</span>
           <p class="text-sm font-serif italic text-[var(--text-secondary)]">
             {formatDate(fileInfo.created)}
           </p>
         </div>
         <div>
-          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Refined</span>
+          <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.refined}</span>
           <p class="text-sm font-serif italic text-[var(--text-secondary)]">
             {formatDate(fileInfo.modified)}
           </p>
@@ -81,7 +83,7 @@
           <!-- Tags -->
           {#if fileInfo.metadata.tags && fileInfo.metadata.tags.length > 0}
             <div>
-              <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">Connections</span>
+              <span class="block text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.fileInfo.connections}</span>
               <div class="flex flex-wrap gap-x-4 gap-y-2 mt-3">
                 {#each fileInfo.metadata.tags as tag}
                   <span class="text-xs font-medium opacity-60 hover:opacity-100 transition-opacity cursor-default">
@@ -96,7 +98,7 @@
     </div>
   {:else}
     <div class="h-64 flex items-center justify-center border border-dashed border-[var(--border-subtle)]">
-      <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-secondary)]">Awaiting Focus</p>
+      <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-secondary)]">{$localizedText.fileInfo.awaitingFocus}</p>
     </div>
   {/if}
 </div>

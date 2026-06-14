@@ -12,14 +12,12 @@ export function escapeHtml(value) {
 }
 
 export function getSearchTerms(query) {
-  return Array.from(new Set(
-    String(query || '')
-      .replace(/^#/, '')
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean)
-  )).sort((a, b) => b.length - a.length);
+  const cleanQuery = String(query || '').replace(/^#/, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const wordTerms = cleanQuery.split(/\s+/).filter(Boolean);
+  const uniqueWords = Array.from(new Set(wordTerms));
+  const phrase = uniqueWords.join(' ');
+  const terms = uniqueWords.length > 1 && phrase !== cleanQuery ? uniqueWords : [phrase, ...uniqueWords];
+  return Array.from(new Set(terms)).sort((a, b) => b.length - a.length);
 }
 
 export function highlightExcerpt(excerpt, query) {

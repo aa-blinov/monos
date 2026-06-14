@@ -48,7 +48,19 @@
     }
   }
 
-  function handleSearchInput() { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, 300); }
+  function handleSearchInput() {
+    clearTimeout(searchTimer);
+    searchRequestId += 1;
+
+    if (!$searchQuery.trim()) {
+      $searchResults = [];
+      $isSearching = false;
+      return;
+    }
+
+    $isSearching = true;
+    searchTimer = setTimeout(doSearch, 300);
+  }
 
   function clearSearch() {
     clearTimeout(searchTimer);

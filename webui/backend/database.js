@@ -30,6 +30,7 @@ function initTables() {
       tags TEXT DEFAULT '[]',
       category TEXT DEFAULT '',
       date_created TEXT NOT NULL,
+      modified_at TEXT,
       last_opened TEXT NOT NULL,
       board_order REAL,
       trashed_at TEXT
@@ -58,10 +59,14 @@ function initTables() {
   if (!noteColumns.includes('board_order')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN board_order REAL');
   }
+  if (!noteColumns.includes('modified_at')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN modified_at TEXT');
+  }
   if (!noteColumns.includes('trashed_at')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN trashed_at TEXT');
   }
 
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notes_modified_at ON notes_index(modified_at)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_board_order ON notes_index(board_order)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_trashed_at ON notes_index(trashed_at)');
 

@@ -3,7 +3,7 @@
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop } from 'lucide-svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { loadFileContent, reorderBoardNotesRequest, setItemColorRequest } from '../lib/editor-api.js';
+  import { loadFileContent, setItemColorRequest } from '../lib/editor-api.js';
   import { stripFrontmatter } from '../lib/preview-html.js';
   import { localizedText } from '../lib/strings.js';
   import { boardColumns, boardGroupByColor } from '../stores.js';
@@ -18,7 +18,6 @@
 
   let orderedNotes = [];
   let notesSignature = '';
-  let draggedNote = null;
   let contextMenu = { show: false, x: 0, y: 0, note: null };
   let wideBoard = typeof window !== 'undefined' ? window.innerWidth >= 1280 : false;
   const hydratedExcerptPaths = new Set();
@@ -29,7 +28,7 @@
   ];
 
   $: {
-    const nextSignature = notes.map((note) => `${note.path}:${note.lastOpened || ''}`).join('|');
+    const nextSignature = notes.map((note) => `${note.path}:${note.modified || note.lastOpened || ''}`).join('|');
     if (nextSignature !== notesSignature) {
       notesSignature = nextSignature;
       orderedNotes = notes;
@@ -48,7 +47,6 @@
   $: if (!mobile && !wideBoard && $boardColumns === '4') $boardColumns = '3';
   $: visibleNotes = orderedNotes;
   $: shouldGroupByColor = $boardGroupByColor && !query.trim();
-  $: canReorderCards = !mobile && !query.trim() && !shouldGroupByColor;
   $: visibleGroups = groupNotesByColor(visibleNotes, shouldGroupByColor);
   $: displayGroups = visibleGroups.length > 0
     ? visibleGroups
@@ -127,22 +125,6 @@
     });
   }
 
-  async function persistBoardOrder() {
-    if (!canReorderCards) return;
-    const paths = orderedNotes.map((note) => note.path).filter(Boolean);
-    if (paths.length === 0) return;
-    try {
-      const reordered = await reorderBoardNotesRequest(paths);
-      if (Array.isArray(reordered) && reordered.length > 0) {
-        const byPath = new Map(reordered.map((note) => [note.path, note]));
-        orderedNotes = orderedNotes.map((note) => byPath.get(note.path) ? { ...note, ...byPath.get(note.path) } : note);
-      }
-      dispatch('notesReordered', { notes: orderedNotes });
-    } catch (error) {
-      console.error('Failed to persist board order:', error);
-    }
-  }
-
   function openFull(note) {
     if (!note?.path) return;
     closeContextMenu();
@@ -174,67 +156,9 @@
     }
   }
 
-  function reorderBefore(sourcePath, targetPath) {
-    if (!sourcePath || !targetPath || sourcePath === targetPath) return;
-    const sourceIndex = orderedNotes.findIndex((note) => note.path === sourcePath);
-    const targetIndex = orderedNotes.findIndex((note) => note.path === targetPath);
-    if (sourceIndex === -1 || targetIndex === -1) return;
-
-    const nextNotes = [...orderedNotes];
-    const [source] = nextNotes.splice(sourceIndex, 1);
-    nextNotes.splice(targetIndex, 0, source);
-    orderedNotes = nextNotes;
-  }
-
-  function autoScrollDuringDrag(event) {
-    const container = event.currentTarget?.closest?.('[data-board-scroll]');
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const edge = 80;
-    if (event.clientY < rect.top + edge) container.scrollTop -= 18;
-    if (event.clientY > rect.bottom - edge) container.scrollTop += 18;
-  }
-
   function handleCardContext(event) {
     const { note, x, y } = event.detail;
     contextMenu = { show: true, note, x, y };
-  }
-
-  function handleDragStart(event) {
-    if (!canReorderCards) return;
-    draggedNote = event.detail.note;
-    event.detail.event.dataTransfer?.setData('text/plain', draggedNote?.path || '');
-    if (event.detail.event.dataTransfer) event.detail.event.dataTransfer.effectAllowed = 'move';
-  }
-
-  function handleDragOver(event) {
-    if (!canReorderCards) return;
-    event.detail?.event?.preventDefault?.();
-    autoScrollDuringDrag(event.detail.event);
-    if (!draggedNote) return;
-    reorderBefore(draggedNote.path, event.detail.note?.path);
-  }
-
-  async function handleDrop(event) {
-    if (!canReorderCards) return;
-    event.detail?.event?.preventDefault?.();
-    if (!draggedNote) return;
-    const note = draggedNote;
-    draggedNote = null;
-    if (note?.path) await persistBoardOrder();
-  }
-
-  function handleBoardDragOver(event) {
-    if (canReorderCards) event.preventDefault();
-  }
-
-  async function handleBoardDrop(event) {
-    if (!canReorderCards) return;
-    event?.preventDefault?.();
-    if (!draggedNote) return;
-    const note = draggedNote;
-    draggedNote = null;
-    if (note?.path) await persistBoardOrder();
   }
 
   function updateWideBoard() {
@@ -285,7 +209,7 @@
 </div>
 {/if}
 
-<div class="space-y-8" role="presentation" on:dragover={handleBoardDragOver} on:drop={handleBoardDrop}>
+<div class="space-y-8" role="presentation">
   {#each displayGroups as group, groupIndex (group.id)}
     <section class="space-y-3">
       {#if group.showHeading}
@@ -317,12 +241,9 @@
             {query}
             {highlight}
             compact={mobile}
-            draggable={canReorderCards}
+            draggable={false}
             on:open={(event) => openFull(event.detail)}
             on:context={handleCardContext}
-            on:dragStart={handleDragStart}
-            on:dragOver={handleDragOver}
-            on:drop={handleDrop}
           />
         {/each}
       </div>

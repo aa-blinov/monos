@@ -52,15 +52,6 @@ beforeEach(() => {
       return jsonResponse({ content: '---\ntitle: Beta\ntags: []\n---\n\nBeta body start for the board card.' });
     }
 
-    if (url === '/api/notes/reorder' && method === 'POST') {
-      const body = JSON.parse(init.body);
-      return jsonResponse(body.paths.map((notePath, index) => ({
-        ...notes.find((note) => note.path === notePath),
-        path: notePath,
-        boardOrder: index + 1,
-      })));
-    }
-
     if (url === '/api/directory/icon?path=notes%2FWork%2FBeta.md' && method === 'POST') {
       return jsonResponse({ message: 'Icon updated' });
     }
@@ -223,6 +214,16 @@ test('NoteBoard показывает дату открытия в русском
   expect(text).not.toContain('06/13');
 });
 
+test('NoteBoard показывает дату изменения, если она пришла с dashboard API', () => {
+  render(NoteBoard, {
+    notes: [{ ...notes[0], modified: '2026-06-04T12:00:00.000Z' }],
+  });
+
+  const card = screen.getByRole('button', { name: /Alpha/ });
+  expect(card.textContent).toContain(uiText.app.board.modified);
+  expect(card.textContent).not.toContain(uiText.app.board.opened);
+});
+
 test('NoteBoard показывает псевдо-карточку создания заметки первой', async () => {
   const { component } = render(NoteBoard, { notes, showCreateCard: true });
   const createNote = vi.fn();
@@ -236,18 +237,17 @@ test('NoteBoard показывает псевдо-карточку создан�
   expect(createNote).toHaveBeenCalledTimes(1);
 });
 
-test('NoteBoard сохраняет ручной порядок при перетаскивании без touch last_opened', async () => {
+test('NoteBoard не использует drag-reorder карточек', async () => {
   render(NoteBoard, { notes });
   const dataTransfer = { setData: vi.fn(), effectAllowed: '' };
 
+  expect(screen.getByRole('button', { name: /Alpha/ }).draggable).toBe(false);
+  expect(screen.getByRole('button', { name: /Beta/ }).draggable).toBe(false);
   await fireEvent.dragStart(screen.getByRole('button', { name: /Beta/ }), { dataTransfer });
   await fireEvent.dragOver(screen.getByRole('button', { name: /Alpha/ }), { dataTransfer });
   await fireEvent.drop(screen.getByRole('button', { name: /Alpha/ }), { dataTransfer });
 
-  await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/notes/reorder', expect.objectContaining({
-    method: 'POST',
-    body: JSON.stringify({ paths: ['notes/Work/Beta.md', 'notes/Work/Alpha.md'] }),
-  })));
+  expect(fetch).not.toHaveBeenCalledWith('/api/notes/reorder', expect.anything());
   expect(fetch).not.toHaveBeenCalledWith('/api/notes/touch?path=notes%2FWork%2FBeta.md', expect.anything());
 });
 
@@ -265,4 +265,16 @@ test('NoteBoard отключает перетаскивание в глобал�
 
   expect(screen.getByRole('button', { name: /Alpha/ }).draggable).toBe(false);
   expect(screen.getByRole('button', { name: /Beta/ }).draggable).toBe(false);
+});
+
+test('NoteBoard подсвечивает совпадение в заголовке результата поиска', () => {
+  render(NoteBoard, {
+    notes: [{ ...notes[0], name: 'Предложение по демо-стенду' }],
+    query: 'предложение по дем',
+    highlight: true,
+  });
+
+  const card = screen.getByRole('button', { name: /Предложение/ });
+  const mark = card.querySelector('mark');
+  expect(mark?.textContent).toBe('Предложение по дем');
 });

@@ -33,7 +33,7 @@ export const contentWidthOptions = [
   { name: 'Snug', value: 'snug', value_css: '48rem' },
   { name: 'Medium', value: 'medium', value_css: '58rem' },
   { name: 'Broad', value: 'broad', value_css: '68rem' },
-  { name: 'Wide', value: 'wide', value_css: '80rem' },
+  { name: 'Wide', value: 'wide', value_css: 'none' },
 ];
 
 export const editorFontSizeOptions = [
