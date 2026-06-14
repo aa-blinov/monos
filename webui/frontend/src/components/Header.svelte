@@ -3,7 +3,7 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { searchQuery, searchResults, isSearching, editorAction } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Clipboard, Search, ArrowLeft, X, Wand, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Clipboard, Search, ArrowLeft, X, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -11,7 +11,6 @@
   export let showBack = false;
   export let showSearch = true;
   export let sidebarOpen = false;
-  export let isFormatting = false;
 
   let searchTimer;
   let searchRequestId = 0;
@@ -155,18 +154,8 @@
   {:else if noteOpen}
     <div class="flex-1"></div>
     <TooltipIconButton
-      on:click={() => editorAction.set('format')}
-      disabled={isFormatting}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/50 hover:text-[var(--text-primary)] disabled:opacity-30"
-      label={$localizedText.editor.formatAllNotes}
-      tooltip={$localizedText.editor.formatAllNotes}
-      tooltipAlign="end"
-    >
-      <Wand class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
-    </TooltipIconButton>
-    <TooltipIconButton
       on:click={() => editorAction.set('delete')}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/50 hover:text-[var(--red)]"
+      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-red-500/10"
       label={$localizedText.editor.deleteNote}
       tooltip={$localizedText.editor.deleteNote}
       tooltipAlign="end"

@@ -4,7 +4,7 @@ import { getDb } from './database.js';
 import { parseFrontmatterMetadata } from './search.js';
 import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
-import { extractWikiLinks, nowISO, relPath, resolveNotesPath } from './utils.js';
+import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath } from './utils.js';
 
 function parseCachedTags(rawTags) {
   if (!rawTags) return [];
@@ -111,7 +111,7 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
 
     if (!fs.existsSync(fullPath)) continue;
 
-    const content = fs.readFileSync(fullPath, 'utf-8');
+    const content = readTextFile(fullPath);
     const currentMetadata = parseFrontmatterMetadata(content);
     const cachedTags = parseCachedTags(row.tags);
     const nextMetadata = {
@@ -162,7 +162,7 @@ export function indexAllFiles() {
       }
 
       if (entry.name.endsWith('.md') || entry.name.endsWith('.txt')) {
-        indexFile(fullPath, fs.readFileSync(fullPath, 'utf-8'));
+        indexFile(fullPath, readTextFile(fullPath));
       }
     }
   }

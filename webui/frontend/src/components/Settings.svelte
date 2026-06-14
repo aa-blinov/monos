@@ -45,6 +45,7 @@
   let backupStatus = '';
   let backupError = '';
   let selectedArchiveName = '';
+  let archiveInput;
   let gitError = '';
 
   function getSelectedRepoFullName() {
@@ -263,6 +264,12 @@
     await importArchive(file);
     input.value = '';
     if (!isImporting) selectedArchiveName = '';
+  }
+
+  function openArchivePicker() {
+    if (isImporting) return;
+    dispatch('archivePickerOpened');
+    archiveInput?.click();
   }
 
   async function checkGitStatus() {
@@ -629,22 +636,26 @@
         </div>
 
         <div class="min-w-0">
-          <label for="notes-import-archive" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.importTitle}</label>
+          <div id="notes-import-archive-label" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.importTitle}</div>
           <div class="flex flex-wrap items-center gap-3">
             <input
               id="notes-import-archive"
+              bind:this={archiveInput}
               type="file"
               accept=".zip,application/zip,application/x-zip-compressed"
               disabled={isImporting}
+              aria-labelledby="notes-import-archive-label"
               on:change={handleImportChange}
               class="sr-only"
             />
-            <label
-              for="notes-import-archive"
-              class="cursor-pointer text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition {isImporting ? 'pointer-events-none opacity-30' : ''}"
+            <button
+              type="button"
+              on:click={openArchivePicker}
+              disabled={isImporting}
+              class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
             >
               {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
-            </label>
+            </button>
             <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>
           </div>
         </div>

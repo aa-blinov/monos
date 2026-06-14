@@ -323,3 +323,19 @@ test('Settings импортирует выбранный ZIP и показыва
   })));
   expect(screen.getByText(/Imported 2 notes/)).toBeTruthy();
 });
+
+test('Settings открывает выбор ZIP без пустого экрана и не импортирует без файла', async () => {
+  const inputClickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+  const fetchMock = createFetchMock({ settings: {} });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Settings);
+
+  await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.chooseArchive }));
+
+  expect(inputClickSpy).toHaveBeenCalled();
+  expect(screen.getByText(uiText.settings.title)).toBeTruthy();
+  expect(fetchMock).not.toHaveBeenCalledWith('/api/backup/import', expect.anything());
+  inputClickSpy.mockRestore();
+});

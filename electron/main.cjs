@@ -66,6 +66,7 @@ async function startBackend() {
 
 function createWindow(port) {
   const icon = runtimeIconPath();
+  const appOrigin = `http://127.0.0.1:${port}`;
   if (icon && app.dock) app.dock.setIcon(icon);
 
   mainWindow = new BrowserWindow({
@@ -85,8 +86,15 @@ function createWindow(port) {
   });
 
   if (process.platform !== 'darwin') mainWindow.setMenu(null);
+  mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
+    try {
+      if (new URL(targetUrl).origin !== appOrigin) event.preventDefault();
+    } catch {
+      event.preventDefault();
+    }
+  });
   mainWindow.once('ready-to-show', () => mainWindow?.show());
-  mainWindow.loadURL(`http://127.0.0.1:${port}/`);
+  mainWindow.loadURL(`${appOrigin}/`);
 }
 
 async function boot() {

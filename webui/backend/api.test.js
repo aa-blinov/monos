@@ -817,6 +817,51 @@ apiTest('rename, move и delete обновляют файловое дерево
   assert.equal(missing.response.status, 404);
 });
 
+apiTest('rename папки сразу обновляет дерево, индекс и настройки вложенных путей', async () => {
+  const sourceDir = path.join(notesDir, 'Rename Source');
+  fs.mkdirSync(sourceDir, { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'Child.md'), `---
+title: "Rename Child"
+tags: ["rename"]
+---
+
+Child content.
+`, 'utf-8');
+  indexAllFiles();
+
+  const icon = await requestJson(buildUrl('/api/directory/icon', { path: 'notes/Rename Source/Nested' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ icon: 'folder', color: '#fabd2f' }),
+  });
+  assert.equal(icon.response.status, 200);
+
+  const rename = await requestJson(buildUrl('/api/file/rename', { path: 'notes/Rename Source' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'Rename Target' }),
+  });
+
+  assert.equal(rename.response.status, 200);
+  assert.equal(rename.data.path, 'notes/Rename Target');
+
+  const oldInfo = await requestJson(buildUrl('/api/file-info', { path: 'notes/Rename Source/Child.md' }));
+  assert.equal(oldInfo.response.status, 404);
+
+  const newInfo = await requestJson(buildUrl('/api/file-info', { path: 'notes/Rename Target/Child.md' }));
+  assert.equal(newInfo.response.status, 200);
+
+  const tree = await requestJson(buildUrl('/api/tree'));
+  assert.equal(tree.response.status, 200);
+  const treeJson = JSON.stringify(tree.data);
+  assert.ok(treeJson.includes('Rename Target'));
+  assert.ok(treeJson.includes('Child.md'));
+  assert.ok(!treeJson.includes('Rename Source'));
+
+  const nestedConfig = getDb().prepare('SELECT color FROM folder_config WHERE path = ?').get('notes/Rename Target/Nested');
+  assert.equal(nestedConfig.color, '#fabd2f');
+});
+
 apiTest('GET /api/backup/export возвращает ZIP с видимой иерархией заметок', async () => {
   fs.mkdirSync(path.join(notesDir, '.monos'), { recursive: true });
   fs.writeFileSync(path.join(notesDir, '.monos', 'templates.json'), '{"customTemplates":[]}', 'utf-8');
@@ -837,6 +882,10 @@ apiTest('GET /api/backup/export возвращает ZIP с видимой ие�
 apiTest('POST /api/backup/import мержит ZIP без перезаписи существующих файлов', async () => {
   const zip = new AdmZip();
   zip.addFile('Imported/Nested.md', Buffer.from('# Imported\n\nHello import.\n'));
+  zip.addFile('Imported/Utf16.md', Buffer.concat([
+    Buffer.from([0xff, 0xfe]),
+    Buffer.from('---\ntitle: "UTF16 Note"\ntags: ["import"]\n---\n\nПривет из UTF-16 заметки.\n', 'utf16le'),
+  ]));
   zip.addFile('Topic/Alpha.md', Buffer.from('# Imported duplicate\n'));
   zip.addFile('Imported/_attachments/image.png', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   zip.addFile('Imported/unsafe.exe', Buffer.from('skip'));
@@ -852,10 +901,11 @@ apiTest('POST /api/backup/import мержит ZIP без перезаписи с
   });
 
   assert.equal(imported.response.status, 200);
-  assert.equal(imported.data.importedNotes, 2);
+  assert.equal(imported.data.importedNotes, 3);
   assert.equal(imported.data.importedAttachments, 1);
   assert.equal(imported.data.renamed, 1);
   assert.equal(fs.existsSync(path.join(notesDir, 'Imported', 'Nested.md')), true);
+  assert.equal(fs.readFileSync(path.join(notesDir, 'Imported', 'Utf16.md'), 'utf-8').includes('\u0000'), false);
   assert.equal(fs.existsSync(path.join(notesDir, 'Topic', 'Alpha 2.md')), true);
   assert.equal(fs.existsSync(path.join(notesDir, 'Imported', '_attachments', 'image.png')), true);
   assert.equal(fs.existsSync(path.join(notesDir, 'Imported', 'unsafe.exe')), false);
@@ -863,7 +913,13 @@ apiTest('POST /api/backup/import мержит ZIP без перезаписи с
   const tree = await requestJson(buildUrl('/api/tree'));
   assert.equal(tree.response.status, 200);
   assert.ok(JSON.stringify(tree.data).includes('Nested.md'));
+  assert.ok(JSON.stringify(tree.data).includes('Utf16.md'));
   assert.ok(JSON.stringify(tree.data).includes('Alpha 2.md'));
+
+  const utf16File = await requestJson(buildUrl('/api/file', { path: 'notes/Imported/Utf16.md' }));
+  assert.equal(utf16File.response.status, 200);
+  assert.match(utf16File.data.content, /Привет из UTF-16 заметки/);
+  assert.equal(utf16File.data.content.includes('\u0000'), false);
 });
 
 apiTest('GET /api/git/status и /api/git/log работают с локальным git-репозиторием', async () => {

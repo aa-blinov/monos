@@ -45,6 +45,7 @@ beforeEach(() => {
   window.dispatchEvent(new PopStateEvent('popstate'));
   navigate('/', { replace: true });
   localStorage.clear();
+  sessionStorage.clear();
   locale.set('en');
   searchQuery.set('');
   searchResults.set([]);
@@ -108,6 +109,27 @@ test('App загружает shell главной страницы', async () =>
   expect(screen.getByTestId('header-stub')).toBeTruthy();
   expect(document.documentElement.classList.contains('dark')).toBe(false);
 }, 20000);
+
+test('App redirects unknown routes to dashboard instead of blank main', async () => {
+  window.history.pushState({}, '', '/Users/justcomex/Documents/obsidian/base.zip');
+  navigate('/Users/justcomex/Documents/obsidian/base.zip', { replace: true });
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(window.location.pathname).toBe('/'));
+  expect(screen.getByText('search visible')).toBeTruthy();
+});
+
+test('App restores settings for unknown file paths when settings was last route', async () => {
+  sessionStorage.setItem('lastAppRoute', '/settings');
+  window.history.pushState({}, '', '/Users/justcomex/Documents/obsidian/base.zip');
+  navigate('/Users/justcomex/Documents/obsidian/base.zip', { replace: true });
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(window.location.pathname).toBe('/settings'));
+  expect(screen.getByTestId('settings-stub')).toBeTruthy();
+});
 
 test('App показывает результаты поиска и открывает заметку по клику', async () => {
   const { default: App } = await import('./App.svelte');
