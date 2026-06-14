@@ -4,6 +4,7 @@
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
 
   const dispatch = createEventDispatcher();
+  const TREE_NOTE_PATHS_DRAG_TYPE = 'application/x-monos-note-paths';
 
   const iconMap = {
     "folder": Icon.Folder, "folder-open": Icon.FolderOpen, "graduation-cap": Icon.GraduationCap,
@@ -20,6 +21,7 @@
   export let expandedPaths = new Set();
   export let searchMode = false;
   export let selectedPath = null;
+  export let selectedPaths = new Set();
 
   const TOOLTIP_OFFSET = 12;
   const TOOLTIP_MARGIN = 16;
@@ -35,6 +37,8 @@
   $: if (!_manualToggle && isExpanded !== expanded) isExpanded = expanded;
   $: if (selectedPath) _manualToggle = false;
   $: fileName = formatFileName(node.name);
+  $: noteSelected = !node.is_dir && selectedPaths.has(node.path);
+  $: active = noteSelected || (selectedPaths.size === 0 && selectedPath === node.path);
 
   function formatFileName(name = '') {
     return name.replace(/\.md$/i, '');
@@ -60,11 +64,16 @@
   function toggle() {
     _manualToggle = true;
     isExpanded = !isExpanded;
+    dispatch('toggleExpand', { path: node.path, expanded: isExpanded });
   }
 
-  function handleSelect() {
+  function handleSelect(event) {
     if (node.is_dir) {
       toggle();
+      return;
+    }
+    if (event?.metaKey || event?.ctrlKey) {
+      dispatch('toggleSelect', { path: node.path, name: node.name, isDir: false });
       return;
     }
     dispatch('navigate', { path: node.path, name: node.name, isDir: node.is_dir });
@@ -84,7 +93,13 @@
   function handleDragStart(e) {
     hideFileTooltip();
     isDragging = true;
-    e.dataTransfer.setData('text/plain', node.path);
+    const dragPaths = !node.is_dir && selectedPaths.has(node.path)
+      ? [...selectedPaths]
+      : [node.path];
+    e.dataTransfer.setData('text/plain', dragPaths[0]);
+    if (!node.is_dir) {
+      e.dataTransfer.setData(TREE_NOTE_PATHS_DRAG_TYPE, JSON.stringify(dragPaths));
+    }
     if (!node.is_dir) {
       e.dataTransfer.setData(NOTE_LINK_DRAG_TYPE, JSON.stringify(noteLinkPayload(node)));
     }
@@ -112,22 +127,34 @@
       e.preventDefault();
       isDragOver = false;
       const sourcePath = e.dataTransfer.getData('text/plain');
+      const sourcePaths = parseDraggedNotePaths(e.dataTransfer, sourcePath);
       if (sourcePath !== node.path) {
-        dispatch('moveFile', { sourcePath, targetPath: node.path });
+        dispatch('moveFile', { sourcePath, sourcePaths, targetPath: node.path });
       }
     }
+  }
+
+  function parseDraggedNotePaths(dataTransfer, fallbackPath) {
+    try {
+      const raw = dataTransfer.getData(TREE_NOTE_PATHS_DRAG_TYPE);
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      // Fall back to the plain text path for older drag payloads.
+    }
+    return fallbackPath ? [fallbackPath] : [];
   }
 </script>
 
 <div class="group text-sm lg:text-xs">
   <button
     class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 px-2.5 py-2 text-left transition-all lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
-    class:border-[var(--text-primary)]={selectedPath === node.path || (node.is_dir && isDragOver)}
-    class:border-transparent={selectedPath !== node.path && !(node.is_dir && isDragOver)}
-    class:bg-[var(--border-subtle)]={selectedPath === node.path || (node.is_dir && isDragOver)}
+    class:border-[var(--text-primary)]={active || (node.is_dir && isDragOver)}
+    class:border-transparent={!active && !(node.is_dir && isDragOver)}
+    class:bg-[var(--border-subtle)]={active || (node.is_dir && isDragOver)}
     on:click={handleSelect}
     on:contextmenu={onRightClick}
-    on:keydown={(e) => e.key === 'Enter' && handleSelect()}
+    on:keydown={(e) => e.key === 'Enter' && handleSelect(e)}
     on:mouseenter={showFileTooltip}
     on:mouseleave={hideFileTooltip}
     on:focus={showFileTooltip}
@@ -183,10 +210,13 @@
         <svelte:self
           node={child}
           {selectedPath}
+          {selectedPaths}
           {expandedPaths}
           {searchMode}
           expanded={searchMode || expandedPaths.has(child.path)}
           on:navigate={(e) => dispatch('navigate', e.detail)}
+          on:toggleSelect
+          on:toggleExpand
           on:rightClick
           on:moveFile
         />

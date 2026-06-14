@@ -3,7 +3,7 @@ import path from 'path';
 import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries } from '../search.js';
 import { NOTES_DIR } from '../config.js';
-import { nowISO, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { noteCardPayload, parseTags } from './helpers.js';
@@ -326,7 +326,7 @@ export function registerNoteRoutes(app) {
           }
 
           if (entry.name.endsWith('.md') && !excluded.has(entry.name)) {
-            const original = fs.readFileSync(fullPath, 'utf-8');
+            const original = readTextFile(fullPath);
             const formatted = original
               .replace(/[ \t]+$/gm, '')
               .replace(/\r\n/g, '\n')

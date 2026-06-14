@@ -3,7 +3,7 @@ import path from 'path';
 import { getDb } from '../database.js';
 import { parseFrontmatterMetadata } from '../search.js';
 import { NOTES_DIR } from '../config.js';
-import { humanSize, nowISO, relPath, resolveNotesPath, safePathName } from '../utils.js';
+import { humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName } from '../utils.js';
 import { indexFile, indexAllFiles } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
@@ -18,7 +18,7 @@ export function registerFileRoutes(app) {
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
 
-      const content = fs.readFileSync(fullPath, 'utf-8');
+      const content = readTextFile(fullPath);
       getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?').run(nowISO(), filePath);
       res.json({ content });
     } catch (error) {
@@ -79,14 +79,19 @@ export function registerFileRoutes(app) {
       const filePath = requireQueryPath(req);
       const newName = safePathName(req.body?.new_name);
       const fullPath = resolveNotesPath(filePath);
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
       const newFullPath = path.join(path.dirname(fullPath), newName);
+      if (newFullPath !== fullPath && fs.existsSync(newFullPath)) {
+        return res.status(409).json({ detail: 'Target already exists' });
+      }
       fs.renameSync(fullPath, newFullPath);
 
       const db = getDb();
       const newRelativePath = relPath(newFullPath);
+      const isDir = fs.statSync(newFullPath).isDirectory();
       db.prepare('UPDATE notes_index SET path = ?, name = ? WHERE path = ?').run(newRelativePath, newName, filePath);
 
-      if (fs.statSync(newFullPath).isDirectory()) {
+      if (isDir) {
         const children = db.prepare('SELECT path FROM notes_index WHERE path LIKE ? || \'/%\'').all(filePath);
         for (const child of children) {
           const newChildPath = child.path.replace(filePath, newRelativePath);
@@ -97,6 +102,9 @@ export function registerFileRoutes(app) {
           );
         }
         db.prepare('UPDATE folder_config SET path = ? WHERE path = ?').run(newRelativePath, filePath);
+        db.prepare('UPDATE folder_config SET path = ? || SUBSTR(path, ?) WHERE path LIKE ? || \'/%\'')
+          .run(newRelativePath, filePath.length + 1, filePath);
+        indexAllFiles();
       }
 
       res.json({ path: newRelativePath, name: newName });
@@ -160,7 +168,7 @@ export function registerFileRoutes(app) {
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       const originalContent = typeof content === 'string'
         ? content
-        : fs.readFileSync(fullPath, 'utf-8');
+        : readTextFile(fullPath);
       const currentMetadata = parseFrontmatterMetadata(originalContent);
       const nextMetadata = {
         title: title ?? currentMetadata.title,

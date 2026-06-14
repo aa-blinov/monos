@@ -27,6 +27,21 @@
   const SIDEBAR_MIN_WIDTH = 256;
   const SIDEBAR_MAX_WIDTH = 420;
   const BOARD_NOTES_PAGE_SIZE = 36;
+  const LAST_APP_ROUTE_KEY = 'lastAppRoute';
+
+  function storedLastKnownRoute() {
+    if (typeof sessionStorage === 'undefined') return '/';
+    const storedRoute = sessionStorage.getItem(LAST_APP_ROUTE_KEY) || '/';
+    return isKnownAppRoute(storedRoute) ? storedRoute : '/';
+  }
+
+  const initialRouteWasUnknown = typeof window !== 'undefined' && !isKnownAppRoute(window.location.pathname);
+  const initialRoutePath = typeof window !== 'undefined' && isKnownAppRoute(window.location.pathname)
+    ? window.location.pathname
+    : storedLastKnownRoute();
+  if (initialRouteWasUnknown) {
+    window.history.replaceState({}, '', initialRoutePath);
+  }
 
   let isDarkMode = false;
   let sidebarOpen = true;
@@ -38,7 +53,8 @@
   let sidebarWidth = getInitialSidebarWidth();
   let isResizingSidebar = false;
   let systemThemeSignal = 0;
-  let routePath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  let routePath = initialRoutePath;
+  let lastKnownAppRoute = initialRoutePath;
   $: isDashboardRoute = routePath === '/';
   $: isNoteOpen = routePath.startsWith('/notes/');
   $: showHeaderBack = !isDashboardRoute;
@@ -79,6 +95,35 @@
     restoredInitialUrlSearch = true;
     $searchQuery = urlSearchQuery;
     void runRestoredSearch(urlSearchQuery);
+  }
+
+  function isKnownAppRoute(pathname) {
+    return pathname === '/'
+      || pathname === '/settings'
+      || pathname === '/trash'
+      || pathname === '/templates'
+      || pathname.startsWith('/notes/');
+  }
+
+  function setRoutePath(pathname) {
+    routePath = pathname;
+    if (isKnownAppRoute(pathname)) {
+      lastKnownAppRoute = pathname;
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LAST_APP_ROUTE_KEY, pathname);
+    }
+  }
+
+  function replaceUnknownRouteWithLastKnown() {
+    const fallbackRoute = isKnownAppRoute(lastKnownAppRoute) ? lastKnownAppRoute : '/';
+    routePath = fallbackRoute;
+    if (fallbackRoute === '/') $noteView = 'board';
+    if (fallbackRoute.startsWith('/notes/')) $noteView = 'list';
+    if (typeof window !== 'undefined' && window.location.pathname !== fallbackRoute) {
+      window.history.replaceState({}, '', fallbackRoute);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else {
+      navigate(fallbackRoute, { replace: true });
+    }
   }
 
   function defaultSidebarWidth() {
@@ -144,11 +189,15 @@
 
   onMount(() => {
     updateMobileState();
-    routePath = window.location.pathname;
-    if (window.location.pathname === '/') $noteView = 'board';
-    if (window.location.pathname === '/' && $noteView === 'board' && !isMobile) sidebarOpen = false;
-    if ($noteView === 'board' && window.location.pathname.startsWith('/notes/')) {
-      routePath = '/';
+    setRoutePath(window.location.pathname);
+    if (initialRouteWasUnknown) navigate(routePath, { replace: true });
+    if (!isKnownAppRoute(routePath)) {
+      replaceUnknownRouteWithLastKnown();
+    }
+    if (routePath === '/') $noteView = 'board';
+    if (routePath === '/' && $noteView === 'board' && !isMobile) sidebarOpen = false;
+    if ($noteView === 'board' && routePath.startsWith('/notes/')) {
+      setRoutePath('/');
       navigate('/');
     }
     void loadHomeRecentNotes();
@@ -157,7 +206,13 @@
     restoreSearchFromUrl();
     searchUrlReady = true;
     const handlePopState = () => {
-      routePath = window.location.pathname;
+      setRoutePath(window.location.pathname);
+      if (!isKnownAppRoute(routePath)) {
+        replaceUnknownRouteWithLastKnown();
+        if (routePath !== '/') clearSearch();
+        if (routePath === '/') void loadHomeRecentNotes();
+        return;
+      }
       if (routePath !== '/') clearSearch();
     };
     window.addEventListener('popstate', handlePopState);
@@ -400,7 +455,7 @@
   function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
     $noteView = 'board';
     if (closeSidebar) sidebarOpen = false;
-    routePath = '/';
+    setRoutePath('/');
     navigate('/', { replace });
     clearSearch();
     void loadHomeRecentNotes();
@@ -408,17 +463,17 @@
   }
   function goHome() { showDashboard({ closeSidebar: false }); }
   function openSettings() {
-    routePath = '/settings';
+    setRoutePath('/settings');
     clearSearch();
     navigate('/settings');
   }
   function openTrash() {
-    routePath = '/trash';
+    setRoutePath('/trash');
     clearSearch();
     navigate('/trash');
   }
   function openTemplatesManager() {
-    routePath = '/templates';
+    setRoutePath('/templates');
     clearSearch();
     navigate('/templates');
   }
@@ -488,7 +543,7 @@
   function handleNavigate(event) {
     $noteView = 'list';
     const nextPath = `/notes/${normalizeNotePath(event.detail.path)}`;
-    routePath = nextPath;
+    setRoutePath(nextPath);
     navigate(nextPath);
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
     if (isMobile && !event.detail.isDir) sidebarOpen = false;
@@ -529,6 +584,15 @@
   function refreshAfterTrashChange() {
     void loadHomeRecentNotes();
     sidebarComponent?.loadTree?.();
+  }
+
+  function handleNotesImported() {
+    sidebarComponent?.loadTree?.();
+    void loadHomeRecentNotes();
+  }
+
+  function rememberSettingsRoute() {
+    setRoutePath('/settings');
   }
 
   async function handleTrashRestored(event) {
@@ -676,10 +740,10 @@
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:formatComplete={() => { if (sidebarComponent) sidebarComponent.loadTree(); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
-          <Settings on:notesImported={() => { sidebarComponent?.loadTree?.(); void loadHomeRecentNotes(); }} />
+          <Settings on:archivePickerOpened={rememberSettingsRoute} on:notesImported={handleNotesImported} />
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
@@ -707,6 +771,11 @@
               {/if}
             </div>
           </div>
+        </Route>
+        <Route path="*">
+          {#if lastKnownAppRoute === '/settings'}
+            <Settings on:archivePickerOpened={rememberSettingsRoute} on:notesImported={handleNotesImported} />
+          {/if}
         </Route>
         {/if}
       </main>

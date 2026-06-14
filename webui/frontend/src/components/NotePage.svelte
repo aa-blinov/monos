@@ -29,7 +29,6 @@
       on:navigate={(e) => dispatch('navigate', e.detail)}
       on:fileDeleted={() => dispatch('fileDeleted')}
       on:fileOpened={(e) => dispatch('fileOpened', e.detail)}
-      on:formatComplete={() => dispatch('formatComplete')}
       on:noteColorChanged={(e) => dispatch('noteColorChanged', e.detail)}
       on:revealInTree={(e) => dispatch('revealInTree', e.detail)}
     />

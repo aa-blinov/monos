@@ -130,28 +130,6 @@ test('Editor показывает breadcrumb без отдельного reveal/
   expect(screen.queryByText('#release')).toBeNull();
 });
 
-test('Editor форматирует заметки и диспатчит formatComplete', async () => {
-  const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
-    'POST /api/format': jsonResponse({ message: 'Formatted. Updated: 3' }),
-  }));
-
-  const { component } = render(Editor, {
-    currentFile: { path: 'notes/Inbox.md', name: 'Inbox.md', isDir: false },
-  });
-  const formatHandler = vi.fn();
-  component.$on('formatComplete', formatHandler);
-
-  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
-  await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
-
-  editorAction.set('format');
-  await tick();
-
-  await waitFor(() => expect(screen.getByText('Formatted. Updated: 3')).toBeTruthy());
-  expect(formatHandler).toHaveBeenCalledTimes(1);
-  expect(fetchMock).toHaveBeenCalledWith('/api/format', { method: 'POST' });
-});
-
 test('Editor позволяет перекрасить открытую заметку из нижней палитры', async () => {
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
     '/api/file-info?path=notes%2FInbox.md': jsonResponse({

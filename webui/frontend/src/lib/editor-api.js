@@ -41,7 +41,6 @@ export const loadTrashNotesRequest = () => fetchJson('/api/notes/trash?limit=200
 export const restoreNoteRequest = (filePath) => fetchJson(`/api/notes/restore?path=${encodeURIComponent(filePath)}`, {
   method: 'POST',
 });
-export const formatAllNotes = () => fetchJson('/api/format', { method: 'POST' });
 export const uploadAttachment = (notePath, file, name = file?.name) => {
   const form = new FormData();
   if (name) form.append('name', name);

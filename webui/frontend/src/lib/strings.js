@@ -178,6 +178,9 @@ const enText = {
     notes(count) {
       return `${count} ${count === 1 ? 'Note' : 'Notes'}`;
     },
+    selectedNotes(count) {
+      return `${count} selected`;
+    },
     dropToRoot: 'Drop to root',
     syncWithGit: 'Sync with Git',
     quickNoteFromClipboard: 'Create quick note from clipboard',
@@ -193,6 +196,7 @@ const enText = {
       editIcon: 'Edit Icon',
       rename: 'Rename',
       delete: 'Delete',
+      deleteSelected: 'Delete Selected',
     },
     modals: {
       renameTitle(kind) {
@@ -212,7 +216,7 @@ const enText = {
       parentFolder: 'Parent Folder',
       root: 'Root',
       folderName: 'Folder Name',
-      folderPlaceholder: 'e.g. AI',
+      folderPlaceholder: 'New Folder',
       creating: 'Creating...',
       create: 'Create',
       newNote: 'New Note',
@@ -257,6 +261,9 @@ const enText = {
     },
     confirmDelete(name, isDir = false) {
       return isDir ? `Delete ${name}?` : `Move ${name} to trash?`;
+    },
+    confirmDeleteMany(count) {
+      return `Move ${count} selected notes to trash?`;
     },
   },
   trash: {
@@ -410,7 +417,6 @@ const enText = {
     defaultCommitMessage: 'Sync from Monos WebUI',
   },
   editor: {
-    formatAllNotes: 'Format all notes',
     deleteNote: 'Delete note',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
@@ -421,7 +427,6 @@ const enText = {
     cancel: 'Cancel',
     archiving: 'Moving...',
     deletePermanently: 'Move to trash',
-    formatFailed: 'Format failed',
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
@@ -660,6 +665,9 @@ const ruText = {
           : 'заметок';
       return `${count} ${form}`;
     },
+    selectedNotes(count) {
+      return `${count} выбрано`;
+    },
     dropToRoot: 'Переместить в корень',
     syncWithGit: 'Синхронизировать с Git',
     quickNoteFromClipboard: 'Создать быструю заметку из буфера обмена',
@@ -675,6 +683,7 @@ const ruText = {
       editIcon: 'Изменить иконку',
       rename: 'Переименовать',
       delete: 'Удалить',
+      deleteSelected: 'Удалить выбранные',
     },
     modals: {
       renameTitle(kind) {
@@ -694,7 +703,7 @@ const ruText = {
       parentFolder: 'Родительская папка',
       root: 'Корень',
       folderName: 'Имя папки',
-      folderPlaceholder: 'например, AI',
+      folderPlaceholder: 'Новая папка',
       creating: 'Создание...',
       create: 'Создать',
       newNote: 'Новая заметка',
@@ -739,6 +748,16 @@ const ruText = {
     },
     confirmDelete(name, isDir = false) {
       return isDir ? `Удалить ${name}?` : `Переместить ${name} в корзину?`;
+    },
+    confirmDeleteMany(count) {
+      const mod10 = count % 10;
+      const mod100 = count % 100;
+      const form = mod10 === 1 && mod100 !== 11
+        ? 'выбранную заметку'
+        : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+          ? 'выбранные заметки'
+          : 'выбранных заметок';
+      return `Переместить ${count} ${form} в корзину?`;
     },
   },
   trash: {
@@ -895,7 +914,6 @@ const ruText = {
     defaultCommitMessage: 'Sync from Monos WebUI',
   },
   editor: {
-    formatAllNotes: 'Форматировать все заметки',
     deleteNote: 'Удалить заметку',
     gatheringThoughts: 'Собираем мысли',
     beginWriting: 'Начните писать...',
@@ -906,7 +924,6 @@ const ruText = {
     cancel: 'Отмена',
     archiving: 'Перемещение...',
     deletePermanently: 'В корзину',
-    formatFailed: 'Не удалось отформатировать',
     saving: 'Сохранение…',
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',

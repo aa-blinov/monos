@@ -2,12 +2,13 @@
   import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
-  import { defaultMarkdownParser } from 'prosemirror-markdown';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import TooltipIconSelect from './TooltipIconSelect.svelte';
   import { lineHeight, contentWidth, editorFontSize } from '../stores.js';
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
+  import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
+  import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
   import { firstImageFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { localizedText } from '../lib/strings.js';
@@ -57,16 +58,6 @@
     { id: 'horizontalRule', run: () => editor.chain().focus().setHorizontalRule().run() },
   ];
 
-  function markdownToEditorContent(markdown) {
-    const source = String(markdown || '');
-    try {
-      return defaultMarkdownParser.parse(source).toJSON();
-    } catch (error) {
-      console.error('Failed to parse markdown:', error);
-      return source;
-    }
-  }
-
   function normalizeWikiLinkMarkdown(markdown) {
     return String(markdown || '')
       .replace(/\\\[\\\[/g, '[[')
@@ -95,6 +86,15 @@
     });
     editor.mount(editorEl);
     lastAppliedContent = content || '';
+  }
+
+  function applyEditorContent(nextContent) {
+    if (!editor) return;
+    editor
+      .chain()
+      .setMeta('addToHistory', false)
+      .setContent(markdownToEditorContent(nextContent), { emitUpdate: false })
+      .run();
   }
 
   function updateActive(ed) {
@@ -137,9 +137,18 @@
 
   async function handlePaste(event) {
     const file = firstImageFileFromDataTransfer(event.clipboardData);
-    if (!file) return;
+    if (file) {
+      event.preventDefault();
+      await insertImageFile(file);
+      return;
+    }
+
+    const markdown = markdownTextFromClipboard(event.clipboardData);
+    if (!markdown || !editor) return;
+    const documentContent = markdownToEditorContent(markdown).content || [];
+    if (!documentContent.length) return;
     event.preventDefault();
-    await insertImageFile(file);
+    editor.chain().focus().insertContent(documentContent).run();
   }
 
   function draggedNotePayload(dataTransfer) {
@@ -368,7 +377,7 @@
       lastAppliedContent = nextContent;
       return;
     }
-    editor.commands.setContent(markdownToEditorContent(nextContent));
+    applyEditorContent(nextContent);
     lastAppliedContent = nextContent;
     updateActive(editor);
   }
@@ -378,7 +387,7 @@
     if (nextContent !== lastAppliedContent) {
       const currentMarkdown = editorMarkdown(editor);
       if (currentMarkdown !== nextContent) {
-        editor.commands.setContent(markdownToEditorContent(nextContent));
+        applyEditorContent(nextContent);
         updateActive(editor);
       }
       lastAppliedContent = nextContent;
@@ -545,6 +554,45 @@
   :global(.ProseMirror) { --editor-caret: color-mix(in srgb, var(--text-primary) 82%, var(--yellow) 18%); min-height: 100%; outline: none; caret-color: var(--editor-caret); }
   :global(.ProseMirror ::selection) { background: color-mix(in srgb, var(--editor-caret) 18%, transparent); color: var(--text-primary); }
   :global(.ProseMirror hr) { border: none; border-top: 1px solid var(--border-subtle); margin: 1.5rem 0; }
+  :global(.ProseMirror li[data-type='taskItem'] input[type='checkbox']) {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin: 0.18rem 0 0;
+    border: 1px solid color-mix(in srgb, var(--text-secondary) 45%, var(--border-subtle));
+    border-radius: 0.28rem;
+    background: var(--note-page-panel, var(--bg-primary));
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  :global(.ProseMirror li[data-type='taskItem'] input[type='checkbox']:hover) {
+    border-color: color-mix(in srgb, var(--text-primary) 55%, var(--border-subtle));
+  }
+  :global(.ProseMirror li[data-type='taskItem'] input[type='checkbox']:focus-visible) {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--note-accent, var(--text-primary)) 18%, transparent);
+  }
+  :global(.ProseMirror li[data-type='taskItem'] input[type='checkbox']:checked) {
+    border-color: var(--note-accent, var(--text-primary));
+    background: var(--note-accent, var(--text-primary));
+  }
+  :global(.ProseMirror li[data-type='taskItem'] input[type='checkbox']:checked::after) {
+    content: '';
+    position: absolute;
+    left: 0.31rem;
+    top: 0.12rem;
+    width: 0.28rem;
+    height: 0.55rem;
+    border: solid var(--bg-primary);
+    border-width: 0 0.12rem 0.12rem 0;
+    transform: rotate(45deg);
+  }
+  :global(.ProseMirror li[data-type='taskItem'][data-checked='true'] > div) {
+    color: var(--text-secondary);
+  }
   :global(.ProseMirror .editor-image-frame) { display: inline-flex; max-width: 100%; flex-direction: column; align-items: center; gap: 0.4rem; margin: 1.25rem 0; vertical-align: top; }
   :global(.ProseMirror img.editor-image) { max-width: 100%; height: auto; border-radius: 0.75rem; border: 1px solid var(--border-subtle); }
   :global(.ProseMirror .editor-image-caption) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.72em; line-height: 1.35; opacity: 0.72; }

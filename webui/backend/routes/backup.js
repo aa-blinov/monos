@@ -3,7 +3,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import multer from 'multer';
 import { NOTES_DIR } from '../config.js';
-import { httpError } from '../utils.js';
+import { decodeTextBuffer, httpError, readTextFile, textFileBuffer } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
 
 const MAX_ARCHIVE_SIZE = 100 * 1024 * 1024;
@@ -22,6 +22,7 @@ const IMPORTABLE_EXTENSIONS = new Set([
   '.svg',
   '.pdf',
 ]);
+const TEXT_EXTENSIONS = new Set(['.md', '.markdown', '.txt']);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -63,6 +64,10 @@ function isImportableFile(relativePath) {
   return IMPORTABLE_EXTENSIONS.has(path.extname(relativePath).toLowerCase());
 }
 
+function normalizeTextFileBuffer(buffer) {
+  return textFileBuffer(decodeTextBuffer(buffer));
+}
+
 function uniqueTargetPath(targetPath) {
   if (!fs.existsSync(targetPath)) return targetPath;
   const dir = path.dirname(targetPath);
@@ -102,7 +107,8 @@ function addDirectoryToArchive(zip, absoluteDir, relativeDir = '') {
     }
 
     if (entry.isFile()) {
-      zip.addFile(relativePath, fs.readFileSync(absolutePath));
+      const ext = path.extname(relativePath).toLowerCase();
+      zip.addFile(relativePath, TEXT_EXTENSIONS.has(ext) ? textFileBuffer(readTextFile(absolutePath)) : fs.readFileSync(absolutePath));
       exported += 1;
     }
   }
@@ -141,10 +147,12 @@ function importZip(buffer) {
 
     const finalPath = uniqueTargetPath(targetPath);
     fs.mkdirSync(path.dirname(finalPath), { recursive: true });
-    fs.writeFileSync(finalPath, entry.getData());
+    const entryData = entry.getData();
+    const ext = path.extname(finalPath).toLowerCase();
+    fs.writeFileSync(finalPath, TEXT_EXTENSIONS.has(ext) ? normalizeTextFileBuffer(entryData) : entryData);
 
     summary.importedFiles += 1;
-    if (['.md', '.markdown', '.txt'].includes(path.extname(finalPath).toLowerCase())) {
+    if (TEXT_EXTENSIONS.has(ext)) {
       summary.importedNotes += 1;
     } else {
       summary.importedAttachments += 1;

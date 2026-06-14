@@ -137,6 +137,7 @@
   let isSyncing = false;
   let syncError = '';
   let pinnedNotes = loadPinnedNotes();
+  let selectedPaths = new Set();
 
   $: filteredTree = tree;
   $: localizedTemplates = getTemplateCatalog($locale, $hiddenLibraryTemplateIds, $customNoteTemplates);
@@ -253,6 +254,12 @@
     return itemPath.split('/').filter(Boolean).at(-1) || itemPath;
   }
 
+  function parentPath(itemPath) {
+    const parts = String(itemPath || '').split('/').filter(Boolean);
+    if (parts.length <= 1) return '';
+    return parts.slice(0, -1).join('/');
+  }
+
   function displayNoteName(name = '') {
     return name.replace(/\.md$/i, '');
   }
@@ -301,7 +308,8 @@
   }
 
   function recentPathLabel(note) {
-    return note.path?.startsWith('notes/') ? note.path.slice(6) : note.path;
+    const relativePath = note.path?.startsWith('notes/') ? note.path.slice(6) : note.path || '';
+    return relativePath.split('/').slice(0, -1).join('/');
   }
 
   function movedPath(sourcePath, targetPath) {
@@ -327,6 +335,7 @@
   }
 
   $: totalNotes = tree ? countNotes(tree) : 0;
+  $: selectedNoteCount = selectedPaths.size;
 
   function padDatePart(value) {
     return String(value).padStart(2, '0');
@@ -355,7 +364,7 @@
       treeKey++;
       if (pendingSelectedPath) {
         selectedPath = pendingSelectedPath;
-        expandToPath(tree, pendingSelectedPath);
+        expandToPath(tree, pendingSelectedPath, { replace: false });
         pendingSelectedPath = null;
       }
     } catch (err) {
@@ -365,19 +374,22 @@
     }
   }
 
-  function expandToPath(node, targetPath) {
-    expandedPaths = new Set();
-    if (!node) return;
-    _find(node, targetPath);
-    expandedPaths = new Set(expandedPaths);
+  function expandToPath(node, targetPath, { replace = true } = {}) {
+    const nextExpandedPaths = replace ? new Set() : new Set(expandedPaths);
+    if (!node || !targetPath) {
+      expandedPaths = nextExpandedPaths;
+      return;
+    }
+    _find(node, targetPath, nextExpandedPaths);
+    expandedPaths = nextExpandedPaths;
   }
 
-  function _find(node, targetPath) {
+  function _find(node, targetPath, nextExpandedPaths) {
     if (node.path === targetPath) return true;
     if (node.children) {
       for (const child of node.children) {
-        if (_find(child, targetPath)) {
-          expandedPaths.add(child.path);
+        if (_find(child, targetPath, nextExpandedPaths)) {
+          nextExpandedPaths.add(child.path);
           return true;
         }
       }
@@ -388,9 +400,57 @@
   let expandedPaths = new Set();
 
   export function setSelected(path) {
-    expandToPath(tree, path);
+    clearSelectedNotes();
+    expandToPath(tree, path, { replace: false });
     selectedPath = path;
     treeKey++;
+  }
+
+  function handleToggleExpand(event) {
+    const { path, expanded } = event.detail;
+    if (!path) return;
+    const next = new Set(expandedPaths);
+    if (expanded) next.add(path);
+    else {
+      for (const expandedPath of [...next]) {
+        if (expandedPath === path || expandedPath.startsWith(`${path}/`)) next.delete(expandedPath);
+      }
+    }
+    expandedPaths = next;
+  }
+
+  function keepParentsExpanded(paths) {
+    for (const itemPath of paths) {
+      const parent = parentPath(itemPath);
+      if (parent && parent !== 'notes') expandToPath(tree, parent, { replace: false });
+    }
+  }
+
+  function removeExpandedDescendants(paths) {
+    const next = new Set(expandedPaths);
+    for (const itemPath of paths) {
+      for (const expandedPath of [...next]) {
+        if (expandedPath === itemPath || expandedPath.startsWith(`${itemPath}/`)) next.delete(expandedPath);
+      }
+    }
+    expandedPaths = next;
+  }
+
+  function clearSelectedNotes() {
+    if (selectedPaths.size === 0) return;
+    selectedPaths = new Set();
+  }
+
+  function toggleSelectedNote(path) {
+    const next = new Set(selectedPaths);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    selectedPaths = next;
+  }
+
+  function selectedContextPaths(path, isDir) {
+    if (isDir) return [];
+    return selectedPaths.has(path) ? [...selectedPaths] : [];
   }
 
   export function openCreateNote() {
@@ -628,14 +688,30 @@
     dispatch('navigate', detail);
   }
 
+  function handleToggleSelectFile(event) {
+    const { path } = event.detail;
+    if (!path) return;
+    toggleSelectedNote(path);
+  }
+
   function handleRightClick(event) {
     const { x, y, path, name, isDir } = event.detail;
-    contextMenu = { show: true, x, y, targetPath: path, targetName: name, isDir };
+    const selectionPaths = selectedContextPaths(path, isDir);
+    if (selectionPaths.length === 0) clearSelectedNotes();
+    contextMenu = {
+      show: true,
+      x,
+      y,
+      targetPath: path,
+      targetName: name,
+      isDir,
+      selectionPaths,
+    };
   }
 
   function handleBackgroundRightClick(e) {
     e.preventDefault();
-    contextMenu = { show: true, x: e.clientX, y: e.clientY, targetPath: 'notes', targetName: 'notes', isDir: true };
+    contextMenu = { show: true, x: e.clientX, y: e.clientY, targetPath: 'notes', targetName: 'notes', isDir: true, selectionPaths: [] };
   }
 
   function closeContextMenu() {
@@ -668,8 +744,12 @@
     } else if (action === 'unpin') {
       unpinNote(path, true);
     } else if (action === 'delete') {
-      if (confirm($localizedText.sidebar.confirmDelete(name, contextMenu.isDir))) {
-        deleteItem(path);
+      const deletePaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [path];
+      const confirmed = deletePaths.length > 1
+        ? confirm($localizedText.sidebar.confirmDeleteMany(deletePaths.length))
+        : confirm($localizedText.sidebar.confirmDelete(name, contextMenu.isDir));
+      if (confirmed) {
+        deleteItems(deletePaths);
       }
     }
     closeContextMenu();
@@ -704,11 +784,18 @@
     }
   }
 
-  async function deleteItem(path) {
+  async function deleteItems(paths) {
+    const uniquePaths = [...new Set(paths.filter(Boolean))];
+    if (uniquePaths.length === 0) return;
     try {
-      const deletedActivePath = selectedPath && isSameOrDescendant(selectedPath, path);
-      await deleteItemRequest(path);
-      unpinNote(path);
+      const deletedActivePath = selectedPath && uniquePaths.some((path) => isSameOrDescendant(selectedPath, path));
+      keepParentsExpanded(uniquePaths);
+      for (const path of uniquePaths) {
+        await deleteItemRequest(path);
+        unpinNote(path);
+      }
+      removeExpandedDescendants(uniquePaths);
+      selectedPaths = new Set([...selectedPaths].filter((path) => !uniquePaths.includes(path)));
       await loadTree();
       await loadDirectories();
       if (deletedActivePath) {
@@ -721,15 +808,25 @@
   }
 
   async function handleMoveFile(event) {
-    const { sourcePath, targetPath } = event.detail;
+    const { sourcePath, sourcePaths = [], targetPath } = event.detail;
+    const movePaths = [...new Set((sourcePaths.length ? sourcePaths : [sourcePath]).filter(Boolean))]
+      .filter((path) => path !== targetPath && !isSameOrDescendant(targetPath, path));
+    if (movePaths.length === 0) return;
     try {
-      const newSourcePath = movedPath(sourcePath, targetPath);
-      await moveItemRequest(sourcePath, targetPath);
-      updatePinnedPath(sourcePath, newSourcePath);
-      pendingSelectedPath = newSourcePath;
+      const movedPaths = [];
+      const activeMoveIndex = selectedPath ? movePaths.indexOf(selectedPath) : -1;
+      for (const path of movePaths) {
+        const newSourcePath = movedPath(path, targetPath);
+        await moveItemRequest(path, targetPath);
+        updatePinnedPath(path, newSourcePath);
+        movedPaths.push(newSourcePath);
+      }
+      selectedPaths = new Set(movedPaths);
+      pendingSelectedPath = movedPaths.length === 1 ? movedPaths[0] : null;
       await loadTree();
       await loadDirectories();
-      navigateToPath(newSourcePath, false);
+      if (activeMoveIndex >= 0) navigateToPath(movedPaths[activeMoveIndex], false);
+      else if (movedPaths.length === 1) navigateToPath(movedPaths[0], false);
     } catch (err) {
       console.error('Failed to move file:', err);
     }
@@ -752,8 +849,14 @@
     e.preventDefault();
     isDragOverRoot = false;
     const sourcePath = e.dataTransfer.getData('text/plain');
+    let sourcePaths = [];
+    try {
+      sourcePaths = JSON.parse(e.dataTransfer.getData('application/x-monos-note-paths') || '[]');
+    } catch {
+      sourcePaths = [];
+    }
     if (sourcePath) {
-      await handleMoveFile({ detail: { sourcePath, targetPath: 'notes' } });
+      await handleMoveFile({ detail: { sourcePath, sourcePaths, targetPath: 'notes' } });
     }
   }
 
@@ -824,12 +927,15 @@
       </div>
       <div class="space-y-2">
         {#each pinnedNotes as note (note.path)}
+          {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
             class="w-full min-h-10 rounded-lg border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/50 transition"
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
-            <div class="text-[10px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{recentPathLabel(note)}</div>
+            {#if pathLabel}
+              <div class="text-[10px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{pathLabel}</div>
+            {/if}
           </button>
         {/each}
       </div>
@@ -885,10 +991,13 @@
           <FileTree 
             {node} 
             {selectedPath} 
+            {selectedPaths}
             {expandedPaths}
             searchMode={false}
             expanded={expandedPaths.has(node.path)}
             on:navigate={handleSelectFile} 
+            on:toggleSelect={handleToggleSelectFile}
+            on:toggleExpand={handleToggleExpand}
             on:rightClick={handleRightClick}
             on:moveFile={handleMoveFile}
           />
@@ -930,7 +1039,9 @@
         <span>{$localizedText.sidebar.settings}</span>
       </button>
     {:else}
-      <span class="text-[var(--text-secondary)]">{$localizedText.sidebar.notes(tree ? totalNotes : 0)}</span>
+      <span class="text-[var(--text-secondary)]">
+        {selectedNoteCount > 0 ? $localizedText.sidebar.selectedNotes(selectedNoteCount) : $localizedText.sidebar.notes(tree ? totalNotes : 0)}
+      </span>
       <div class="flex items-center gap-3">
         {#if gitConfigured}
           <TooltipIconButton
@@ -1000,7 +1111,9 @@
       {/if}
       <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.editIcon}</button>
       <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.rename}</button>
-      <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-red-500/10 text-red-500 transition">{$localizedText.sidebar.context.delete}</button>
+      <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-red-500/10 text-red-500 transition">
+        {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
+      </button>
     </div>
   {/if}
 </div>
@@ -1073,19 +1186,9 @@
 <!-- Create Folder Modal -->
 {#if showCreateFolderModal}
   <ModalShell title={$localizedText.sidebar.modals.newSection} closeOnEscape={true} on:close={() => showCreateFolderModal = false}>
-      <div class="space-y-8">
-        <div>
-          <label for="parent-folder" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.parentFolder}</label>
-          <select id="parent-folder" bind:value={newFolderName} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 text-sm outline-none appearance-none cursor-pointer">
-            {#each directoryList as dir}
-              <option value={dir}>{dir || $localizedText.sidebar.modals.root}</option>
-            {/each}
-          </select>
-        </div>
-        <div>
-          <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
-          <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
-        </div>
+      <div>
+        <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
+        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
       </div>
       <div class="flex gap-6 mt-12">
         <button on:click={() => showCreateFolderModal = false} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>

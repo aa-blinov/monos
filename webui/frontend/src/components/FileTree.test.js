@@ -133,14 +133,11 @@ test('FileTree диспатчит moveFile при переносе файла в
   await fireEvent.dragOver(target, { dataTransfer });
   await fireEvent.drop(target, { dataTransfer });
 
-  expect(moveHandler).toHaveBeenCalledWith(
-    expect.objectContaining({
-      detail: {
-        sourcePath: 'notes/Inbox.md',
-        targetPath: 'notes/Archive',
-      },
-    })
-  );
+  expect(moveHandler).toHaveBeenCalledTimes(1);
+  expect(moveHandler.mock.calls[0][0].detail).toEqual(expect.objectContaining({
+    sourcePath: 'notes/Inbox.md',
+    targetPath: 'notes/Archive',
+  }));
 });
 
 test('FileTree добавляет payload для создания wiki-link при drag заметки', async () => {

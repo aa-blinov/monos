@@ -7,7 +7,6 @@
   import { editorState, editorAction } from '../stores.js';
   import {
     deleteFileRequest,
-    formatAllNotes,
     getWordCharStats,
     loadBacklinksRequest,
     loadFileContent,
@@ -26,7 +25,7 @@
     resolveMarkdownImagePath,
   } from '../lib/attachments.js';
   import { localizedText } from '../lib/strings.js';
-  import { Palette, Trash2, Wand } from 'lucide-svelte';
+  import { Palette, Trash2 } from 'lucide-svelte';
 
   let richEditor;
 
@@ -42,7 +41,6 @@
   let isLoading = true;
   let isSaving = false;
   let isDeleting = false;
-  let isFormatting = false;
   let formatToast = '';
   let formatToastTimer;
   let showDeleteConfirm = false;
@@ -226,20 +224,6 @@
       formatToastTimer = setTimeout(() => formatToast = '', 3000);
     } finally {
       isSaving = false;
-    }
-  }
-
-  async function handleFormat() {
-    if (isFormatting) return;
-    isFormatting = true;
-    try {
-      formatToast = (await formatAllNotes()).message;
-      dispatch('formatComplete');
-    } catch (e) { formatToast = $localizedText.editor.formatFailed; }
-    finally {
-      isFormatting = false;
-      if (formatToastTimer) clearTimeout(formatToastTimer);
-      formatToastTimer = setTimeout(() => formatToast = '', 3000);
     }
   }
 
@@ -502,8 +486,7 @@
   $: if ($editorAction && currentFile) {
     const action = $editorAction;
     editorAction.set(null);
-    if (action === 'format') handleFormat();
-    else if (action === 'delete') showDeleteConfirm = true;
+    if (action === 'delete') showDeleteConfirm = true;
   }
 </script>
 
