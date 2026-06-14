@@ -1,0 +1,56 @@
+name: Фича
+description: Предложить новую возможность или улучшение продукта
+title: "[Фича]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за идею для Monos. Сначала опишите пользовательскую проблему, затем желаемое поведение.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Проблема
+      description: Какую пользовательскую потребность, ограничение или разрыв в сценарии нужно закрыть?
+      placeholder: "Например: важные заметки уезжают вниз на дашборде после редактирования других заметок."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предложение
+      description: Опишите ожидаемую возможность или поведение.
+      placeholder: "Например: дать возможность закреплять выбранные заметки в отдельной верхней секции дашборда."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Критерии приёмки
+      description: Что должно быть верно, когда задача будет готова?
+      placeholder: |
+        - Пользователь может включить фичу из...
+        - Состояние сохраняется после перезапуска.
+        - Интерфейс работает на десктопе и мобильных экранах.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Рассмотренные альтернативы
+      description: Необязательно. Укажите более простые или другие подходы.
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Заметки
+      description: Необязательно. Добавьте скриншоты, ссылки, идеи реализации или связанные issue.
+    validations:
+      required: false

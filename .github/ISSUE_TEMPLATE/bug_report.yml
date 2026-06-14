@@ -1,0 +1,67 @@
+name: Баг
+description: Сообщить о поломке или неожиданном поведении
+title: "[Баг]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за баг-репорт для Monos. Чёткие шаги воспроизведения помогут быстрее исправить проблему.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Краткое описание
+      description: Что сломано?
+      placeholder: "Например: дашборд сохраняет старый порядок карточек после редактирования заметки."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      description: Перечислите точные шаги, которые приводят к багу.
+      placeholder: |
+        1. Открыть...
+        2. Изменить...
+        3. Нажать...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+      description: Что должно происходить?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактическое поведение
+      description: Что происходит сейчас?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Окружение
+      description: Версия приложения, ОС, тип установки, браузер/runtime, если релевантно.
+      placeholder: |
+        - Версия Monos:
+        - ОС:
+        - Сборка: десктоп / веб-разработка
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи или скриншоты
+      description: Необязательно. Добавьте ошибки, логи, скриншоты или короткие видео.
+    validations:
+      required: false
