@@ -80,7 +80,7 @@
       on:click|stopPropagation
     >
       {#each options as option}
-        <option value={option.value}>{option.name}</option>
+        <option value={option.value}>{option.label || option.name}</option>
       {/each}
     </select>
   </label>

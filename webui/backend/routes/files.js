@@ -36,7 +36,8 @@ export function registerFileRoutes(app) {
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       fs.writeFileSync(fullPath, content, 'utf-8');
       indexFile(fullPath, content);
-      res.json({ message: 'Saved' });
+      const updated = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath);
+      res.json({ message: 'Saved', modified: updated?.modified_at || fs.statSync(fullPath).mtime.toISOString() });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }

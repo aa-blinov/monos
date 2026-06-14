@@ -4,7 +4,7 @@ import { tick } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
-import { activeTheme, themeMode, isSearching, noteView, searchQuery, searchResults } from './stores.js';
+import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults } from './stores.js';
 
 vi.mock('./components/Header.svelte', async () => ({
   default: (await import('./components/__mocks__/HeaderStub.svelte')).default,
@@ -50,6 +50,7 @@ beforeEach(() => {
   searchQuery.set('');
   searchResults.set([]);
   isSearching.set(false);
+  noteSaveSignal.set(null);
   activeTheme.set('gruvbox');
   themeMode.set('system');
   noteView.set('list');
@@ -80,10 +81,13 @@ beforeEach(() => {
         ],
       });
     }
-    if (url.endsWith('/api/notes/recent?limit=36&offset=0')) {
+    if (url.endsWith('/api/notes/recent?limit=36&offset=0&sort=modified')) {
       return jsonResponse([
-        { path: 'notes/Work/Recent.md', name: 'Recent Note' },
+        { path: 'notes/Work/Recent.md', name: 'Recent Note', excerpt: 'Recent excerpt' },
       ]);
+    }
+    if (url.endsWith('/api/file?path=notes%2FWork%2FRecent.md')) {
+      return jsonResponse({ content: 'Recent body' });
     }
     if (url.endsWith('/api/notes/create') && init.method === 'POST') {
       const body = JSON.parse(init.body || '{}');
@@ -222,6 +226,49 @@ test('App возвращается на главную по клику на ло
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(screen.getByText(uiText.app.homeActions.newNote)).toBeTruthy();
+});
+
+test('App сохраняет scroll дашборда при возврате кнопкой назад из заметки', async () => {
+  noteView.set('board');
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  const boardScroll = document.querySelector('[data-board-scroll]');
+  boardScroll.scrollTop = 420;
+  await fireEvent.scroll(boardScroll);
+
+  await fireEvent.click(screen.getByText('sidebar navigate'));
+  await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
+
+  await fireEvent.click(screen.getByText('go home'));
+
+  await waitFor(() => expect(window.location.pathname).toBe('/'));
+  await waitFor(() => expect(document.querySelector('[data-board-scroll]').scrollTop).toBe(420));
+});
+
+test('App обновляет дашборд после фонового сохранения заметки', async () => {
+  noteView.set('board');
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  const boardScroll = document.querySelector('[data-board-scroll]');
+  boardScroll.scrollTop = 420;
+  await fireEvent.scroll(boardScroll);
+  const recentUrl = '/api/notes/recent?limit=36&offset=0&sort=modified';
+  const callsBeforeSave = fetch.mock.calls.filter(([url]) => url === recentUrl).length;
+
+  noteSaveSignal.set({
+    path: 'notes/FromSidebar.md',
+    modified: '2026-06-14T17:08:00.000Z',
+    savedAt: Date.now(),
+  });
+  await waitFor(() => {
+    const callsAfterSave = fetch.mock.calls.filter(([url]) => url === recentUrl).length;
+    expect(callsAfterSave).toBeGreaterThan(callsBeforeSave);
+  });
+  await waitFor(() => expect(document.querySelector('[data-board-scroll]').scrollTop).toBe(420));
 });
 
 test('App показывает дашборд на главной даже при list noteView', async () => {

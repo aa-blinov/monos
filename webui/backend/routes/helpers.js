@@ -41,6 +41,7 @@ export function noteCardPayload(entry) {
     color: entry.color || null,
     category: entry.category || '',
     tags: parseTags(entry.tags),
+    modified: entry.modified_at || null,
     lastOpened: entry.last_opened,
     boardOrder: entry.board_order ?? null,
     trashedAt: entry.trashed_at || null,

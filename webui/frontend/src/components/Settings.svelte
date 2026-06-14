@@ -5,14 +5,25 @@
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
+  import appPackage from '../../../../package.json';
 
   const dispatch = createEventDispatcher();
   const DEFAULT_GIT_OWNER = 'Monos';
+  const appVersion = appPackage.version;
   const themeModeOptions = [
     { value: 'system', label: () => $localizedText.settings.themeModeSystem },
     { value: 'light', label: () => $localizedText.settings.themeModeLight },
     { value: 'dark', label: () => $localizedText.settings.themeModeDark },
   ];
+
+  $: localizedFontSizeOptions = fontSizeOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.fontSize[option.value] || option.name,
+  }));
+  $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.fontSize[option.value] || option.name,
+  }));
 
   let settings = {
     auto_sync_interval: 0,
@@ -428,8 +439,8 @@
             on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
             class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
           >
-            {#each fontSizeOptions as s}
-              <option value={s.value}>{s.name} ({s.base})</option>
+            {#each localizedFontSizeOptions as s}
+              <option value={s.value}>{s.label} ({s.base})</option>
             {/each}
           </select>
         </div>
@@ -447,8 +458,8 @@
           on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
           class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
         >
-          {#each editorFontSizeOptions as s}
-            <option value={s.value}>{s.name} ({s.base})</option>
+          {#each localizedEditorFontSizeOptions as s}
+            <option value={s.value}>{s.label} ({s.base})</option>
           {/each}
         </select>
       </div>
@@ -610,7 +621,7 @@
           {/each}
         </div>
         <button on:click={openConflictResolver} class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-secondary)] transition">
-          Resolve Conflicts
+          {$localizedText.settings.resolveConflicts}
         </button>
       </section>
     {/if}
@@ -668,6 +679,10 @@
         <div class="text-xs text-[var(--red)]">{backupError}</div>
       {/if}
     </section>
+
+    <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+      <span class="opacity-40">{$localizedText.settings.version} {appVersion}</span>
+    </footer>
 
     </div>
 

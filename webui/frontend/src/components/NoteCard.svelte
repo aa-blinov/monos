@@ -45,10 +45,10 @@
     return new Intl.DateTimeFormat(dateLocale(currentLocale), options).format(date);
   }
 
-  function openedDateLabel(value, currentLocale = 'en', short = false) {
+  function cardDateLabel(value, label, currentLocale = 'en', short = false) {
     const formattedDate = formatOpenedDate(value, currentLocale, short);
     if (!formattedDate) return '';
-    return short ? formattedDate : `${$localizedText.app.board.opened} ${formattedDate}`;
+    return short ? formattedDate : `${label} ${formattedDate}`;
   }
 
   function cardDateTime(value) {
@@ -81,9 +81,12 @@
   $: excerpt = excerptText(note?.excerpt);
   $: visibleExcerpt = highlight && query ? searchSnippet(excerpt, query, compact ? 56 : 180) : excerpt;
   $: pathLabel = visiblePath(note?.path);
-  $: openedDate = openedDateLabel(note?.lastOpened, $locale, compact);
-  $: openedDateTime = cardDateTime(note?.lastOpened);
-  $: openedDateTitle = cardDateTitle(note?.lastOpened, $locale);
+  $: visibleName = String(note?.name || '');
+  $: cardDateValue = note?.modified || note?.lastOpened;
+  $: cardDatePrefix = note?.modified ? $localizedText.app.board.modified : $localizedText.app.board.opened;
+  $: openedDate = cardDateLabel(cardDateValue, cardDatePrefix, $locale, compact);
+  $: openedDateTime = cardDateTime(cardDateValue);
+  $: openedDateTitle = cardDateTitle(cardDateValue, $locale);
   $: cardStyle = `--note-accent: ${accent}; --note-tint: color-mix(in srgb, ${accent} 13%, transparent); --note-glow: color-mix(in srgb, ${accent} 18%, transparent);`;
   $: cardClass = compact
     ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3.5 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
@@ -105,7 +108,11 @@
   <span class="pointer-events-none absolute -right-12 -top-16 h-32 w-32 rounded-full bg-[var(--note-glow)] blur-2xl"></span>
 
   <span class="relative block shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'truncate text-lg sm:text-xl'} font-medium leading-tight tracking-tight break-anywhere">
-    {note?.name || ''}
+    {#if highlight && query}
+      {@html highlightExcerpt(visibleName, query)}
+    {:else}
+      {visibleName}
+    {/if}
   </span>
   {#if pathLabel}
     <span class="relative mt-1 block shrink-0 truncate text-[9px] uppercase tracking-[0.14em] text-[var(--text-secondary)]/70 {compact ? '' : 'sm:text-[10px] sm:tracking-[0.16em]'}">

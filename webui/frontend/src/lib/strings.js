@@ -82,6 +82,7 @@ const enText = {
       filter: 'Search notes',
       filterPlaceholder: 'Search notes...',
       opened: 'Opened',
+      modified: 'Modified',
       columns(count) {
         return `${count} columns`;
       },
@@ -288,6 +289,7 @@ const enText = {
     description: 'Description',
     folder: 'Folder',
     tags: 'Tags',
+    tagsPlaceholder: 'project, idea',
     content: 'Markdown content',
     placeholders: 'Variables: {{title}}, {{date}}, {{shortDate}}, {{time}}.',
     createTemplate: 'Create template',
@@ -307,10 +309,33 @@ const enText = {
       return `Delete custom template ${name}?`;
     },
   },
+  optionLabels: {
+    fontSize: {
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large',
+      xlarge: 'Extra Large',
+    },
+    lineHeight: {
+      compact: 'Compact',
+      cozy: 'Cozy',
+      normal: 'Normal',
+      spaced: 'Spaced',
+      relaxed: 'Relaxed',
+    },
+    contentWidth: {
+      narrow: 'Narrow',
+      snug: 'Snug',
+      medium: 'Medium',
+      broad: 'Broad',
+      wide: 'Wide',
+    },
+  },
   settings: {
     title: 'Settings',
     hint: 'Adjust the interface, editor, sync, templates, and backup behavior.',
     back: 'Back',
+    version: 'Version',
     language: 'Language',
     interfaceLanguage: 'Interface Language',
     theme: 'Theme',
@@ -523,6 +548,18 @@ const enText = {
       return `Failed to load tree: ${message}`;
     },
   },
+  fileInfo: {
+    identifier: 'Identifier',
+    dimensions: 'Dimensions',
+    nature: 'Nature',
+    collection: 'Collection',
+    thought: 'Thought',
+    conceived: 'Conceived',
+    refined: 'Refined',
+    connections: 'Connections',
+    awaitingFocus: 'Awaiting Focus',
+    unknown: 'Unknown',
+  },
   modal: {
     close: 'Close modal',
     closeBackdrop: 'Close modal by clicking backdrop',
@@ -561,6 +598,7 @@ const ruText = {
       filter: 'Поиск по заметкам',
       filterPlaceholder: 'Искать заметки...',
       opened: 'Открыта',
+      modified: 'Изменена',
       columns(count) {
         return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
       },
@@ -782,6 +820,7 @@ const ruText = {
     description: 'Описание',
     folder: 'Папка',
     tags: 'Теги',
+    tagsPlaceholder: 'проект, идея',
     content: 'Markdown-содержимое',
     placeholders: 'Переменные: {{title}}, {{date}}, {{shortDate}}, {{time}}.',
     createTemplate: 'Создать шаблон',
@@ -801,10 +840,33 @@ const ruText = {
       return `Удалить пользовательский шаблон ${name}?`;
     },
   },
+  optionLabels: {
+    fontSize: {
+      small: 'Маленький',
+      medium: 'Средний',
+      large: 'Большой',
+      xlarge: 'Очень большой',
+    },
+    lineHeight: {
+      compact: 'Компактный',
+      cozy: 'Удобный',
+      normal: 'Обычный',
+      spaced: 'Просторный',
+      relaxed: 'Свободный',
+    },
+    contentWidth: {
+      narrow: 'Узкая',
+      snug: 'Плотная',
+      medium: 'Средняя',
+      broad: 'Широкая',
+      wide: 'Очень широкая',
+    },
+  },
   settings: {
     title: 'Настройки',
     hint: 'Настройте интерфейс, редактор, синхронизацию, шаблоны и резервные копии.',
     back: 'Назад',
+    version: 'Версия',
     language: 'Язык',
     interfaceLanguage: 'Язык интерфейса',
     theme: 'Тема',
@@ -1019,6 +1081,18 @@ const ruText = {
     failedToLoadTree(message) {
       return `Не удалось загрузить дерево: ${message}`;
     },
+  },
+  fileInfo: {
+    identifier: 'Идентификатор',
+    dimensions: 'Размер',
+    nature: 'Тип',
+    collection: 'Коллекция',
+    thought: 'Заметка',
+    conceived: 'Создано',
+    refined: 'Изменено',
+    connections: 'Связи',
+    awaitingFocus: 'Ожидает выбора',
+    unknown: 'Неизвестно',
   },
   modal: {
     close: 'Закрыть окно',

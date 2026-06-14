@@ -109,6 +109,7 @@
   let renameNewName = '';
   /** @type {string} */
   let renameOldName = '';
+  let renameTarget = null;
 
   /** @type {boolean} */
   let showIconModal = false;
@@ -262,6 +263,31 @@
 
   function displayNoteName(name = '') {
     return name.replace(/\.md$/i, '');
+  }
+
+  function renameInputName(name = '', isDir = false) {
+    return isDir ? name : displayNoteName(name);
+  }
+
+  function fileExtension(name = '') {
+    const match = String(name || '').match(/(\.[^.]*)$/);
+    return match ? match[1] : '';
+  }
+
+  function renameRequestName(inputName, oldName = '', isDir = false) {
+    const trimmed = String(inputName || '').trim();
+    if (isDir) return trimmed;
+    const extension = fileExtension(oldName);
+    return extension && !trimmed.toLowerCase().endsWith(extension.toLowerCase())
+      ? `${trimmed}${extension}`
+      : trimmed;
+  }
+
+  function closeRenameModal() {
+    showRenameModal = false;
+    renameTarget = null;
+    renameNewName = '';
+    renameOldName = '';
   }
 
   function loadPinnedNotes() {
@@ -736,8 +762,9 @@
       iconPickerTarget = path;
       showIconModal = true;
     } else if (action === 'rename') {
-      renameOldName = name;
-      renameNewName = name.replace(/\.md$/, '');
+      renameTarget = { path, name, isDir: contextMenu.isDir };
+      renameOldName = renameInputName(name, contextMenu.isDir);
+      renameNewName = renameOldName;
       showRenameModal = true;
     } else if (action === 'pin') {
       pinNote(path, name);
@@ -756,26 +783,29 @@
   }
 
   async function renameItem() {
-    if (!renameNewName.trim() || renameNewName === renameOldName) {
-      showRenameModal = false;
+    const target = renameTarget;
+    const nextInputName = renameNewName.trim();
+    if (!target || !nextInputName || nextInputName === renameOldName) {
+      closeRenameModal();
       return;
     }
 
     try {
       isCreating = true;
-      const data = await renameItemRequest(contextMenu.targetPath, renameNewName);
-      showRenameModal = false;
+      const requestName = renameRequestName(nextInputName, target.name, target.isDir);
+      const data = await renameItemRequest(target.path, requestName);
+      closeRenameModal();
       
-      const affectedSelectedPath = selectedPath && isSameOrDescendant(selectedPath, contextMenu.targetPath)
-        ? replacePathPrefix(selectedPath, contextMenu.targetPath, data.path)
+      const affectedSelectedPath = selectedPath && isSameOrDescendant(selectedPath, target.path)
+        ? replacePathPrefix(selectedPath, target.path, data.path)
         : null;
       
       await loadTree();
       await loadDirectories();
       
-      updatePinnedPath(contextMenu.targetPath, data.path, data.name);
+      updatePinnedPath(target.path, data.path, data.name);
       if (affectedSelectedPath) {
-        navigateToPath(affectedSelectedPath, contextMenu.isDir && affectedSelectedPath === data.path);
+        navigateToPath(affectedSelectedPath, target.isDir && affectedSelectedPath === data.path);
       }
     } catch (err) {
       error = $localizedText.sidebar.errors.rename(err.message);
@@ -1120,7 +1150,7 @@
 
 <!-- Rename Modal -->
 {#if showRenameModal}
-  <ModalShell title={$localizedText.sidebar.modals.renameTitle(contextMenu.isDir ? $localizedText.sidebar.modals.section : $localizedText.sidebar.modals.note)} on:close={() => showRenameModal = false}>
+  <ModalShell title={$localizedText.sidebar.modals.renameTitle(renameTarget?.isDir ? $localizedText.sidebar.modals.section : $localizedText.sidebar.modals.note)} on:close={closeRenameModal}>
       <div class="space-y-8">
         <div>
           <label for="rename-input" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.newName}</label>
@@ -1135,7 +1165,7 @@
         </div>
       </div>
       <div class="flex gap-6 mt-12">
-        <button on:click={() => showRenameModal = false} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
+        <button on:click={closeRenameModal} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
         <button on:click={renameItem} disabled={isCreating || !renameNewName.trim() || renameNewName === renameOldName} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
           {isCreating ? $localizedText.sidebar.modals.renaming : $localizedText.sidebar.modals.rename}
         </button>

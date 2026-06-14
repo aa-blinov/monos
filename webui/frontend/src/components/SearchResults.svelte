@@ -12,11 +12,7 @@
 </script>
 
 <div class="h-full overflow-y-auto px-4 lg:px-12 py-6 lg:py-8" data-board-scroll>
-  {#if isSearching}
-    <div class="flex items-center justify-center h-32">
-      <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.searchResults.searching}</span>
-    </div>
-  {:else if results.length > 0}
+  {#if results.length > 0}
     <div class="mx-auto max-w-6xl">
       <div class="mb-6 flex items-baseline justify-between gap-4">
         <div>
@@ -33,7 +29,7 @@
         on:reveal={(e) => dispatch('reveal', e.detail)}
       />
     </div>
-  {:else}
+  {:else if !isSearching}
     <div class="flex items-center justify-center h-32">
       <span class="text-xs uppercase tracking-widest opacity-40">{$localizedText.searchResults.noResults}</span>
     </div>

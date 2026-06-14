@@ -16,7 +16,7 @@
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching } from './stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -61,6 +61,11 @@
   let homeRecentNotes = [];
   let homeRecentHasMore = true;
   let homeRecentLoading = false;
+  let boardScrollContainer = null;
+  let boardScrollTop = 0;
+  let pendingBoardScrollTop = null;
+  let dashboardNeedsRefresh = false;
+  let lastSeenNoteSaveAt = 0;
   let continueWorkOpen = false;
   let searchUrlReady = false;
   let urlSearchQuery = searchParamFromUrl().trim();
@@ -95,6 +100,12 @@
     restoredInitialUrlSearch = true;
     $searchQuery = urlSearchQuery;
     void runRestoredSearch(urlSearchQuery);
+  }
+  $: if (boardScrollContainer && isDashboardRoute && pendingBoardScrollTop !== null) {
+    restoreBoardScrollPosition();
+  }
+  $: if ($noteSaveSignal?.savedAt && $noteSaveSignal.savedAt !== lastSeenNoteSaveAt) {
+    handleNoteSaved($noteSaveSignal);
   }
 
   function isKnownAppRoute(pathname) {
@@ -212,6 +223,10 @@
         if (routePath !== '/') clearSearch();
         if (routePath === '/') void loadHomeRecentNotes();
         return;
+      }
+      if (routePath === '/') {
+        $noteView = 'board';
+        enterDashboardFromNote();
       }
       if (routePath !== '/') clearSearch();
     };
@@ -362,7 +377,7 @@
     homeRecentLoading = true;
     try {
       const offset = append ? homeRecentNotes.length : 0;
-      const response = await fetch(`/api/notes/recent?limit=${BOARD_NOTES_PAGE_SIZE}&offset=${offset}`);
+      const response = await fetch(`/api/notes/recent?limit=${BOARD_NOTES_PAGE_SIZE}&offset=${offset}&sort=modified`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const recent = await response.json();
       const nextNotes = Array.isArray(recent) ? recent : [];
@@ -385,11 +400,52 @@
   }
 
   function handleBoardScroll(event) {
-    if ($noteView !== 'board' || !homeRecentHasMore || homeRecentLoading) return;
+    if (pendingBoardScrollTop !== null) return;
     const container = event.currentTarget;
+    boardScrollTop = container.scrollTop || 0;
+    if ($noteView !== 'board' || !homeRecentHasMore || homeRecentLoading) return;
     if (container.scrollHeight - container.scrollTop - container.clientHeight < 640) {
       void loadHomeRecentNotes({ append: true });
     }
+  }
+
+  function rememberBoardScrollPosition() {
+    if (!boardScrollContainer) return;
+    boardScrollTop = boardScrollContainer.scrollTop || 0;
+  }
+
+  function scheduleBoardScrollRestore() {
+    pendingBoardScrollTop = boardScrollTop;
+  }
+
+  function restoreBoardScrollPosition() {
+    if (pendingBoardScrollTop === null || !boardScrollContainer) return;
+    const savedScrollTop = pendingBoardScrollTop;
+    boardScrollContainer.scrollTop = savedScrollTop;
+    boardScrollTop = savedScrollTop;
+    pendingBoardScrollTop = null;
+  }
+
+  async function refreshDashboardAfterNoteSave() {
+    rememberBoardScrollPosition();
+    const savedScrollTop = boardScrollTop;
+    dashboardNeedsRefresh = false;
+    await loadHomeRecentNotes();
+    pendingBoardScrollTop = savedScrollTop;
+    await tick();
+    restoreBoardScrollPosition();
+  }
+
+  function shouldRefreshDashboardOnReturn() {
+    return dashboardNeedsRefresh || $editorState.dirty || $editorState.saving;
+  }
+
+  function enterDashboardFromNote() {
+    if (shouldRefreshDashboardOnReturn()) {
+      refreshDashboardAfterNoteSave();
+      return;
+    }
+    scheduleBoardScrollRestore();
   }
 
   async function maybeFillBoardViewport() {
@@ -453,12 +509,17 @@
   function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
   function closeCommandPalette() { commandPaletteOpen = false; }
   function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
+    const shouldRestoreBoardScroll = isNoteOpen && !refreshTree;
     $noteView = 'board';
     if (closeSidebar) sidebarOpen = false;
     setRoutePath('/');
     navigate('/', { replace });
     clearSearch();
-    void loadHomeRecentNotes();
+    if (shouldRestoreBoardScroll) {
+      enterDashboardFromNote();
+    } else {
+      void loadHomeRecentNotes();
+    }
     if (refreshTree && sidebarComponent) sidebarComponent.loadTree();
   }
   function goHome() { showDashboard({ closeSidebar: false }); }
@@ -541,6 +602,7 @@
   }
 
   function handleNavigate(event) {
+    if (isDashboardRoute) rememberBoardScrollPosition();
     $noteView = 'list';
     const nextPath = `/notes/${normalizeNotePath(event.detail.path)}`;
     setRoutePath(nextPath);
@@ -565,6 +627,14 @@
     if (!path) return;
     homeRecentNotes = homeRecentNotes.map((note) => note.path === path ? { ...note, color } : note);
     if (sidebarComponent) sidebarComponent.loadTree();
+  }
+
+  function handleNoteSaved(eventOrDetail) {
+    const detail = eventOrDetail?.detail || eventOrDetail || {};
+    if (detail.savedAt && detail.savedAt === lastSeenNoteSaveAt) return;
+    if (detail.savedAt) lastSeenNoteSaveAt = detail.savedAt;
+    dashboardNeedsRefresh = true;
+    if (isDashboardRoute) refreshDashboardAfterNoteSave();
   }
 
   function handlePaletteCommand(event) {
@@ -740,7 +810,7 @@
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:notesImported={handleNotesImported} />
@@ -752,7 +822,7 @@
           <TemplateManager />
         </Route>
         <Route path="/">
-          <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
+          <div bind:this={boardScrollContainer} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
             <div class="mx-auto max-w-6xl">
               <NoteBoard
                 notes={homeRecentNotes}
@@ -762,7 +832,6 @@
                 on:openFull={(e) => openRecentNote(e.detail)}
                 on:reveal={revealInTree}
                 on:noteTouched={(e) => promoteRecentNote(e.detail)}
-                on:notesReordered={(e) => homeRecentNotes = e.detail.notes}
               />
               {#if homeRecentLoading && homeRecentNotes.length > 0}
                 <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">

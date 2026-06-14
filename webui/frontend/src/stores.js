@@ -32,6 +32,7 @@ export const searchResults = writable([]);
 export const isSearching = writable(false);
 export const editorState = writable({ path: null, dirty: false, saving: false });
 export const editorAction = writable(null);
+export const noteSaveSignal = writable(null);
 
 activeTheme.subscribe(value => {
   localStorage.setItem('theme', value);

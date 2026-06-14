@@ -363,6 +363,42 @@ test('Editor не перетирает новые правки после зав
   expect(fileLoadCount).toBe(1);
 });
 
+test('Editor сохраняет последнюю правку по интервалу даже при непрерывном вводе', async () => {
+  const path = 'notes/Inbox.md';
+  const encodedPath = encodeURIComponent(path);
+  const fetchMock = installFetchMock(createDefaultResponses(path, {
+    [`/api/file?path=${encodedPath}`]: jsonResponse({ content: 'Initial body' }),
+    [`POST /api/file?path=${encodedPath}`]: jsonResponse({
+      message: 'Saved',
+      modified: '2026-05-07T12:01:30.000Z',
+    }),
+  }));
+
+  render(Editor, {
+    currentFile: { path, name: 'Inbox.md', isDir: false },
+  });
+
+  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
+  await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
+  const editorInput = screen.getByTestId('rich-editor-input');
+
+  vi.useFakeTimers();
+  await fireEvent.input(editorInput, { target: { value: 'First edit' } });
+  await vi.advanceTimersByTimeAsync(800);
+  await fireEvent.input(editorInput, { target: { value: 'Second edit' } });
+  await vi.advanceTimersByTimeAsync(700);
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/file?path=${encodedPath}`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ content: 'Second edit' }),
+      })
+    );
+  });
+});
+
 test('Editor сохраняет старую заметку при быстром переключении во время autosave', async () => {
   const alphaPath = 'notes/Alpha.md';
   const betaPath = 'notes/Beta.md';

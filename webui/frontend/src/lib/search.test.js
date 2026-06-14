@@ -6,11 +6,21 @@ test('getSearchTerms убирает #, дубликаты и пустые час
   assert.deepEqual(getSearchTerms('#RAG   rag  агенты '), ['агенты', 'rag']);
 });
 
+test('getSearchTerms предпочитает полную фразу отдельным словам', () => {
+  assert.deepEqual(getSearchTerms('предложение по дем'), ['предложение по дем', 'предложение', 'дем', 'по']);
+});
+
 test('highlightExcerpt подсвечивает каждое слово запроса', () => {
   const result = highlightExcerpt('RAG система и агенты', 'rag агенты');
 
   assert.match(result, /<mark[^>]*>RAG<\/mark>/);
   assert.match(result, /<mark[^>]*>агенты<\/mark>/);
+});
+
+test('highlightExcerpt подсвечивает полную фразу запроса', () => {
+  const result = highlightExcerpt('Предложение по демо-стенду', 'предложение по дем');
+
+  assert.match(result, /<mark[^>]*>Предложение по дем<\/mark>о-стенду/);
 });
 
 test('highlightExcerpt экранирует HTML перед подсветкой', () => {

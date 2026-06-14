@@ -3,6 +3,7 @@ import { beforeEach, test, expect, vi } from 'vitest';
 import Settings from './Settings.svelte';
 import { locale, uiText } from '../lib/strings.js';
 import { editorState, themeMode } from '../stores.js';
+import appPackage from '../../../../package.json';
 
 function jsonResponse(data, ok = true) {
   return {
@@ -118,6 +119,16 @@ test('Settings показывает Monos как owner по умолчанию',
   render(Settings);
 
   await waitFor(() => expect(screen.getByLabelText(uiText.settings.owner).value).toBe('Monos'));
+});
+
+test('Settings показывает версию приложения в футере', async () => {
+  const fetchMock = createFetchMock({ settings: {} });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Settings);
+
+  await waitFor(() => expect(screen.getByText(`${uiText.settings.version} ${appPackage.version}`)).toBeTruthy());
 });
 
 test('Settings не запускает git setup без явного действия пользователя', async () => {

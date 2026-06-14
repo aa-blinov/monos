@@ -503,6 +503,7 @@ test('Sidebar после rename открытой заметки навигиру
   await waitFor(() => expect(navigateHandler).toHaveBeenCalledWith(expect.objectContaining({
     detail: { path: 'notes/Work/Alpha Renamed.md', name: 'Alpha Renamed.md', isDir: false },
   })));
+  await waitFor(() => expect(screen.queryByLabelText(uiText.sidebar.modals.newName)).toBeNull());
 });
 
 test('Sidebar после удаления открытой заметки сбрасывает активный файл', async () => {

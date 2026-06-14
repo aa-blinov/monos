@@ -100,6 +100,7 @@ test('Header выполняет обычный поиск по вводу и о�
 
   const input = screen.getByPlaceholderText(uiText.header.search);
   await fireEvent.input(input, { target: { value: 'beta' } });
+  expect(get(isSearching)).toBe(true);
 
   await vi.advanceTimersByTimeAsync(300);
   await waitFor(() => expect(get(searchResults)).toEqual([
@@ -111,6 +112,7 @@ test('Header выполняет обычный поиск по вводу и о�
   expect(input.value).toBe('');
   expect(get(searchQuery)).toBe('');
   expect(get(searchResults)).toEqual([]);
+  expect(get(isSearching)).toBe(false);
 });
 
 test('Header показывает восстановленный запрос', () => {

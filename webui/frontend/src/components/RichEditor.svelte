@@ -46,6 +46,19 @@
 
   const WIKI_SUGGESTION_LIMIT = 8;
 
+  $: localizedContentWidthOptions = contentWidthOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.contentWidth[option.value] || option.name,
+  }));
+  $: localizedLineHeightOptions = lineHeightOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.lineHeight[option.value] || option.name,
+  }));
+  $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.fontSize[option.value] || option.name,
+  }));
+
   const slashCommands = [
     { id: 'heading1', run: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
     { id: 'heading2', run: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
@@ -436,7 +449,7 @@
 
     <TooltipIconSelect
       bind:value={$contentWidth}
-      options={contentWidthOptions}
+      options={localizedContentWidthOptions}
       label={$localizedText.richEditor.contentWidth}
       class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
     >
@@ -444,7 +457,7 @@
     </TooltipIconSelect>
     <TooltipIconSelect
       bind:value={$lineHeight}
-      options={lineHeightOptions}
+      options={localizedLineHeightOptions}
       label={$localizedText.richEditor.lineHeight}
       class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
     >
@@ -452,7 +465,7 @@
     </TooltipIconSelect>
     <TooltipIconSelect
       bind:value={$editorFontSize}
-      options={editorFontSizeOptions}
+      options={localizedEditorFontSizeOptions}
       label={$localizedText.richEditor.fontSize}
       class="relative inline-flex shrink-0 cursor-pointer rounded p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
     >

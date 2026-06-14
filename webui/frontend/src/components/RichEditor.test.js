@@ -4,6 +4,7 @@ import { get } from 'svelte/store';
 import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
 import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
 import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
+import { contentWidthOptions } from '../lib/fonts.js';
 import { locale, uiText } from '../lib/strings.js';
 import { contentWidth, editorFontSize, lineHeight } from '../stores.js';
 import RichEditor from './RichEditor.svelte';
@@ -108,6 +109,17 @@ test('RichEditor converts markdown image syntax to image nodes', () => {
   expect(imageOnlySerialized).toContain('"src":"_attachments/image-20260614.png"');
 });
 
+test('RichEditor converts markdown pipe tables to TipTap table nodes', () => {
+  const doc = markdownToEditorContent('| Name | Value |\n| --- | --- |\n| Alpha | **42** |');
+  const serialized = JSON.stringify(doc);
+
+  expect(serialized).toContain('"type":"table"');
+  expect(serialized).toContain('"type":"tableHeader"');
+  expect(serialized).toContain('"type":"tableCell"');
+  expect(serialized).toContain('"type":"bold"');
+  expect(serialized).not.toContain('| Name | Value |');
+});
+
 test('RichEditor detects markdown clipboard text for paste formatting', () => {
   const markdownClipboard = {
     types: ['text/plain'],
@@ -145,6 +157,12 @@ test('RichEditor exposes dropdowns for editor layout settings', async () => {
   expect(get(contentWidth)).toBe('narrow');
   expect(get(lineHeight)).toBe('relaxed');
   expect(get(editorFontSize)).toBe('xl');
+});
+
+test('RichEditor wide content width disables max-width centering', () => {
+  const wide = contentWidthOptions.find((option) => option.value === 'wide');
+
+  expect(wide?.value_css).toBe('none');
 });
 
 test('RichEditor configures the attachment image extension', () => {

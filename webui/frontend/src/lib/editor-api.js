@@ -11,11 +11,6 @@ export const resolveWikiLink = (name) => fetchJson(`/api/notes/resolve-link?name
 export const touchNoteRequest = (filePath) => fetchJson(`/api/notes/touch?path=${encodeURIComponent(filePath)}`, {
   method: 'POST',
 });
-export const reorderBoardNotesRequest = (paths) => fetchJson('/api/notes/reorder', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ paths }),
-});
 export const setItemColorRequest = (itemPath, color) => fetchJson(`/api/directory/icon?path=${encodeURIComponent(itemPath)}`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },

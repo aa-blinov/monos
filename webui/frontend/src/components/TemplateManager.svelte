@@ -249,7 +249,7 @@
         </div>
         <div>
           <label for="template-manager-tags" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.tags}</label>
-          <input id="template-manager-tags" bind:value={form.tags} placeholder="project, idea" class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
+          <input id="template-manager-tags" bind:value={form.tags} placeholder={$localizedText.templates.tagsPlaceholder} class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
         </div>
       </div>
       <div>

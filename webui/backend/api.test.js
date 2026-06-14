@@ -178,6 +178,35 @@ apiTest('POST /api/notes/touch поднимает заметку в recent', asy
   assert.equal(recent.data[0].path, 'notes/Beta.md');
 });
 
+apiTest('GET /api/notes/recent sort=modified сортирует по mtime, а не по last_opened', async () => {
+  const alphaPath = path.join(notesDir, 'Topic', 'Alpha.md');
+  const betaPath = path.join(notesDir, 'Beta.md');
+  const formatMePath = path.join(notesDir, 'FormatMe.md');
+  const oldestMtime = new Date('2025-12-01T00:00:00.000Z');
+  const olderMtime = new Date('2026-01-01T00:00:00.000Z');
+  const newerMtime = new Date('2026-02-01T00:00:00.000Z');
+  fs.utimesSync(alphaPath, olderMtime, olderMtime);
+  fs.utimesSync(betaPath, newerMtime, newerMtime);
+  fs.utimesSync(formatMePath, oldestMtime, oldestMtime);
+  indexAllFiles();
+
+  getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?')
+    .run('2026-03-01T00:00:00.000Z', 'notes/Topic/Alpha.md');
+  getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?')
+    .run('2026-01-15T00:00:00.000Z', 'notes/Beta.md');
+  getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?')
+    .run('2025-12-15T00:00:00.000Z', 'notes/FormatMe.md');
+
+  const modified = await requestJson(buildUrl('/api/notes/recent', { limit: '2', sort: 'modified' }));
+  assert.equal(modified.response.status, 200);
+  assert.deepEqual(modified.data.map((note) => note.path), ['notes/Beta.md', 'notes/Topic/Alpha.md']);
+  assert.equal(modified.data[0].modified, newerMtime.toISOString());
+
+  const opened = await requestJson(buildUrl('/api/notes/recent', { limit: '1' }));
+  assert.equal(opened.response.status, 200);
+  assert.equal(opened.data[0].path, 'notes/Topic/Alpha.md');
+});
+
 apiTest('POST /api/file и indexAllFiles обновляют поиск, но не меняют last_opened', async () => {
   const fixedOpenedAt = '2001-01-01T00:00:00.000Z';
   getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?')
@@ -199,10 +228,12 @@ Fresh searchable phrase from save.
     body: JSON.stringify({ content: nextContent }),
   });
   assert.equal(saved.response.status, 200);
+  assert.match(saved.data.modified, /^\d{4}-\d{2}-\d{2}T/);
 
-  const afterSave = getDb().prepare('SELECT last_opened FROM notes_index WHERE path = ?')
+  const afterSave = getDb().prepare('SELECT last_opened, modified_at FROM notes_index WHERE path = ?')
     .get('notes/Topic/Alpha.md');
   assert.equal(afterSave.last_opened, fixedOpenedAt);
+  assert.equal(afterSave.modified_at, saved.data.modified);
 
   const search = await requestJson(buildUrl('/api/search'), {
     method: 'POST',
