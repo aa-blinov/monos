@@ -6,8 +6,9 @@
   import { loadFileContent, setItemColorRequest } from '../lib/editor-api.js';
   import { stripFrontmatter } from '../lib/preview-html.js';
   import { localizedText } from '../lib/strings.js';
-  import { boardColumns, boardGroupByColor } from '../stores.js';
+  import { boardColumns, boardGroupByColor, activeTheme } from '../stores.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
+  import { getNoteColorOptions } from '../lib/note-colors.js';
 
   export let notes = [];
   export let query = '';
@@ -42,10 +43,7 @@
   let wideBoard = typeof window !== 'undefined' ? window.innerWidth >= 1280 : false;
   const hydratedExcerptPaths = new Set();
 
-  const colorOptions = [
-    '#a89984', '#928374', '#fb4934', '#fe8019', '#fabd2f',
-    '#b8bb26', '#8ec07c', '#83a598', '#458588', '#d3869b'
-  ];
+  $: colorOptions = getNoteColorOptions($activeTheme);
 
   $: {
     const nextSignature = notes.map((note) => `${note.path}:${note.modified || note.lastOpened || ''}`).join('|');

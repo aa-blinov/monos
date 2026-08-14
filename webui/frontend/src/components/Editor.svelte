@@ -4,7 +4,8 @@
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction, noteSaveSignal } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal, activeTheme } from '../stores.js';
+  import { getNoteColorOptions } from '../lib/note-colors.js';
   import {
     deleteFileRequest,
     getWordCharStats,
@@ -65,10 +66,7 @@
   let currentNoteColor = '';
   let isColorSaving = false;
 
-  const colorOptions = [
-    '#a89984', '#928374', '#fb4934', '#fe8019', '#fabd2f',
-    '#b8bb26', '#8ec07c', '#83a598', '#458588', '#d3869b'
-  ];
+  $: colorOptions = getNoteColorOptions($activeTheme);
 
   function isCurrentLoad(requestId, filePath) {
     return requestId === loadRequestId && currentFile?.path === filePath;
