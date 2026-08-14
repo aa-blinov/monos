@@ -3,6 +3,8 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import ModalShell from './ModalShell.svelte';
+  import RenameModal from './RenameModal.svelte';
+  import IconPickerModal from './IconPickerModal.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { iconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
@@ -1150,67 +1152,29 @@
 
 <!-- Rename Modal -->
 {#if showRenameModal}
-  <ModalShell title={$localizedText.sidebar.modals.renameTitle(renameTarget?.isDir ? $localizedText.sidebar.modals.section : $localizedText.sidebar.modals.note)} on:close={closeRenameModal}>
-      <div class="space-y-8">
-        <div>
-          <label for="rename-input" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.newName}</label>
-          <input 
-            id="rename-input" 
-            type="text" 
-            bind:value={renameNewName} 
-            placeholder={$localizedText.sidebar.modals.newNamePlaceholder}
-            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
-            on:keydown={(e) => e.key === 'Enter' && renameItem()}
-          />
-        </div>
-      </div>
-      <div class="flex gap-6 mt-12">
-        <button on:click={closeRenameModal} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-        <button on:click={renameItem} disabled={isCreating || !renameNewName.trim() || renameNewName === renameOldName} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
-          {isCreating ? $localizedText.sidebar.modals.renaming : $localizedText.sidebar.modals.rename}
-        </button>
-      </div>
-  </ModalShell>
+  <RenameModal
+    isDir={renameTarget?.isDir}
+    currentName={renameOldName}
+    busy={isCreating}
+    sectionLabel={$localizedText.sidebar.modals.section}
+    noteLabel={$localizedText.sidebar.modals.note}
+    on:close={closeRenameModal}
+    on:submit={(e) => { renameNewName = e.detail.newName; renameItem(); }}
+  />
 {/if}
 
 <!-- Icon Picker Modal -->
 {#if showIconModal}
-  <ModalShell title={$localizedText.sidebar.modals.iconColor} widthClass="w-[28rem]" on:close={() => showIconModal = false}>
-      <div class="mb-6">
-        <fieldset>
-          <legend class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.color}</legend>
-        <div class="flex gap-2 flex-wrap">
-          {#each colorOptions as c}
-            <TooltipIconButton
-              on:click={() => setItemColor(c)}
-              class="w-7 h-7 rounded-full border-2 transition-all {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
-              style="background: {c}"
-              label={c}
-              tooltip={c}
-            ></TooltipIconButton>
-          {/each}
-        </div>
-        </fieldset>
-      </div>
-      <div class="grid grid-cols-6 gap-3">
-        <TooltipIconButton on:click={() => setFolderIcon(null)} class="w-full aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[9px] uppercase tracking-tighter opacity-50" label={$localizedText.sidebar.modals.none}>{$localizedText.sidebar.modals.none}</TooltipIconButton>
-        {#each iconOptions as icon}
-          <TooltipIconButton
-            on:click={() => setFolderIcon(icon)}
-            class="w-full aspect-square flex items-center justify-center hover:bg-[var(--border-subtle)] transition rounded border border-transparent hover:border-[var(--border-subtle)]"
-            label={icon}
-            tooltip={icon}
-          >
-            {#if iconMap[icon]}
-              <svelte:component this={iconMap[icon]} size="20" aria-hidden="true" />
-            {/if}
-          </TooltipIconButton>
-        {/each}
-      </div>
-      <div class="mt-8">
-        <button on:click={() => showIconModal = false} class="w-full text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-      </div>
-  </ModalShell>
+  <IconPickerModal
+    {colorOptions}
+    {iconOptions}
+    {iconMap}
+    {selectedColor}
+    noneLabel={$localizedText.sidebar.modals.none}
+    on:close={() => showIconModal = false}
+    on:color={(e) => setItemColor(e.detail)}
+    on:icon={(e) => setFolderIcon(e.detail)}
+  />
 {/if}
 
 <!-- Create Folder Modal -->
