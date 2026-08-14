@@ -12,9 +12,15 @@
 
   let editedName = '';
   let inputEl;
+  let lastNotePath = null;
 
-  $: if (note) {
+  // Синхронизируем editedName с note, но только когда note реально меняется
+  // (другой path). Раньше здесь был `$: if (note) { ... }`, и компилятор
+  // Svelte 4 почему-то пере-вычислял его на каждый input-event, сбрасывая
+  // то, что пользователь только что напечатал.
+  $: if (note && note.path !== lastNotePath) {
     editedName = displayNoteName(note);
+    lastNotePath = note.path;
   }
 
   $: renameTarget = note
