@@ -25,6 +25,7 @@
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
   import { loadShellSettings } from './lib/shell-settings.js';
+  import { runSearch } from './lib/search-results.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -225,23 +226,7 @@
   }
 
   async function runRestoredSearch(query) {
-    const cleanQuery = String(query || '').trim();
-    if (!cleanQuery) return;
-
-    $isSearching = true;
-    try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: cleanQuery, search_content: true }),
-      });
-      const results = response.ok ? await response.json() : [];
-      if ($searchQuery === cleanQuery) $searchResults = Array.isArray(results) ? results : [];
-    } catch {
-      if ($searchQuery === cleanQuery) $searchResults = [];
-    } finally {
-      if ($searchQuery === cleanQuery) $isSearching = false;
-    }
+    await runSearch(query);
   }
 
   function restoreSearchFromUrl() {
