@@ -18,6 +18,7 @@
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
+  import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './lib/dashboard.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -27,7 +28,6 @@
   const SIDEBAR_COMPACT_WIDTH = 304;
   const SIDEBAR_MIN_WIDTH = 256;
   const SIDEBAR_MAX_WIDTH = 420;
-  const BOARD_NOTES_PAGE_SIZE = 36;
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
   function storedLastKnownRoute() {
@@ -59,9 +59,7 @@
   $: isDashboardRoute = routePath === '/';
   $: isNoteOpen = routePath.startsWith('/notes/');
   $: showHeaderBack = !isDashboardRoute;
-  let homeRecentNotes = [];
-  let homeRecentHasMore = true;
-  let homeRecentLoading = false;
+
   let boardScrollContainer = null;
   let boardScrollTop = 0;
   let pendingBoardScrollTop = null;
@@ -343,38 +341,11 @@
     sidebarComponent?.openTemplates();
   }
 
-  async function loadHomeRecentNotes({ append = false } = {}) {
-    if (homeRecentLoading) return;
-    homeRecentLoading = true;
-    try {
-      const offset = append ? homeRecentNotes.length : 0;
-      const response = await fetch(`/api/notes/recent?limit=${BOARD_NOTES_PAGE_SIZE}&offset=${offset}&sort=modified`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const recent = await response.json();
-      const nextNotes = Array.isArray(recent) ? recent : [];
-      if (append) {
-        const seen = new Set(homeRecentNotes.map((note) => note.path));
-        homeRecentNotes = [
-          ...homeRecentNotes,
-          ...nextNotes.filter((note) => note?.path && !seen.has(note.path)),
-        ];
-      } else {
-        homeRecentNotes = nextNotes;
-      }
-      homeRecentHasMore = nextNotes.length === BOARD_NOTES_PAGE_SIZE;
-    } catch (error) {
-      console.error('Failed to load recent notes:', error);
-    } finally {
-      homeRecentLoading = false;
-      void maybeFillBoardViewport();
-    }
-  }
-
   function handleBoardScroll(event) {
     if (pendingBoardScrollTop !== null) return;
     const container = event.currentTarget;
     boardScrollTop = container.scrollTop || 0;
-    if ($noteView !== 'board' || !homeRecentHasMore || homeRecentLoading) return;
+    if ($noteView !== 'board' || !$homeRecentHasMore || $homeRecentLoading) return;
     if (container.scrollHeight - container.scrollTop - container.clientHeight < 640) {
       void loadHomeRecentNotes({ append: true });
     }
@@ -443,10 +414,12 @@
 
   function promoteRecentNote(note) {
     if (!note?.path) return;
-    const hasNote = homeRecentNotes.some((item) => item.path === note.path);
-    homeRecentNotes = hasNote
-      ? homeRecentNotes.map((item) => item.path === note.path ? { ...item, ...note } : item)
-      : [note, ...homeRecentNotes];
+    homeRecentNotes.update((current) => {
+      const hasNote = current.some((item) => item.path === note.path);
+      return hasNote
+        ? current.map((item) => item.path === note.path ? { ...item, ...note } : item)
+        : [note, ...current];
+    });
   }
 
   function displayNoteName(note) {
@@ -462,7 +435,7 @@
   }
 
   function openContinueWork() {
-    if (homeRecentNotes.length === 0) {
+    if ($homeRecentNotes.length === 0) {
       openCommandPalette('notes');
       return;
     }
@@ -596,7 +569,8 @@
   function handleNoteColorChanged(event) {
     const { path, color } = event.detail || {};
     if (!path) return;
-    homeRecentNotes = homeRecentNotes.map((note) => note.path === path ? { ...note, color } : note);
+    homeRecentNotes.update((current) =>
+      current.map((note) => note.path === path ? { ...note, color } : note));
     if (sidebarComponent) sidebarComponent.loadTree();
   }
 
@@ -690,7 +664,7 @@
         on:close={() => continueWorkOpen = false}
       >
         <div class="space-y-2">
-          {#each homeRecentNotes.slice(0, 6) as note (note.path)}
+          {#each $homeRecentNotes.slice(0, 6) as note (note.path)}
             <button
               type="button"
               class="w-full rounded-2xl border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/45"
@@ -796,7 +770,7 @@
           <div bind:this={boardScrollContainer} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
             <div class="mx-auto max-w-6xl">
               <NoteBoard
-                notes={homeRecentNotes}
+                notes={$homeRecentNotes}
                 mobile={isMobile}
                 showCreateCard={true}
                 on:createNote={openNewNoteFlow}
@@ -804,7 +778,7 @@
                 on:reveal={revealInTree}
                 on:noteTouched={(e) => promoteRecentNote(e.detail)}
               />
-              {#if homeRecentLoading && homeRecentNotes.length > 0}
+              {#if $homeRecentLoading && $homeRecentNotes.length > 0}
                 <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
                   {$localizedText.searchResults.searching}
                 </div>
