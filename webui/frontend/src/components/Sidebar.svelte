@@ -54,6 +54,7 @@
   } from '../lib/attachments.js';
   import { editorState, activeTheme } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
   import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
@@ -1140,8 +1141,12 @@
         <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
       </div>
       <div class="flex gap-6 mt-12">
-        <button on:click={() => showCreateFolderModal = false} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-        <button on:click={createFolder} disabled={isCreating || !newFolderNameInput.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+        <button on:click={() => showCreateFolderModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
+        <button
+          on:click={createFolder}
+          disabled={isCreating || !newFolderNameInput.trim()}
+          class={getModalButtonClass('primary', { disabled: isCreating || !newFolderNameInput.trim() })}
+        >
           {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
         </button>
       </div>
@@ -1243,8 +1248,12 @@
         </div>
 
         <div class="mt-6 flex gap-4">
-          <button on:click={() => showTemplatesModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-          <button on:click={createNoteFromTemplate} disabled={isCreating || !templateTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+          <button on:click={() => showTemplatesModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
+          <button
+            on:click={createNoteFromTemplate}
+            disabled={isCreating || !templateTitle.trim()}
+            class={getModalButtonClass('primary', { disabled: isCreating || !templateTitle.trim() })}
+          >
             {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.useTemplate}
           </button>
         </div>

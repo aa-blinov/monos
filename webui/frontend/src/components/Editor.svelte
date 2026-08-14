@@ -6,6 +6,7 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { editorState, editorAction, noteSaveSignal, activeTheme } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
   import {
     deleteFileRequest,
     getWordCharStats,
@@ -619,8 +620,12 @@
         {$localizedText.editor.archiveConfirm(currentFile.name)}
       </p>
       <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
-        <button on:click={() => showDeleteConfirm = false} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition py-2">{$localizedText.editor.cancel}</button>
-        <button on:click={deleteFile} disabled={isDeleting} class="flex-1 text-sm font-bold uppercase tracking-widest text-red-500 hover:opacity-60 transition disabled:opacity-30 py-2">
+        <button on:click={() => showDeleteConfirm = false} class={getModalButtonClass('secondary', { extraClass: 'py-2' })}>{$localizedText.editor.cancel}</button>
+        <button
+          on:click={deleteFile}
+          disabled={isDeleting}
+          class={getModalButtonClass('primary', { disabled: isDeleting, extraClass: 'text-red-500 py-2' })}
+        >
           {isDeleting ? $localizedText.editor.archiving : $localizedText.editor.deletePermanently}
         </button>
       </div>
@@ -641,10 +646,10 @@
       />
     </div>
     <div class="mt-8 flex gap-6">
-      <button on:click={() => imageRename = null} class="flex-1 text-sm font-medium hover:opacity-60 transition">
+      <button on:click={() => imageRename = null} class={getModalButtonClass('secondary')}>
         {$localizedText.editor.cancel}
       </button>
-      <button on:click={saveImageRename} disabled={!attachmentNewName.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
+      <button on:click={saveImageRename} disabled={!attachmentNewName.trim()} class={getModalButtonClass('primary', { disabled: !attachmentNewName.trim() })}>
         {$localizedText.editor.renameImage}
       </button>
     </div>

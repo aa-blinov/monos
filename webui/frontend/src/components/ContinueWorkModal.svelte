@@ -2,6 +2,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { displayNoteName, recentPathLabel } from '../lib/note-format.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
 
   export let open = false;
   export let notes = [];
@@ -32,14 +33,14 @@
     <div class="mt-8 flex gap-4">
       <button
         type="button"
-        class="flex-1 text-sm font-medium transition hover:opacity-60"
+        class={getModalButtonClass('secondary')}
         on:click={onClose}
       >
         {$localizedText.sidebar.modals.cancel}
       </button>
       <button
         type="button"
-        class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60"
+        class={getModalButtonClass('primary')}
         on:click={onOpenAll}
       >
         {$localizedText.app.continueWork.all}
