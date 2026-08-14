@@ -23,6 +23,7 @@
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './lib/dashboard.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
+  import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -59,16 +60,15 @@
   let dashboardNeedsRefresh = false;
   let lastSeenNoteSaveAt = 0;
   let continueWorkOpen = false;
-  let searchUrlReady = false;
-  let urlSearchQuery = searchParamFromUrl().trim();
-  let restoredInitialUrlSearch = false;
+
   let showCreateNoteModal = false;
   let createNoteInitialCategory = '';
   let savedQuickNote = null;
   let quickNoteIssue = '';
   let syncError = '';
   let gitConfigured = false;
-  if (urlSearchQuery) $searchQuery = urlSearchQuery;
+  if (!$urlSearchQuery) urlSearchQuery.set(searchParamFromUrl().trim());
+  if ($urlSearchQuery) $searchQuery = $urlSearchQuery;
 
   $: isDarkMode = typeof window !== 'undefined' ? (systemThemeSignal, detectDarkMode($themeMode)) : false;
   $: if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', isDarkMode);
@@ -85,11 +85,11 @@
     fontSizeOptions,
     fontOptions,
   });
-  $: activeSearchQuery = isDashboardRoute ? ($searchQuery.trim() || urlSearchQuery) : '';
-  $: if (!searchUrlReady && isDashboardRoute && urlSearchQuery && !restoredInitialUrlSearch) {
-    restoredInitialUrlSearch = true;
-    $searchQuery = urlSearchQuery;
-    void runRestoredSearch(urlSearchQuery);
+  $: activeSearchQuery = isDashboardRoute ? ($searchQuery.trim() || $urlSearchQuery) : '';
+  $: if (!$searchUrlReady && isDashboardRoute && $urlSearchQuery && !$restoredInitialUrlSearch) {
+    restoredInitialUrlSearch.set(true);
+    $searchQuery = $urlSearchQuery;
+    void runRestoredSearch($urlSearchQuery);
   }
   $: if (boardScrollContainer && isDashboardRoute && pendingBoardScrollTop !== null) {
     restoreBoardScrollPosition();
@@ -180,7 +180,7 @@
     void loadShellSettings();
     void loadTemplateSettings();
     restoreSearchFromUrl();
-    searchUrlReady = true;
+    searchUrlReady.set(true);
     const handlePopState = () => {
       setRoutePath(window.location.pathname);
       if (!isKnownAppRoute(routePath)) {
@@ -207,7 +207,7 @@
     };
   });
 
-  $: if (searchUrlReady && isDashboardRoute) syncSearchUrl($searchQuery);
+  $: if ($searchUrlReady && isDashboardRoute) syncSearchUrl($searchQuery);
 
   async function loadShellSettings() {
     // Load theme from server
@@ -224,28 +224,10 @@
   }
 
   function clearSearch() {
-    urlSearchQuery = '';
+    urlSearchQuery.set('');
     $searchQuery = '';
     $searchResults = [];
     $isSearching = false;
-  }
-
-  function searchParamFromUrl() {
-    if (typeof window === 'undefined') return '';
-    return new URL(window.location.href).searchParams.get('q') || '';
-  }
-
-  function syncSearchUrl(query) {
-    if (typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    const cleanQuery = String(query || '').trim();
-    urlSearchQuery = cleanQuery;
-    if (cleanQuery) url.searchParams.set('q', cleanQuery);
-    else url.searchParams.delete('q');
-
-    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    if (nextUrl !== currentUrl) window.history.replaceState(window.history.state, '', nextUrl);
   }
 
   async function runRestoredSearch(query) {
@@ -270,10 +252,10 @@
 
   function restoreSearchFromUrl() {
     if (!isDashboardRoute) return;
-    if (restoredInitialUrlSearch) return;
-    const query = ($searchQuery || urlSearchQuery || searchParamFromUrl()).trim();
+    if ($restoredInitialUrlSearch) return;
+    const query = ($searchQuery || $urlSearchQuery || searchParamFromUrl()).trim();
     if (!query) return;
-    urlSearchQuery = query;
+    urlSearchQuery.set(query);
     $searchQuery = query;
     void runRestoredSearch(query);
   }
