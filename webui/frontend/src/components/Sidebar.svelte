@@ -1,5 +1,5 @@
 <script>
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount, createEventDispatcher, tick } from 'svelte';
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import ModalShell from './ModalShell.svelte';
@@ -15,6 +15,7 @@
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
   import { pinnedNotes, isPinned, pinNote, unpinNote, updatePinnedPath } from '../lib/sidebar-pinned.js';
+  import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { iconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
@@ -146,6 +147,25 @@
 
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
+  let contextMenuEl = null;
+  let contextMenuPos = { x: 0, y: 0 };
+  const CONTEXT_MENU_MARGIN = 4;
+  $: if (contextMenu.show && contextMenuEl) adjustContextMenuPosition();
+  async function adjustContextMenuPosition() {
+    await tick();
+    if (!contextMenu.show || !contextMenuEl) return;
+    const rect = contextMenuEl.getBoundingClientRect();
+    const next = computeContextMenuPosition({
+      x: contextMenu.x,
+      y: contextMenu.y,
+      menuWidth: rect.width,
+      menuHeight: rect.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      margin: CONTEXT_MENU_MARGIN,
+    });
+    contextMenuPos = { x: next.x, y: next.y };
+  }
   let isDragOverRoot = false;
   let isSyncing = false;
   let syncError = '';
@@ -1060,9 +1080,10 @@
 
   <!-- Context Menu -->
   {#if contextMenu.show}
-    <div 
+    <div
+      bind:this={contextMenuEl}
       class="fixed bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48"
-      style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
+      style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
         <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.newNote}</button>
