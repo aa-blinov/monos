@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
+  import Checkbox from './Checkbox.svelte';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
@@ -565,9 +566,14 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <input type="checkbox" id="auto-format" bind:checked={settings.auto_format_on_save} on:change={saveSettings} class="accent-[var(--text-primary)]" />
-        <label for="auto-format" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.autoFormatOnSave}</label>
+      <div class="flex items-center">
+        <Checkbox
+          id="auto-format"
+          bind:checked={settings.auto_format_on_save}
+          on:change={saveSettings}
+        >
+          {$localizedText.settings.autoFormatOnSave}
+        </Checkbox>
       </div>
     </section>
 
