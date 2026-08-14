@@ -56,6 +56,7 @@
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata } from '../lib/template-preview.js';
+  import { formFieldClass } from '../lib/form-field.js';
   import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
@@ -1221,7 +1222,7 @@
               id="template-title"
               type="text"
               bind:value={templateTitle}
-              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 outline-none transition focus:border-[var(--text-secondary)]"
+              class={formFieldClass()}
             />
           </div>
           <div>
@@ -1229,7 +1230,7 @@
             <select
               id="template-category"
               bind:value={templateCategory}
-              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 text-sm outline-none appearance-none cursor-pointer transition focus:border-[var(--text-secondary)]"
+              class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
             >
               {#each templateDirectoryList as dir}
                 <option value={dir}>{dir || $localizedText.sidebar.modals.root}</option>
