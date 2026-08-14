@@ -108,7 +108,11 @@
 
 input[type="text"],
 textarea {
-  @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-primary)] outline-none transition-all py-2;
+  /* py-1.5 + focus:border-[var(--text-secondary)] должны совпадать с
+     formFieldClass(), иначе более специфичный селектор input[type="text"]
+     (0,1,1) перекроет helper (0,1,0) и underline у input съедет
+     относительно select. */
+  @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-secondary)] outline-none transition-all py-1.5;
 }
 
 .btn-minimal {
