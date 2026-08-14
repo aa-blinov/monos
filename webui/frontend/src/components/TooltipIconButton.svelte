@@ -71,7 +71,7 @@
     type={type}
     disabled={disabled}
     {...$$restProps}
-    class={className}
+    class="{className} inline-flex items-center justify-center"
     aria-label={label}
     on:mouseenter={showTooltip}
     on:mouseleave={hideTooltip}
