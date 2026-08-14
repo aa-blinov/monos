@@ -5,6 +5,15 @@
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
   import IconPickerModal from './IconPickerModal.svelte';
+  import {
+    isSameOrDescendant,
+    basename,
+    parentPath,
+    displayNoteName,
+    renameInputName,
+    fileExtension,
+    replacePathPrefix,
+  } from '../lib/sidebar-utils.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { iconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
@@ -182,10 +191,6 @@
     applyTemplateDefaults(getTemplateCatalogById(selectedTemplateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates));
   }
 
-  function isSameOrDescendant(itemPath, parentPath) {
-    return itemPath === parentPath || itemPath.startsWith(`${parentPath}/`);
-  }
-
   function isSafeHref(value) {
     const href = String(value || '').trim();
     return /^(https?:|mailto:|tel:|#|\/(?!\/)|\.{0,2}\/)/i.test(href);
@@ -246,34 +251,6 @@
   function renderTemplateMarkdown(markdown) {
     const previewMarkdown = String(markdown || '').replace(/^#\s+.+(?:\r?\n)+/, '');
     return sanitizePreviewHtml(marked.parse(previewMarkdown));
-  }
-
-  function replacePathPrefix(itemPath, oldPrefix, newPrefix) {
-    if (itemPath === oldPrefix) return newPrefix;
-    return `${newPrefix}${itemPath.slice(oldPrefix.length)}`;
-  }
-
-  function basename(itemPath) {
-    return itemPath.split('/').filter(Boolean).at(-1) || itemPath;
-  }
-
-  function parentPath(itemPath) {
-    const parts = String(itemPath || '').split('/').filter(Boolean);
-    if (parts.length <= 1) return '';
-    return parts.slice(0, -1).join('/');
-  }
-
-  function displayNoteName(name = '') {
-    return name.replace(/\.md$/i, '');
-  }
-
-  function renameInputName(name = '', isDir = false) {
-    return isDir ? name : displayNoteName(name);
-  }
-
-  function fileExtension(name = '') {
-    const match = String(name || '').match(/(\.[^.]*)$/);
-    return match ? match[1] : '';
   }
 
   function renameRequestName(inputName, oldName = '', isDir = false) {
