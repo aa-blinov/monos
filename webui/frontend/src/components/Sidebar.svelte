@@ -55,6 +55,7 @@
   import { editorState, activeTheme } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
+  import { extractTemplateMetadata } from '../lib/template-preview.js';
   import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
@@ -205,7 +206,9 @@
   $: templatePreview = selectedTemplate
     ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title)
     : '';
-  $: templatePreviewHtml = renderTemplateMarkdown(templatePreview);
+  $: templatePreviewParts = extractTemplateMetadata(templatePreview);
+  $: templatePreviewBodyHtml = sanitizePreviewHtml(marked.parse(templatePreviewParts.rest));
+  $: templatePreviewGridCols = templatePreviewParts.metadata.length >= 3 ? 3 : templatePreviewParts.metadata.length || 1;
   $: if (showTemplatesModal && templateLocale !== $locale) {
     templateLocale = $locale;
     applyTemplateDefaults(getTemplateCatalogById(selectedTemplateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates));
@@ -1155,51 +1158,51 @@
 
 <!-- Templates Modal -->
 {#if showTemplatesModal}
-  <ModalShell title={$localizedText.sidebar.templateLibrary} widthClass="w-[min(94vw,68rem)] h-[88vh] max-h-[88vh] overflow-hidden flex flex-col" closeOnEscape={true} on:close={() => showTemplatesModal = false}>
-    <div class="grid min-h-0 flex-1 gap-6 overflow-hidden lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+  <ModalShell title={$localizedText.sidebar.templateLibrary} subtitle={$localizedText.sidebar.templateLibrarySubtitle} widthClass="w-[min(94vw,68rem)] h-[88vh] max-h-[88vh] overflow-hidden flex flex-col" closeOnEscape={true} on:close={() => showTemplatesModal = false}>
+    <div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
       <div class="min-h-0 flex flex-col overflow-hidden">
-        <div class="mb-4">
-          <label for="template-search" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.templateSearch}</label>
+        <div class="mb-3">
+          <label for="template-search" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.templateSearch}</label>
           <input
             id="template-search"
             type="text"
             bind:value={templateQuery}
             placeholder={$localizedText.sidebar.templateSearchPlaceholder}
-            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
+            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 outline-none transition focus:border-[var(--text-secondary)]"
           />
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2 space-y-5" data-testid="template-list-scroll">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 space-y-4" data-testid="template-list-scroll">
           {#if templateGroups.length === 0}
             <div class="py-12 text-center text-sm text-[var(--text-secondary)]">{$localizedText.sidebar.noTemplates}</div>
           {/if}
 
           {#each templateGroups as group}
-            <section class="pt-6 first:pt-0">
-              <div class="mb-3">
+            <section class="pt-4 first:pt-0">
+              <div class="mb-2">
                 <div class="flex items-center gap-3">
                   <h3 class="shrink-0 text-[10px] uppercase tracking-[0.22em] font-bold text-[var(--text-secondary)]/80">{group.title}</h3>
                   <span class="h-px flex-1 bg-[var(--border-subtle)]"></span>
                 </div>
-                <p class="mt-1.5 max-w-xl text-xs leading-relaxed text-[var(--text-secondary)]/70">{group.description}</p>
+                <p class="mt-1 max-w-xl text-xs leading-relaxed text-[var(--text-secondary)]/70 line-clamp-2">{group.description}</p>
               </div>
-              <div class="grid gap-2">
+              <div class="grid gap-1.5">
                 {#each group.templates as template}
                   <button
                     type="button"
                     on:click={() => selectTemplate(template)}
-                    class="w-full rounded-xl border p-3 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/50'}"
+                    class="w-full rounded-lg border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/50'}"
                   >
                     <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <div class="font-serif text-base leading-snug">{template.title}</div>
-                        <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{template.description}</p>
+                      <div class="min-w-0 flex-1">
+                        <div class="font-serif text-[15px] leading-snug">{template.title}</div>
+                        <p class="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">{template.description}</p>
                       </div>
-                      <span class="shrink-0 text-[9px] uppercase tracking-widest text-[var(--text-secondary)]/60">{template.category}</span>
+                      <span class="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">{template.category}</span>
                     </div>
-                    <div class="mt-3 flex flex-wrap gap-1.5">
+                    <div class="mt-2 flex flex-wrap gap-1">
                       {#each template.tags as tag}
-                        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">#{tag}</span>
+                        <span class="rounded-full bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">#{tag}</span>
                       {/each}
                     </div>
                   </button>
@@ -1210,23 +1213,23 @@
         </div>
       </div>
 
-      <div class="min-h-0 flex flex-col overflow-hidden border-t border-[var(--border-subtle)] pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-        <div class="grid gap-4 sm:grid-cols-2">
+      <div class="min-h-0 flex flex-col overflow-hidden border-t border-[var(--border-subtle)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+        <div class="grid gap-3 sm:grid-cols-2">
           <div>
-            <label for="template-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
+            <label for="template-title" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.modals.title}</label>
             <input
               id="template-title"
               type="text"
               bind:value={templateTitle}
-              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
+              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 outline-none transition focus:border-[var(--text-secondary)]"
             />
           </div>
           <div>
-            <label for="template-category" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.templateFolder}</label>
+            <label for="template-category" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.templateFolder}</label>
             <select
               id="template-category"
               bind:value={templateCategory}
-              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 text-sm outline-none appearance-none cursor-pointer"
+              class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 text-sm outline-none appearance-none cursor-pointer transition focus:border-[var(--text-secondary)]"
             >
               {#each templateDirectoryList as dir}
                 <option value={dir}>{dir || $localizedText.sidebar.modals.root}</option>
@@ -1235,19 +1238,39 @@
           </div>
         </div>
 
-        <div class="mt-5 min-h-0 flex flex-1 flex-col overflow-hidden">
-          <div class="mb-2 flex items-center justify-between gap-3">
-            <h3 class="text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.sidebar.templatePreview}</h3>
-          </div>
+        <div class="mt-4 min-h-0 flex flex-1 flex-col overflow-hidden">
+          <h3 class="mb-2 text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70">{$localizedText.sidebar.templatePreview}</h3>
           <div
             class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
             data-testid="template-preview-scroll"
           >
-            {@html templatePreviewHtml}
+            {#if selectedTemplate}
+              {#if templatePreviewParts.metadata.length > 0}
+                <div
+                  class="mb-4 grid gap-3 border-b border-[var(--border-subtle)] pb-4"
+                  style="grid-template-columns: repeat({templatePreviewGridCols}, minmax(0, 1fr));"
+                >
+                  {#each templatePreviewParts.metadata as field}
+                    <div class="min-w-0">
+                      <div class="text-[9px] uppercase tracking-[0.18em] text-[var(--text-secondary)]/60">{field.label}</div>
+                      <div class="mt-1 truncate text-sm text-[var(--text-primary)]" title={field.value}>{field.value || '—'}</div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+              {@html templatePreviewBodyHtml}
+            {:else}
+              <div class="flex h-full items-center justify-center text-center">
+                <div>
+                  <div class="text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)]/50">{$localizedText.sidebar.templatePreviewEmpty}</div>
+                  <p class="mt-2 max-w-xs text-xs leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.templatePreviewEmptyHint}</p>
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
 
-        <div class="mt-6 flex gap-4">
+        <div class="mt-5 flex gap-4">
           <button on:click={() => showTemplatesModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
           <button
             on:click={createNoteFromTemplate}
@@ -1275,7 +1298,7 @@
   }
 
   :global(.template-preview) {
-    line-height: 1.7;
+    line-height: 1.55;
     font-size: 0.8125rem;
   }
 
@@ -1289,29 +1312,40 @@
   }
 
   :global(.template-preview h2) {
-    margin-top: 1.5rem;
-    margin-bottom: 0.6rem;
+    margin-top: 1.1rem;
+    margin-bottom: 0.35rem;
     color: var(--text-primary);
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  :global(.template-preview h2:first-child) {
+    margin-top: 0;
   }
 
   :global(.template-preview h3) {
-    margin-top: 1rem;
-    margin-bottom: 0.45rem;
-    color: var(--text-primary);
-    font-size: 0.8rem;
-    font-weight: 700;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
   }
 
   :global(.template-preview p) {
-    margin-bottom: 0.75rem;
+    margin: 0 0 0.55rem;
+  }
+
+  :global(.template-preview p:last-child) {
+    margin-bottom: 0;
   }
 
   :global(.template-preview ul),
   :global(.template-preview ol) {
-    margin-left: 1.25rem;
-    margin-bottom: 0.75rem;
+    margin: 0.15rem 0 0.55rem 1.1rem;
+    padding: 0;
   }
 
   :global(.template-preview ul) {
@@ -1323,7 +1357,22 @@
   }
 
   :global(.template-preview li) {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
+    line-height: 1.4;
+  }
+
+  :global(.template-preview li:empty),
+  :global(.template-preview li > p:only-child:empty) {
+    list-style: none;
+    margin-left: -1.1rem;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  :global(.template-preview li:empty::before) {
+    content: '— empty';
+    font-size: 0.7rem;
   }
 
   :global(.template-preview table) {

@@ -5,6 +5,7 @@
   import { X } from 'lucide-svelte';
 
   export let title = '';
+  export let subtitle = '';
   export let widthClass = 'w-96';
   export let closeOnEscape = false;
 
@@ -38,7 +39,12 @@
     on:touchmove|stopPropagation
   >
     {#if title}
-      <h2 class="mb-6 shrink-0 pr-12 font-serif text-2xl leading-tight tracking-tight break-anywhere">{title}</h2>
+      <h2 class="mb-1 shrink-0 pr-12 font-serif text-2xl leading-tight tracking-tight break-anywhere">{title}</h2>
+    {/if}
+    {#if subtitle}
+      <p class="mb-5 shrink-0 pr-12 text-sm leading-relaxed text-[var(--text-secondary)]">{subtitle}</p>
+    {:else if title}
+      <div class="mb-5"></div>
     {/if}
     <TooltipIconButton
       type="button"
