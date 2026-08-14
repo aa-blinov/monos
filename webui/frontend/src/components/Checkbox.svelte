@@ -37,7 +37,9 @@
       stroke-width="3"
       stroke-linecap="round"
       stroke-linejoin="round"
-      class="w-3 h-3 text-[var(--bg-primary)] opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+      class="pointer-events-none absolute inset-0 m-auto w-3 h-3 z-10
+             text-[var(--bg-primary)] opacity-0 peer-checked:opacity-100
+             transition-opacity duration-150"
     >
       <polyline points="20 6 9 17 4 12" />
     </svg>
