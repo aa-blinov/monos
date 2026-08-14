@@ -39,6 +39,15 @@ test('Checkbox при checked: true задаёт bg/border на инпуте', (
   expect(cls).toContain('appearance-none');
 });
 
+test('Checkbox SVG-галочка абсолютно позиционирована и выше инпута (z-10)', () => {
+  render(Checkbox, { id: 'test', checked: true });
+  const mark = screen.getByTestId('checkbox-mark');
+  const cls = mark.getAttribute('class') || '';
+  expect(cls).toContain('absolute');
+  expect(cls).toContain('z-10');
+  expect(cls).toContain('pointer-events-none');
+});
+
 test('Checkbox disabled делает label недоступным', () => {
   render(Checkbox, { id: 'test', checked: false, disabled: true });
   const input = screen.getByTestId('checkbox-input');
