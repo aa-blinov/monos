@@ -14,6 +14,7 @@
   import CreateNoteModal from './components/CreateNoteModal.svelte';
   import ContinueWorkModal from './components/ContinueWorkModal.svelte';
   import InfoModal from './components/InfoModal.svelte';
+  import QuickNoteSavedModal from './components/QuickNoteSavedModal.svelte';
   import TooltipIconButton from './components/TooltipIconButton.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
@@ -26,7 +27,7 @@
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
   import { loadShellSettings } from './lib/shell-settings.js';
   import { runSearch } from './lib/search-results.js';
-  import { createNoteRequest } from './lib/sidebar-api.js';
+  import { createNoteRequest, renameItemRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
@@ -469,6 +470,29 @@
     clearSearch();
   }
 
+  async function handleOpenQuickNote(event) {
+    const { note, renameTo } = event.detail;
+    savedQuickNote = null;
+    let nextPath = note.path;
+    if (renameTo && renameTo !== note.name) {
+      try {
+        const result = await renameItemRequest(note.path, renameTo);
+        if (result?.path) {
+          nextPath = result.path;
+        } else {
+          // бэкенд не вернул новый путь — собираем вручную из dir + filename
+          const dir = note.path.split('/').slice(0, -1).join('/');
+          nextPath = dir ? `${dir}/${renameTo}` : renameTo;
+        }
+        if (sidebarComponent) await sidebarComponent.loadTree();
+      } catch (err) {
+        console.error('Failed to rename quick note:', err);
+        // открываем со старым именем
+      }
+    }
+    handleNavigate({ detail: { path: nextPath, name: renameTo || note.name, isDir: false } });
+  }
+
   async function revealInTree(event) {
     const path = event.detail?.path;
     if (!path) return;
@@ -692,15 +716,10 @@
   {/if}
 
   {#if savedQuickNote}
-    <InfoModal
-      title={$localizedText.sidebar.modals.quickNoteSaved}
-      hint={$localizedText.sidebar.modals.quickNoteSavedHint}
-      detail={savedQuickNote}
-      secondaryLabel={$localizedText.sidebar.modals.stayHere}
-      primaryLabel={$localizedText.sidebar.modals.openNote}
+    <QuickNoteSavedModal
+      note={savedQuickNote}
       on:close={() => savedQuickNote = null}
-      on:secondary={() => savedQuickNote = null}
-      on:primary={() => { const note = savedQuickNote; savedQuickNote = null; handleNavigate({ detail: note }); }}
+      on:open={handleOpenQuickNote}
     />
   {/if}
 
