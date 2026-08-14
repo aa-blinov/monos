@@ -12,6 +12,7 @@
   import CommandPalette from './components/CommandPalette.svelte';
   import ModalShell from './components/ModalShell.svelte';
   import CreateNoteModal from './components/CreateNoteModal.svelte';
+  import ContinueWorkModal from './components/ContinueWorkModal.svelte';
   import TooltipIconButton from './components/TooltipIconButton.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
@@ -388,18 +389,6 @@
     });
   }
 
-  function displayNoteName(note) {
-    return String(note?.name || note?.path?.split('/').pop() || '').replace(/\.md$/i, '');
-  }
-
-  function recentPathLabel(note) {
-    const rawPath = String(note?.path || '');
-    return rawPath
-      .replace(/^notes\/?/, '')
-      .replace(/\/?[^/]*\.md$/i, '')
-      .replace(/\/$/, '') || $localizedText.sidebar?.modals?.root || '';
-  }
-
   function openContinueWork() {
     if ($homeRecentNotes.length === 0) {
       openCommandPalette('notes');
@@ -619,41 +608,13 @@
     />
 
     {#if continueWorkOpen}
-      <ModalShell
-        title={$localizedText.app.continueWork.modalTitle}
-        widthClass="w-[min(92vw,36rem)]"
-        closeOnEscape={true}
-        on:close={() => continueWorkOpen = false}
-      >
-        <div class="space-y-2">
-          {#each $homeRecentNotes.slice(0, 6) as note (note.path)}
-            <button
-              type="button"
-              class="w-full rounded-2xl border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/45"
-              on:click={() => openRecentNote(note)}
-            >
-              <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>
-              <span class="mt-1 block truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">{recentPathLabel(note)}</span>
-            </button>
-          {/each}
-        </div>
-        <div class="mt-8 flex gap-4">
-          <button
-            type="button"
-            class="flex-1 text-sm font-medium transition hover:opacity-60"
-            on:click={() => continueWorkOpen = false}
-          >
-            {$localizedText.sidebar.modals.cancel}
-          </button>
-          <button
-            type="button"
-            class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60"
-            on:click={openAllRecentNotes}
-          >
-            {$localizedText.app.continueWork.all}
-          </button>
-        </div>
-      </ModalShell>
+      <ContinueWorkModal
+        open={continueWorkOpen}
+        notes={$homeRecentNotes}
+        onClose={() => continueWorkOpen = false}
+        onOpenNote={openRecentNote}
+        onOpenAll={openAllRecentNotes}
+      />
     {/if}
 
     <div class="flex flex-1 overflow-hidden relative">
