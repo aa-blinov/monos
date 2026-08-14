@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
 
   /** Title shown in the modal header. */
   export let title = '';
@@ -47,7 +48,7 @@
       <button
         type="button"
         on:click={() => dispatch('secondary')}
-        class="flex-1 text-sm font-medium transition hover:opacity-60"
+        class={getModalButtonClass('secondary')}
       >
         {secondaryLabel}
       </button>
@@ -56,7 +57,7 @@
       <button
         type="button"
         on:click={() => dispatch('primary')}
-        class={`flex-1 text-sm font-${primaryStyle} uppercase tracking-widest transition hover:opacity-60`}
+        class={getModalButtonClass(primaryStyle === 'bold' ? 'primary' : 'secondary')}
       >
         {primaryLabel}
       </button>

@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
 
   /** Whether the target is a folder (changes the title suffix). */
   export let isDir = false;
@@ -47,11 +48,11 @@
     </div>
   </div>
   <div class="flex gap-6 mt-12">
-    <button on:click={() => dispatch('close')} class="flex-1 text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
+    <button on:click={() => dispatch('close')} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
     <button
       on:click={submit}
       disabled={busy || !newName.trim() || newName === currentName}
-      class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30"
+      class={getModalButtonClass('primary', { disabled: busy || !newName.trim() || newName === currentName })}
     >
       {busy ? $localizedText.sidebar.modals.renaming : $localizedText.sidebar.modals.rename}
     </button>

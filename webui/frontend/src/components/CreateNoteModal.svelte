@@ -2,6 +2,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
 
   export let open = false;
   export let category = '';
@@ -119,11 +120,11 @@
       </div>
     </div>
     <div class="flex gap-6 mt-10">
-      <button on:click={onClose} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
+      <button on:click={onClose} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
       <button
         on:click={submitCreateNote}
         disabled={isCreating || !newNoteTitle.trim()}
-        class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30"
+        class={getModalButtonClass('primary', { disabled: isCreating || !newNoteTitle.trim() })}
       >
         {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
       </button>

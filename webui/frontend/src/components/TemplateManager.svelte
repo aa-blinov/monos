@@ -14,6 +14,7 @@
     showLibraryTemplate,
   } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
+  import { getModalButtonClass } from '../lib/modal-button.js';
 
   const emptyForm = {
     id: '',
@@ -267,10 +268,10 @@
     </div>
 
     <div class="mt-6 flex shrink-0 gap-4">
-      <button type="button" on:click={closeForm} class="flex-1 text-sm font-medium transition hover:opacity-60">
+      <button type="button" on:click={closeForm} class={getModalButtonClass('secondary')}>
         {$localizedText.sidebar.modals.cancel}
       </button>
-      <button type="button" on:click={submitTemplate} disabled={!form.title.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest transition hover:opacity-60 disabled:opacity-30">
+      <button type="button" on:click={submitTemplate} disabled={!form.title.trim()} class={getModalButtonClass('primary', { disabled: !form.title.trim() })}>
         {form.id ? $localizedText.templates.saveChanges : $localizedText.templates.createTemplate}
       </button>
     </div>
