@@ -14,6 +14,7 @@
     fileExtension,
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
+  import { pinnedNotes, isPinned, pinNote, unpinNote, updatePinnedPath } from '../lib/sidebar-pinned.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { iconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
@@ -148,7 +149,7 @@
   let isDragOverRoot = false;
   let isSyncing = false;
   let syncError = '';
-  let pinnedNotes = loadPinnedNotes();
+
   let selectedPaths = new Set();
 
   $: filteredTree = tree;
@@ -262,54 +263,12 @@
       : trimmed;
   }
 
+
   function closeRenameModal() {
     showRenameModal = false;
     renameTarget = null;
     renameNewName = '';
     renameOldName = '';
-  }
-
-  function loadPinnedNotes() {
-    try {
-      const raw = localStorage.getItem(PINNED_NOTES_KEY);
-      const parsed = JSON.parse(raw || '[]');
-      return Array.isArray(parsed) ? parsed.filter((note) => note?.path) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function savePinnedNotes() {
-    localStorage.setItem(PINNED_NOTES_KEY, JSON.stringify(pinnedNotes));
-  }
-
-  function isPinned(path) {
-    return pinnedNotes.some((note) => note.path === path);
-  }
-
-  function pinNote(path, name) {
-    if (!path || isPinned(path)) return;
-    pinnedNotes = [
-      { path, name: displayNoteName(name || basename(path)) },
-      ...pinnedNotes,
-    ];
-    savePinnedNotes();
-  }
-
-  function unpinNote(path, includeDescendants = false) {
-    pinnedNotes = pinnedNotes.filter((note) => includeDescendants ? !isSameOrDescendant(note.path, path) : note.path !== path);
-    savePinnedNotes();
-  }
-
-  function updatePinnedPath(oldPath, newPath, newName = basename(newPath)) {
-    let changed = false;
-    pinnedNotes = pinnedNotes.map((note) => {
-      if (!isSameOrDescendant(note.path, oldPath)) return note;
-      changed = true;
-      const path = replacePathPrefix(note.path, oldPath, newPath);
-      return { ...note, path, name: displayNoteName(note.path === oldPath ? newName : basename(path)) };
-    });
-    if (changed) savePinnedNotes();
   }
 
   function recentPathLabel(note) {
@@ -928,14 +887,14 @@
     </div>
 
   <!-- Pinned Notes Section -->
-  {#if pinnedNotes.length > 0}
+  {#if $pinnedNotes.length > 0}
     <div class="mb-4 shrink-0 px-4">
       <div class="mb-3 flex min-h-10 items-center justify-between text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">
         <span>{$localizedText.sidebar.pinned}</span>
-        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[10px] tabular-nums">{pinnedNotes.length}</span>
+        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[10px] tabular-nums">{$pinnedNotes.length}</span>
       </div>
       <div class="space-y-2">
-        {#each pinnedNotes as note (note.path)}
+        {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}

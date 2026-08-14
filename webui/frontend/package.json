@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "check": "svelte-check",
     "lint": "svelte-check",
-    "test": "node --test ./src/lib/search.test.js ./src/lib/api/client.test.js ./src/lib/stores/persisted.test.js ./src/lib/i18n/t.test.js ./src/lib/wiki-links.test.js ./src/lib/paths.test.js ./src/lib/dashboard.test.js ./src/lib/sidebar.test.js ./src/lib/command-palette.test.js ./src/lib/note-format.test.js ./src/lib/search-query.test.js ./src/lib/shell-settings.test.js ./src/lib/search-results.test.js ./src/lib/sidebar-utils.test.js ./src/stores.test.js && vitest run ./src/App.test.js ./src/components/*.test.js",
+    "test": "node --test ./src/lib/search.test.js ./src/lib/api/client.test.js ./src/lib/stores/persisted.test.js ./src/lib/i18n/t.test.js ./src/lib/wiki-links.test.js ./src/lib/paths.test.js ./src/lib/dashboard.test.js ./src/lib/sidebar.test.js ./src/lib/command-palette.test.js ./src/lib/note-format.test.js ./src/lib/search-query.test.js ./src/lib/shell-settings.test.js ./src/lib/search-results.test.js ./src/lib/sidebar-utils.test.js ./src/lib/sidebar-pinned.test.js ./src/stores.test.js && vitest run ./src/App.test.js ./src/components/*.test.js",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "screenshots": "node e2e/capture-responsive-screenshots.mjs"
