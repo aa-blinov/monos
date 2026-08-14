@@ -6,6 +6,7 @@
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
+  import { formFieldClass } from '../lib/form-field.js';
   import appPackage from '../../../../package.json';
 
   const dispatch = createEventDispatcher();
@@ -370,7 +371,7 @@
           id="interface-language"
           bind:value={$locale}
           on:change={saveSettings}
-          class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
         >
           {#each localeOptions as option}
             <option value={option.value}>{option.label}</option>
@@ -425,7 +426,7 @@
             id="font-family"
             value={$fontFamily}
             on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
-            class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
           >
             {#each fontOptions as f}
               <option value={f.name}>{f.name} ({f.category})</option>
@@ -438,7 +439,7 @@
             id="font-size"
             value={$fontSize}
             on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
-            class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
           >
             {#each localizedFontSizeOptions as s}
               <option value={s.value}>{s.label} ({s.base})</option>
@@ -457,7 +458,7 @@
           id="editor-font-size"
           value={$editorFontSize}
           on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
-          class="w-full min-w-0 truncate bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer"
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
         >
           {#each localizedEditorFontSizeOptions as s}
             <option value={s.value}>{s.label} ({s.base})</option>
@@ -486,7 +487,7 @@
         <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
         <div class="flex gap-3">
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" disabled={isAuthenticated} />
+          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
           {#if isAuthenticated}
             <button type="button" on:click={() => { isAuthenticated = false; settings.git_token = ''; settings.git_owner = DEFAULT_GIT_OWNER; settings.git_repo = ''; gitRepos = []; gitBranches = []; }} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
           {:else}
@@ -504,11 +505,11 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
-          <input type="text" id="git-owner" bind:value={settings.git_owner} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm {isAuthenticated ? 'opacity-50' : ''}" disabled={isAuthenticated} />
+          <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
         </div>
         <div>
           <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
-          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer" disabled={!gitRepos.length}>
+          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })} disabled={!gitRepos.length}>
             <option value="">{$localizedText.settings.select}</option>
             {#each gitRepos as r}
               <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
@@ -520,7 +521,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
-          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none text-sm appearance-none cursor-pointer">
+          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}>
             {#if isLoadingBranches}
               <option>{$localizedText.settings.loading}</option>
             {:else if gitBranches.length}
@@ -534,7 +535,7 @@
         </div>
         <div>
           <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" />
+          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
         </div>
       </div>
 
@@ -557,12 +558,12 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="auto-sync-interval" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncInterval}</label>
-          <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" />
+          <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
           <p class="text-[10px] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
         </div>
         <div>
           <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
-          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none focus:border-[var(--text-primary)] text-sm" />
+          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
         </div>
       </div>
 
