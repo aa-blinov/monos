@@ -605,7 +605,7 @@
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
-          on:quickNoteSaved={(e) => { savedQuickNote = e.detail; if (isMobile) setSidebarOpen(false); }}
+          on:quickNoteSaved={(e) => { savedQuickNote = e.detail; promoteRecentNote(e.detail); if (isMobile) setSidebarOpen(false); }}
           on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) setSidebarOpen(false); }}
           on:syncError={(e) => { syncError = e.detail; if (isMobile) setSidebarOpen(false); }}
           mobile={isMobile}

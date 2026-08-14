@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
 import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults } from './stores.js';
+import { homeRecentNotes } from './lib/dashboard.js';
 
 vi.mock('./components/Header.svelte', async () => ({
   default: (await import('./components/__mocks__/HeaderStub.svelte')).default,
@@ -407,7 +408,26 @@ test('App запускает quick note из navbar', async () => {
   await fireEvent.click(screen.getByText('quick note'));
 
   await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.quickNoteSaved)).toBeTruthy());
-  expect(screen.getByText('Quick')).toBeTruthy();
+  // Quick note появляется и в модалке, и на доске — проверим именно модалку
+  expect(screen.getByText(uiText.sidebar.modals.openNote)).toBeTruthy();
+});
+
+test('App добавляет quick note в homeRecentNotes, чтобы дашборд сразу её видел', async () => {
+  homeRecentNotes.set([]);
+  noteView.set('board');
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByText('quick note')).toBeTruthy());
+  await fireEvent.click(screen.getByText('quick note'));
+
+  // Сразу после создания quick note новая заметка должна оказаться
+  // в homeRecentNotes — дашборд подхватывает её без отдельного refresh.
+  await waitFor(() => {
+    const notes = get(homeRecentNotes);
+    const hasQuick = notes.some((note) => note.path === 'notes/Quick Notes/Quick.md');
+    expect(hasQuick).toBe(true);
+  });
 });
 
 test('App создаёт today note из центрального действия', async () => {
