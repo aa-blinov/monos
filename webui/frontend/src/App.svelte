@@ -19,15 +19,10 @@
   import { localizedText } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './lib/dashboard.js';
+  import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
-  const SIDEBAR_WIDTH_KEY = 'sidebarWidth';
-  const SIDEBAR_DEFAULT_WIDTH = 336;
-  const SIDEBAR_LAPTOP_WIDTH = 280;
-  const SIDEBAR_COMPACT_WIDTH = 304;
-  const SIDEBAR_MIN_WIDTH = 256;
-  const SIDEBAR_MAX_WIDTH = 420;
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
   function storedLastKnownRoute() {
@@ -45,14 +40,11 @@
   }
 
   let isDarkMode = false;
-  let sidebarOpen = true;
   let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   let headerComponent;
   let sidebarComponent;
   let commandPaletteOpen = false;
   let commandPaletteMode = 'commands';
-  let sidebarWidth = getInitialSidebarWidth();
-  let isResizingSidebar = false;
   let systemThemeSignal = 0;
   let routePath = initialRoutePath;
   let lastKnownAppRoute = initialRoutePath;
@@ -134,38 +126,12 @@
     }
   }
 
-  function defaultSidebarWidth() {
-    if (typeof window === 'undefined') return SIDEBAR_DEFAULT_WIDTH;
-    if (window.innerWidth < 1200) return SIDEBAR_LAPTOP_WIDTH;
-    if (window.innerWidth < 1400) return SIDEBAR_COMPACT_WIDTH;
-    return SIDEBAR_DEFAULT_WIDTH;
-  }
-
-  function viewportMaxSidebarWidth() {
-    if (typeof window === 'undefined') return SIDEBAR_MAX_WIDTH;
-    return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(window.innerWidth * 0.36)));
-  }
-
-  function clampSidebarWidth(value) {
-    const numericValue = Number(value) || defaultSidebarWidth();
-    return Math.min(viewportMaxSidebarWidth(), Math.max(SIDEBAR_MIN_WIDTH, numericValue));
-  }
-
-  function getInitialSidebarWidth() {
-    if (typeof localStorage === 'undefined') return defaultSidebarWidth();
-    return clampSidebarWidth(localStorage.getItem(SIDEBAR_WIDTH_KEY));
-  }
-
-  function saveSidebarWidth(width) {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(Math.round(width)));
-  }
-
   function updateMobileState() {
     const wasMobile = isMobile;
     isMobile = window.innerWidth < 1024;
-    if (isMobile && sidebarOpen) sidebarOpen = false;
-    if (wasMobile && !isMobile) sidebarOpen = false;
-    if (!isMobile) sidebarWidth = clampSidebarWidth(sidebarWidth);
+    if (isMobile && $sidebarOpen) setSidebarOpen(false);
+    if (wasMobile && !isMobile) setSidebarOpen(false);
+    if (!isMobile) setSidebarWidth($sidebarWidth);
   }
 
   function handleKeydown(e) {
@@ -196,6 +162,7 @@
   }
 
   onMount(() => {
+    setSidebarOpen(true);
     updateMobileState();
     setRoutePath(window.location.pathname);
     if (initialRouteWasUnknown) navigate(routePath, { replace: true });
@@ -203,7 +170,7 @@
       replaceUnknownRouteWithLastKnown();
     }
     if (routePath === '/') $noteView = 'board';
-    if (routePath === '/' && $noteView === 'board' && !isMobile) sidebarOpen = false;
+    if (routePath === '/' && $noteView === 'board' && !isMobile) setSidebarOpen(false);
     if ($noteView === 'board' && routePath.startsWith('/notes/')) {
       setRoutePath('/');
       navigate('/');
@@ -327,7 +294,7 @@
   }
 
   async function handleNoteCreated(data, title) {
-    if (isMobile) sidebarOpen = false;
+    if (isMobile) setSidebarOpen(false);
     if (sidebarComponent) await sidebarComponent.loadTree();
     await loadHomeRecentNotes();
     openCreatedNote(data, title);
@@ -335,7 +302,7 @@
 
   async function handlePickTemplate() {
     if (isMobile) {
-      sidebarOpen = true;
+      setSidebarOpen(true);
       await tick();
     }
     sidebarComponent?.openTemplates();
@@ -447,15 +414,12 @@
     openCommandPalette('notes');
   }
 
-  function toggleSidebar() {
-    sidebarOpen = !sidebarOpen;
-  }
   function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
   function closeCommandPalette() { commandPaletteOpen = false; }
   function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
     const shouldRestoreBoardScroll = isNoteOpen && !refreshTree;
     $noteView = 'board';
-    if (closeSidebar) sidebarOpen = false;
+    if (closeSidebar) setSidebarOpen(false);
     setRoutePath('/');
     navigate('/', { replace });
     clearSearch();
@@ -488,15 +452,15 @@
   }
 
   function handleSidebarResize(event) {
-    sidebarWidth = clampSidebarWidth(event.clientX);
+    setSidebarWidth(event.clientX);
   }
 
   function stopSidebarResize() {
-    if (!isResizingSidebar) return;
-    isResizingSidebar = false;
+    if (!$isResizingSidebar) return;
+    isResizingSidebar.set(false);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-    saveSidebarWidth(sidebarWidth);
+    saveSidebarWidth($sidebarWidth);
     window.removeEventListener('pointermove', handleSidebarResize);
     window.removeEventListener('pointerup', stopSidebarResize);
     window.removeEventListener('mousemove', handleSidebarResize);
@@ -504,9 +468,9 @@
   }
 
   function startSidebarResize(event) {
-    if (isMobile || !sidebarOpen || isResizingSidebar) return;
+    if (isMobile || !$sidebarOpen || $isResizingSidebar) return;
     event.preventDefault();
-    isResizingSidebar = true;
+    isResizingSidebar.set(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('pointermove', handleSidebarResize);
@@ -515,9 +479,9 @@
     window.addEventListener('mouseup', stopSidebarResize);
   }
 
-  function setSidebarWidth(width) {
-    sidebarWidth = clampSidebarWidth(width);
-    saveSidebarWidth(sidebarWidth);
+  function applySidebarWidth(width) {
+    setSidebarWidth(width);
+    saveSidebarWidth($sidebarWidth);
   }
 
   function resetSidebarWidth() {
@@ -525,20 +489,20 @@
   }
 
   function handleSidebarResizeKeydown(event) {
-    if (isMobile || !sidebarOpen) return;
+    if (isMobile || !$sidebarOpen) return;
 
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      setSidebarWidth(sidebarWidth - 16);
+      setSidebarWidth($sidebarWidth - 16);
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      setSidebarWidth(sidebarWidth + 16);
+      setSidebarWidth($sidebarWidth + 16);
     } else if (event.key === 'Home') {
       event.preventDefault();
-      setSidebarWidth(SIDEBAR_MIN_WIDTH);
+      setSidebarWidth(SIDEBAR_CONSTANTS.MIN_WIDTH);
     } else if (event.key === 'End') {
       event.preventDefault();
-      setSidebarWidth(viewportMaxSidebarWidth());
+      setSidebarWidth(SIDEBAR_CONSTANTS.MAX_WIDTH);
     } else if (event.key === 'Enter') {
       event.preventDefault();
       resetSidebarWidth();
@@ -552,15 +516,15 @@
     setRoutePath(nextPath);
     navigate(nextPath);
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
-    if (isMobile && !event.detail.isDir) sidebarOpen = false;
+    if (isMobile && !event.detail.isDir) setSidebarOpen(false);
     clearSearch();
   }
 
   async function revealInTree(event) {
     const path = event.detail?.path;
     if (!path) return;
-    if (!sidebarOpen) {
-      sidebarOpen = true;
+    if (!$sidebarOpen) {
+      setSidebarOpen(true);
       await tick();
     }
     sidebarComponent?.setSelected(path);
@@ -645,7 +609,7 @@
       noteOpen={isNoteOpen}
       showBack={showHeaderBack}
       showSearch={isDashboardRoute}
-      {sidebarOpen}
+      sidebarOpen={$sidebarOpen}
     />
 
     <CommandPalette
@@ -695,7 +659,7 @@
     {/if}
 
     <div class="flex flex-1 overflow-hidden relative">
-      {#if isMobile && sidebarOpen}
+      {#if isMobile && $sidebarOpen}
         <button
           class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
           on:click={toggleSidebar}
@@ -705,10 +669,10 @@
 
       <div
         class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'relative shrink-0'}
-               {!sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
+               {!$sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
         data-testid="sidebar-shell"
-        style={!isMobile && sidebarOpen ? `width: ${sidebarWidth}px;` : ''}
+        style={!isMobile && $sidebarOpen ? `width: ${$sidebarWidth}px;` : ''}
       >
         <Sidebar
           bind:this={sidebarComponent}
@@ -720,13 +684,13 @@
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
           on:openCreateNote={openNewNoteFlow}
-          on:quickNoteSaved={(e) => { savedQuickNote = e.detail; if (isMobile) sidebarOpen = false; }}
-          on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) sidebarOpen = false; }}
-          on:syncError={(e) => { syncError = e.detail; if (isMobile) sidebarOpen = false; }}
+          on:quickNoteSaved={(e) => { savedQuickNote = e.detail; if (isMobile) setSidebarOpen(false); }}
+          on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) setSidebarOpen(false); }}
+          on:syncError={(e) => { syncError = e.detail; if (isMobile) setSidebarOpen(false); }}
           mobile={isMobile}
           {gitConfigured}
         />
-        {#if !isMobile && sidebarOpen}
+        {#if !isMobile && $sidebarOpen}
           <span class="pointer-events-none absolute inset-y-0 right-0 z-10 w-px bg-[var(--border-subtle)]"></span>
           <TooltipIconButton
             type="button"

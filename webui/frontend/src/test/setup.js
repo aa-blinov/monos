@@ -54,6 +54,11 @@ Object.defineProperty(window, 'scrollTo', {
   value: vi.fn(),
 });
 
+Object.defineProperty(window, 'innerWidth', {
+  configurable: true,
+  get: () => 1300,
+});
+
 beforeEach(async () => {
   storage.clear();
   storage.setItem('theme', 'gruvbox');
@@ -82,6 +87,9 @@ beforeEach(async () => {
   stores.searchQuery.set('');
   stores.searchResults.set([]);
   stores.isSearching.set(false);
+
+  const sidebar = await import('../lib/sidebar.js');
+  sidebar.setSidebarOpen(true);
 });
 
 afterEach(() => {
