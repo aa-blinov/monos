@@ -73,37 +73,38 @@ export const themes = {
 
   dracula: {
     name: 'Dracula',
+    // Alucard — official light variant from draculatheme.com/spec
     light: {
-      '--bg-primary': '#f8f8f2',
-      '--bg-secondary': '#e6e6dc',
-      '--bg-tertiary': '#d4d4c8',
-      '--text-primary': '#3b3b32',
-      '--text-secondary': '#77776e',
-      '--text-muted': '#999988',
-      '--border-subtle': '#d4d4c8',
-      '--green': '#50fa7b',
-      '--yellow': '#f1fa8c',
-      '--orange': '#ffb86c',
-      '--red': '#ff5555',
-      '--blue': '#8be9fd',
-      '--purple': '#bd93f9',
-      '--aqua': '#66d9ef',
+      '--bg-primary': '#fffbeb',          // Background
+      '--bg-secondary': '#cfcfde',        // Selection
+      '--bg-tertiary': '#6c664b',         // Current Line / Comment
+      '--text-primary': '#1f1f1f',         // Foreground
+      '--text-secondary': '#6c664b',       // Comment
+      '--text-muted': '#6c664b',          // Comment
+      '--border-subtle': '#cfcfde',        // Selection
+      '--green': '#4d8240',
+      '--yellow': '#846e15',
+      '--orange': '#ad6e1b',
+      '--red': '#cb3a2a',
+      '--blue': '#036a96',                 // Cyan
+      '--purple': '#644ac9',
+      '--aqua': '#a3144d',                 // Pink (Dracula has no separate aqua)
     },
     dark: {
-      '--bg-primary': '#282a36',
-      '--bg-secondary': '#21222c',
-      '--bg-tertiary': '#44475a',
-      '--text-primary': '#f8f8f2',
-      '--text-secondary': '#9999a5',
-      '--text-muted': '#6272a4',
-      '--border-subtle': '#44475a',
+      '--bg-primary': '#282a36',          // Background
+      '--bg-secondary': '#44475a',         // Current Line
+      '--bg-tertiary': '#44475a',          // Current Line
+      '--text-primary': '#f8f8f2',         // Foreground
+      '--text-secondary': '#6272a4',       // Comment
+      '--text-muted': '#6272a4',           // Comment
+      '--border-subtle': '#44475a',        // Current Line
       '--green': '#50fa7b',
       '--yellow': '#f1fa8c',
       '--orange': '#ffb86c',
       '--red': '#ff5555',
-      '--blue': '#8be9fd',
+      '--blue': '#8be9fd',                 // Cyan
       '--purple': '#bd93f9',
-      '--aqua': '#66d9ef',
+      '--aqua': '#8be9fd',                 // Cyan (no separate aqua in Dracula)
     }
   },
 
@@ -167,7 +168,7 @@ export const themes = {
       '--bg-tertiary': '#0a4b58',
       '--text-primary': '#839496',
       '--text-secondary': '#586e75',
-      '--text-muted': '#465a61',
+      '--text-muted': '#586e75',
       '--border-subtle': '#0a4b58',
       '--green': '#859900',
       '--yellow': '#b58900',
