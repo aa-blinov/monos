@@ -20,6 +20,7 @@
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './lib/dashboard.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
+  import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -43,8 +44,6 @@
   let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   let headerComponent;
   let sidebarComponent;
-  let commandPaletteOpen = false;
-  let commandPaletteMode = 'commands';
   let systemThemeSignal = 0;
   let routePath = initialRoutePath;
   let lastKnownAppRoute = initialRoutePath;
@@ -414,8 +413,7 @@
     openCommandPalette('notes');
   }
 
-  function openCommandPalette(mode = 'commands') { commandPaletteMode = mode; commandPaletteOpen = true; }
-  function closeCommandPalette() { commandPaletteOpen = false; }
+
   function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
     const shouldRestoreBoardScroll = isNoteOpen && !refreshTree;
     $noteView = 'board';
@@ -555,7 +553,7 @@
       openCommandPalette('notes');
       return;
     }
-    commandPaletteOpen = false;
+    closeCommandPalette();
     if (event.detail === 'openSettings') openSettings();
     if (event.detail === 'toggleSidebar') toggleSidebar();
   }
@@ -613,8 +611,8 @@
     />
 
     <CommandPalette
-      open={commandPaletteOpen}
-      mode={commandPaletteMode}
+      open={$commandPaletteOpen}
+      mode={$commandPaletteMode}
       on:close={closeCommandPalette}
       on:command={handlePaletteCommand}
       on:openNote={(e) => handleNavigate({ detail: e.detail })}
