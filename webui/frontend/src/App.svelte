@@ -11,6 +11,7 @@
   import SearchResults from './components/SearchResults.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import ModalShell from './components/ModalShell.svelte';
+  import CreateNoteModal from './components/CreateNoteModal.svelte';
   import TooltipIconButton from './components/TooltipIconButton.svelte';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
@@ -71,9 +72,7 @@
   let urlSearchQuery = searchParamFromUrl().trim();
   let restoredInitialUrlSearch = false;
   let showCreateNoteModal = false;
-  let newNoteTitle = '';
-  let newNoteCategory = '';
-  let isCreating = false;
+  let createNoteInitialCategory = '';
   let savedQuickNote = null;
   let quickNoteIssue = '';
   let syncError = '';
@@ -313,15 +312,9 @@
     void runRestoredSearch(query);
   }
 
-  async function openNewNoteFlow(event = null) {
-    newNoteTitle = '';
-    newNoteCategory = event?.detail?.category || '';
+  function openNewNoteFlow(event = null) {
+    createNoteInitialCategory = event?.detail?.category || '';
     showCreateNoteModal = true;
-  }
-
-  function padDatePart(n) { return String(n).padStart(2, '0'); }
-  function formatTodayNoteTitle(date = new Date()) {
-    return [padDatePart(date.getDate()), padDatePart(date.getMonth() + 1), padDatePart(date.getFullYear() % 100), padDatePart(date.getHours()), padDatePart(date.getMinutes()), padDatePart(date.getSeconds())].join('-');
   }
 
   function openCreatedNote(data, fallbackTitle) {
@@ -335,41 +328,19 @@
     });
   }
 
-  async function createTodayFromHome() {
-    try {
-      isCreating = true;
-      const title = formatTodayNoteTitle();
-      const data = await createNoteRequest({ title, category: 'Daily', tags: [], content: '' });
-      showCreateNoteModal = false;
-      if (isMobile) sidebarOpen = false;
-      if (sidebarComponent) await sidebarComponent.loadTree();
-      await loadHomeRecentNotes();
-      openCreatedNote(data, title);
-    } catch (err) {
-      console.error('Failed to create today note:', err);
-    } finally {
-      isCreating = false;
-    }
+  async function handleNoteCreated(data, title) {
+    if (isMobile) sidebarOpen = false;
+    if (sidebarComponent) await sidebarComponent.loadTree();
+    await loadHomeRecentNotes();
+    openCreatedNote(data, title);
   }
 
-  async function submitCreateNote() {
-    if (!newNoteTitle.trim()) return;
-    try {
-      isCreating = true;
-      const title = newNoteTitle.trim();
-      const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
-      showCreateNoteModal = false;
-      newNoteTitle = '';
-      newNoteCategory = '';
-      if (isMobile) sidebarOpen = false;
-      if (sidebarComponent) await sidebarComponent.loadTree();
-      await loadHomeRecentNotes();
-      openCreatedNote(data, title);
-    } catch (err) {
-      console.error('Failed to create note:', err);
-    } finally {
-      isCreating = false;
+  async function handlePickTemplate() {
+    if (isMobile) {
+      sidebarOpen = true;
+      await tick();
     }
+    sidebarComponent?.openTemplates();
   }
 
   async function loadHomeRecentNotes({ append = false } = {}) {
@@ -852,53 +823,13 @@
   </div>
 
   {#if showCreateNoteModal}
-    <ModalShell title={$localizedText.sidebar.modals.newNote} widthClass="w-[min(92vw,40rem)]" closeOnEscape={true} on:close={() => showCreateNoteModal = false}>
-      <div class="space-y-7">
-        <section>
-          <div class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
-            {$localizedText.sidebar.modals.createStart}
-          </div>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
-              on:click={createTodayFromHome}
-              disabled={isCreating}
-            >
-              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
-              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.todayNoteHint}</span>
-            </button>
-            <button
-              type="button"
-              class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
-              on:click={async () => {
-                showCreateNoteModal = false;
-                if (isMobile) {
-                  sidebarOpen = true;
-                  await tick();
-                }
-                sidebarComponent?.openTemplates();
-              }}
-            >
-              <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
-              <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.fromTemplateHint}</span>
-            </button>
-          </div>
-        </section>
-
-        <div>
-          <label for="app-note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
-          <input id="app-note-title" type="text" bind:value={newNoteTitle} placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newNoteTitle.trim()) submitCreateNote(); if (e.key === 'Escape') showCreateNoteModal = false; }} autofocus />
-          <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-secondary)]/65">{$localizedText.sidebar.modals.titleHint}</p>
-        </div>
-      </div>
-      <div class="flex gap-6 mt-10">
-        <button on:click={() => showCreateNoteModal = false} class="flex-1 text-sm font-medium hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
-        <button on:click={submitCreateNote} disabled={isCreating || !newNoteTitle.trim()} class="flex-1 text-sm font-bold uppercase tracking-widest hover:opacity-60 transition disabled:opacity-30">
-          {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
-        </button>
-      </div>
-    </ModalShell>
+    <CreateNoteModal
+      open={showCreateNoteModal}
+      category={createNoteInitialCategory}
+      onClose={() => showCreateNoteModal = false}
+      onCreated={handleNoteCreated}
+      onPickTemplate={handlePickTemplate}
+    />
   {/if}
 
   {#if savedQuickNote}
