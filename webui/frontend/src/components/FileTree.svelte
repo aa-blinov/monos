@@ -2,7 +2,6 @@
   import { createEventDispatcher } from 'svelte';
   import * as Icon from 'lucide-svelte';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
-  import { getTreeItemAccentStyle } from '../lib/tree-accent.js';
 
   const dispatch = createEventDispatcher();
   const TREE_NOTE_PATHS_DRAG_TYPE = 'application/x-monos-note-paths';
@@ -40,8 +39,14 @@
   $: fileName = formatFileName(node.name);
   $: noteSelected = !node.is_dir && selectedPaths.has(node.path);
   $: active = noteSelected || (selectedPaths.size === 0 && selectedPath === node.path);
-  $: accentStyle = getTreeItemAccentStyle({ color: node.color });
-  $: hasAccent = !!(node.color && typeof node.color === 'string');
+  $: hasColor = !!(node.color && typeof node.color === 'string');
+  $: accentStyle = hasColor ? `--tree-color: ${node.color};` : '';
+  // When the row is the active selection, paint its background with the note
+  // color (mirrors the dashboard NoteCard tint). When no color is set we fall
+  // back to the generic subtle background so selected rows stay visible.
+  $: activeBgStyle = active && hasColor
+    ? `background: color-mix(in srgb, ${node.color} 18%, transparent); ${accentStyle}`
+    : accentStyle;
 
   function formatFileName(name = '') {
     return name.replace(/\.md$/i, '');
@@ -151,11 +156,10 @@
 
 <div class="group text-sm lg:text-xs">
   <button
-    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 px-2.5 py-2 text-left transition-all lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
+    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-all lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
     class:border-[var(--text-primary)]={active || (node.is_dir && isDragOver)}
-    class:border-transparent={!active && !(node.is_dir && isDragOver)}
-    class:bg-[var(--border-subtle)]={active || (node.is_dir && isDragOver)}
-    style={accentStyle}
+    class:bg-[var(--border-subtle)]={(active && !hasColor) || (node.is_dir && isDragOver)}
+    style={activeBgStyle}
     on:click={handleSelect}
     on:contextmenu={onRightClick}
     on:keydown={(e) => e.key === 'Enter' && handleSelect(e)}
@@ -191,8 +195,7 @@
     {/if}
 
     <span
-      class="truncate flex-1 {node.is_dir ? 'font-medium' : 'opacity-80'} {hasAccent ? 'tree-note-tinted' : ''}"
-      style={hasAccent ? `color: var(--tree-text);` : ''}
+      class="truncate flex-1 {node.is_dir ? 'font-medium' : 'opacity-80'}"
     >
       {fileName}
     </span>
@@ -233,14 +236,7 @@
 </div>
 
 <style>
-  /* Tint the file label so the user can spot coloured notes at a glance.
-     Border accent: use the note's color when set, otherwise stay transparent. */
-  button {
-    border-left-color: var(--tree-accent, transparent);
-  }
-  .tree-note-tinted {
-    /* Dim the accent a bit so the text remains readable. */
-    opacity: 0.92;
-  }
+  /* Selected note with a color: the inline style already sets a tinted
+     background. Nothing extra to do here. */
 </style>
 

@@ -160,8 +160,9 @@ test('FileTree добавляет payload для создания wiki-link пр
   expect(dataTransfer.effectAllowed).toBe('copyMove');
 });
 
-test('FileTree подкрашивает заметку в её цвет, когда указан node.color', () => {
-  render(FileTree, {
+test('FileTree подкрашивает фон активной заметки её цветом', () => {
+  const { component } = render(FileTree, {
+    selectedPath: 'notes/Colored.md',
     node: {
       path: 'notes/Colored.md',
       name: 'Colored.md',
@@ -171,16 +172,33 @@ test('FileTree подкрашивает заметку в её цвет, ког�
   });
 
   const button = screen.getByRole('button', { name: 'Colored' });
-  // CSS-переменная с цветом проставляется в inline-стиль кнопки
-  expect(button.getAttribute('style') || '').toContain('--tree-accent: #8ec07c');
-  // Название заметки получает класс tinted и инлайн-цвет
-  const label = screen.getByText('Colored');
-  expect(label.classList.contains('tree-note-tinted')).toBe(true);
-  expect(label.getAttribute('style') || '').toContain('color: var(--tree-text)');
+  const style = button.getAttribute('style') || '';
+  // Фон подкрашен цветом заметки (микс с прозрачным)
+  expect(style).toContain('background');
+  expect(style).toContain('#8ec07c');
+  expect(style).toContain('--tree-color: #8ec07c');
 });
 
-test('FileTree не подкрашивает заметку, когда node.color не задан', () => {
+test('FileTree не красит фон неактивной заметки, даже если у неё есть цвет', () => {
   render(FileTree, {
+    selectedPath: 'notes/Other.md',
+    node: {
+      path: 'notes/Colored.md',
+      name: 'Colored.md',
+      is_dir: false,
+      color: '#8ec07c',
+    },
+  });
+
+  const button = screen.getByRole('button', { name: 'Colored' });
+  const style = button.getAttribute('style') || '';
+  // CSS-переменная с цветом может быть, но фон не должен быть подкрашен
+  expect(style).not.toContain('background');
+});
+
+test('FileTree не ставит цвет в стиль, когда node.color не задан', () => {
+  render(FileTree, {
+    selectedPath: 'notes/Plain.md',
     node: {
       path: 'notes/Plain.md',
       name: 'Plain.md',
@@ -189,8 +207,23 @@ test('FileTree не подкрашивает заметку, когда node.col
   });
 
   const button = screen.getByRole('button', { name: 'Plain' });
-  // Без цвета акцент прозрачный
-  expect(button.getAttribute('style') || '').toContain('--tree-accent: transparent');
-  const label = screen.getByText('Plain');
-  expect(label.classList.contains('tree-note-tinted')).toBe(false);
+  const style = button.getAttribute('style') || '';
+  expect(style).not.toContain('--tree-color');
+  expect(style).not.toContain('background:');
+});
+
+test('FileTree не использует вертикальную полоску слева', () => {
+  render(FileTree, {
+    selectedPath: 'notes/Colored.md',
+    node: {
+      path: 'notes/Colored.md',
+      name: 'Colored.md',
+      is_dir: false,
+      color: '#8ec07c',
+    },
+  });
+
+  const button = screen.getByRole('button', { name: 'Colored' });
+  // border-l-transparent гарантирует, что у строки нет видимой цветной полоски
+  expect(button.className).toContain('border-l-transparent');
 });
