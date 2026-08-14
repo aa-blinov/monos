@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop } from 'lucide-svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -7,6 +7,7 @@
   import { stripFrontmatter } from '../lib/preview-html.js';
   import { localizedText } from '../lib/strings.js';
   import { boardColumns, boardGroupByColor } from '../stores.js';
+  import { computeContextMenuPosition } from '../lib/context-menu-position.js';
 
   export let notes = [];
   export let query = '';
@@ -19,6 +20,25 @@
   let orderedNotes = [];
   let notesSignature = '';
   let contextMenu = { show: false, x: 0, y: 0, note: null };
+  let contextMenuEl = null;
+  let contextMenuPos = { x: 0, y: 0 };
+  const CONTEXT_MENU_MARGIN = 4;
+  $: if (contextMenu.show && contextMenuEl) adjustContextMenuPosition();
+  async function adjustContextMenuPosition() {
+    await tick();
+    if (!contextMenu.show || !contextMenuEl) return;
+    const rect = contextMenuEl.getBoundingClientRect();
+    const next = computeContextMenuPosition({
+      x: contextMenu.x,
+      y: contextMenu.y,
+      menuWidth: rect.width,
+      menuHeight: rect.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      margin: CONTEXT_MENU_MARGIN,
+    });
+    contextMenuPos = { x: next.x, y: next.y };
+  }
   let wideBoard = typeof window !== 'undefined' ? window.innerWidth >= 1280 : false;
   const hydratedExcerptPaths = new Set();
 
@@ -253,8 +273,9 @@
 
 {#if contextMenu.show}
   <div
+    bind:this={contextMenuEl}
     class="fixed z-[130] w-48 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
-    style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
+    style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     role="menu"
     tabindex="-1"
     on:click|stopPropagation
