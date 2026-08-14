@@ -52,7 +52,8 @@
     firstImageFileFromText,
     markdownImage,
   } from '../lib/attachments.js';
-  import { editorState } from '../stores.js';
+  import { editorState, activeTheme } from '../stores.js';
+  import { getNoteColorOptions } from '../lib/note-colors.js';
   import * as Icon from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
@@ -131,10 +132,7 @@
   /** @type {string} */
   let selectedColor = '#a89984';
 
-  const colorOptions = [
-    '#a89984', '#928374', '#fb4934', '#fe8019', '#fabd2f',
-    '#b8bb26', '#8ec07c', '#83a598', '#458588', '#d3869b'
-  ];
+  $: colorOptions = getNoteColorOptions($activeTheme);
 
   const PINNED_NOTES_KEY = 'pinnedNotes';
   const QUICK_NOTES_CATEGORY = 'Quick Notes';
