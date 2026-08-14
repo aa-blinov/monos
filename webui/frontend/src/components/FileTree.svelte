@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import * as Icon from 'lucide-svelte';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
+  import { getTreeItemAccentStyle } from '../lib/tree-accent.js';
 
   const dispatch = createEventDispatcher();
   const TREE_NOTE_PATHS_DRAG_TYPE = 'application/x-monos-note-paths';
@@ -39,6 +40,8 @@
   $: fileName = formatFileName(node.name);
   $: noteSelected = !node.is_dir && selectedPaths.has(node.path);
   $: active = noteSelected || (selectedPaths.size === 0 && selectedPath === node.path);
+  $: accentStyle = getTreeItemAccentStyle({ color: node.color });
+  $: hasAccent = !!(node.color && typeof node.color === 'string');
 
   function formatFileName(name = '') {
     return name.replace(/\.md$/i, '');
@@ -152,6 +155,7 @@
     class:border-[var(--text-primary)]={active || (node.is_dir && isDragOver)}
     class:border-transparent={!active && !(node.is_dir && isDragOver)}
     class:bg-[var(--border-subtle)]={active || (node.is_dir && isDragOver)}
+    style={accentStyle}
     on:click={handleSelect}
     on:contextmenu={onRightClick}
     on:keydown={(e) => e.key === 'Enter' && handleSelect(e)}
@@ -186,7 +190,10 @@
       {/if}
     {/if}
 
-    <span class="truncate flex-1 {node.is_dir ? 'font-medium' : 'opacity-80'}">
+    <span
+      class="truncate flex-1 {node.is_dir ? 'font-medium' : 'opacity-80'} {hasAccent ? 'tree-note-tinted' : ''}"
+      style={hasAccent ? `color: var(--tree-text);` : ''}
+    >
       {fileName}
     </span>
   </button>
@@ -224,4 +231,16 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* Tint the file label so the user can spot coloured notes at a glance.
+     Border accent: use the note's color when set, otherwise stay transparent. */
+  button {
+    border-left-color: var(--tree-accent, transparent);
+  }
+  .tree-note-tinted {
+    /* Dim the accent a bit so the text remains readable. */
+    opacity: 0.92;
+  }
+</style>
 

@@ -159,3 +159,38 @@ test('FileTree добавляет payload для создания wiki-link пр
   });
   expect(dataTransfer.effectAllowed).toBe('copyMove');
 });
+
+test('FileTree подкрашивает заметку в её цвет, когда указан node.color', () => {
+  render(FileTree, {
+    node: {
+      path: 'notes/Colored.md',
+      name: 'Colored.md',
+      is_dir: false,
+      color: '#8ec07c',
+    },
+  });
+
+  const button = screen.getByRole('button', { name: 'Colored' });
+  // CSS-переменная с цветом проставляется в inline-стиль кнопки
+  expect(button.getAttribute('style') || '').toContain('--tree-accent: #8ec07c');
+  // Название заметки получает класс tinted и инлайн-цвет
+  const label = screen.getByText('Colored');
+  expect(label.classList.contains('tree-note-tinted')).toBe(true);
+  expect(label.getAttribute('style') || '').toContain('color: var(--tree-text)');
+});
+
+test('FileTree не подкрашивает заметку, когда node.color не задан', () => {
+  render(FileTree, {
+    node: {
+      path: 'notes/Plain.md',
+      name: 'Plain.md',
+      is_dir: false,
+    },
+  });
+
+  const button = screen.getByRole('button', { name: 'Plain' });
+  // Без цвета акцент прозрачный
+  expect(button.getAttribute('style') || '').toContain('--tree-accent: transparent');
+  const label = screen.getByText('Plain');
+  expect(label.classList.contains('tree-note-tinted')).toBe(false);
+});
