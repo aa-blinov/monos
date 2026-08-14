@@ -24,6 +24,7 @@
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
+  import { loadShellSettings } from './lib/shell-settings.js';
   import { createNoteRequest } from './lib/sidebar-api.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
@@ -177,7 +178,7 @@
       navigate('/');
     }
     void loadHomeRecentNotes();
-    void loadShellSettings();
+    void applyShellSettings();
     void loadTemplateSettings();
     restoreSearchFromUrl();
     searchUrlReady.set(true);
@@ -209,17 +210,10 @@
 
   $: if ($searchUrlReady && isDashboardRoute) syncSearchUrl($searchQuery);
 
-  async function loadShellSettings() {
-    // Load theme from server
-    try {
-      const r = await fetch('/api/settings');
-      if (r.ok) {
-        const s = await r.json();
-        if (s.theme && themes[s.theme]) $activeTheme = s.theme;
-        if (['system', 'light', 'dark'].includes(s.themeMode)) $themeMode = s.themeMode;
-      }
-    } catch {}
-
+  async function applyShellSettings() {
+    const settings = await loadShellSettings(themes);
+    if (settings?.theme) $activeTheme = settings.theme;
+    if (settings?.themeMode) $themeMode = settings.themeMode;
     applyTheme($activeTheme, isDarkMode, themes);
   }
 
