@@ -1,45 +1,22 @@
-async function fetchJson(url, options) {
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
+import { get, post, del } from './api/client.js';
 
-export const loadTreeData = () => fetchJson('/api/tree');
-export const loadRecentNotesRequest = () => fetchJson('/api/notes/recent?limit=5');
-export const loadTagsRequest = () => fetchJson('/api/tags');
-export const loadDirectoriesRequest = () => fetchJson('/api/directories');
+export const loadTreeData = () => get('/api/tree');
+export const loadRecentNotesRequest = () => get('/api/notes/recent', { limit: 5 });
+export const loadTagsRequest = () => get('/api/tags');
+export const loadDirectoriesRequest = () => get('/api/directories');
+export const checkGitStatus = () => get('/api/git/status');
 
-export const createFolderRequest = (fullPath) => fetchJson(`/api/directory/create?path=${encodeURIComponent(fullPath)}`, {
-  method: 'POST',
-});
+export const createFolderRequest = (fullPath) => post('/api/directory/create', null, { query: { path: fullPath } });
+export const createNoteRequest = (payload) => post('/api/notes/create', payload);
+export const syncRequest = () => post('/api/git/sync');
 
-export const createNoteRequest = (payload) => fetchJson('/api/notes/create', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload),
-});
+export const renameItemRequest = (itemPath, newName) =>
+  post('/api/file/rename', { new_name: newName }, { query: { path: itemPath } });
 
-export const renameItemRequest = (itemPath, newName) => fetchJson(`/api/file/rename?path=${encodeURIComponent(itemPath)}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ new_name: newName }),
-});
+export const deleteItemRequest = (itemPath) => del('/api/file', { query: { path: itemPath } });
 
-export const deleteItemRequest = (itemPath) => fetchJson(`/api/file?path=${encodeURIComponent(itemPath)}`, {
-  method: 'DELETE',
-});
+export const moveItemRequest = (sourcePath, targetPath) =>
+  post('/api/file/move', null, { query: { source: sourcePath, target: targetPath } });
 
-export const moveItemRequest = (sourcePath, targetPath) => fetchJson(
-  `/api/file/move?source=${encodeURIComponent(sourcePath)}&target=${encodeURIComponent(targetPath)}`,
-  { method: 'POST' }
-);
-
-export const syncRequest = () => fetchJson('/api/git/sync', { method: 'POST' });
-
-export const checkGitStatus = () => fetchJson('/api/git/status');
-
-export const setItemIconRequest = (itemPath, body) => fetchJson(`/api/directory/icon?path=${encodeURIComponent(itemPath)}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
+export const setItemIconRequest = (itemPath, body) =>
+  post('/api/directory/icon', body, { query: { path: itemPath } });

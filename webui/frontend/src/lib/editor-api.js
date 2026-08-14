@@ -1,60 +1,38 @@
-async function fetchJson(url, options) {
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
+import { get, post, put, del } from './api/client.js';
 
-export const loadFileContent = (filePath) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}`);
-export const loadFileInfo = (filePath) => fetchJson(`/api/file-info?path=${encodeURIComponent(filePath)}`);
-export const loadBacklinksRequest = (filePath) => fetchJson(`/api/notes/backlinks?path=${encodeURIComponent(filePath)}`);
-export const resolveWikiLink = (name) => fetchJson(`/api/notes/resolve-link?name=${encodeURIComponent(name)}`);
-export const touchNoteRequest = (filePath) => fetchJson(`/api/notes/touch?path=${encodeURIComponent(filePath)}`, {
-  method: 'POST',
-});
-export const setItemColorRequest = (itemPath, color) => fetchJson(`/api/directory/icon?path=${encodeURIComponent(itemPath)}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ color }),
-});
-export const saveFileContent = (filePath, content) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ content }),
-});
-export const saveFileMetadata = (filePath, payload) => fetchJson(`/api/file/metadata?path=${encodeURIComponent(filePath)}`, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload),
-});
-export const deleteFileRequest = (filePath) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}`, {
-  method: 'DELETE',
-});
-export const deleteFilePermanentlyRequest = (filePath) => fetchJson(`/api/file?path=${encodeURIComponent(filePath)}&permanent=1`, {
-  method: 'DELETE',
-});
-export const loadTrashNotesRequest = () => fetchJson('/api/notes/trash?limit=200');
-export const restoreNoteRequest = (filePath) => fetchJson(`/api/notes/restore?path=${encodeURIComponent(filePath)}`, {
-  method: 'POST',
-});
+export const loadFileContent = (filePath) => get('/api/file', { path: filePath });
+export const loadFileInfo = (filePath) => get('/api/file-info', { path: filePath });
+export const loadBacklinksRequest = (filePath) => get('/api/notes/backlinks', { path: filePath });
+export const resolveWikiLink = (name) => get('/api/notes/resolve-link', { name });
+export const loadTrashNotesRequest = () => get('/api/notes/trash', { limit: 200 });
+
+export const touchNoteRequest = (filePath) => post('/api/notes/touch', null, { query: { path: filePath } });
+export const restoreNoteRequest = (filePath) => post('/api/notes/restore', null, { query: { path: filePath } });
+
+export const saveFileContent = (filePath, content) =>
+  post('/api/file', { content }, { query: { path: filePath } });
+
+export const saveFileMetadata = (filePath, payload) =>
+  put('/api/file/metadata', payload, { query: { path: filePath } });
+
+export const setItemColorRequest = (itemPath, color) =>
+  post('/api/directory/icon', { color }, { query: { path: itemPath } });
+
+export const deleteFileRequest = (filePath) => del('/api/file', { query: { path: filePath } });
+export const deleteFilePermanentlyRequest = (filePath) =>
+  del('/api/file', { query: { path: filePath, permanent: 1 } });
+
 export const uploadAttachment = (notePath, file, name = file?.name) => {
   const form = new FormData();
   if (name) form.append('name', name);
   form.append('file', file, name || file.name);
-  return fetchJson(`/api/attachments?notePath=${encodeURIComponent(notePath)}`, {
-    method: 'POST',
-    body: form,
-  });
+  return post('/api/attachments', form, { query: { notePath } });
 };
-export const renameAttachment = (notePath, attachmentPath, newName) => fetchJson('/api/attachments/rename', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ notePath, path: attachmentPath, newName }),
-});
-export const saveSettingsRequest = (payload) => fetchJson('/api/settings', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload),
-});
+
+export const renameAttachment = (notePath, attachmentPath, newName) =>
+  post('/api/attachments/rename', { notePath, path: attachmentPath, newName });
+
+export const saveSettingsRequest = (payload) => post('/api/settings', payload);
 
 export function getWordCharStats(content) {
   const text = content || '';
