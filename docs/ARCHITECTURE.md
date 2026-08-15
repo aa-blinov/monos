@@ -92,18 +92,54 @@ The backend owns:
 
 Frontend code should call backend APIs instead of touching local files directly.
 
-## Frontend Boundaries
+## Frontend Module Layout
 
-The frontend owns:
+The frontend code lives in `webui/frontend/src` and is split into three top-level concerns:
 
-- responsive layout
-- editor interactions
-- board rendering and card actions
-- search UX and highlighting
-- settings screens
-- local UI preferences stored in browser storage
+```text
+src/
+  App.svelte          composition root, top-level routing, cross-feature state
+  stores.js           global Svelte stores (theme, view mode, board config…)
+  components/         UI building blocks (one .svelte per concern)
+  lib/                pure JS helpers (no Svelte runtime needed for most)
+    api/              HTTP client + endpoint wrappers
+    i18n/             reactive i18n subscription
+    stores/           store utilities (persisted, etc.)
+```
 
-Shared frontend API helpers live in `webui/frontend/src/lib`.
+The split rule:
+
+- **components/** — anything that renders pixels and dispatches events. Test with `vitest`.
+- **lib/** — pure functions, parsers, formatters, API wrappers, class-string builders. Test with `node:test`.
+- **stores.js** — global state shared across components. Each store is either `writable()` or a `persisted()` wrapper.
+- **App.svelte** — only cross-cutting state lives here; per-feature state stays in the component that owns it (e.g. `Sidebar.svelte` keeps the tree, the editor keeps draft content).
+
+See `docs/STATE.md` for the full state model and `docs/LIB.md` for the lib/* map.
+
+## Theme System
+
+Six palettes are supported (gruvbox, github, dracula, nord, solarized, catppuccin). The palette is selected through two orthogonal stores:
+
+- `activeTheme` — the palette name, persisted in `localStorage`
+- `themeMode` — `light` | `dark` | `system`, also persisted
+
+The CSS layer is split:
+
+- `lib/themes.js` is the **source of truth** for token values. Every palette is exported as a structured object with `light` / `dark` blocks, plus the function `applyTheme(themeName, mode)` that sets CSS variables on `document.documentElement`.
+- Tailwind classes in components read those CSS variables (`bg-[var(--bg-primary)]`) — components never hardcode colors.
+- A subscription in `app.css` calls `applyTheme` whenever `activeTheme` or `themeMode` changes, so theme switches are O(1) and don't require a re-render.
+
+Per-theme note color palettes (used to tag notes) live in `lib/note-colors.js` and are derived from the same base tokens. Tests in `lib/themes.test.js` lock the official palette values to prevent drift.
+
+## Internationalization
+
+Strings live in `lib/strings.js` as a single structured tree (`app.*`, `sidebar.*`, `editor.*`, `templates.*`, `modal.*`, `settings.*`) with parallel `en` and `ru` blocks. The active locale is a `writable` store; `lib/i18n/t.js` exposes the `localizedText` derived store that components subscribe to with `$localizedText`.
+
+Conventions:
+
+- **Add a new key to both blocks** at the same time — there is no fallback to English.
+- For dynamic values, expose a function: `quickNoteWillRenameTo: (target) => ...`.
+- Tests in `lib/i18n.test.js` and `lib/i18n/t.test.js` check that both locales expose the same key set.
 
 ## Git Sync
 
@@ -116,17 +152,30 @@ The backend validates Git inputs, keeps tokens out of remote URLs, and exposes r
 `electron-builder` creates platform installers:
 
 - Windows: NSIS installer
-- macOS: DMG
+- macOS: DMG (signed and notarized when credentials are available)
 
 `better-sqlite3` is a native dependency, so Electron is pinned to a version that can rebuild it reliably in CI.
 
 ## Testing Strategy
 
-Core checks:
+The project uses a strict two-track split:
+
+- **Pure JS helpers (`lib/*.js`)** — tested with Node's built-in `node:test` runner. No Svelte runtime needed, fast feedback.
+- **Svelte components and `App.svelte`** — tested with `vitest` + `@testing-library/svelte`. Renders into JSDOM, simulates events with `fireEvent`.
+
+The TDD cycle for every bug fix and most features:
+
+1. Write a failing test that captures the desired behavior.
+2. Implement the smallest change that turns it green.
+3. Refactor while keeping tests green.
+
+Tests live next to the module they cover: `lib/foo.js` + `lib/foo.test.js`, `components/Foo.svelte` + `components/Foo.test.js`.
+
+Core checks run on every PR and on every push to master:
 
 - backend syntax checks
 - backend API/search tests
-- Svelte diagnostics
+- Svelte diagnostics (`svelte-check`)
 - frontend unit tests
 - Playwright scale-boundary tests
 - production frontend build

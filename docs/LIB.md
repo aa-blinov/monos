@@ -1,0 +1,125 @@
+# `lib/` Module Map
+
+Every pure-JS helper the frontend uses, organized by what it does. Use this when you're trying to find "is there already a function for X?" or when you want to know what to test when you change one.
+
+The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has UI side effects, it belongs in `components/` instead. Every entry below should be testable with `node --test` from `webui/frontend/src/lib/`.
+
+## API wrappers
+
+| Module | Purpose |
+|--------|---------|
+| `api/client.js` | Low-level `get` / `post` / `del` / `put` around `fetch` with consistent error handling (`ApiError`, status, body) |
+| `api/client.test.js` | Tests for error envelope, query string handling, network failures |
+| `editor-api.js` | Wraps `loadFileContent`, `saveFileContent`, `uploadAttachment` over the HTTP client |
+| `sidebar-api.js` | Tree, recents, tags, directories, create/rename/move/delete operations |
+| `shell-settings.js` | Load/save the shell-level settings JSON (theme, git config, sync interval) |
+| `shell-settings.test.js` | Round-trip + corrupt-input behavior |
+
+## State and stores
+
+| Module | Purpose |
+|--------|---------|
+| `stores/persisted.js` | `writable` wrapper that mirrors to `localStorage`, with `serialize` / `deserialize` / `migrate` options |
+| `stores/persisted.test.js` | Migration, corrupt JSON, custom serializer, subscriber notifications |
+| `app-shell.js` | Side-effect wrapper that wires the persisted stores to the document on load (theme application, font size, etc.) |
+| `drag-data.js` | Serialize/deserialize drag payloads for the editor's attachment drag-and-drop |
+
+## Theming and styling
+
+| Module | Purpose |
+|--------|---------|
+| `themes.js` | Source of truth for six palettes (gruvbox, github, dracula, nord, solarized, catppuccin) — both light and dark variants. Exports `applyTheme(name, mode)` which sets CSS variables on `document.documentElement` |
+| `themes.test.js` | Locks the official palette values for all 6 themes; prevents accidental drift |
+| `note-colors.js` | Ten-color palette per theme for tagging notes; `getNoteColorOptions(themeName)` |
+| `note-colors.test.js` | Per-theme color list length, hex validity, unknown theme falls back to gruvbox |
+| `modal-button.js` | `getModalButtonClass('primary' \| 'secondary', { disabled, extraClass })` — keeps all modal footers visually consistent |
+| `modal-button.test.js` | Both variants share size/case/tracking, primary is bold, secondary is muted, extraClass passthrough |
+| `form-field.js` | `formFieldClass({ extraClass })` — locks `text-sm leading-6 py-1.5` for input/select baseline alignment |
+| `form-field.test.js` | Required utility presence, theme variable usage, focus state |
+| `form-field-alignment.test.js` | Reads `app.css` and asserts the global input rule's `py-N` matches `formFieldClass()` so the cascade doesn't silently win and shift the underline |
+| `fonts.js` | Available font families and size presets; consumed by `Settings.svelte` |
+
+## Markdown and content
+
+| Module | Purpose |
+|--------|---------|
+| `note-format.js` | `displayNoteName(note)` strips `.md`; `recentPathLabel(note, fallback)` formats a "Quick Notes" style folder label |
+| `note-format.test.js` | Edge cases: missing fields, mixed case extension, fallback behavior |
+| `preview-html.js` | Renders a sanitized HTML preview of a markdown source; consumed by the Template Library and editor preview pane |
+| `markdown-editor-content.js` | TipTap-friendly serialization of the editor's content |
+| `wiki-links.js` | `parseWikiLink`, `findWikiLinks`, `replaceWikiLinks` for `[[Note Title]]` syntax |
+| `wiki-links.test.js` | Multiple links per line, deduplication, malformed input, trailing punctuation |
+| `richEditorExtensions.js` | TipTap extension set used by the rich editor |
+| `rich-editor-paste.js` | Paste handler for the rich editor: images, links, plain text fallbacks |
+
+## Templates
+
+| Module | Purpose |
+|--------|---------|
+| `note-templates.js` | Built-in template catalog (Daily Note, Meeting Notes, Project Brief, 1:1, Research, Topic MOC, Atomic Note, etc.) and `buildTemplateContent` to render them |
+| `template-library.js` | Manages custom user templates, hidden-library flags, persistence to `localStorage` |
+| `template-preview.js` | `extractTemplateMetadata(markdown)` splits a template's "Label: value" header from its body so the preview can show fields in a grid |
+| `template-preview.test.js` | Typical templates, missing H1, no-blank-line variants, URL values, multi-word labels |
+| `quick-note-rename.js` | `resolveQuickNoteRename(current, new, ext='.md')` decides if a quick note should be renamed before opening |
+| `quick-note-rename.test.js` | Case-insensitive equality, empty input, extension normalization |
+
+## Search and command palette
+
+| Module | Purpose |
+|--------|---------|
+| `search-query.js` | Parses the search input into terms, quoted phrases, and exclusions |
+| `search-query.test.js` | Quotes, exclusions, mixed syntax |
+| `search-results.js` | Ranks and groups raw matches; consumed by the search panel |
+| `search-results.test.js` | Score ordering, empty results, group boundaries |
+| `search.js` | Client-side search that combines the query parser and results ranker (consumed by the sidebar search bar) |
+| `search.test.js` | End-to-end behavior with mock notes |
+| `command-palette.js` | Item model and keyboard navigation logic for the Cmd+K palette |
+| `command-palette.test.js` | Filtering, selection wrapping, disabled items |
+
+## Paths and IDs
+
+| Module | Purpose |
+|--------|---------|
+| `paths.js` | `normalizeNotePath`, `stripNotesPrefix`, etc. — single source of truth for the `notes/` path convention shared between frontend and backend |
+| `paths.test.js` | Trailing slashes, leading slashes, double slashes, root |
+
+## Sidebar and dashboard
+
+| Module | Purpose |
+|--------|---------|
+| `sidebar.js` | The Sidebar component's public API surface (re-exported for `App.svelte` via `bind:this`) |
+| `sidebar.test.js` | Public method contracts |
+| `sidebar-utils.js` | Tree manipulation helpers: sort, filter, find-by-path |
+| `sidebar-utils.test.js` | Tree shape edge cases |
+| `sidebar-pinned.js` | `pinnedNotes` store + `pinNote` / `unpinNote` / `updatePinnedPath` actions |
+| `sidebar-pinned.test.js` | Pin/unpin flow, reordering, stale-path repair after rename |
+| `sidebar-api.js` | Wrappers for the sidebar's HTTP endpoints (see also API wrappers above) |
+| `context-menu-position.js` | `computeContextMenuPosition(rect, menuSize, viewport)` — keeps the right-click menu inside the viewport |
+| `context-menu-position.test.js` | Bottom overflow, left overflow, exact fit |
+| `dashboard.js` | `buildDashboardSections(notes, opts)` — what cards appear on the home view, in what order, with what grouping |
+| `dashboard.test.js` | Empty notes, mixed categories, color grouping on/off |
+
+## i18n
+
+| Module | Purpose |
+|--------|---------|
+| `strings.js` | The complete en + ru string tree. Adding a key requires updating both blocks |
+| `i18n.js` | Helpers for locale detection, fallback handling, and `pluralize` |
+| `i18n.test.js` | Locale detection, fallback rules |
+| `i18n/t.js` | `localizedText` derived store + `t(keyPath, ...args)` accessor |
+| `i18n/t.test.js` | Subscription, fallback to en on missing key, formatter functions |
+
+## Icons and visual
+
+| Module | Purpose |
+|--------|---------|
+| `icons.js` | List of available `lucide-svelte` icon names for the icon picker |
+| `attachments.js` | Helpers for the editor's attachment model (sort, dedupe, find by name) |
+
+## Adding a New Module
+
+1. Put the source in `lib/<feature>.js`.
+2. Put the test in `lib/<feature>.test.js`.
+3. Use `node:test` and `node:assert/strict` — match the existing style.
+4. If the module exposes a function for a class string (like `formFieldClass` or `modalButtonClass`), tests should assert that the right Tailwind utilities are present so the visual behavior can't drift.
+5. Add a one-line entry to the table above.

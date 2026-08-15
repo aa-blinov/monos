@@ -106,9 +106,12 @@ npm run build:frontend
 
 ## Documentation
 
-- `docs/ARCHITECTURE.md` explains the system design.
+- `docs/ARCHITECTURE.md` explains the system design and the frontend module layout.
+- `docs/STATE.md` describes where state lives, who owns it, and how it flows.
+- `docs/LIB.md` is a map of every helper in `webui/frontend/src/lib/` and what it's for.
 - `docs/FRONTMATTER.md` documents note metadata.
-- `docs/CONTRIBUTING.md` covers development workflow.
+- `docs/CONTRIBUTING.md` covers development workflow and conventions.
+- `docs/PUBLISHING.md` documents the release process.
 - `webui/README.md` describes the web application internals.
 
 ## License
