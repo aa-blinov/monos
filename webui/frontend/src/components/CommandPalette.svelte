@@ -2,6 +2,7 @@
   import { createEventDispatcher, tick } from 'svelte';
   import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
+  import { rankQuickSwitcherResults } from '../lib/quick-switcher.js';
   import { locale, localizedText } from '../lib/strings.js';
 
   export let open = false;
@@ -233,7 +234,24 @@
   $: visiblePinnedItems = filterItems(pinnedItems, query).slice(0, 4);
   $: visibleRecentItems = filterItems(recentItems.filter((item) => !pinnedItems.some((pinned) => pinned.path === item.path)), query).slice(0, 4);
   $: visibleTemplateItems = filterItems(templateItems(), query).slice(0, mode === 'notes' ? 4 : 3);
-  $: noteItems = filterItems(notes.filter((item) => !isFeaturedPath(item.path)), query);
+  $: noteItems = mode === 'notes'
+    ? rankQuickSwitcher(query, notes.filter((item) => !isFeaturedPath(item.path)))
+    : filterItems(notes.filter((item) => !isFeaturedPath(item.path)), query);
+
+  /**
+   * Notes-mode ranking: использует rankQuickSwitcherResults для
+   * поддержки `tag:`/`path:` фильтров и более точного скоринга.
+   */
+  function rankQuickSwitcher(queryText, items) {
+    const ranked = rankQuickSwitcherResults(
+      queryText,
+      items.map((it) => ({ name: it.label, path: it.path, tags: [] })),
+    );
+    const byPath = new Map(items.map((it) => [it.path, it]));
+    return ranked
+      .map(({ item }) => byPath.get(item.path))
+      .filter(Boolean);
+  }
   $: filteredItems = mode === 'notes'
     ? [...visiblePinnedItems, ...visibleRecentItems, ...noteItems.slice(0, 10), ...visibleTemplateItems]
     : [...commandItems, ...visiblePinnedItems, ...visibleRecentItems, ...visibleTemplateItems, ...noteItems.slice(0, Math.max(0, 10 - commandItems.length))];

@@ -37,5 +37,7 @@ export const saveSettingsRequest = (payload) => post('/api/settings', payload);
 export function getWordCharStats(content) {
   const text = content || '';
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  return `${words} words · ${text.length} chars`;
+  const readingMinutes = words === 0 ? 0 : Math.max(1, Math.ceil(words / 200));
+  if (words === 0) return '0 words';
+  return `${words.toLocaleString()} words · ${readingMinutes} min read`;
 }

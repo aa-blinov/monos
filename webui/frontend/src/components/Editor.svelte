@@ -3,6 +3,7 @@
   import EditorHeader from './EditorHeader.svelte';
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
+  import OutlinePanel from './OutlinePanel.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { editorState, editorAction, noteSaveSignal, activeTheme } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
@@ -440,6 +441,16 @@
     }
   }
 
+  function handleOutlineNavigate(event) {
+    const { text } = event.detail || {};
+    if (!text || !richEditor) return;
+    if (!richEditor.scrollToHeadingText?.(text)) {
+      // fallback: попробуем найти по anchor id, если рендерер когда-то добавит
+      const target = document.getElementById(event.detail.anchor || '');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   async function setNoteColor(color) {
     if (!currentFile?.path || isColorSaving) return;
     const filePath = currentFile.path;
@@ -557,18 +568,21 @@
       <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.editor.gatheringThoughts}</span>
     </div>
   {:else}
-    <div class="flex-1 flex flex-col min-w-0 min-h-0">
-      <RichEditor
-        bind:this={richEditor}
-        content={richContentForEditor}
-        placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
-        notePath={visibleFile?.path}
-        onImageFile={handleImageFile}
-        resolveImageSrc={resolveEditorImageSrc}
-        resolveImagePath={resolveEditorImagePath}
-        onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
-        on:imageClick={openImageRename}
-      />
+    <div class="flex-1 flex min-w-0 min-h-0">
+      <div class="flex-1 flex flex-col min-w-0 min-h-0">
+        <RichEditor
+          bind:this={richEditor}
+          content={richContentForEditor}
+          placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
+          notePath={visibleFile?.path}
+          onImageFile={handleImageFile}
+          resolveImageSrc={resolveEditorImageSrc}
+          resolveImagePath={resolveEditorImagePath}
+          onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
+          on:imageClick={openImageRename}
+        />
+      </div>
+      <OutlinePanel content={content} on:navigate={handleOutlineNavigate} />
     </div>
   {/if}
 
