@@ -32,6 +32,14 @@ function listLibModules() {
   return out.sort();
 }
 
+function existsInLib(relPath) {
+  try {
+    return statSync(join(libDir, `${relPath}.test.js`)).isFile();
+  } catch {
+    return false;
+  }
+}
+
 test('docs/LIB.md существует и не пустой', () => {
   assert.ok(libDoc.length > 1000, 'LIB.md должен содержать реальное описание');
   assert.match(libDoc, /^# `?lib\/`? Module Map/m);
@@ -92,4 +100,16 @@ test('README ссылается на все docs/ файлы', () => {
 test('relative paths в тесте корректны', () => {
   // smoke test, чтобы при перемещении теста сразу увидеть поломку
   assert.equal(relative(repoRoot, libDir), 'webui/frontend/src/lib');
+});
+
+test('каждый lib/*.js имеет парный *.test.js (TDD convention)', () => {
+  const modules = listLibModules();
+  const untested = modules.filter((m) => !existsInLib(m));
+  assert.equal(
+    untested.length,
+    0,
+    `Следующие модули в lib/ не имеют парного *.test.js:\n` +
+      untested.map((m) => `  - lib/${m}.js`).join('\n') +
+      `\nЛибо добавь lib/${untested[0] || 'X'}.test.js, либо вынеси в components/ если модуль Svelte-specific.`,
+  );
 });
