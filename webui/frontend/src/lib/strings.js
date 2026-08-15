@@ -466,6 +466,8 @@ const enText = {
       return `Ошибка при удалении: ${message}`;
     },
     localNavigation: 'Related',
+    outline: 'Outline',
+    outlineEmpty: 'No headings yet',
     imageUploadFailed: 'Image upload failed',
     imageRenameFailed: 'Image rename failed',
     renameImageTitle: 'Rename image',
@@ -1004,6 +1006,8 @@ const ruText = {
       return `Ошибка при удалении: ${message}`;
     },
     localNavigation: 'Связанные',
+    outline: 'Структура',
+    outlineEmpty: 'Заголовков пока нет',
     imageUploadFailed: 'Не удалось загрузить изображение',
     imageRenameFailed: 'Не удалось переименовать изображение',
     renameImageTitle: 'Переименовать изображение',

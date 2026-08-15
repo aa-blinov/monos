@@ -384,6 +384,35 @@
   }
 
   export function getMarkdown() { return editor ? editorMarkdown(editor) : content; }
+
+  /**
+   * Scroll the editor to the first heading whose text matches `headingText`.
+   * Used by the OutlinePanel for click-to-jump.
+   * Returns true if found and scrolled, false otherwise.
+   */
+  export function scrollToHeadingText(headingText) {
+    if (!editor || !headingText) return false;
+    let found = false;
+    let targetPos = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (found) return false;
+      if (node.type.name === 'heading' && node.textContent.trim() === headingText.trim()) {
+        targetPos = pos + 1;
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    if (found && targetPos !== null) {
+      try {
+        editor.commands.focus();
+        editor.commands.setTextSelection(targetPos);
+      } catch (_) {
+        // ignore
+      }
+    }
+    return found;
+  }
   export function setMarkdown(md) {
     const nextContent = md || '';
     if (!editor) {
