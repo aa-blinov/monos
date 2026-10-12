@@ -8,9 +8,11 @@
   import { editorState, editorAction, noteSaveSignal, activeTheme } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
+  import { formFieldClass } from '../lib/form-field.js';
+  import { dueLabel, dueStatus, parseFrontmatter, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
+  import { notifyDue } from '../lib/reminders.js';
   import {
     deleteFileRequest,
-    getWordCharStats,
     loadBacklinksRequest,
     loadFileContent,
     loadFileInfo,
@@ -27,8 +29,13 @@
     replaceMarkdownImagePath,
     resolveMarkdownImagePath,
   } from '../lib/attachments.js';
-  import { localizedText } from '../lib/strings.js';
-  import { Palette, Trash2 } from 'lucide-svelte';
+  import { localizedText, locale } from '../lib/strings.js';
+  import { wordStats } from '../lib/word-stats.js';
+  import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
+  import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
+  import ConflictNoteView from './ConflictNoteView.svelte';
+  import NoteHistoryModal from './NoteHistoryModal.svelte';
+  import { Palette, Trash2, FileText, Pencil, CalendarDays, X, Focus } from 'lucide-svelte';
 
   let richEditor;
 
@@ -38,12 +45,34 @@
 
   let content = '';
   let editedContent = '';
+  // Raw Markdown view: the note *is* a file in git, so seeing exactly the bytes
+  // that will be committed matters — not only what the rich editor rebuilds.
+  let rawMode = false;
+  // Режим фокуса: одна мысль на экране — узкая колонка и никакой второстепенной
+  // панели. Мера текста в дизайн-системе уже есть, мы её переиспользуем.
+  let focusMode = false;
+  // Дедлайн заметки живёт в YAML-шапке и потому переживает перезагрузку,
+  // экспорт в PDF и попадает в git как обычная строка.
+  let dueDate = '';
+  let dueInput = '';
+  let showDueInput = false;
+
+  $: dueDate = parseFrontmatter(editedContent).due;
+  $: if (dueDate !== dueInput && document.activeElement?.dataset?.testid !== 'due-input') {
+    dueInput = dueDate;
+  }
   let title = '';
   let editedTitle = '';
   let fileInfo = null;
   let isLoading = true;
   let isSaving = false;
   let isDeleting = false;
+  let deleteError = '';
+  let wordCharStats = '';
+  let conflictCount = 0;
+  let conflictNotice = '';
+  let showHistory = false;
+  let historyNote = null;
   let formatToast = '';
   let formatToastTimer;
   let showDeleteConfirm = false;
@@ -74,50 +103,41 @@
     return requestId === loadRequestId && currentFile?.path === filePath;
   }
 
-  function quoteYamlString(value) {
-    return JSON.stringify(String(value || ''));
+  $: dueStatusOf = dueStatus(dueDate);
+  $: dueLabelOf = dueDate
+    ? dueLabel(dueDate, new Date(), {
+      overdue: (days) => $localizedText.editor.dueOverdue(days),
+      today: $localizedText.editor.dueToday,
+      tomorrow: $localizedText.editor.dueTomorrow,
+      inDays: (days) => $localizedText.editor.dueInDays(days),
+      onDate: (date) => new Intl.DateTimeFormat($locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' }).format(date),
+    })
+    : '';
+
+  // Напоминание показывается один раз на каждую пару «заметка + срок»:
+  // перезагрузка страницы не должна снова дёргать уведомлением.
+  $: if (currentFile?.path && dueDate && dueStatusOf !== 'none') {
+    notifyDue(
+      { path: currentFile.path, name: editedTitle, due: dueDate, status: dueStatusOf },
+      {
+        title: editedTitle || $localizedText.editor.due,
+        body: dueLabelOf,
+      },
+    );
   }
 
-  function upsertContentFrontmatter(noteContent, metadata = {}) {
-    const rawContent = String(noteContent || '');
-    const match = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-    const frontmatter = match ? match[1] : '';
-    const body = match ? rawContent.slice(match[0].length) : rawContent;
-    const reservedKeys = new Set(['title', 'category', 'tags']);
-    const preservedLines = frontmatter
-      .split(/\r?\n/)
-      .filter((line) => {
-        const separatorIndex = line.indexOf(':');
-        if (separatorIndex === -1) return line.trim();
-        return !reservedKeys.has(line.slice(0, separatorIndex).trim().toLowerCase());
-      });
-
-    const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
-    const lines = [];
-    if (metadata.title) lines.push(`title: ${quoteYamlString(metadata.title)}`);
-    if (metadata.category) lines.push(`category: ${quoteYamlString(metadata.category)}`);
-    lines.push(`tags: [${tags.map((tag) => quoteYamlString(tag)).join(', ')}]`);
-    lines.push(...preservedLines);
-
-    return `---\n${lines.join('\n')}\n---\n\n${body.replace(/^\s*\n/, '')}`;
-  }
-
-  function splitContentFrontmatter(noteContent) {
-    const rawContent = String(noteContent || '');
-    const match = rawContent.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
-    if (!match) return { frontmatter: '', body: rawContent };
-    return {
-      frontmatter: match[0].trimEnd(),
-      body: rawContent.slice(match[0].length).replace(/^\s*\n/, ''),
-    };
+  function applyDue(value) {
+    if (!currentFile?.path) return;
+    editedContent = setFrontmatterKey(editedContent, 'due', value || '');
+    dueInput = value || '';
   }
 
   function richEditorBody(noteContent) {
-    return splitContentFrontmatter(noteContent).body;
+    return splitFrontmatter(noteContent).body;
   }
 
   function replaceContentBody(noteContent, nextBody) {
-    const { frontmatter } = splitContentFrontmatter(noteContent);
+    const { frontmatter } = splitFrontmatter(noteContent);
     return frontmatter
       ? `${frontmatter}\n\n${String(nextBody || '').replace(/^\s*\n/, '')}`
       : String(nextBody || '');
@@ -267,6 +287,7 @@
 
       content = nextContent;
       editedContent = nextContent;
+      conflictCount = summarizeConflicts(nextContent).count;
       fileInfo = nextFileInfo;
       currentNoteColor = nextFileInfo.color || '';
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
@@ -332,9 +353,51 @@
     }, AUTOSAVE_DELAY);
   }
 
+  /**
+   * Apply per-region choices made in the conflict view.
+   *
+   * The result is composed from the raw file text, never from the editor, so
+   * everything outside a conflict survives byte-for-byte. The backend writes it
+   * and stages the path so git can finish the merge.
+   */
+  async function applyConflictResolution(event) {
+    const filePath = loadedFilePath || currentFile?.path;
+    if (!filePath) return;
+    const choices = event.detail?.choices || {};
+    let next = editedContent;
+    for (const [index, choice] of Object.entries(choices)) {
+      next = resolveRegion(next, Number(index), choice);
+    }
+    if (next === editedContent) return;
+
+    conflictNotice = $localizedText.editor.conflictSaving;
+    try {
+      const response = await fetch('/api/git/resolve-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: filePath, content: next }),
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.detail || `HTTP ${response.status}`);
+      }
+      await saveFileContent(filePath, next);
+      editedContent = next;
+      content = next;
+      conflictCount = 0;
+      conflictNotice = $localizedText.editor.conflictResolved;
+    } catch (error) {
+      conflictNotice = $localizedText.settings.backupError(error?.message || String(error));
+    }
+  }
+
   async function saveContent() {
     const filePath = loadedFilePath || currentFile?.path;
     if (!filePath || !hasUnsavedChanges() || isSaving) return;
+    // A note with conflict markers cannot survive the editor round-trip: `marked`
+    // turns the `=======` separator into a setext underline and the markers are
+    // gone. Saving would write that damage over the file, so refuse instead.
+    if (conflictCount > 0) return;
 
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
@@ -383,10 +446,14 @@
   async function saveMetadataFields() {
     if (!currentFile || !fileInfo || !hasMetadataChanges()) return;
     if (metadataTimer) clearTimeout(metadataTimer);
-    const nextContent = upsertContentFrontmatter(editedContent, {
+    const nextContent = upsertFrontmatter(editedContent, {
       title: editedTitle,
       category: fileInfo.metadata?.category || '',
       tags: editableTags,
+      // Срок живёт в тех же ключах, что и заголовок: если его не передать,
+      // upsertFrontmatter сочтёт его неуправляемым и молча удалит при
+      // переименовании заметки.
+      due: dueDate,
     });
     if (nextContent !== editedContent) editedContent = nextContent;
 
@@ -435,7 +502,7 @@
         dispatch('syncComplete');
       }
     } catch (error) {
-      alert($localizedText.editor.deleteError(error.message));
+      deleteError = $localizedText.editor.deleteError(error.message);
     } finally {
       isDeleting = false;
     }
@@ -503,7 +570,14 @@
     editorState.set({ path: null, dirty: false, saving: false });
   });
 
-  $: wordCharStats = getWordCharStats(editedContent);
+  $: {
+    const { words, readingMinutes } = wordStats(editedContent);
+    wordCharStats = words === 0
+      ? $localizedText.editorHeader.stats.empty
+      : `${$localizedText.editorHeader.stats.words(words)} · ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
+  }
+
+  $: taskProgress = taskProgressOf(editedContent);
 
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
@@ -518,7 +592,11 @@
     }
   }
 
-  $: noteSurfaceStyle = currentNoteColor
+  // Фокус сужает колонку и убирает подсветку цвета заметки: на экране остаётся
+  // только текст, который пишется прямо сейчас.
+  $: noteSurfaceStyle = focusMode
+    ? '--content-width: 46rem; --note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-soft: transparent; --note-page-border: var(--border-subtle);'
+    : currentNoteColor
     ? `--note-accent: ${currentNoteColor}; --note-page-bg: color-mix(in srgb, ${currentNoteColor} 12%, var(--bg-primary)); --note-page-panel: color-mix(in srgb, ${currentNoteColor} 9%, var(--bg-primary)); --note-page-soft: color-mix(in srgb, ${currentNoteColor} 16%, transparent); --note-page-border: color-mix(in srgb, ${currentNoteColor} 30%, var(--border-subtle));`
     : '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-soft: transparent; --note-page-border: var(--border-subtle);';
 
@@ -539,18 +617,29 @@
     currentFile={visibleFile}
     {fileInfo}
     {wordCharStats}
+    {taskProgress}
+    historyAvailable={Boolean(loadedFilePath) && conflictCount === 0}
+    onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
   />
+
+  {#if showHistory && historyNote?.path}
+    <NoteHistoryModal
+      notePath={(historyNote.path || '').replace(/^notes\//, '')}
+      on:close={() => { showHistory = false; }}
+      on:restored={async () => { if (loadedFilePath) await loadFile(); }}
+    />
+  {/if}
   <div class="border-b border-[var(--note-page-border)]"></div>
   {#if !isLoading && backlinks.length > 0}
     <div class="border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="local-navigation">
       <div class="flex items-center gap-3 overflow-x-auto">
-        <span class="shrink-0 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
+        <span class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
           {$localizedText.editor.localNavigation}
         </span>
         {#each backlinks.slice(0, 8) as item}
           <TooltipIconButton
             type="button"
-            class="group flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+            class="group flex shrink-0 items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
             on:click={() => openLinkedNote(item)}
             label={relatedNoteLabel(item)}
             tooltip={`${item.path} · ${relationLabel(item.type)}`}
@@ -570,9 +659,36 @@
   {:else}
     <div class="flex-1 flex min-w-0 min-h-0">
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
+        {#if conflictCount > 0}
+          <div class="mb-4 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+            <p class="text-sm font-bold text-[var(--red)]">{$localizedText.editor.conflictTitle}</p>
+            <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+              {$localizedText.editor.conflictHint}
+            </p>
+            <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">
+              {$localizedText.editor.conflictCount(conflictCount)}
+            </p>
+            {#if conflictNotice}
+              <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-primary)]">{conflictNotice}</p>
+            {/if}
+          </div>
+        {/if}
+
+        {#if conflictCount > 0}
+          <ConflictNoteView content={editedContent} on:resolve={applyConflictResolution} />
+        {:else if rawMode}
+          <textarea
+            data-testid="raw-source"
+            class="h-full min-h-0 w-full resize-none bg-transparent px-4 pb-6 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-8"
+            placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
+            spellcheck="false"
+            bind:value={editedContent}
+          />
+        {:else}
         <RichEditor
           bind:this={richEditor}
           content={richContentForEditor}
+          editable={true}
           placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
           notePath={visibleFile?.path}
           onImageFile={handleImageFile}
@@ -581,8 +697,11 @@
           onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
           on:imageClick={openImageRename}
         />
+        {/if}
       </div>
-      <OutlinePanel content={content} on:navigate={handleOutlineNavigate} />
+      {#if !focusMode}
+        <OutlinePanel content={content} on:navigate={handleOutlineNavigate} />
+      {/if}
     </div>
   {/if}
 
@@ -591,7 +710,89 @@
       <div class="flex h-full items-center gap-2">
         <TooltipIconButton
           type="button"
-          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {colorPaletteOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          data-testid="toggle-focus-mode"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {focusMode ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          label={focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
+          tooltip={focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
+          tooltipAlign="start"
+          on:click={() => focusMode = !focusMode}
+        >
+          <Focus size="20" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+
+        <TooltipIconButton
+          type="button"
+          data-testid="toggle-raw-mode"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {rawMode ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          label={rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
+          tooltip={rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
+          tooltipAlign="start"
+          on:click={() => rawMode = !rawMode}
+        >
+          {#if rawMode}
+            <Pencil class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+          {:else}
+            <FileText class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+          {/if}
+        </TooltipIconButton>
+
+        {#if dueDate}
+          <TooltipIconButton
+            type="button"
+            data-testid="clear-due"
+            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)]"
+            label={$localizedText.editor.dueClear}
+            tooltip={$localizedText.editor.dueClear}
+            tooltipAlign="start"
+            on:click={() => applyDue('')}
+          >
+            <X class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+          </TooltipIconButton>
+        {/if}
+
+        <TooltipIconButton
+          type="button"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {dueDate ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          label={$localizedText.editor.due}
+          tooltip={$localizedText.editor.due}
+          tooltipAlign="start"
+          on:click={() => showDueInput = !showDueInput}
+        >
+          <CalendarDays class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+
+        {#if showDueInput}
+          <div
+            class="flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-1.5"
+            data-testid="due-popover"
+          >
+            <input
+              data-testid="due-input"
+              type="date"
+              class="bg-transparent text-[length:var(--text-whisper-lg)] text-[var(--text-primary)] outline-none"
+              bind:value={dueInput}
+              on:change={(e) => applyDue(e.currentTarget.value)}
+            />
+          </div>
+        {/if}
+
+        {#if dueDate}
+          <span
+            data-testid="due-label"
+            data-status={dueStatusOf}
+            class="shrink-0 rounded-full px-2.5 py-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] {dueStatusOf === 'overdue'
+              ? 'bg-[color-mix(in_srgb,var(--red)_14%,transparent)] text-[var(--red)]'
+              : dueStatusOf === 'today'
+                ? 'bg-[color-mix(in_srgb,var(--yellow)_18%,transparent)] text-[var(--yellow)]'
+                : 'text-[var(--text-muted)]'}"
+          >
+            {dueLabelOf}
+          </span>
+        {/if}
+
+        <TooltipIconButton
+          type="button"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {colorPaletteOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
           label={$localizedText.editor.noteColor}
           tooltip={$localizedText.editor.noteColor}
           tooltipAlign="start"
@@ -604,7 +805,7 @@
           <div class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" aria-label={$localizedText.editor.noteColor}>
             <button
               type="button"
-              class="flex h-8 shrink-0 items-center rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+              class="flex h-8 shrink-0 items-center rounded-md border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
               disabled={isColorSaving}
               on:click={() => setNoteColor('')}
             >
@@ -613,7 +814,7 @@
             {#each colorOptions as color}
               <button
                 type="button"
-                class="h-8 w-8 shrink-0 rounded-full border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
+                class="h-8 w-8 shrink-0 rounded-sm border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
                 style="background: {color};"
                 disabled={isColorSaving}
                 aria-label={$localizedText.app.board.applyColor(color)}
@@ -629,18 +830,23 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteConfirm}
-  <ModalShell title={$localizedText.editor.archiveTitle} widthClass="w-[90%] lg:w-[32rem]" on:close={() => showDeleteConfirm = false}>
+  <ModalShell title={$localizedText.editor.archiveTitle} widthClass="w-[90%] lg:w-[32rem]" on:close={() => { showDeleteConfirm = false; deleteError = ''; }}>
       <p class="text-[var(--text-secondary)] text-base lg:text-lg mb-10 font-serif italic">
         {$localizedText.editor.archiveConfirm(currentFile.name)}
       </p>
+      {#if deleteError}
+        <p class="mb-6 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm leading-relaxed text-[var(--red)]">
+          {deleteError}
+        </p>
+      {/if}
       <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
         <button on:click={() => showDeleteConfirm = false} class={getModalButtonClass('secondary', { extraClass: 'py-2' })}>{$localizedText.editor.cancel}</button>
         <button
           on:click={deleteFile}
           disabled={isDeleting}
-          class={getModalButtonClass('primary', { disabled: isDeleting, extraClass: 'text-red-500 py-2' })}
+          class={getModalButtonClass('primary', { disabled: isDeleting, extraClass: 'text-[var(--red)] py-2' })}
         >
-          {isDeleting ? $localizedText.editor.archiving : $localizedText.editor.deletePermanently}
+          {isDeleting ? $localizedText.editor.archiving : $localizedText.editor.moveToTrash}
         </button>
       </div>
   </ModalShell>
@@ -655,7 +861,7 @@
       <input
         type="text"
         bind:value={attachmentNewName}
-        class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
+        class={formFieldClass()}
         on:keydown={(e) => { if (e.key === 'Enter') saveImageRename(); if (e.key === 'Escape') imageRename = null; }}
       />
     </div>

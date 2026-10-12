@@ -2,14 +2,14 @@
   import { createEventDispatcher, tick } from 'svelte';
   import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
-  import { rankQuickSwitcherResults } from '../lib/quick-switcher.js';
+  import { pinnedNotes } from '../lib/sidebar-pinned.js';
+  import { matchesNoteFilters, parseQuickSwitcherQuery, rankQuickSwitcherResults } from '../lib/quick-switcher.js';
   import { locale, localizedText } from '../lib/strings.js';
 
   export let open = false;
   export let mode = 'commands';
 
   const dispatch = createEventDispatcher();
-  const PINNED_NOTES_KEY = 'pinnedNotes';
 
   let inputEl;
   let query = '';
@@ -41,6 +41,11 @@
         detail: displayPath(node.path),
         path: node.path,
         name: node.name,
+        // Carried from the tree metadata so tag:/category:/created: filters can
+        // actually match. They used to be dropped here, which made every such
+        // filter a silent no-op.
+        tags: node.metadata?.tags ?? [],
+        metadata: node.metadata ?? null,
       });
     }
     for (const child of node.children || []) collectNotes(child, result);
@@ -76,23 +81,23 @@
     }
   }
 
+  /**
+   * Закрепления приходят из того же стора, что и в сайдбаре, — то есть из
+   * шапки заметок. Раньше палитра читала их из localStorage, и после переноса
+   * закреплений в файлы список здесь просто опустел бы.
+   */
   function loadPinnedItems() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(PINNED_NOTES_KEY) || '[]');
-      pinnedItems = Array.isArray(parsed)
-        ? parsed.filter((note) => note?.path).map((note) => ({
-          id: note.path,
-          type: 'pinned',
-          section: 'pinned',
-          label: note.name?.replace(/\.md$/i, '') || note.path.split('/').at(-1)?.replace(/\.md$/i, '') || '',
-          detail: displayPath(note.path),
-          path: note.path,
-          name: note.name,
-        }))
-        : [];
-    } catch {
-      pinnedItems = [];
-    }
+    let current = [];
+    pinnedNotes.subscribe((value) => { current = value; })();
+    pinnedItems = current.map((note) => ({
+      id: note.path,
+      type: 'pinned',
+      section: 'pinned',
+      label: note.name?.replace(/\.md$/i, '') || note.path.split('/').at(-1)?.replace(/\.md$/i, '') || '',
+      detail: displayPath(note.path),
+      path: note.path,
+      name: note.name,
+    }));
   }
 
   function templateItems() {
@@ -115,6 +120,13 @@
         label: $localizedText.commandPalette.commands.quickOpen,
         detail: $localizedText.commandPalette.commandDetails.quickOpen,
         shortcut: '⌘O',
+      },
+      {
+        id: 'continueWork',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.continueWork,
+        detail: $localizedText.commandPalette.commandDetails.continueWork,
       },
       {
         id: 'openSettings',
@@ -230,10 +242,38 @@
 
   $: if (open && (!lastOpen || mode !== lastMode)) activatePalette();
   $: if (!open && lastOpen) lastOpen = false;
-  $: commandItems = mode === 'notes' ? [] : filterItems(commands(), query);
-  $: visiblePinnedItems = filterItems(pinnedItems, query).slice(0, 4);
-  $: visibleRecentItems = filterItems(recentItems.filter((item) => !pinnedItems.some((pinned) => pinned.path === item.path)), query).slice(0, 4);
-  $: visibleTemplateItems = filterItems(templateItems(), query).slice(0, mode === 'notes' ? 4 : 3);
+  // Operators are stripped once, then the leftover term drives the fuzzy match.
+  // Filtering the featured sections on the raw query made `folder:` match the
+  // literal characters "folder:" instead of the folder, so Pinned and Recent
+  // ignored operators that the Notes list honoured.
+  $: parsedQuery = parseQuickSwitcherQuery(query);
+  $: freeTerm = parsedQuery.term;
+
+  /**
+   * Filter a featured section: drop anything failing the operators, then fuzzy
+   * match the remaining free term. Recent items are described by their backend
+   * payload (tags, category, date), pinned ones by the tree.
+   */
+  function filterFeatured(items, limit) {
+    return items
+      .filter((item) => matchesNoteFilters(parsedQuery, {
+        name: item.label,
+        path: item.path,
+        tags: item.tags ?? [],
+        metadata: item.metadata ?? null,
+      }))
+      .filter((item) => !freeTerm || fuzzyMatch(item, freeTerm))
+      .sort((a, b) => matchScore(a, freeTerm) - matchScore(b, freeTerm))
+      .slice(0, limit);
+  }
+
+  $: commandItems = mode === 'notes' ? [] : filterItems(commands(), freeTerm);
+  $: visiblePinnedItems = filterFeatured(pinnedItems, 4);
+  $: visibleRecentItems = filterFeatured(
+    recentItems.filter((item) => !pinnedItems.some((pinned) => pinned.path === item.path)),
+    4,
+  );
+  $: visibleTemplateItems = filterItems(templateItems(), freeTerm).slice(0, mode === 'notes' ? 4 : 3);
   $: noteItems = mode === 'notes'
     ? rankQuickSwitcher(query, notes.filter((item) => !isFeaturedPath(item.path)))
     : filterItems(notes.filter((item) => !isFeaturedPath(item.path)), query);
@@ -245,7 +285,7 @@
   function rankQuickSwitcher(queryText, items) {
     const ranked = rankQuickSwitcherResults(
       queryText,
-      items.map((it) => ({ name: it.label, path: it.path, tags: [] })),
+      items.map((it) => ({ name: it.label, path: it.path, tags: it.tags ?? [], metadata: it.metadata ?? null })),
     );
     const byPath = new Map(items.map((it) => [it.path, it]));
     return ranked
@@ -259,21 +299,21 @@
 </script>
 
 {#if open}
-  <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/25 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
+  <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/20 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
     <button class="absolute inset-0 cursor-default" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
 
     <div class="relative w-full max-w-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl">
       <div class="border-b border-[var(--border-subtle)] px-5 py-4">
         <div class="mb-3 flex items-center justify-between gap-4">
           <div>
-            <div class="text-[10px] font-bold uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+            <div class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.24em] text-[var(--text-secondary)]">
               {mode === 'notes' ? $localizedText.commandPalette.quickSwitcher : $localizedText.commandPalette.title}
             </div>
             <div class="mt-1 text-xs text-[var(--text-secondary)]">
               {mode === 'notes' ? $localizedText.commandPalette.quickSwitcherHint : $localizedText.commandPalette.commandHint}
             </div>
           </div>
-          <div class="hidden items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--text-muted)] sm:flex">
+          <div class="hidden items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)] sm:flex">
             <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">↑↓</span>
             <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">Enter</span>
             <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">Esc</span>
@@ -285,7 +325,7 @@
           bind:value={query}
           on:keydown={handleKeydown}
           placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
-          class="w-full bg-transparent py-2 text-xl font-serif outline-none placeholder:text-[var(--text-secondary)]/40"
+          class="w-full bg-transparent py-1.5 text-xl font-serif outline-none placeholder:text-[var(--text-tertiary)]"
           autocomplete="off"
           spellcheck="false"
         />
@@ -297,7 +337,7 @@
         {:else if filteredItems.length}
           {#each filteredItems as item, index (item.type + item.id)}
             {#if index === 0 || filteredItems[index - 1].section !== item.section}
-              <div class="px-5 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
+              <div class="px-5 pb-1 pt-3 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
                 {$localizedText.commandPalette.sections[item.section]}
               </div>
             {/if}
@@ -311,12 +351,12 @@
                 <span class="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{item.detail}</span>
               </span>
               {#if item.shortcut}
-                <span class="shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{item.shortcut}</span>
+                <span class="shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)]">{item.shortcut}</span>
               {/if}
             </button>
           {/each}
           {#if isLoading}
-            <div class="px-5 py-3 text-[10px] uppercase tracking-widest text-[var(--text-secondary)]/60">{$localizedText.commandPalette.loading}</div>
+            <div class="px-5 py-3 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{$localizedText.commandPalette.loading}</div>
           {/if}
         {:else if error}
           <div class="px-5 py-8 text-sm text-[var(--red)]">{error}</div>

@@ -14,9 +14,10 @@
     fileExtension,
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
-  import { pinnedNotes, isPinned, pinNote, unpinNote, updatePinnedPath } from '../lib/sidebar-pinned.js';
+  import { pinnedNotes, isPinned, pinNote, unpinNote, setPinnedFromTree, migrateLegacyPins } from '../lib/sidebar-pinned.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import { iconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
   import {
@@ -44,7 +45,7 @@
     syncRequest,
     checkGitStatus,
   } from '../lib/sidebar-api.js';
-  import { loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
+  import { bulkTagRequest, duplicateNoteRequest, loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
   import {
     convertImageToWebp,
     defaultImageName,
@@ -137,7 +138,6 @@
 
   $: colorOptions = getNoteColorOptions($activeTheme);
 
-  const PINNED_NOTES_KEY = 'pinnedNotes';
   const QUICK_NOTES_CATEGORY = 'Quick Notes';
   const allowedPreviewTags = new Set([
     'A', 'B', 'BLOCKQUOTE', 'BR', 'CODE', 'DEL', 'EM', 'H1', 'H2', 'H3',
@@ -148,6 +148,7 @@
 
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
+  let pendingDelete = null;
   let contextMenuEl = null;
   let contextMenuPos = { x: 0, y: 0 };
   const CONTEXT_MENU_MARGIN = 4;
@@ -169,9 +170,16 @@
   }
   let isDragOverRoot = false;
   let isSyncing = false;
+  export let autoPullState = { conflicts: false, received: 0 };
   let syncError = '';
 
   let selectedPaths = new Set();
+  let showBulkTagPrompt = false;
+  let bulkTagValue = '';
+  let bulkBusy = false;
+  let bulkError = '';
+  let bulkTagPaths = [];
+  let duplicateTarget = '';
 
   $: filteredTree = tree;
   $: localizedTemplates = getTemplateCatalog($locale, $hiddenLibraryTemplateIds, $customNoteTemplates);
@@ -348,6 +356,9 @@
       error = '';
       tree = await loadTreeData();
       await loadTags();
+      // Закрепления читаются из самих заметок, поэтому список живёт ровно
+      // столько, сколько живёт дерево.
+      setPinnedFromTree(tree);
       treeKey++;
       if (pendingSelectedPath) {
         selectedPath = pendingSelectedPath;
@@ -730,15 +741,15 @@
     } else if (action === 'pin') {
       pinNote(path, name);
     } else if (action === 'unpin') {
-      unpinNote(path, true);
+      unpinNote(path);
     } else if (action === 'delete') {
       const deletePaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [path];
-      const confirmed = deletePaths.length > 1
-        ? confirm($localizedText.sidebar.confirmDeleteMany(deletePaths.length))
-        : confirm($localizedText.sidebar.confirmDelete(name, contextMenu.isDir));
-      if (confirmed) {
-        deleteItems(deletePaths);
-      }
+      pendingDelete = {
+        paths: deletePaths,
+        message: deletePaths.length > 1
+          ? $localizedText.sidebar.confirmDeleteMany(deletePaths.length)
+          : $localizedText.sidebar.confirmDelete(name, contextMenu.isDir),
+      };
     }
     closeContextMenu();
   }
@@ -764,7 +775,6 @@
       await loadTree();
       await loadDirectories();
       
-      updatePinnedPath(target.path, data.path, data.name);
       if (affectedSelectedPath) {
         navigateToPath(affectedSelectedPath, target.isDir && affectedSelectedPath === data.path);
       }
@@ -773,6 +783,16 @@
     } finally {
       isCreating = false;
     }
+  }
+
+  function cancelPendingDelete() {
+    pendingDelete = null;
+  }
+
+  function confirmPendingDelete() {
+    const paths = pendingDelete?.paths;
+    pendingDelete = null;
+    if (paths?.length) deleteItems(paths);
   }
 
   async function deleteItems(paths) {
@@ -809,7 +829,6 @@
       for (const path of movePaths) {
         const newSourcePath = movedPath(path, targetPath);
         await moveItemRequest(path, targetPath);
-        updatePinnedPath(path, newSourcePath);
         movedPaths.push(newSourcePath);
       }
       selectedPaths = new Set(movedPaths);
@@ -876,7 +895,44 @@
 
   function resetDragOver() { isDragOverRoot = false; }
 
-  onMount(() => {
+  async function applyBulkTag() {
+    const tag = bulkTagValue.trim();
+    if (!tag || bulkTagPaths.length === 0) return;
+    bulkBusy = true;
+    bulkError = '';
+    try {
+      const result = await bulkTagRequest(bulkTagPaths, tag);
+      showBulkTagPrompt = false;
+      selectedPaths = new Set();
+      await loadTree();
+      dispatch('bulkTagged', { tag, changed: result?.changed?.length ?? 0, missing: result?.missing?.length ?? 0 });
+    } catch (error) {
+      bulkError = error?.message || String(error);
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function duplicateNote() {
+    const target = duplicateTarget;
+    if (!target) return;
+    duplicateTarget = '';
+    bulkBusy = true;
+    bulkError = '';
+    try {
+      const created = await duplicateNoteRequest(target);
+      await loadTree();
+      dispatch('noteDuplicated', created);
+    } catch (error) {
+      bulkError = error?.message || String(error);
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  onMount(async () => {
+    // Пины из прежнего localStorage переезжают в файлы один раз.
+    migrateLegacyPins().catch(() => {});
     loadTree();
     loadDirectories();
     loadTags();
@@ -889,6 +945,16 @@
   });
 </script>
 
+{#if pendingDelete}
+  <ConfirmModal
+    danger={true}
+    title={$localizedText.sidebar.delete}
+    message={pendingDelete.message}
+    on:confirm={confirmPendingDelete}
+    on:cancel={cancelPendingDelete}
+  />
+{/if}
+
   <div
     class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-primary)]"
     role="presentation"
@@ -899,7 +965,7 @@
       <div class="flex min-h-11 items-center justify-between gap-3">
         <TooltipIconButton
           on:click={() => dispatch('toggleSidebar')}
-          class="h-11 w-11 shrink-0 justify-center rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          class="h-11 w-11 shrink-0 justify-center rounded-md border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.close}
           tooltip={$localizedText.sidebar.close}
           tooltipAlign="start"
@@ -912,9 +978,9 @@
   <!-- Pinned Notes Section -->
   {#if $pinnedNotes.length > 0}
     <div class="mb-4 shrink-0 px-4">
-      <div class="mb-3 flex min-h-10 items-center justify-between text-[11px] uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)] opacity-60">
+      <div class="mb-3 flex min-h-10 items-center justify-between text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)]">
         <span>{$localizedText.sidebar.pinned}</span>
-        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[10px] tabular-nums">{$pinnedNotes.length}</span>
+        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] tabular-nums">{$pinnedNotes.length}</span>
       </div>
       <div class="space-y-2">
         {#each $pinnedNotes as note (note.path)}
@@ -925,7 +991,7 @@
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
             {#if pathLabel}
-              <div class="text-[10px] uppercase tracking-[0.1em] text-[var(--text-secondary)] opacity-40 truncate mt-0.5">{pathLabel}</div>
+              <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] truncate mt-0.5">{pathLabel}</div>
             {/if}
           </button>
         {/each}
@@ -937,10 +1003,10 @@
   <!-- Tree View Header -->
     <div class="mb-2 shrink-0 px-4 lg:mb-4">
       <div class="flex items-center justify-between gap-3 pb-1.5 lg:pb-2">
-        <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] opacity-60 lg:text-[11px] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
+        <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
           on:click={() => dispatch('openCreateNote')}
-          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-lg lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[10px] lg:tracking-[0.16em]"
+          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-lg lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
         >
           <span class="text-sm leading-none">+</span>
           <span class="whitespace-nowrap">{$localizedText.sidebar.new.replace(/^\+\s*/, '')}</span>
@@ -968,12 +1034,12 @@
       <div class="space-y-0.5 lg:space-y-1">
         {#if isDragOverRoot}
           <div
-            class="mx-2 py-3 border-2 border-dashed border-[var(--text-secondary)]/30 rounded text-center"
+            class="mx-2 rounded-lg border-2 border-dashed border-[var(--text-secondary)]/30 py-3 text-center"
             role="presentation"
             on:dragover|preventDefault
             on:drop={handleRootDrop}
           >
-            <span class="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]/50">{$localizedText.sidebar.dropToRoot}</span>
+            <span class="text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{$localizedText.sidebar.dropToRoot}</span>
           </div>
         {/if}
         <!-- Render children directly to hide 'notes' root node -->
@@ -1005,7 +1071,7 @@
   {/if}
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex h-16 shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 text-[11px] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex h-16 shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
@@ -1020,6 +1086,14 @@
       <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.LayoutTemplate size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.templates}</span>
+      </button>
+      <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Bookmark size="20" strokeWidth="1.7" />
+        <span>{$localizedText.savedSearches.title}</span>
+      </button>
+      <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Hash size="20" strokeWidth="1.7" />
+        <span>{$localizedText.tags.title}</span>
       </button>
       <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Trash2 size="20" strokeWidth="1.7" />
@@ -1039,12 +1113,14 @@
             on:click={handleSync}
             disabled={isSyncing || $editorState.saving || $editorState.dirty}
             class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30 lg:h-10 lg:w-10"
-            label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
-            tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
+            label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
+            tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
             tooltipAlign="end"
           >
             {#if isSyncing}
               <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+            {:else if autoPullState?.conflicts}
+              <Icon.AlertTriangle class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {:else}
               <Icon.RefreshCw class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {/if}
@@ -1058,6 +1134,26 @@
           tooltipAlign="end"
         >
           <Icon.LayoutTemplate class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+        <TooltipIconButton
+          data-testid="open-saved-searches"
+          on:click={() => dispatch('openSavedSearches')}
+          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          label={$localizedText.savedSearches.title}
+          tooltip={$localizedText.savedSearches.title}
+          tooltipAlign="end"
+        >
+          <Icon.Bookmark class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+        <TooltipIconButton
+          data-testid="open-tags"
+          on:click={() => dispatch('openTags')}
+          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          label={$localizedText.tags.title}
+          tooltip={$localizedText.tags.title}
+          tooltipAlign="end"
+        >
+          <Icon.Hash class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
@@ -1103,12 +1199,76 @@
       {/if}
       <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.editIcon}</button>
       <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.rename}</button>
-      <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-red-500/10 text-red-500 transition">
+      {#if !contextMenu.isDir}
+        <button
+          type="button"
+          data-testid="bulk-tag"
+          on:click={() => { bulkTagPaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [contextMenu.targetPath]; showBulkTagPrompt = true; bulkTagValue = ''; bulkError = ''; closeContextMenu(); }}
+          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition"
+        >
+          {bulkTagPaths.length > 1
+            ? $localizedText.sidebar.context.tagSelected(bulkTagPaths.length)
+            : $localizedText.sidebar.context.addTag}
+        </button>
+        <button
+          type="button"
+          data-testid="duplicate-note"
+          on:click={() => { duplicateTarget = contextMenu.targetPath; closeContextMenu(); duplicateNote(); }}
+          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition"
+        >
+          {$localizedText.sidebar.context.duplicate}
+        </button>
+        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+      {/if}
+      <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red)] transition">
         {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
       </button>
     </div>
   {/if}
 </div>
+
+<!-- Bulk Tag Modal -->
+{#if showBulkTagPrompt}
+  <ModalShell
+    title={bulkTagPaths.length > 1
+      ? $localizedText.sidebar.modals.tagSelectedTitle(bulkTagPaths.length)
+      : $localizedText.sidebar.context.addTag}
+    widthClass="w-[min(94vw,28rem)]"
+    closeOnEscape={true}
+    on:close={() => showBulkTagPrompt = false}
+  >
+    <div class="space-y-3">
+      <p class="text-sm text-[var(--text-secondary)]">{$localizedText.sidebar.modals.tagHint}</p>
+      <input
+        data-testid="bulk-tag-input"
+        type="text"
+        class="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm outline-none placeholder-[var(--text-secondary)]"
+        placeholder={$localizedText.sidebar.modals.tagPlaceholder}
+        bind:value={bulkTagValue}
+        on:keydown={(e) => { if (e.key === 'Enter') applyBulkTag(); }}
+      />
+      {#if bulkError}
+        <p class="text-sm text-[var(--red)]">{bulkError}</p>
+      {/if}
+      <div class="flex gap-2">
+        <button
+          type="button"
+          data-testid="bulk-tag-apply"
+          disabled={bulkBusy || !bulkTagValue.trim()}
+          class={getModalButtonClass('primary', { extraClass: 'flex-1 py-2' })}
+          on:click={applyBulkTag}
+        >
+          {$localizedText.sidebar.context.addTag}
+        </button>
+        <button
+          type="button"
+          class={getModalButtonClass('secondary', { extraClass: 'flex-1 py-2' })}
+          on:click={() => showBulkTagPrompt = false}
+        >{$localizedText.editor.cancel}</button>
+      </div>
+    </div>
+  </ModalShell>
+{/if}
 
 <!-- Rename Modal -->
 {#if showRenameModal}
@@ -1142,7 +1302,7 @@
   <ModalShell title={$localizedText.sidebar.modals.newSection} closeOnEscape={true} on:close={() => showCreateFolderModal = false}>
       <div>
         <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
-        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none" on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
+        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class={formFieldClass()} on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
       </div>
       <div class="flex gap-6 mt-12">
         <button on:click={() => showCreateFolderModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
@@ -1163,13 +1323,13 @@
     <div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
       <div class="min-h-0 flex flex-col overflow-hidden">
         <div class="mb-3">
-          <label for="template-search" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.templateSearch}</label>
+          <label for="template-search" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.templateSearch}</label>
           <input
             id="template-search"
             type="text"
             bind:value={templateQuery}
             placeholder={$localizedText.sidebar.templateSearchPlaceholder}
-            class="w-full bg-transparent border-b border-[var(--border-subtle)] py-1.5 outline-none transition focus:border-[var(--text-secondary)]"
+            class={formFieldClass()}
           />
         </div>
 
@@ -1182,10 +1342,10 @@
             <section class="pt-4 first:pt-0">
               <div class="mb-2">
                 <div class="flex items-center gap-3">
-                  <h3 class="shrink-0 text-[10px] uppercase tracking-[0.22em] font-bold text-[var(--text-secondary)]/80">{group.title}</h3>
+                  <h3 class="shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.22em] font-bold text-[var(--text-tertiary)]">{group.title}</h3>
                   <span class="h-px flex-1 bg-[var(--border-subtle)]"></span>
                 </div>
-                <p class="mt-1 max-w-xl text-xs leading-relaxed text-[var(--text-secondary)]/70 line-clamp-2">{group.description}</p>
+                <p class="mt-1 max-w-xl text-xs leading-relaxed text-[var(--text-tertiary)] line-clamp-2">{group.description}</p>
               </div>
               <div class="grid gap-1.5">
                 {#each group.templates as template}
@@ -1196,14 +1356,14 @@
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
-                        <div class="font-serif text-[15px] leading-snug">{template.title}</div>
+                        <div class="font-serif text-base leading-snug">{template.title}</div>
                         <p class="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">{template.description}</p>
                       </div>
-                      <span class="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">{template.category}</span>
+                      <span class="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">{template.category}</span>
                     </div>
                     <div class="mt-2 flex flex-wrap gap-1">
                       {#each template.tags as tag}
-                        <span class="rounded-full bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">#{tag}</span>
+                        <span class="rounded-full bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
                   </button>
@@ -1217,7 +1377,7 @@
       <div class="min-h-0 flex flex-col overflow-hidden border-t border-[var(--border-subtle)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
-            <label for="template-title" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.modals.title}</label>
+            <label for="template-title" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.modals.title}</label>
             <input
               id="template-title"
               type="text"
@@ -1226,7 +1386,7 @@
             />
           </div>
           <div>
-            <label for="template-category" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70 mb-1.5">{$localizedText.sidebar.templateFolder}</label>
+            <label for="template-category" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.templateFolder}</label>
             <select
               id="template-category"
               bind:value={templateCategory}
@@ -1240,9 +1400,9 @@
         </div>
 
         <div class="mt-4 min-h-0 flex flex-1 flex-col overflow-hidden">
-          <h3 class="mb-2 text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70">{$localizedText.sidebar.templatePreview}</h3>
+          <h3 class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreview}</h3>
           <div
-            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
+            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
             data-testid="template-preview-scroll"
           >
             {#if selectedTemplate}
@@ -1253,7 +1413,7 @@
                 >
                   {#each templatePreviewParts.metadata as field}
                     <div class="min-w-0">
-                      <div class="text-[9px] uppercase tracking-[0.18em] text-[var(--text-secondary)]/60">{field.label}</div>
+                      <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">{field.label}</div>
                       <div class="mt-1 truncate text-sm text-[var(--text-primary)]" title={field.value}>{field.value || '—'}</div>
                     </div>
                   {/each}
@@ -1263,8 +1423,8 @@
             {:else}
               <div class="flex h-full items-center justify-center text-center">
                 <div>
-                  <div class="text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)]/50">{$localizedText.sidebar.templatePreviewEmpty}</div>
-                  <p class="mt-2 max-w-xs text-xs leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.templatePreviewEmptyHint}</p>
+                  <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreviewEmpty}</div>
+                  <p class="mt-2 max-w-xs text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreviewEmptyHint}</p>
                 </div>
               </div>
             {/if}
@@ -1306,7 +1466,7 @@
   :global(.template-preview h1) {
     margin-bottom: 1.25rem;
     color: var(--text-primary);
-    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
     font-size: 1.25rem;
     font-weight: 600;
     line-height: 1.25;

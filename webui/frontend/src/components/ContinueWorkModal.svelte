@@ -22,11 +22,11 @@
       {#each notes.slice(0, 6) as note (note.path)}
         <button
           type="button"
-          class="w-full rounded-2xl border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/45"
+          class="w-full rounded-md border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/45"
           on:click={() => onOpenNote(note)}
         >
           <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>
-          <span class="mt-1 block truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">{recentPathLabel(note, $localizedText.sidebar?.modals?.root)}</span>
+          <span class="mt-1 block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{recentPathLabel(note, $localizedText.sidebar?.modals?.root)}</span>
         </button>
       {/each}
     </div>

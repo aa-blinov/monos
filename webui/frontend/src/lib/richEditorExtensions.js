@@ -1,12 +1,24 @@
 import { mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { defaultMarkdownSerializer } from 'prosemirror-markdown';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import { InlineMath, MathBlock, MermaidBlock } from './richEditorExtras.js';
 import { Markdown } from 'tiptap-markdown';
+
+// 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
+// а редактор их игнорировал. `common` покрывает 11 языков из 12 встречающихся;
+// `docker` и `cron` не входят в набор — для них расширение само откатывается на
+// highlightAuto, а не падает.
+const lowlight = createLowlight(common);
+// Ключ — язык, значение — синонимы (не наоборот). Без `env` блок .env ушёл бы
+// в автоопределение вместо ini.
+lowlight.registerAlias({ ini: 'env' });
 
 function imageCaption(attributes, attachmentPath) {
   const alt = String(attributes.alt || '').trim();
@@ -59,7 +71,10 @@ export function createRichEditorExtensions(placeholder, {
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4] },
       link: { openOnClick: false },
+      // Штатный CodeBlock не умеет подсветку — его заменяет CodeBlockLowlight.
+      codeBlock: false,
     }),
+    CodeBlockLowlight.configure({ lowlight }),
     Placeholder.configure({ placeholder }),
     AttachmentImage.configure({
       inline: true,
@@ -75,6 +90,9 @@ export function createRichEditorExtensions(placeholder, {
     TableHeader,
     TaskList,
     TaskItem.configure({ nested: true }),
+    InlineMath,
+    MathBlock,
+    MermaidBlock,
     Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
   ];
 }

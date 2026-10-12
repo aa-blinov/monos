@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { get } from 'svelte/store';
-import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './dashboard.js';
+import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './dashboard.js';
 
 function jsonResponse(status, body) {
   return {
@@ -17,6 +17,7 @@ test.beforeEach(() => {
   homeRecentNotes.set([]);
   homeRecentHasMore.set(true);
   homeRecentLoading.set(false);
+  homeRecentError.set(null);
 });
 
 test('loadHomeRecentNotes загружает заметки и обновляет store', async () => {
@@ -94,6 +95,26 @@ test('loadHomeRecentNotes обрабатывает HTTP ошибку без cras
 
   assert.equal(get(homeRecentNotes).length, 0);
   assert.equal(get(homeRecentLoading), false);
+});
+
+test('loadHomeRecentNotes сохраняет ошибку для показа в UI', async () => {
+  globalThis.fetch = async () => jsonResponse(500, { error: 'internal' });
+
+  await loadHomeRecentNotes();
+
+  assert.ok(get(homeRecentError), 'ошибка загрузки должна попасть в homeRecentError');
+});
+
+test('loadHomeRecentNotes очищает ошибку после успешной загрузки', async () => {
+  globalThis.fetch = async () => jsonResponse(500, { error: 'internal' });
+  await loadHomeRecentNotes();
+  assert.ok(get(homeRecentError));
+
+  globalThis.fetch = async () => jsonResponse(200, [{ path: 'a.md', name: 'A' }]);
+  await loadHomeRecentNotes();
+
+  assert.equal(get(homeRecentError), null);
+  assert.equal(get(homeRecentNotes).length, 1);
 });
 
 test('loadHomeRecentNotes обрабатывает не-массив ответ', async () => {

@@ -54,8 +54,8 @@ const enText = {
   app: {
     closeSidebar: 'Close sidebar',
     resizeSidebar: 'Resize sidebar',
-    emptyDesktop: 'Open a note from the sidebar, or start with one of the actions below.',
-    emptyMobile: 'Open the menu to choose a note or create a new one.',
+    emptyDesktop: 'Your notes are plain Markdown files on your own disk — not rows in someone\'s database. Monos is just a comfortable way to read, write and find them.',
+    emptyMobile: 'Your notes are plain Markdown files on your own disk. Open the menu to pick one or start writing.',
     openMenu: 'Open menu',
     homeActions: {
       newNote: '+ New note',
@@ -68,6 +68,7 @@ const enText = {
       openRecentHint: 'Continue where you left off',
       continueWork: 'Continue',
       continueWorkHint: 'Choose a recent note',
+      importNotes: 'Import notes',
     },
     continueWork: {
       title: 'Continue working',
@@ -79,6 +80,9 @@ const enText = {
       eyebrow: 'Notes',
       title: 'Notes',
       hint: 'Capture thoughts quickly. Find them by text, tags, or color.',
+      loadFailed: 'Your notes could not be loaded.',
+      loadFailedHint: 'Your files are still on disk. This is only a display problem.',
+      retry: 'Try again',
       filter: 'Search notes',
       filterPlaceholder: 'Search notes...',
       opened: 'Opened',
@@ -104,8 +108,40 @@ const enText = {
       },
     },
   },
+  tags: {
+    title: 'Tags',
+    filter: 'Filter tags',
+    loading: 'Loading tags',
+    empty: 'No tags yet',
+    emptyFiltered: 'Nothing matches',
+    save: 'Rename',
+    cancel: 'Cancel',
+    rename(tag) {
+      return `Rename tag ${tag}`;
+    },
+    drop(tag) {
+      return `Remove tag ${tag} from all notes`;
+    },
+  },
+  savedSearches: {
+    title: 'Saved searches',
+    saveCurrent: 'Save the current search',
+    queryPlaceholder: 'Type something in the search box first',
+    namePlaceholder: 'Name',
+    save: 'Save',
+    renameHint: 'Rename',
+    remove(name) {
+      return `Delete saved search ${name}`;
+    },
+    rename(name) {
+      return `Rename saved search ${name}`;
+    },
+    nothingToSave: 'Type a query in the search box first',
+    empty: 'No saved searches yet',
+  },
   header: {
     search: 'Search',
+    searchHint: 'Search. Operators: body:word — only inside the note, updated:2026-10 — changed since, -body:word — exclude.',
     closeSearch: 'Close search',
     toggleSidebar: 'Toggle Sidebar',
     openSidebar: 'Open sidebar',
@@ -146,12 +182,14 @@ const enText = {
     },
     commands: {
       quickOpen: 'Quick open note',
+      continueWork: 'Continue working',
       openSettings: 'Open settings',
       toggleSidebar: 'Toggle sidebar',
       toggleTheme: 'Toggle theme',
     },
     commandDetails: {
       quickOpen: 'Switch to note-only search',
+      continueWork: 'Return to a note you opened recently',
       openSettings: 'Go to the settings screen',
       toggleSidebar: 'Show or hide the knowledge tree',
       toggleTheme: 'Switch between light and dark mode',
@@ -159,6 +197,7 @@ const enText = {
   },
   sidebar: {
     close: 'Close sidebar',
+    delete: 'Delete',
     mobileNavigation: 'Navigation',
     pinned: 'Pinned',
     recentThoughts: 'Recently Opened',
@@ -186,7 +225,8 @@ const enText = {
       return `${count} selected`;
     },
     dropToRoot: 'Drop to root',
-    syncWithGit: 'Sync with Git',
+    syncWithGit: 'Back up notes',
+    conflictsWaiting: 'Conflicts need review in Settings',
     quickNoteFromClipboard: 'Create quick note from clipboard',
     saveBeforeSync: 'Save the current note before syncing',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
@@ -206,6 +246,11 @@ const enText = {
       renameTitle(kind) {
         return `Rename ${kind}`;
       },
+      tagSelectedTitle(count) {
+        return `Tag ${count} selected notes`;
+      },
+      tagHint: 'The tag is added to every selected note. Everything else in the note stays as it is.',
+      tagPlaceholder: 'Tag name',
       section: 'Section',
       note: 'Note',
       newName: 'New Name',
@@ -272,6 +317,9 @@ const enText = {
     },
   },
   trash: {
+    loadFailed: 'Could not load the trash.',
+    restoreFailed: 'Could not restore the note.',
+    deleteFailed: 'Could not delete the note.',
     title: 'Trash',
     hint: 'Notes in trash are hidden from search, dashboard, and the tree until restored.',
     loading: 'Loading trash',
@@ -359,11 +407,60 @@ const enText = {
     exportTitle: 'Export notes',
     exportNotes: 'Download ZIP',
     exporting: 'Exporting...',
+    printReady: 'PDF saved where you chose.',
     exportComplete: 'ZIP export is ready.',
     exportFailed: 'Export failed',
     importTitle: 'Import notes',
+    attachmentsFound: '{count} unused · {size} taken by ZIP exports',
+    attachmentsTitle: 'Attachments',
+    attachmentsLoading: 'Looking for unused attachments…',
+    attachmentsError: 'Could not read the attachment list',
+    attachmentsClean: 'Every attachment is referenced by a note',
     chooseArchive: 'Choose ZIP',
+    printAllNotes: 'Print all notes as one PDF',
     noArchiveSelected: 'No archive selected',
+    clipper: 'Web clipper',
+    clipperHint: 'A browser extension sends the page or your selection straight into a note. Copy the token into the extension.',
+    clipperShowToken: 'Show token',
+    clipperEndpoint: 'App address',
+    clipperTokenLabel: 'Token',
+    clipperError(message) {
+      return `Could not read the clipper token: ${message}`;
+    },
+    documentation: 'Documentation',
+    documentationHint: 'Everything below is available at any time — nothing here is a one-time tour.',
+    docsGettingStarted: 'Getting started',
+    docsStepNew: 'Write a note',
+    docsStepNewHint: 'Creates one Markdown file in your notes folder.',
+    docsStepImport: 'Bring notes from elsewhere',
+    docsStepImportHint: 'Import a ZIP of .md files. Your files stay .md afterwards.',
+    docsStepBackup: 'Keep a copy',
+    docsStepBackupHint: 'Export a ZIP at any time, or connect Git for versioned backup.',
+    docsKeyboard: 'Keyboard',
+    docsNotesLive: 'Where your notes live',
+    docsNotesLiveHint: 'Ordinary files. Open the folder in Finder or Explorer, or read them in any text editor — they stay readable without Monos.',
+    docsFileFormat: 'File format',
+    docsFrontmatter: 'Frontmatter at the top of each note carries title, tags, and dates.',
+    docsWikiLinks: 'Typing [[ and a note name links to it; the note lists what links back.',
+    docsShortcutCommands: 'Command palette',
+    docsShortcutOpen: 'Open a note by name',
+    docsShortcutSidebar: 'Show or hide the sidebar',
+    docsShortcutSearch: 'Search',
+    docsShortcutSave: 'Save the current note',
+    docsOperators: 'Search operators',
+    docsOperatorsHint: 'Type these in the note switcher (Ctrl+O), alone or combined with words.',
+    docsOpTag: 'tag:work',
+    docsOpTagHint: 'Notes carrying the tag',
+    docsOpFolder: 'folder:base',
+    docsOpFolderHint: 'Notes inside that folder',
+    docsOpPath: 'path:llm',
+    docsOpPathHint: 'Notes whose path contains that text',
+    docsOpTitle: 'title:Review',
+    docsOpTitleHint: 'Notes whose title contains that text',
+    docsOpCreated: 'created:2026-10',
+    docsOpCreatedHint: 'Notes created in that month',
+    docsOpNegation: '-tag:archive',
+    docsOpNegationHint: 'Exclude anything matching',
     importing: 'Importing...',
     importFailed: 'Import failed',
     importComplete(summary = {}) {
@@ -393,6 +490,10 @@ const enText = {
     authenticate: 'Authenticate',
     connecting: 'Connecting...',
     invalidToken: 'Invalid token',
+    publicRepoTitle: 'This repository is public',
+    publicRepoHint: 'Notes pushed there become public text, and stay in the git history even after you delete them. Prefer a private repository.',
+    tokenScopeTitle: 'This token has more access than Monos needs',
+    tokenScopeHint: 'A fine-grained token limited to just this repository is enough. Anything wider also works, but a leaked token then reaches further than your notes.',
     failedToFetchRepos: 'Failed to fetch repos',
     owner: 'Owner',
     repository: 'Repository',
@@ -443,10 +544,9 @@ const enText = {
     empty: '(empty)',
     saveBeforeSync: 'Save the current note before syncing.',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
-    defaultCommitMessage: 'Sync from Monos WebUI',
+    defaultCommitMessage: 'Sync notes from Monos',
   },
   editor: {
-    deleteNote: 'Delete note',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
     archiveTitle: 'Move this note to trash?',
@@ -455,15 +555,36 @@ const enText = {
     },
     cancel: 'Cancel',
     archiving: 'Moving...',
-    deletePermanently: 'Move to trash',
+    moveToTrash: 'Move to trash',
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
     noteNotFound(target) {
       return `Note "${target}" not found.`;
     },
+    conflictResolveHint: 'Pick a side for each conflicting part, then apply. Everything outside them stays untouched.',
+    conflictKeepOurs: 'Keep mine',
+    conflictKeepTheirs: 'Keep theirs',
+    conflictKeepBoth: 'Keep both',
+    conflictKeepAllOurs: 'Keep mine everywhere',
+    conflictKeepAllTheirs: 'Keep theirs everywhere',
+    conflictApply: 'Apply',
+    conflictRegionLabel: 'Conflicting part',
+    conflictResolved: 'Conflict resolved in this note.',
+    conflictSaving: 'Applying your choice…',
+    conflictRegion(index, total) {
+      return total === 1 ? 'Conflicting part' : `Conflicting part ${index} of ${total}`;
+    },
+    conflictBase: 'Original (both started here)',
+    conflictOurs: 'This device',
+    conflictTheirs: 'Other device',
+    conflictTitle: 'This note has an unresolved sync conflict',
+    conflictHint: 'It is read-only on purpose: opening it in the editor would rewrite the merge markers and damage the note. Resolve the conflict in Settings, then reopen.',
+    conflictCount(count) {
+      return `${count} conflict${count === 1 ? '' : 's'} in this note`;
+    },
     deleteError(message) {
-      return `Ошибка при удалении: ${message}`;
+      return `Could not move the note to trash: ${message}`;
     },
     localNavigation: 'Related',
     outline: 'Outline',
@@ -473,15 +594,62 @@ const enText = {
     renameImageTitle: 'Rename image',
     renameImageHint: 'The file will be renamed on disk and the Markdown link in this note will be updated.',
     renameImage: 'Rename',
-      noteColor: 'Note color',
-      noColor: 'No',
+    focusOn: 'Focus mode',
+    focusOff: 'Leave focus mode',
+    rawMode: 'Markdown source',
+    richMode: 'Rich editor',
+    due: 'Due date',
+    dueClear: 'Clear due date',
+    dueToday: 'today',
+    dueTomorrow: 'tomorrow',
+    dueOverdue(days) {
+      return `${days} ${days === 1 ? 'day' : 'days'} overdue`;
+    },
+    dueInDays(days) {
+      return `in ${days} ${days === 1 ? 'day' : 'days'}`;
+    },
+    noteColor: 'Note color',
+    noColor: 'No',
+  },
+  history: {
+    title: 'Note history',
+    loading: 'Reading history…',
+    notSynced: 'This note is not in a git repository yet, so there is no history to show. Sync once and its versions will appear here.',
+    empty: 'No earlier versions recorded.',
+    pickRevision: 'Pick a version on the left to see what changed.',
+    diffTitle: 'Differences against the current note',
+    restore: 'Restore this version',
+    restoring: 'Restoring…',
+    unchanged: 'This is the version the note already has.',
+    noMessage: '(no message)',
   },
   editorHeader: {
     noteTitle: 'Note Title',
     created: 'Created',
     modified: 'Modified',
+    stats: {
+      words(count) {
+        return `${count} ${count === 1 ? 'word' : 'words'}`;
+      },
+      readingMinutes(count) {
+        return `${count} min read`;
+      },
+      empty: 'No words yet',
+    },
+    taskProgress: {
+      label(done, total) {
+        return `${done}/${total}`;
+      },
+      percent(value) {
+        return `${value}%`;
+      },
+      complete: 'All tasks done',
+    },
     tagPlaceholder: '+ tag',
     revealInTree: 'Reveal in tree',
+    exportPdf: 'PDF',
+    historyButton: 'History',
+    print: 'Print',
   },
   sourceEditor: {
     beginWriting: 'Begin writing...',
@@ -489,6 +657,8 @@ const enText = {
     backlink: 'Backlink',
     mention: 'Mention',
     wikiSuggestions: 'Note suggestions',
+    duplicateNameShort: 'duplicate',
+    duplicateName: 'Another note has this name — the link will be ambiguous',
     resizeContent: 'Resize source content',
   },
   richEditor: {
@@ -516,6 +686,8 @@ const enText = {
     lineHeight: 'Line Height',
     fontSize: 'Font Size',
     linkPrompt: 'URL:',
+    insertLink: 'Insert link',
+    insertImage: 'Insert image',
     imagePrompt: 'Image URL:',
     slashMenuLabel: 'Slash commands',
     slashHint: 'Type / for commands',
@@ -529,29 +701,6 @@ const enText = {
       codeBlock: 'Code block',
       table: 'Table',
       horizontalRule: 'Divider',
-    },
-  },
-  browser: {
-    browseFiles: 'Browse Files',
-    searchFiles: 'Search files...',
-    createNewNote: 'Create new note',
-    newNote: 'New Note',
-    loadingFiles: 'Loading files...',
-    noFilesFound: 'No files found',
-    createYourFirstNote: 'Create Your First Note',
-    createNewNoteTitle: 'Create New Note',
-    title: 'Title *',
-    titlePlaceholder: 'Enter note title...',
-    category: 'Category *',
-    categoryPlaceholder: 'e.g., Образование, Работа, Документы...',
-    cancel: 'Cancel',
-    create: 'Create',
-    fillAllFields: 'Please fill in all fields',
-    failedToCreateNote(message) {
-      return `Failed to create note: ${message}`;
-    },
-    failedToLoadTree(message) {
-      return `Failed to load tree: ${message}`;
     },
   },
   fileInfo: {
@@ -569,6 +718,9 @@ const enText = {
   modal: {
     close: 'Close modal',
     closeBackdrop: 'Close modal by clicking backdrop',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    promptLabel: 'Value',
   },
 };
 
@@ -576,8 +728,8 @@ const ruText = {
   app: {
     closeSidebar: 'Закрыть боковую панель',
     resizeSidebar: 'Изменить ширину сайдбара',
-    emptyDesktop: 'Откройте заметку в боковой панели или начните с одного из действий ниже.',
-    emptyMobile: 'Откройте меню, чтобы выбрать заметку или создать новую.',
+    emptyDesktop: 'Ваши заметки — обычные файлы Markdown на вашем диске, а не строки в чужой базе. Monos просто удобный способ их читать, писать и находить.',
+    emptyMobile: 'Ваши заметки — обычные файлы Markdown на вашем диске. Откройте меню, чтобы выбрать или начать писать.',
     openMenu: 'Открыть меню',
     homeActions: {
       newNote: '+ Новая заметка',
@@ -590,6 +742,7 @@ const ruText = {
       openRecentHint: 'Продолжить с места остановки',
       continueWork: 'Продолжить',
       continueWorkHint: 'Выбрать недавний документ',
+      importNotes: 'Импорт заметок',
     },
     continueWork: {
       title: 'Продолжить работу',
@@ -601,6 +754,9 @@ const ruText = {
       eyebrow: 'Заметки',
       title: 'Заметки',
       hint: 'Быстро фиксируйте мысли. Находите по тексту, тегам или цвету.',
+      loadFailed: 'Не удалось загрузить заметки.',
+      loadFailedHint: 'Файлы на диске в порядке. Это только проблема отображения.',
+      retry: 'Повторить',
       filter: 'Поиск по заметкам',
       filterPlaceholder: 'Искать заметки...',
       opened: 'Открыта',
@@ -626,8 +782,40 @@ const ruText = {
       },
     },
   },
+  tags: {
+    title: 'Теги',
+    filter: 'Фильтр тегов',
+    loading: 'Загружаем теги',
+    empty: 'Тегов пока нет',
+    emptyFiltered: 'Ничего не найдено',
+    save: 'Переименовать',
+    cancel: 'Отмена',
+    rename(tag) {
+      return `Переименовать тег ${tag}`;
+    },
+    drop(tag) {
+      return `Убрать тег ${tag} из всех заметок`;
+    },
+  },
+  savedSearches: {
+    title: 'Сохранённые поиски',
+    saveCurrent: 'Сохранить текущий поиск',
+    queryPlaceholder: 'Сначала введите запрос в строке поиска',
+    namePlaceholder: 'Название',
+    save: 'Сохранить',
+    renameHint: 'Переименовать',
+    remove(name) {
+      return `Удалить сохранённый поиск ${name}`;
+    },
+    rename(name) {
+      return `Переименовать сохранённый поиск ${name}`;
+    },
+    nothingToSave: 'Сначала введите запрос в строке поиска',
+    empty: 'Сохранённых поисков пока нет',
+  },
   header: {
     search: 'Поиск',
+    searchHint: 'Поиск. Операторы: body:слово — только внутри заметки, updated:2026-10 — изменена с, -body:слово — исключить.',
     closeSearch: 'Закрыть поиск',
     toggleSidebar: 'Показать или скрыть боковую панель',
     openSidebar: 'Открыть боковую панель',
@@ -669,12 +857,14 @@ const ruText = {
     },
     commands: {
       quickOpen: 'Быстро открыть заметку',
+      continueWork: 'Продолжить работу',
       openSettings: 'Открыть настройки',
       toggleSidebar: 'Переключить боковую панель',
       toggleTheme: 'Переключить тему',
     },
     commandDetails: {
       quickOpen: 'Перейти к поиску только по заметкам',
+      continueWork: 'Вернуться к недавно открытой заметке',
       openSettings: 'Открыть экран настроек',
       toggleSidebar: 'Показать или скрыть дерево знаний',
       toggleTheme: 'Переключить светлую и тёмную тему',
@@ -682,6 +872,7 @@ const ruText = {
   },
   sidebar: {
     close: 'Закрыть боковую панель',
+    delete: 'Удалить',
     mobileNavigation: 'Навигация',
     pinned: 'Закреплённые',
     recentThoughts: 'Недавно открытые',
@@ -716,7 +907,8 @@ const ruText = {
       return `${count} выбрано`;
     },
     dropToRoot: 'Переместить в корень',
-    syncWithGit: 'Синхронизировать с Git',
+    syncWithGit: 'Резервная копия',
+    conflictsWaiting: 'Конфликты — разобрать в настройках',
     quickNoteFromClipboard: 'Создать быструю заметку из буфера обмена',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
@@ -736,6 +928,15 @@ const ruText = {
       renameTitle(kind) {
         return `Переименовать ${kind}`;
       },
+      tagSelectedTitle(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `Пометить тегом ${count} заметку`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `Пометить тегом ${count} заметки`;
+        return `Пометить тегом ${count} заметок`;
+      },
+      tagHint: 'Тег добавится ко всем выбранным заметкам. Всё остальное в заметке останется как есть.',
+      tagPlaceholder: 'Название тега',
       section: 'раздел',
       note: 'заметку',
       newName: 'Новое имя',
@@ -809,6 +1010,9 @@ const ruText = {
     },
   },
   trash: {
+    loadFailed: 'Не удалось загрузить корзину.',
+    restoreFailed: 'Не удалось восстановить заметку.',
+    deleteFailed: 'Не удалось удалить заметку.',
     title: 'Корзина',
     hint: 'Заметки в корзине скрыты из поиска, дашборда и дерева, пока вы их не восстановите.',
     loading: 'Загрузка корзины',
@@ -897,10 +1101,59 @@ const ruText = {
     exportNotes: 'Скачать ZIP',
     exporting: 'Экспорт...',
     exportComplete: 'ZIP-архив готов.',
+    printReady: 'PDF сохранён.',
     exportFailed: 'Не удалось экспортировать',
     importTitle: 'Импорт заметок',
+    attachmentsFound: '{count} неиспользуемых · {size} попадает в ZIP-бэкапы',
+    attachmentsTitle: 'Вложения',
+    attachmentsLoading: 'Ищу неиспользуемые вложения…',
+    attachmentsError: 'Не удалось прочитать список вложений',
+    attachmentsClean: 'Каждое вложение используется хотя бы одной заметкой',
     chooseArchive: 'Выбрать ZIP',
+    printAllNotes: 'Печать всех заметок одним PDF',
     noArchiveSelected: 'Архив не выбран',
+    clipper: 'Веб-клиппер',
+    clipperHint: 'Расширение браузера отправляет страницу или выделенный текст прямо в заметку. Скопируйте токен в расширение.',
+    clipperShowToken: 'Показать токен',
+    clipperEndpoint: 'Адрес приложения',
+    clipperTokenLabel: 'Токен',
+    clipperError(message) {
+      return `Не удалось получить токен клиппера: ${message}`;
+    },
+    documentation: 'Документация',
+    documentationHint: 'Всё это доступно в любой момент — здесь не бывает разовых туров.',
+    docsGettingStarted: 'С чего начать',
+    docsStepNew: 'Написать заметку',
+    docsStepNewHint: 'Создаёт один файл Markdown в папке заметок.',
+    docsStepImport: 'Перенести из другого места',
+    docsStepImportHint: 'Импортируйте ZIP с файлами .md. После импорта они останутся .md.',
+    docsStepBackup: 'Хранить копию',
+    docsStepBackupHint: 'Экспортируйте ZIP в любой момент или подключите Git для версионируемой копии.',
+    docsKeyboard: 'Клавиатура',
+    docsNotesLive: 'Где лежат ваши заметки',
+    docsNotesLiveHint: 'Обычные файлы. Откройте папку в Finder или проводнике, либо прочитайте в любом текстовом редакторе — они останутся читаемыми и без Monos.',
+    docsFileFormat: 'Формат файла',
+    docsFrontmatter: 'Фронтматтер в начале заметки хранит заголовок, теги и даты.',
+    docsWikiLinks: 'Ввод [[ и названия заметки создаёт ссылку; заметка перечисляет, кто на неё ссылается.',
+    docsShortcutCommands: 'Палитра команд',
+    docsShortcutOpen: 'Открыть заметку по имени',
+    docsShortcutSidebar: 'Показать или скрыть боковую панель',
+    docsShortcutSearch: 'Поиск',
+    docsShortcutSave: 'Сохранить текущую заметку',
+    docsOperators: 'Операторы поиска',
+    docsOperatorsHint: 'Пишите их в переключателе заметок (Ctrl+O) — отдельно или вместе со словами.',
+    docsOpTag: 'tag:работа',
+    docsOpTagHint: 'Заметки с этим тегом',
+    docsOpFolder: 'folder:base',
+    docsOpFolderHint: 'Заметки внутри этой папки',
+    docsOpPath: 'path:llm',
+    docsOpPathHint: 'Заметки, в пути которых есть этот текст',
+    docsOpTitle: 'title:Отчёт',
+    docsOpTitleHint: 'Заметки, в заголовке которых есть этот текст',
+    docsOpCreated: 'created:2026-10',
+    docsOpCreatedHint: 'Заметки, созданные в этом месяце',
+    docsOpNegation: '-tag:архив',
+    docsOpNegationHint: 'Исключить всё, что подходит',
     importing: 'Импорт...',
     importFailed: 'Не удалось импортировать',
     importComplete(summary = {}) {
@@ -932,6 +1185,10 @@ const ruText = {
     authenticate: 'Авторизоваться',
     connecting: 'Подключение...',
     invalidToken: 'Некорректный токен',
+    publicRepoTitle: 'Этот репозиторий публичный',
+    publicRepoHint: 'Заметки в нём станут публичным текстом и останутся в истории git даже после удаления. Лучше приватный репозиторий.',
+    tokenScopeTitle: 'У этого токена больше прав, чем нужно Monos',
+    tokenScopeHint: 'Достаточно тонкого токена, ограниченного одним репозиторием. Более широкий тоже сработает, но утёкший токен дотянется дальше ваших заметок.',
     failedToFetchRepos: 'Не удалось получить репозитории',
     owner: 'Владелец',
     repository: 'Репозиторий',
@@ -983,10 +1240,9 @@ const ruText = {
     empty: '(пусто)',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией.',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
-    defaultCommitMessage: 'Sync from Monos WebUI',
+    defaultCommitMessage: 'Синхронизация заметок из Monos',
   },
   editor: {
-    deleteNote: 'Удалить заметку',
     gatheringThoughts: 'Собираем мысли',
     beginWriting: 'Начните писать...',
     archiveTitle: 'Переместить заметку в корзину?',
@@ -995,12 +1251,37 @@ const ruText = {
     },
     cancel: 'Отмена',
     archiving: 'Перемещение...',
-    deletePermanently: 'В корзину',
+    moveToTrash: 'В корзину',
     saving: 'Сохранение…',
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
+    },
+    conflictResolveHint: 'Выберите сторону для каждой конфликтной части и примените. Всё остальное останется как есть.',
+    conflictKeepOurs: 'Оставить мою',
+    conflictKeepTheirs: 'Оставить чужую',
+    conflictKeepBoth: 'Оставить обе',
+    conflictKeepAllOurs: 'Оставить мою везде',
+    conflictKeepAllTheirs: 'Оставить чужую везде',
+    conflictApply: 'Применить',
+    conflictRegionLabel: 'Конфликтная часть',
+    conflictResolved: 'Конфликт в этой заметке разрешён.',
+    conflictSaving: 'Применяем ваш выбор…',
+    conflictBase: 'Исходник (от него отталкивались оба)',
+    conflictOurs: 'Это устройство',
+    conflictTheirs: 'Другое устройство',
+    conflictTitle: 'В этой заметке неразрешён конфликт синхронизации',
+    conflictHint: 'Она намеренно только для чтения: открытие в редакторе перепишет маркеры слияния и повредит заметку. Разрешите конфликт в настройках, затем откройте снова.',
+    conflictCount(count) {
+      const mod10 = count % 10;
+      const mod100 = count % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${count} конфликт в этой заметке`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} конфликта в этой заметке`;
+      return `${count} конфликтов в этой заметке`;
+    },
+    conflictRegion(index, total) {
+      return total === 1 ? 'Конфликтная часть' : `Конфликтная часть ${index} из ${total}`;
     },
     deleteError(message) {
       return `Ошибка при удалении: ${message}`;
@@ -1013,15 +1294,78 @@ const ruText = {
     renameImageTitle: 'Переименовать изображение',
     renameImageHint: 'Файл будет переименован на диске, а Markdown-ссылка в этой заметке обновится.',
     renameImage: 'Переименовать',
-      noteColor: 'Цвет заметки',
-      noColor: 'Нет',
+    focusOn: 'Режим фокуса',
+    focusOff: 'Выйти из фокуса',
+    rawMode: 'Исходный Markdown',
+    richMode: 'Визуальный редактор',
+    due: 'Срок',
+    dueClear: 'Убрать срок',
+    dueToday: 'сегодня',
+    dueTomorrow: 'завтра',
+    dueOverdue(days) {
+      const mod10 = days % 10;
+      const mod100 = days % 100;
+      if (mod10 === 1 && mod100 !== 11) return `просрочено на ${days} день`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `просрочено на ${days} дня`;
+      return `просрочено на ${days} дней`;
+    },
+    dueInDays(days) {
+      const mod10 = days % 10;
+      const mod100 = days % 100;
+      if (mod10 === 1 && mod100 !== 11) return `через ${days} день`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `через ${days} дня`;
+      return `через ${days} дней`;
+    },
+    noteColor: 'Цвет заметки',
+    noColor: 'Нет',
+  },
+  history: {
+    title: 'История заметки',
+    loading: 'Читаем историю…',
+    notSynced: 'Заметки ещё нет в git-репозитории, поэтому истории пока нет. Синхронизируйте один раз — и версии появятся здесь.',
+    empty: 'Более ранних версий нет.',
+    pickRevision: 'Выберите версию слева, чтобы увидеть изменения.',
+    diffTitle: 'Отличия от текущей заметки',
+    restore: 'Восстановить эту версию',
+    restoring: 'Восстанавливаем…',
+    unchanged: 'Это уже текущая версия заметки.',
+    noMessage: '(без сообщения)',
   },
   editorHeader: {
     noteTitle: 'Заголовок заметки',
     created: 'Создано',
     modified: 'Изменено',
+    stats: {
+      words(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${count} слово`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} слова`;
+        return `${count} слов`;
+      },
+      readingMinutes(count) {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${count} минута`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} минуты`;
+        return `${count} минут`;
+      },
+      empty: 'Пока нет слов',
+    },
+    taskProgress: {
+      label(done, total) {
+        return `${done}/${total}`;
+      },
+      percent(value) {
+        return `${value}%`;
+      },
+      complete: 'Все задачи выполнены',
+    },
     tagPlaceholder: '+ тег',
     revealInTree: 'Показать в дереве',
+    exportPdf: 'PDF',
+    historyButton: 'История',
+    print: 'Печать',
   },
   sourceEditor: {
     beginWriting: 'Начните писать...',
@@ -1029,6 +1373,8 @@ const ruText = {
     backlink: 'Обратная ссылка',
     mention: 'Упоминание',
     wikiSuggestions: 'Подсказки заметок',
+    duplicateNameShort: 'дубль',
+    duplicateName: 'Заметка с таким именем уже есть — ссылка будет неоднозначной',
     resizeContent: 'Изменить ширину source-контента',
   },
   richEditor: {
@@ -1056,6 +1402,8 @@ const ruText = {
     lineHeight: 'Межстрочный интервал',
     fontSize: 'Размер шрифта',
     linkPrompt: 'URL:',
+    insertLink: 'Вставить ссылку',
+    insertImage: 'Вставить изображение',
     imagePrompt: 'URL изображения:',
     slashMenuLabel: 'Slash-команды',
     slashHint: 'Введите / для команд',
@@ -1069,29 +1417,6 @@ const ruText = {
       codeBlock: 'Блок кода',
       table: 'Таблица',
       horizontalRule: 'Разделитель',
-    },
-  },
-  browser: {
-    browseFiles: 'Просмотр файлов',
-    searchFiles: 'Искать файлы...',
-    createNewNote: 'Создать заметку',
-    newNote: 'Новая заметка',
-    loadingFiles: 'Загрузка файлов...',
-    noFilesFound: 'Файлы не найдены',
-    createYourFirstNote: 'Создать первую заметку',
-    createNewNoteTitle: 'Создать новую заметку',
-    title: 'Заголовок *',
-    titlePlaceholder: 'Введите заголовок заметки...',
-    category: 'Категория *',
-    categoryPlaceholder: 'например, Образование, Работа, Документы...',
-    cancel: 'Отмена',
-    create: 'Создать',
-    fillAllFields: 'Заполните все поля',
-    failedToCreateNote(message) {
-      return `Не удалось создать заметку: ${message}`;
-    },
-    failedToLoadTree(message) {
-      return `Не удалось загрузить дерево: ${message}`;
     },
   },
   fileInfo: {
@@ -1109,6 +1434,9 @@ const ruText = {
   modal: {
     close: 'Закрыть окно',
     closeBackdrop: 'Закрыть окно по фону',
+    confirm: 'Подтвердить',
+    cancel: 'Отмена',
+    promptLabel: 'Значение',
   },
 };
 

@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Monos Clipper",
+  "version": "0.1.0",
+  "description": "Send the page or your selection to your Monos notes.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Clip to Monos"
+  },
+  "icons": {
+    "128": "icon.png"
+  }
+}

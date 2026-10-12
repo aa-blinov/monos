@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import CommandPalette from './CommandPalette.svelte';
+import { pinnedNotes } from '../lib/sidebar-pinned.js';
 import { locale, translations, uiText } from '../lib/strings.js';
 
 vi.mock('../lib/sidebar-api.js', () => ({
@@ -33,9 +34,13 @@ vi.mock('../lib/sidebar-api.js', () => ({
 beforeEach(() => {
   locale.set('en');
   localStorage.clear();
-  localStorage.setItem('pinnedNotes', JSON.stringify([
-    { path: 'notes/Work/Alpha.md', name: 'Alpha Note' },
-  ]));
+  // Закрепления больше не живут в браузере — палитра берёт их из стора,
+  // который наполняется шапками заметок.
+  pinnedNotes.set([{ path: 'notes/Work/Alpha.md', name: 'Alpha Note' }]);
+});
+
+afterEach(() => {
+  pinnedNotes.set([]);
 });
 
 test('CommandPalette показывает Pinned, Recent и Templates', async () => {

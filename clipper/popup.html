@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Clip to Monos</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="panel">
+    <h1 class="title">Clip to Monos</h1>
+
+    <label class="field">
+      <span class="label">Note title</span>
+      <input id="title" type="text" placeholder="Defaults to the page title">
+    </label>
+
+    <label class="field">
+      <span class="label">Folder <span class="hint">(inside notes)</span></span>
+      <input id="folder" type="text" placeholder="clips">
+    </label>
+
+    <label class="field">
+      <span class="label">App address</span>
+      <input id="endpoint" type="text" placeholder="http://127.0.0.1:8000">
+    </label>
+
+    <label class="field">
+      <span class="label">Token</span>
+      <input id="token" type="password" placeholder="Copy from Monos → Settings → Web clipper">
+    </label>
+
+    <label class="check">
+      <input id="includeSelection" type="checkbox" checked>
+      <span>Include the selected text as a quote</span>
+    </label>
+
+    <div class="actions">
+      <button id="clipSelection" class="btn">Clip selection</button>
+      <button id="clipPage" class="btn btn-primary">Clip whole page</button>
+    </div>
+
+    <p id="status" class="status" role="status"></p>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -46,3 +46,8 @@ webui/frontend/playwright-report/
 # Sensitive environment variables
 .env
 .env.local
+
+# Agent scratch output — не часть проекта
+.mavis/
+.impeccable/
+webui/frontend/.impeccable/

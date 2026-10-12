@@ -1,4 +1,12 @@
 import test from 'node:test';
+// `--text-secondary` is deliberately NOT the upstream palette value in every
+// theme. It is the body-text step (14px note excerpts, field labels), so it is
+// governed by the WCAG AA guarantee asserted below rather than by brand
+// fidelity: measured against `--bg-secondary` and against a note card carrying
+// the 13% `--note-tint`, the upstream values fall to 1.94:1 in dracula.dark.
+// Each value below is the minimum shift from the upstream colour that clears
+// 4.5:1 on every surface where the token is actually used. Backgrounds,
+// foreground and accents stay exactly as the upstream palettes define them.
 import assert from 'node:assert/strict';
 import { themes } from './themes.js';
 
@@ -9,7 +17,7 @@ test('gruvbox.dark совпадает с medium-контрастной пали�
   assert.equal(dark['--bg-secondary'], '#3c3836');   // bg1
   assert.equal(dark['--bg-tertiary'], '#504945');    // bg2
   assert.equal(dark['--text-primary'], '#ebdbb2');   // fg1
-  assert.equal(dark['--text-secondary'], '#a89984'); // fg4
+  assert.equal(dark['--text-secondary'], '#b1a491'); // fg4
   assert.equal(dark['--text-muted'], '#928374');     // gray
   assert.equal(dark['--red'], '#fb4934');            // red_bright
   assert.equal(dark['--green'], '#b8bb26');          // green_bright
@@ -60,7 +68,7 @@ test('github.light совпадает с Primer (включая data-cyan-emphas
   assert.equal(light['--bg-secondary'], '#f6f8fa');
   assert.equal(light['--bg-tertiary'], '#eaeef2');
   assert.equal(light['--text-primary'], '#1f2328');
-  assert.equal(light['--text-secondary'], '#656d76');
+  assert.equal(light['--text-secondary'], '#626972');
   assert.equal(light['--text-muted'], '#8b949e');
   assert.equal(light['--border-subtle'], '#d0d7de');
   assert.equal(light['--green'], '#1a7f37');
@@ -80,7 +88,7 @@ test('dracula.dark.bg/foreground совпадает с официальной п
   assert.equal(dark['--bg-tertiary'], '#44475a');
   assert.equal(dark['--border-subtle'], '#44475a');
   assert.equal(dark['--text-primary'], '#f8f8f2');   // Foreground
-  assert.equal(dark['--text-secondary'], '#6272a4'); // Comment
+  assert.equal(dark['--text-secondary'], '#adb6d0'); // Comment
   assert.equal(dark['--text-muted'], '#6272a4');
   assert.equal(dark['--red'], '#ff5555');
   assert.equal(dark['--green'], '#50fa7b');
@@ -98,7 +106,7 @@ test('dracula.light (Alucard) совпадает с официальной па�
   assert.equal(light['--bg-tertiary'], '#6c664b');    // Current Line / Comment
   assert.equal(light['--border-subtle'], '#cfcfde');
   assert.equal(light['--text-primary'], '#1f1f1f');    // Foreground
-  assert.equal(light['--text-secondary'], '#6c664b');  // Comment
+  assert.equal(light['--text-secondary'], '#5f5a42');  // Comment
   assert.equal(light['--text-muted'], '#6c664b');
   assert.equal(light['--red'], '#cb3a2a');
   assert.equal(light['--green'], '#4d8240');
@@ -149,7 +157,7 @@ test('solarized.dark совпадает с официальной палитро
   assert.equal(dark['--bg-primary'], '#002b36');    // base03
   assert.equal(dark['--bg-secondary'], '#073642');  // base02
   assert.equal(dark['--text-primary'], '#839496');  // base0
-  assert.equal(dark['--text-secondary'], '#586e75'); // base01
+  assert.equal(dark['--text-secondary'], '#909fa3'); // base01
   assert.equal(dark['--text-muted'], '#586e75');    // base01 (Solarized не определяет уровень ниже comment)
   assert.equal(dark['--green'], '#859900');
   assert.equal(dark['--yellow'], '#b58900');
@@ -165,7 +173,7 @@ test('solarized.light совпадает с официальной палитр�
   assert.equal(light['--bg-primary'], '#fdf6e3');   // base3
   assert.equal(light['--bg-secondary'], '#eee8d5'); // base2
   assert.equal(light['--text-primary'], '#586e75'); // base01
-  assert.equal(light['--text-secondary'], '#657b83'); // base00
+  assert.equal(light['--text-secondary'], '#56686f'); // base00
   assert.equal(light['--text-muted'], '#93a1a1');   // base1
   assert.equal(light['--green'], '#859900');
   assert.equal(light['--yellow'], '#b58900');
@@ -183,7 +191,7 @@ test('catppuccin.dark (Mocha) совпадает с официальной па�
   assert.equal(dark['--bg-secondary'], '#181825');  // Mantle
   assert.equal(dark['--bg-tertiary'], '#313244');   // Surface0
   assert.equal(dark['--text-primary'], '#cdd6f4');   // Text
-  assert.equal(dark['--text-secondary'], '#9399b2'); // Subtext1
+  assert.equal(dark['--text-secondary'], '#9ba0b7'); // Subtext1
   assert.equal(dark['--text-muted'], '#6c7086');    // Subtext0
   assert.equal(dark['--border-subtle'], '#313244');  // Surface0
   assert.equal(dark['--red'], '#f38ba8');
@@ -201,7 +209,7 @@ test('catppuccin.light (Latte) совпадает с официальной па
   assert.equal(light['--bg-secondary'], '#e6e9ef'); // Mantle
   assert.equal(light['--bg-tertiary'], '#ccd0da');  // Surface0
   assert.equal(light['--text-primary'], '#4c4f69');  // Text
-  assert.equal(light['--text-secondary'], '#6c6f85'); // Subtext1
+  assert.equal(light['--text-secondary'], '#5c5f71'); // Subtext1
   assert.equal(light['--text-muted'], '#8c8fa1');   // Subtext0
   assert.equal(light['--border-subtle'], '#ccd0da'); // Surface0
   assert.equal(light['--red'], '#d20f39');
@@ -217,7 +225,7 @@ test('catppuccin.light (Latte) совпадает с официальной па
 test('все темы содержат одинаковый набор CSS-переменных', () => {
   const REQUIRED_KEYS = [
     '--bg-primary', '--bg-secondary', '--bg-tertiary',
-    '--text-primary', '--text-secondary', '--text-muted',
+    '--text-primary', '--text-secondary', '--text-tertiary', '--text-muted',
     '--border-subtle',
     '--green', '--yellow', '--orange', '--red', '--blue',
     '--purple', '--aqua',
@@ -230,6 +238,102 @@ test('все темы содержат одинаковый набор CSS-пе�
           `${name}.${mode} должен содержать ${key}, нет: ${theme[mode][key]}`
         );
       }
+    }
+  }
+});
+
+// Метаданные (9-10px) лежат не на чистой бумаге, а на карточке, поверх
+// которой наложен 13% цвет заметки (--note-tint). Проверяем контраст именно
+// там: раньше токен считался по --bg-primary и не дотягивал до AA.
+const NOTE_TINT = 0.13;
+const ACCENTS = ['--red', '--orange', '--yellow', '--green', '--aqua', '--blue', '--purple'];
+
+const hexToRgb = (hex) => {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
+const channel = (c) => {
+  c /= 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+};
+const luminance = ([r, g, b]) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+const contrast = (fg, bg) => {
+  const L1 = luminance(hexToRgb(fg));
+  const L2 = luminance(hexToRgb(bg));
+  const [hi, lo] = L1 > L2 ? [L1, L2] : [L2, L1];
+  return (hi + 0.05) / (lo + 0.05);
+};
+const tintOver = (accent, bg, alpha) => {
+  const A = hexToRgb(accent);
+  const B = hexToRgb(bg);
+  return '#' + [0, 1, 2]
+    .map((i) => Math.round(A[i] * alpha + B[i] * (1 - alpha)).toString(16).padStart(2, '0'))
+    .join('');
+};
+
+test('--text-tertiary проходит AA 4.5:1 на тонированной карточке', () => {
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      const vars = theme[mode];
+      const bg = vars['--bg-primary'];
+      const tertiary = vars['--text-tertiary'];
+      for (const key of ACCENTS) {
+        const tinted = tintOver(vars[key], bg, NOTE_TINT);
+        const ratio = contrast(tertiary, tinted);
+        assert.ok(
+          ratio >= 4.5,
+          `${name}.${mode}: --text-tertiary ${tertiary} даёт ${ratio.toFixed(2)}:1 на карточке с ${key} (нужно 4.5:1)`
+        );
+      }
+    }
+  }
+});
+
+test('--text-tertiary проходит AA на всех рабочих поверхностях', () => {
+  const SURFACES = (vars) => [
+    vars['--bg-primary'],
+    vars['--bg-secondary'],
+    ...ACCENTS.map((key) => tintOver(vars[key], vars['--bg-primary'], NOTE_TINT)),
+  ];
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      for (const surface of SURFACES(theme[mode])) {
+        const ratio = contrast(theme[mode]['--text-tertiary'], surface);
+        assert.ok(
+          ratio >= 4.5,
+          `${name}.${mode}: --text-tertiary даёт ${ratio.toFixed(2)}:1 на ${surface} (нужно 4.5:1)`
+        );
+      }
+    }
+  }
+});
+
+test('--text-secondary проходит AA на всех рабочих поверхностях', () => {
+  // Every surface where secondary text is actually used: the two paper
+  // layers, plus a note card carrying each accent's 13% tint.
+  const SURFACES = (vars) => [
+    vars['--bg-primary'],
+    vars['--bg-secondary'],
+    ...ACCENTS.map((key) => tintOver(vars[key], vars['--bg-primary'], NOTE_TINT)),
+  ];
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      for (const surface of SURFACES(theme[mode])) {
+        const ratio = contrast(theme[mode]['--text-secondary'], surface);
+        assert.ok(
+          ratio >= 4.5,
+          `${name}.${mode}: --text-secondary ${theme[mode]['--text-secondary']} даёт ${ratio.toFixed(2)}:1 на ${surface} (нужно 4.5:1)`
+        );
+      }
+    }
+  }
+});
+
+test('--text-tertiary не проваливается и на чистой бумаге', () => {
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      const ratio = contrast(theme[mode]['--text-tertiary'], theme[mode]['--bg-primary']);
+      assert.ok(ratio >= 4.5, `${name}.${mode}: ${ratio.toFixed(2)}:1 на бумаге`);
     }
   }
 });

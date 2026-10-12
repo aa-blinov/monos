@@ -199,7 +199,7 @@
 <div class="mb-4 flex justify-end">
   <div class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/65 p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
     <TooltipIconButton
-      class="h-7 min-w-8 rounded-full px-2 transition {$boardGroupByColor ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+      class="h-7 min-w-8 rounded-full px-2 transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
       label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltip={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltipAlign="end"
@@ -208,12 +208,12 @@
       <Palette size="14" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
     {#if !mobile}
-      <span class="flex h-7 w-7 items-center justify-center text-[var(--text-secondary)]/70" aria-hidden="true">
+      <span class="flex h-7 w-7 items-center justify-center text-[var(--text-tertiary)]" aria-hidden="true">
         <LayoutGrid size="14" strokeWidth="1.7" />
       </span>
       {#each availableColumnCounts as columnCount}
         <TooltipIconButton
-          class="h-7 min-w-8 rounded-full px-2 text-[11px] font-bold tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+          class="h-7 min-w-8 rounded-full px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
           label={$localizedText.app.board.columns(columnCount)}
           tooltip={$localizedText.app.board.columns(columnCount)}
           tooltipAlign="end"
@@ -231,21 +231,21 @@
   {#each displayGroups as group, groupIndex (group.id)}
     <section class="space-y-3">
       {#if group.showHeading}
-        <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+        <div class="flex items-center gap-3 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
           <span
             class="h-3 w-3 rounded-full border border-[var(--border-subtle)]"
             style="background: {group.color || 'transparent'};"
             aria-hidden="true"
           ></span>
           <span>{group.label}</span>
-          <span class="text-[var(--text-secondary)]/55">{group.notes.length}</span>
+          <span class="text-[var(--text-tertiary)]">{group.notes.length}</span>
         </div>
       {/if}
       <div class={gridClass} role="list">
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
           <button
             type="button"
-            class="{mobile ? 'h-36 rounded-2xl px-3 py-3' : 'h-48 rounded-3xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
+            class="{mobile ? 'h-36 rounded-xl px-3 py-3' : 'h-48 rounded-xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
             on:click={createNote}
           >
             <span class="block font-serif text-sm font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)] sm:text-base">
@@ -272,7 +272,7 @@
 {#if contextMenu.show}
   <div
     bind:this={contextMenuEl}
-    class="fixed z-[130] w-48 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+    class="fixed z-[130] w-48 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
     style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     role="menu"
     tabindex="-1"
@@ -289,7 +289,7 @@
       <Copy size="14" aria-hidden="true" /> {$localizedText.app.board.copyPath}
     </button>
     <div class="mt-1 border-t border-[var(--border-subtle)] px-3 py-2">
-      <div class="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+      <div class="mb-2 flex items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
         <Palette size="12" aria-hidden="true" /> {$localizedText.app.board.color}
       </div>
       <div class="grid grid-cols-5 gap-1.5">

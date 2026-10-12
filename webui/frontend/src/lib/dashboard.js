@@ -6,6 +6,7 @@ export const BOARD_PAGE_SIZE = 36;
 export const homeRecentNotes = writable([]);
 export const homeRecentHasMore = writable(true);
 export const homeRecentLoading = writable(false);
+export const homeRecentError = writable(null);
 
 export async function loadHomeRecentNotes({ append = false } = {}) {
   if (get(homeRecentLoading)) return;
@@ -29,10 +30,13 @@ export async function loadHomeRecentNotes({ append = false } = {}) {
       homeRecentNotes.set(nextNotes);
     }
     homeRecentHasMore.set(nextNotes.length === BOARD_PAGE_SIZE);
+    homeRecentError.set(null);
   } catch (err) {
     if (err instanceof ApiError) {
+      homeRecentError.set(err.message || `HTTP ${err.status}`);
       console.error(`Failed to load recent notes: HTTP ${err.status}`);
     } else {
+      homeRecentError.set(err?.message || String(err));
       console.error('Failed to load recent notes:', err);
     }
   } finally {

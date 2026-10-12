@@ -34,10 +34,13 @@ export const renameAttachment = (notePath, attachmentPath, newName) =>
 
 export const saveSettingsRequest = (payload) => post('/api/settings', payload);
 
-export function getWordCharStats(content) {
-  const text = content || '';
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  const readingMinutes = words === 0 ? 0 : Math.max(1, Math.ceil(words / 200));
-  if (words === 0) return '0 words';
-  return `${words.toLocaleString()} words · ${readingMinutes} min read`;
-}
+/** Копия заметки рядом с оригиналом. */
+export const duplicateNoteRequest = (filePath) =>
+  post('/api/notes/duplicate', null, { query: { path: filePath } });
+
+/**
+ * Массовое действие над тегами: добавить или снять тег у списка заметок.
+ * Бэкенд переписывает только ключ `tags`, остальные строки шапки остаются.
+ */
+export const bulkTagRequest = (paths, tag, remove = false) =>
+  post('/api/notes/bulk-tag', { paths, tag, remove });

@@ -30,11 +30,11 @@
   class="w-56 shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs"
   data-testid="outline-panel"
 >
-  <h3 class="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)]/70">
+  <h3 class="mb-3 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
     {$localizedText.editor.outline}
   </h3>
   {#if items.length === 0}
-    <p class="text-[var(--text-secondary)]/50">
+    <p class="text-[var(--text-tertiary)]">
       {$localizedText.editor.outlineEmpty}
     </p>
   {:else}

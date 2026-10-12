@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import { relPath, resolveNotesPath, safePathName, httpError } from '../utils.js';
+import { NOTES_DIR } from '../config.js';
+import { relPath, resolveNotesPath, safePathName, httpError, readTextFile } from '../utils.js';
 
 const ATTACHMENTS_DIR = '_attachments';
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -162,6 +163,81 @@ export function registerAttachmentRoutes(app) {
       });
     } catch (error) {
       sendError(res, error);
+    }
+  });
+}
+
+/**
+ * Attachment files that no note points at.
+ *
+ * Nothing in the interface could surface these: the tree hides `_attachments`,
+ * and the board only lists notes. After the migration that moved pooled images
+ * next to their notes, one orphan (`image-1.png`) was left behind with no way
+ * to find it — the file just took up space in every ZIP export.
+ */
+function collectFiles(dir, out = []) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) collectFiles(full, out);
+    else out.push(full);
+  }
+  return out;
+}
+
+function resolveReferencedPaths(noteFullPath, markdown) {
+  const noteDir = path.dirname(noteFullPath);
+  const found = new Set();
+  for (const match of String(markdown || '').matchAll(/!\[[^\]]*\]\(([^)\s]+)/g)) {
+    let target = match[1].trim();
+    if (/^(https?:|data:)/i.test(target)) continue;
+    try {
+      target = decodeURI(target);
+    } catch {
+      // A malformed escape is still a path we can try as-is.
+    }
+    const full = path.resolve(noteDir, target);
+    if (!full.startsWith(path.resolve(noteDir) + path.sep)) continue;
+    found.add(path.resolve(full));
+  }
+  return found;
+}
+
+export function registerOrphanRoutes(app) {
+  app.get('/api/attachments/orphans', (_req, res) => {
+    try {
+      const allFiles = collectFiles(NOTES_DIR);
+      const notes = allFiles.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+
+      const referenced = new Set();
+      for (const note of notes) {
+        for (const target of resolveReferencedPaths(note, readTextFile(note))) referenced.add(target);
+      }
+
+      const orphans = allFiles
+        .filter((file) => !referenced.has(path.resolve(file)))
+        .filter((file) => /\.(png|jpe?g|gif|webp|svg)$/i.test(file))
+        .map((file) => {
+          const stats = fs.statSync(file);
+          return {
+            path: relPath(file),
+            name: path.basename(file),
+            folder: path.relative(path.resolve(NOTES_DIR), path.dirname(file)).split(path.sep).join('/'),
+            size: stats.size,
+            modified: stats.mtime.toISOString(),
+          };
+        })
+        .sort((a, b) => b.size - a.size);
+
+      res.json({ orphans, totalSize: orphans.reduce((sum, item) => sum + item.size, 0) });
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
     }
   });
 }

@@ -3,6 +3,7 @@
   import { localizedText } from '../lib/strings.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
+  import { formFieldClass } from '../lib/form-field.js';
 
   export let open = false;
   export let category = '';
@@ -77,28 +78,28 @@
     closeOnEscape={true}
     on:close={onClose}
   >
-    <div class="space-y-7">
+    <div class="space-y-6">
       <section>
-        <div class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]/70">
+        <div class="mb-3 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
           {$localizedText.sidebar.modals.createStart}
         </div>
         <div class="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
-            class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
+            class="min-h-24 rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
             on:click={createToday}
             disabled={isCreating}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
-            <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.todayNoteHint}</span>
+            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.todayNoteHint}</span>
           </button>
           <button
             type="button"
-            class="min-h-24 rounded-2xl border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
+            class="min-h-24 rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
-            <span class="mt-2 block text-[10px] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-secondary)]/60">{$localizedText.sidebar.modals.fromTemplateHint}</span>
+            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.fromTemplateHint}</span>
           </button>
         </div>
       </section>
@@ -109,14 +110,14 @@
           type="text"
           bind:value={newNoteTitle}
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
-          class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
+          class={formFieldClass()}
           on:keydown={(e) => {
             if (e.key === 'Enter' && newNoteTitle.trim()) submitCreateNote();
             if (e.key === 'Escape') onClose();
           }}
           autofocus
         />
-        <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-secondary)]/65">{$localizedText.sidebar.modals.titleHint}</p>
+        <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
       </div>
     </div>
     <div class="flex gap-6 mt-10">

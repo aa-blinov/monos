@@ -1,7 +1,19 @@
 import path from 'path';
+import { NOTES_DIR } from '../config.js';
 import { getDb } from '../database.js';
 
 export function registerTreeRoutes(app) {
+  /**
+   * Where the notes actually live.
+   *
+   * The whole promise of the app is that the notes are ordinary files on the
+   * user's disk, so the folder is shown in the interface rather than hidden
+   * behind a menu. This is the user's own path on their own machine.
+   */
+  app.get('/api/info', (req, res) => {
+    res.json({ notesDir: NOTES_DIR });
+  });
+
   app.get('/api/tree', (req, res) => {
     try {
       const db = getDb();
@@ -42,6 +54,7 @@ export function registerTreeRoutes(app) {
                 date: child.date_created || null,
                 category: child.category || null,
                 tags: JSON.parse(child.tags || '[]'),
+                pinned: Boolean(child.pinned),
               },
             };
           }),
