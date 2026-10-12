@@ -25,7 +25,13 @@ export function applyTypographyVars({
   root.style.setProperty('--line-height', lineHeightOptions.find((item) => item.value === lineHeight)?.value_css || '1.625');
   root.style.setProperty('--content-width', contentWidthOptions.find((item) => item.value === contentWidth)?.value_css || '80rem');
   root.style.setProperty('--editor-font-size', editorFontSizeOptions.find((item) => item.value === editorFontSize)?.base || '16px');
-  root.style.setProperty('--font-size-base', fontSizeOptions.find((item) => item.value === fontSize)?.base || '14px');
+  const baseSize = parseFloat(fontSizeOptions.find((item) => item.value === fontSize)?.base) || 16;
+  root.style.setProperty('--font-size-base', `${baseSize}px`);
+  // The metadata whisper must scale with the UI size. Hard-coded px sizes do
+  // not, so bumping the interface size used to grow the headings while leaving
+  // the whisper at 9-10px — inverting the hierarchy.
+  root.style.setProperty('--text-whisper', `${(baseSize * 0.625).toFixed(2)}px`);
+  root.style.setProperty('--text-whisper-lg', `${(baseSize * 0.6875).toFixed(2)}px`);
   root.style.setProperty('--font-family', fontOptions.find((item) => item.family.includes(fontFamily) || item.name === fontFamily)?.family || fontFamily);
 }
 

@@ -1,11 +1,14 @@
 <script>
-  import { onMount, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
+import { get } from 'svelte/store';
   import { Router, Route, navigate } from 'svelte-routing';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
   import NotePage from './components/NotePage.svelte';
   import NoteBoard from './components/NoteBoard.svelte';
   import Settings from './components/Settings.svelte';
+  import SavedSearchesPanel from './components/SavedSearchesPanel.svelte';
+  import TagPanel from './components/TagPanel.svelte';
   import TrashView from './components/TrashView.svelte';
   import TemplateManager from './components/TemplateManager.svelte';
   import SearchResults from './components/SearchResults.svelte';
@@ -21,7 +24,9 @@
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
-  import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, loadHomeRecentNotes } from './lib/dashboard.js';
+  import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
+import { pickAndImport } from './lib/backup.js';
+import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
@@ -46,6 +51,7 @@
     window.history.replaceState({}, '', initialRoutePath);
   }
 
+  let tagPanelOpen = false;
   let isDarkMode = false;
   let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   let headerComponent;
@@ -63,6 +69,10 @@
   let dashboardNeedsRefresh = false;
   let lastSeenNoteSaveAt = 0;
   let continueWorkOpen = false;
+  let autoPullState = { conflicts: false, received: 0 };
+  let cancelAutoPull = () => {};
+  let importStatus = '';
+  let importError = '';
 
   let showCreateNoteModal = false;
   let createNoteInitialCategory = '';
@@ -165,6 +175,35 @@
     }
   }
 
+  /**
+   * A background pull must never steal focus or interrupt typing, so it only
+   * refreshes the board and raises a badge. Conflicts are surfaced where the
+   * user already goes to resolve them, not as a modal out of nowhere.
+   */
+  onDestroy(() => cancelAutoPull());
+
+  /**
+   * Start the background pull only when a remote is actually connected. Without
+   * one, every launch would fire a request that can only answer 400. The local
+   * `gitConfigured` flag is never assigned here (the sidebar keeps its own), so
+   * ask the backend once.
+   */
+  async function startAutoPullIfConfigured() {
+    try {
+      const response = await fetch('/api/git/status');
+      const status = response.ok ? await response.json() : null;
+      if (status?.initialized) cancelAutoPull = startAutoPull({ onResult: handleAutoPullResult });
+    } catch {
+      // offline or not configured — nothing to pull
+    }
+  }
+
+  function handleAutoPullResult(result) {
+    if (!result) return;
+    autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
+    if (result.received > 0) void loadHomeRecentNotes();
+  }
+
   onMount(() => {
     setSidebarOpen(true);
     updateMobileState();
@@ -182,6 +221,16 @@
     void loadHomeRecentNotes();
     void applyShellSettings();
     void loadTemplateSettings();
+    // Pull on launch and every few minutes. Uploads stay manual; a stale device
+    // is the main source of conflicts on a second machine.
+    // Only when a remote is configured: without one, every launch would fire a
+    // request that can only answer 400. The local `gitConfigured` flag is never
+    // assigned here (the sidebar keeps its own), so ask the backend once.
+    setBusyCheck(() => {
+      const state = get(editorState);
+      return Boolean(state?.saving || state?.dirty);
+    });
+    void startAutoPullIfConfigured();
     restoreSearchFromUrl();
     searchUrlReady.set(true);
     const handlePopState = () => {
@@ -360,6 +409,20 @@
     continueWorkOpen = true;
   }
 
+  function startArchiveImport() {
+    importStatus = '';
+    importError = '';
+    pickAndImport({
+      onDone: async (data) => {
+        importStatus = $localizedText.settings.importComplete(data);
+        await loadHomeRecentNotes();
+      },
+      onError: (detail) => {
+        importError = $localizedText.settings.backupError(detail);
+      },
+    });
+  }
+
   function openAllRecentNotes() {
     continueWorkOpen = false;
     openCommandPalette('notes');
@@ -395,6 +458,36 @@
     setRoutePath('/templates');
     clearSearch();
     navigate('/templates');
+  }
+
+  function openTagPanel() {
+    tagPanelOpen = true;
+  }
+
+  let savedSearchPanelOpen = false;
+  /** Запрос, который панель предложит сохранить. */
+  let pendingSearchQuery = '';
+
+  function openSavedSearchPanel(event) {
+    // Кнопка в строке поиска передаёт текущий запрос — панель сохранит именно его.
+    pendingSearchQuery = typeof event?.detail === 'string' ? event.detail : $searchQuery.trim();
+    savedSearchPanelOpen = true;
+  }
+
+  /** Запуск сохранённого поиска: кладём запрос в строку и уходим на доску. */
+  function runSavedSearch(event) {
+    const query = String(event?.detail?.query || '').trim();
+    if (!query) return;
+    savedSearchPanelOpen = false;
+    showDashboard({ closeSidebar: true });
+    searchQuery.set(query);
+  }
+
+  /** Клик по тегу в панели ведёт в поиск по нему — панель это вход, а не тупик. */
+  function searchByTag(event) {
+    tagPanelOpen = false;
+    showDashboard({ closeSidebar: true });
+    searchQuery.set(`#${event.detail.tag}`);
   }
 
   function createQuickNoteFromHeader() {
@@ -529,6 +622,7 @@
       return;
     }
     closeCommandPalette();
+    if (event.detail === 'continueWork') openContinueWork();
     if (event.detail === 'openSettings') openSettings();
     if (event.detail === 'toggleSidebar') toggleSidebar();
   }
@@ -583,6 +677,7 @@
       showBack={showHeaderBack}
       showSearch={isDashboardRoute}
       sidebarOpen={$sidebarOpen}
+      on:saveSearch={openSavedSearchPanel}
     />
 
     <CommandPalette
@@ -625,6 +720,8 @@
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
+          on:openTags={openTagPanel}
+          on:openSavedSearches={openSavedSearchPanel}
           on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
           on:toggleSidebar={toggleSidebar}
@@ -633,6 +730,7 @@
           on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) setSidebarOpen(false); }}
           on:syncError={(e) => { syncError = e.detail; if (isMobile) setSidebarOpen(false); }}
           mobile={isMobile}
+          autoPullState={autoPullState}
           {gitConfigured}
         />
         {#if !isMobile && $sidebarOpen}
@@ -678,19 +776,74 @@
         <Route path="/">
           <div bind:this={boardScrollContainer} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>
             <div class="mx-auto max-w-6xl">
-              <NoteBoard
-                notes={$homeRecentNotes}
-                mobile={isMobile}
-                showCreateCard={true}
-                on:createNote={openNewNoteFlow}
-                on:openFull={(e) => openRecentNote(e.detail)}
-                on:reveal={revealInTree}
-                on:noteTouched={(e) => promoteRecentNote(e.detail)}
-              />
-              {#if $homeRecentLoading && $homeRecentNotes.length > 0}
-                <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
-                  {$localizedText.searchResults.searching}
-                </div>
+              {#if $homeRecentNotes.length === 0}
+                {#if $homeRecentError}
+                  <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
+                    <h1 class="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+                      {$localizedText.app.board.loadFailed}
+                    </h1>
+                    <p class="mt-3 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {$localizedText.app.board.loadFailedHint}
+                    </p>
+                    <button
+                      type="button"
+                      class="mt-8 text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70"
+                      on:click={() => loadHomeRecentNotes()}
+                    >
+                      {$localizedText.app.board.retry}
+                    </button>
+                  </div>
+                {:else if $homeRecentLoading}
+                  <div class="py-16 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
+                    {$localizedText.searchResults.searching}
+                  </div>
+                {:else}
+                  <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
+                    <h1 class="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+                      {$localizedText.app.board.title}
+                    </h1>
+                    <p class="mt-3 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
+                      {isMobile ? $localizedText.app.emptyMobile : $localizedText.app.emptyDesktop}
+                    </p>
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                      <button
+                        type="button"
+                        class="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70"
+                        on:click={openNewNoteFlow}
+                      >
+                        {$localizedText.app.homeActions.newNote}
+                      </button>
+                      <button
+                        type="button"
+                        class="text-sm uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+                        on:click={startArchiveImport}
+                      >
+                        {$localizedText.app.homeActions.importNotes}
+                      </button>
+                    </div>
+                    {#if importStatus}
+                      <p class="mt-6 text-xs text-[var(--text-tertiary)]">{importStatus}</p>
+                    {/if}
+                    {#if importError}
+                      <p class="mt-6 max-w-sm text-xs text-[var(--red)]">{importError}</p>
+                    {/if}
+                  </div>
+                {/if}
+              {:else}
+                <NoteBoard
+                  notes={$homeRecentNotes}
+                  mobile={isMobile}
+                  showCreateCard={true}
+                  on:createNote={openNewNoteFlow}
+                  on:openFull={(e) => openRecentNote(e.detail)}
+                  on:reveal={revealInTree}
+                  on:noteTouched={(e) => promoteRecentNote(e.detail)}
+                />
+                {#if $homeRecentLoading}
+                  <div class="py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
+                    {$localizedText.searchResults.searching}
+                  </div>
+                {/if}
               {/if}
             </div>
           </div>
@@ -742,4 +895,17 @@
       on:primary={() => syncError = ''}
     />
   {/if}
+
+  <SavedSearchesPanel
+    open={savedSearchPanelOpen}
+    currentQuery={pendingSearchQuery}
+    on:run={runSavedSearch}
+    on:saved={() => { pendingSearchQuery = ''; }}
+  />
+
+  <TagPanel
+    open={tagPanelOpen}
+    on:select={searchByTag}
+    on:changed={() => { if (headerComponent?.loadTags) headerComponent.loadTags(); if (sidebarComponent?.loadTree) sidebarComponent.loadTree(); }}
+  />
 </Router>

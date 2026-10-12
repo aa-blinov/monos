@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getDb } from './database.js';
+import { indexNoteForFts, removeNoteFromFts, ensureFtsSchema } from './fts.js';
 import { parseFrontmatterMetadata } from './search.js';
 import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
@@ -21,6 +22,7 @@ function parseCachedTags(rawTags) {
 function metadataEqual(left, right) {
   return left.title === right.title
     && left.category === right.category
+    && left.pinned === right.pinned
     && JSON.stringify(left.tags) === JSON.stringify(right.tags);
 }
 
@@ -37,7 +39,7 @@ export function indexFile(filePath, content) {
 
   if (existing) {
     db.prepare(`
-      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?
+      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?, pinned = ?
       WHERE path = ?
     `).run(
       name,
@@ -48,12 +50,13 @@ export function indexFile(filePath, content) {
       metadata.category || '',
       content || '',
       modifiedAt,
+      metadata.pinned ? 1 : 0,
       relativePath
     );
   } else {
     db.prepare(`
-      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened, pinned)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       relativePath,
       name,
@@ -65,7 +68,8 @@ export function indexFile(filePath, content) {
       metadata.category || '',
       nowISO(),
       modifiedAt,
-      nowISO()
+      nowISO(),
+      metadata.pinned ? 1 : 0
     );
   }
 
@@ -77,6 +81,19 @@ export function indexFile(filePath, content) {
       for (const target of linkNames) insertLink.run(sourcePath, target);
     });
     transaction(relativePath, links);
+  }
+
+  try {
+    indexNoteForFts(db, {
+      path: relativePath,
+      name,
+      title: metadata.title || '',
+      tags: JSON.stringify(metadata.tags),
+      content: content || '',
+      is_dir: isDir ? 1 : 0,
+    });
+  } catch {
+    // The FTS table is an accelerator; losing it must not block a save.
   }
 }
 
@@ -121,6 +138,7 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
       title: currentMetadata.title || row.title || '',
       category: currentMetadata.category || row.category || '',
       tags: currentMetadata.tags.length ? currentMetadata.tags : cachedTags,
+      pinned: currentMetadata.pinned,
     };
 
     if (!metadataEqual(currentMetadata, nextMetadata)) {
@@ -134,6 +152,11 @@ export function indexAllFiles() {
   const indexedPaths = new Set();
 
   fs.mkdirSync(NOTES_DIR, { recursive: true });
+  try {
+    ensureFtsSchema(db);
+  } catch {
+    // No FTS5 in this build — search falls back to the linear scan.
+  }
   migrateCachedMetadataToFrontmatter(db);
 
   function walk(dir) {
@@ -178,6 +201,11 @@ export function indexAllFiles() {
   for (const itemPath of allPaths) {
     if (!indexedPaths.has(itemPath)) {
       db.prepare('DELETE FROM notes_index WHERE path = ? OR path LIKE ? || \'/%\'').run(itemPath, itemPath);
+      try {
+        removeNoteFromFts(db, itemPath);
+      } catch {
+        // Same as above: a missing FTS index must not break reindexing.
+      }
     }
   }
 }

@@ -45,6 +45,9 @@ test('TrashView восстанавливает и окончательно уд�
   await waitFor(() => expect(screen.queryByText('Old')).toBeNull());
 
   await fireEvent.click(screen.getByRole('button', { name: uiText.trash.deleteForever }));
+  // Destructive confirmation now goes through the designed modal, not confirm().
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.modal.confirm })).toBeTruthy());
+  await fireEvent.click(screen.getByRole('button', { name: uiText.modal.confirm }));
   await waitFor(() => expect(screen.queryByText('Gone')).toBeNull());
 
   expect(api.restoreNoteRequest).toHaveBeenCalledWith('notes/Old.md');

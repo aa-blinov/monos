@@ -1,6 +1,17 @@
+@import './fonts.css';
+@import 'katex/dist/katex.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Metadata whisper. Derived from --font-size-base in lib/app-shell.js; these
+   are the 16px-base defaults. Use text-[var(--text-whisper)], never a literal
+   px size — a literal does not scale with the interface size setting. */
+:root {
+  --text-whisper: 10px;
+  --text-whisper-lg: 11px;
+}
 
 @layer base {
   html {
@@ -26,6 +37,32 @@
   h3 {
     font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
     @apply text-base font-bold tracking-tight;
+  }
+
+  /* Текстовые поля и textarea по умолчанию — underline-стилистика, согласованная
+     с formFieldClass(). Три правила, и все три важны:
+
+     1. Правило живёт в @layer base. Tailwind 3 не использует нативные каскадные
+        слои: @layer — его собственные корзины, и базовая печатается раньше
+        утилит. Правило, написанное прямо в файле, попадает в конец вывода и
+        перебивает утилиты — `input[type="text"] { @apply py-1.5 }` молча
+        отменял h-9 у полей настроек и py-2 у полей шаблонов, и поля на разных
+        экранах выглядели по-разному (37px, 36px, 34px).
+
+     2. Селектор обёрнут в :where() — он даёт специфичность 0. Без этого
+        input[type="text"] (0,1,1) перебивал утилиту поля (0,1,0), и это
+        стоило двух дефектов сразу: bg-transparent стирал заливку
+        --bg-secondary у пилюль и рамок (поиск, фильтр тегов, название
+        сохранённого поиска), а focus:border отменял собственный фокус поля.
+        Порядок вывода это не чинит: порядок решает только при равной
+        специфичности.
+
+     3. Вертикальную геометрию здесь не задаём намеренно: высота принадлежит
+        компоненту. У полей-подчёркиваний это formFieldClass() (h-9), у остальных
+        — собственная высота или свои py-N. Иначе базовый padding снова задаст
+        высоту за компонент, и расхождение в 1px вернётся. */
+  :where(input[type="text"], textarea) {
+    @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-secondary)] outline-none transition-all;
   }
 }
 
@@ -106,26 +143,29 @@
   @apply underline decoration-1 underline-offset-4 hover:decoration-2 transition-all;
 }
 
-input[type="text"],
-textarea {
-  /* py-1.5 + focus:border-[var(--text-secondary)] должны совпадать с
-     formFieldClass(), иначе более специфичный селектор input[type="text"]
-     (0,1,1) перекроет helper (0,1,0) и underline у input съедет
-     относительно select. */
-  @apply bg-transparent border-b border-[var(--border-subtle)] focus:border-[var(--text-secondary)] outline-none transition-all py-1.5;
-}
+/* Подсветка кода. Токены --code-* выведены в themes.js из акцентов темы со
+   сдвигом до AA 4.5:1 на фоне блока: сырые --green/--yellow давали 1.28–2.6:1
+   и код оказывался читаем хуже, чем обычный текст.
 
-.btn-minimal {
-  @apply px-4 py-2 text-sm font-medium transition-all hover:opacity-70 disabled:opacity-30;
-}
-
-.btn-primary {
-  @apply bg-[var(--text-primary)] text-[var(--bg-primary)] px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all;
-}
-
-.btn-secondary {
-  @apply border border-[var(--border-subtle)] hover:border-[var(--text-primary)] px-6 py-2 rounded-full font-medium transition-all;
-}
+   Правила топ-уровневые, как остальные в этом файле: блок @layer components
+   после директив @tailwind в этой сборке не попадал в вывод вовсе. Помещать
+   сюда @layer base нельзя — base печатается раньше утилит, а цвета токенов
+   должны побеждать. Конкурентов-утилит у этих span-ов нет. */
+.hljs-comment, .hljs-quote { @apply italic; color: var(--code-comment); }
+.hljs-keyword, .hljs-literal, .hljs-doctag, .hljs-formula { color: var(--code-keyword); }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-char.escape_ { color: var(--code-string); }
+.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-link { color: var(--code-number); }
+.hljs-title, .hljs-title.function_, .hljs-section, .hljs-name { color: var(--code-function); }
+.hljs-type, .hljs-title.class_, .hljs-built_in, .hljs-class .hljs-title { color: var(--code-type); }
+.hljs-tag, .hljs-attr, .hljs-selector-tag, .hljs-selector-attr, .hljs-selector-class,
+.hljs-selector-id, .hljs-selector-pseudo, .hljs-meta { color: var(--code-tag); }
+.hljs-variable, .hljs-template-variable, .hljs-params, .hljs-property { color: var(--code-number); }
+.hljs-punctuation, .hljs-operator, .hljs-subst { color: var(--code-punctuation); }
+.hljs-meta .hljs-keyword { color: var(--code-keyword); }
+.hljs-meta .hljs-string { color: var(--code-string); }
+.hljs-deletion { color: var(--red); }
+.hljs-emphasis { @apply italic; }
+.hljs-strong { @apply font-bold; }
 
 .animate-toast-in { animation: toastIn 0.3s ease-out; }
 @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }

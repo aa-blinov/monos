@@ -2,8 +2,9 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { RotateCcw, Trash2 } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import { deleteFilePermanentlyRequest, loadTrashNotesRequest, restoreNoteRequest } from '../lib/editor-api.js';
-  import { localizedText } from '../lib/strings.js';
+  import { locale, localizedText } from '../lib/strings.js';
 
   export let initialNotes = null;
 
@@ -13,6 +14,7 @@
   let isLoading = true;
   let error = '';
   let busyPath = '';
+  let pendingDelete = null;
 
   $: if (Array.isArray(initialNotes) && isLoading) {
     notes = initialNotes;
@@ -29,7 +31,7 @@
       error = '';
       notes = await loadTrashNotesRequest();
     } catch (err) {
-      error = err.message || 'Failed to load trash';
+      error = err.message || $localizedText.trash.loadFailed;
     } finally {
       isLoading = false;
     }
@@ -43,22 +45,31 @@
       notes = notes.filter((item) => item.path !== note.path);
       dispatch('restored', restored);
     } catch (err) {
-      error = err.message || 'Failed to restore note';
+      error = err.message || $localizedText.trash.restoreFailed;
     } finally {
       busyPath = '';
     }
   }
 
-  async function deleteForever(note) {
+  function requestDeleteForever(note) {
     if (!note?.path || busyPath) return;
-    if (!confirm($localizedText.trash.deleteForeverConfirm(note.name || note.path))) return;
+    pendingDelete = note;
+  }
+
+  function cancelDeleteForever() {
+    pendingDelete = null;
+  }
+
+  async function deleteForever(note) {
+    if (!note?.path) return;
+    pendingDelete = null;
     try {
       busyPath = note.path;
       await deleteFilePermanentlyRequest(note.path);
       notes = notes.filter((item) => item.path !== note.path);
       dispatch('deleted', note);
     } catch (err) {
-      error = err.message || 'Failed to delete note';
+      error = err.message || $localizedText.trash.deleteFailed;
     } finally {
       busyPath = '';
     }
@@ -79,7 +90,7 @@
           {$localizedText.trash.hint}
         </p>
       </div>
-      <div class="shrink-0 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+      <div class="shrink-0 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
         {notes.length}
       </div>
     </div>
@@ -89,11 +100,11 @@
         {$localizedText.trash.loading}
       </div>
     {:else if error}
-      <div class="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+      <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm text-[var(--red)]">
         {error}
       </div>
     {:else if notes.length === 0}
-      <div class="rounded-3xl border border-dashed border-[var(--border-subtle)] px-6 py-20 text-center">
+      <div class="rounded-xl border border-dashed border-[var(--border-subtle)] px-6 py-20 text-center">
         <div class="font-serif text-xl tracking-tight">{$localizedText.trash.emptyTitle}</div>
         <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
           {$localizedText.trash.emptyHint}
@@ -102,10 +113,10 @@
     {:else}
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {#each notes as note (note.path)}
-          <article class="group flex min-h-48 flex-col overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 shadow-sm shadow-black/[0.03]">
+          <article class="group flex min-h-48 flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 shadow-sm shadow-black/[0.03]">
             <div class="min-w-0">
               <h2 class="truncate font-serif text-lg font-medium tracking-tight">{note.name}</h2>
-              <div class="mt-1 truncate text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)]/65">
+              <div class="mt-1 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
                 {pathLabel(note)}
               </div>
             </div>
@@ -115,13 +126,13 @@
             </p>
 
             <div class="mt-auto flex items-center justify-between gap-3 pt-5">
-              <div class="truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/55">
-                {note.trashedAt ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(note.trashedAt)) : ''}
+              <div class="truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                {note.trashedAt ? new Intl.DateTimeFormat($locale === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(new Date(note.trashedAt)) : ''}
               </div>
               <div class="flex items-center gap-1">
                 <TooltipIconButton
                   type="button"
-                  class="h-9 w-9 rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
+                  class="h-9 w-9 rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
                   label={$localizedText.trash.restore}
                   tooltip={$localizedText.trash.restore}
                   disabled={busyPath === note.path}
@@ -131,12 +142,12 @@
                 </TooltipIconButton>
                 <TooltipIconButton
                   type="button"
-                  class="h-9 w-9 rounded-full text-red-400 transition hover:bg-red-500/10 disabled:opacity-30"
+                  class="h-9 w-9 rounded-md text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] disabled:opacity-30"
                   label={$localizedText.trash.deleteForever}
                   tooltip={$localizedText.trash.deleteForever}
                   tooltipAlign="end"
                   disabled={busyPath === note.path}
-                  on:click={() => deleteForever(note)}
+                  on:click={() => requestDeleteForever(note)}
                 >
                   <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />
                 </TooltipIconButton>
@@ -148,3 +159,13 @@
     {/if}
   </div>
 </div>
+
+{#if pendingDelete}
+  <ConfirmModal
+    danger={true}
+    title={$localizedText.trash.deleteForever}
+    message={$localizedText.trash.deleteForeverConfirm(pendingDelete.name || pendingDelete.path)}
+    on:confirm={() => deleteForever(pendingDelete)}
+    on:cancel={cancelDeleteForever}
+  />
+{/if}

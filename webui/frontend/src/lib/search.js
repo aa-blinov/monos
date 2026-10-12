@@ -11,12 +11,28 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Words the user actually typed, with search operators removed.
+ *
+ * Highlighting must look for `квартальные`, not for `body:квартальные`: the
+ * operator is a filter instruction, and it never appears in the note text.
+ */
 export function getSearchTerms(query) {
-  const cleanQuery = String(query || '').replace(/^#/, '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const wordTerms = cleanQuery.split(/\s+/).filter(Boolean);
+  const stripped = String(query || '')
+    .replace(/^#/, '')
+    // `updated:` filters by date: neither it nor its value is in the text.
+    .replace(/(^|\s)-?updated:(?:"[^"]*"|\S*)/g, ' ')
+    // `body:` only names the field — the words after it are still content.
+    .replace(/(^|\s)-?body:(?:"([^"]*)"|)/g, (match, lead, phrase) => (phrase ? ` ${phrase}` : ' '))
+    .replace(/"/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  const wordTerms = stripped.split(/\s+/).filter(Boolean);
   const uniqueWords = Array.from(new Set(wordTerms));
+  if (uniqueWords.length === 0) return [];
   const phrase = uniqueWords.join(' ');
-  const terms = uniqueWords.length > 1 && phrase !== cleanQuery ? uniqueWords : [phrase, ...uniqueWords];
+  const terms = uniqueWords.length > 1 && phrase !== stripped ? uniqueWords : [phrase, ...uniqueWords];
   return Array.from(new Set(terms)).sort((a, b) => b.length - a.length);
 }
 

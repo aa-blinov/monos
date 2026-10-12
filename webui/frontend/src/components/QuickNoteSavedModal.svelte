@@ -58,7 +58,7 @@
     on:close={() => dispatch('close')}
   >
     <div class="space-y-2">
-      <label for="quick-note-name" class="block text-[10px] uppercase tracking-[0.18em] font-bold text-[var(--text-secondary)]/70">
+      <label for="quick-note-name" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">
         {$localizedText.sidebar.modals.title}
       </label>
       <input
@@ -70,11 +70,11 @@
         on:keydown={handleKeydown}
         data-testid="quick-note-name-input"
       />
-      <div class="truncate pt-1 text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60">
+      <div class="truncate pt-1 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
         {note.path?.replace(/^notes\/?/, '')}
       </div>
       {#if renameTarget}
-        <p class="text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)]/50">
+        <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
           {$localizedText.sidebar.modals.quickNoteWillRenameTo(renameTarget)}
         </p>
       {/if}

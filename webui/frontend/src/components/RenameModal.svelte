@@ -3,6 +3,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
+  import { formFieldClass } from '../lib/form-field.js';
 
   /** Whether the target is a folder (changes the title suffix). */
   export let isDir = false;
@@ -42,7 +43,7 @@
         type="text"
         bind:value={newName}
         placeholder={$localizedText.sidebar.modals.newNamePlaceholder}
-        class="w-full bg-transparent border-b border-[var(--border-subtle)] py-2 outline-none"
+        class={formFieldClass()}
         on:keydown={onKeydown}
       />
     </div>

@@ -10,10 +10,13 @@ import { registerFileRoutes } from './routes/files.js';
 import { registerTreeRoutes } from './routes/tree.js';
 import { registerNoteRoutes } from './routes/notes.js';
 import { registerDirectoryRoutes } from './routes/directories.js';
-import { registerAttachmentRoutes } from './routes/attachments.js';
+import { registerAttachmentRoutes, registerOrphanRoutes } from './routes/attachments.js';
 import { registerGitRoutes } from './routes/git.js';
+import { registerSavedSearchRoutes } from './routes/saved-searches.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { registerBackupRoutes } from './routes/backup.js';
+import { registerPrintRoutes } from './routes/print.js';
+import { registerClipRoutes } from './routes/clip.js';
 
 const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
@@ -28,7 +31,18 @@ function isAllowedOrigin(origin) {
   return !origin || getAllowedOrigins().has(origin);
 }
 
+// The clipper is reached by a browser extension, whose Origin is an extension
+// scheme that cannot be enumerated ahead of install. Allowing those schemes
+// globally would let any installed extension read the notes API, so the path is
+// exempted here and re-checked — origin *and* a bearer token — inside
+// routes/clip.js, where the extension schemes are the only extra thing allowed.
+const EXEMPT_PREFIXES = ['/api/clip/'];
+
 function rejectCrossOriginRequests(req, res, next) {
+  if (EXEMPT_PREFIXES.some((prefix) => req.path.startsWith(prefix))) {
+    next();
+    return;
+  }
   const origin = req.get('Origin');
   if (!isAllowedOrigin(origin)) {
     return res.status(403).json({ detail: 'Origin not allowed' });
@@ -54,9 +68,13 @@ registerTreeRoutes(app);
 registerNoteRoutes(app);
 registerDirectoryRoutes(app);
 registerAttachmentRoutes(app);
+registerOrphanRoutes(app);
 registerGitRoutes(app);
 registerTemplateRoutes(app);
+registerSavedSearchRoutes(app);
 registerBackupRoutes(app);
+registerPrintRoutes(app);
+registerClipRoutes(app, { appOrigins: () => [...getAllowedOrigins()] });
 
 let server = null;
 let signalHandlersRegistered = false;

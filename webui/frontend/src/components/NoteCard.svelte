@@ -89,8 +89,8 @@
   $: openedDateTitle = cardDateTitle(cardDateValue, $locale);
   $: cardStyle = `--note-accent: ${accent}; --note-tint: color-mix(in srgb, ${accent} 13%, transparent); --note-glow: color-mix(in srgb, ${accent} 18%, transparent);`;
   $: cardClass = compact
-    ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3.5 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
-    : 'note-card group relative flex h-48 w-full flex-col overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-4 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40 sm:px-5 sm:hover:-translate-y-0.5 sm:hover:shadow-xl sm:hover:shadow-black/10';
+    ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
+    : 'note-card group relative flex h-48 w-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-4 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40 sm:px-5 sm:hover:-translate-y-0.5 sm:hover:shadow-xl sm:hover:shadow-black/10';
 </script>
 
 <button
@@ -107,7 +107,7 @@
   <span class="pointer-events-none absolute inset-0 bg-[var(--note-tint)] opacity-70 transition group-hover:opacity-100"></span>
   <span class="pointer-events-none absolute -right-12 -top-16 h-32 w-32 rounded-full bg-[var(--note-glow)] blur-2xl"></span>
 
-  <span class="relative block shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'truncate text-lg sm:text-xl'} font-medium leading-tight tracking-tight break-anywhere">
+  <span class="relative block shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'truncate text-lg sm:text-xl'} font-bold leading-tight tracking-tight break-anywhere">
     {#if highlight && query}
       {@html highlightExcerpt(visibleName, query)}
     {:else}
@@ -115,7 +115,7 @@
     {/if}
   </span>
   {#if pathLabel}
-    <span class="relative mt-1 block shrink-0 truncate text-[9px] uppercase tracking-[0.14em] text-[var(--text-secondary)]/70 {compact ? '' : 'sm:text-[10px] sm:tracking-[0.16em]'}">
+    <span class="relative mt-1 block shrink-0 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)] {compact ? '' : 'sm:text-[length:var(--text-whisper)] sm:tracking-[0.16em]'}">
       {pathLabel}
     </span>
   {/if}
@@ -128,7 +128,7 @@
         {visibleExcerpt}
       {/if}
     {:else}
-      <span class="italic text-[var(--text-secondary)]/65">{$localizedText.app.board.emptyNote}</span>
+      <span class="italic text-[var(--text-tertiary)]">{$localizedText.app.board.emptyNote}</span>
     {/if}
   </span>
 
@@ -137,7 +137,7 @@
       {#if visibleTags.length > 0}
         <span class="flex min-w-0 gap-1.5 overflow-hidden">
           {#each visibleTags as tag}
-            <span class="min-w-0 truncate rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[10px] leading-tight text-[var(--text-secondary)]">
+            <span class="min-w-0 truncate rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[length:var(--text-whisper)] leading-tight text-[var(--text-secondary)]">
               #{tag}
             </span>
           {/each}
@@ -145,7 +145,7 @@
       {/if}
       {#if openedDate}
         <time
-          class="min-h-4 truncate text-[9px] uppercase tracking-[0.1em] text-[var(--text-secondary)]/60"
+          class="min-h-4 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]"
           datetime={openedDateTime}
           title={openedDateTitle}
         >
@@ -158,12 +158,12 @@
       <span class="flex h-6 min-w-0 flex-wrap gap-1.5 overflow-hidden">
       {#if visibleTags.length > 0}
         {#each visibleTags as tag}
-          <span class="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[10px] text-[var(--text-secondary)]">
+          <span class="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[length:var(--text-whisper)] text-[var(--text-secondary)]">
             #{tag}
           </span>
         {/each}
         {#if hiddenTagCount > 0}
-          <span class="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[10px] text-[var(--text-secondary)]">
+          <span class="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/45 px-2 py-0.5 text-[length:var(--text-whisper)] text-[var(--text-secondary)]">
             +{hiddenTagCount}
           </span>
         {/if}
@@ -171,7 +171,7 @@
       </span>
       {#if openedDate}
         <time
-          class="min-h-4 truncate text-[10px] uppercase tracking-[0.12em] text-[var(--text-secondary)]/60"
+          class="min-h-4 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]"
           datetime={openedDateTime}
           title={openedDateTitle}
         >

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { EyeOff, Eye, Pencil, Plus, Trash2 } from 'lucide-svelte';
   import ModalShell from './ModalShell.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import {
     customNoteTemplates,
@@ -15,6 +16,9 @@
   } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
+  import { formFieldClass } from '../lib/form-field.js';
+
+  let pendingDelete = null;
 
   const emptyForm = {
     id: '',
@@ -87,9 +91,18 @@
     closeForm();
   }
 
+  function requestRemoveCustomTemplate(template) {
+    if (!template?.id) return;
+    pendingDelete = template;
+  }
+
+  function cancelRemoveCustomTemplate() {
+    pendingDelete = null;
+  }
+
   async function removeCustomTemplate(template) {
     if (!template?.id) return;
-    if (!confirm($localizedText.templates.deleteConfirm(template.title))) return;
+    pendingDelete = null;
     await deleteCustomTemplate(template.id);
     if (form.id === template.id) closeForm();
   }
@@ -121,11 +134,11 @@
         type="text"
         bind:value={query}
         placeholder={$localizedText.templates.searchPlaceholder}
-        class="w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 py-2 text-sm outline-none"
+        class="h-9 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 text-sm outline-none"
       />
     </div>
 
-    <div class="grid gap-9">
+    <div class="grid gap-4">
       <section>
         <div class="mb-4 flex items-end justify-between gap-4">
           <div>
@@ -133,7 +146,7 @@
           </div>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+            class="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
             on:click={openNewTemplate}
           >
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
@@ -142,13 +155,13 @@
         </div>
 
         {#if filteredCustomTemplates.length === 0}
-          <div class="rounded-3xl border border-dashed border-[var(--border-subtle)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+          <div class="rounded-xl border border-dashed border-[var(--border-subtle)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
             {$localizedText.templates.noCustomTemplates}
           </div>
         {:else}
           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {#each filteredCustomTemplates as template (template.id)}
-              <article class="rounded-2xl border border-[var(--border-subtle)] p-4">
+              <article class="rounded-xl border border-[var(--border-subtle)] p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <h3 class="truncate font-serif text-lg tracking-tight">{template.title}</h3>
@@ -157,20 +170,20 @@
                     {/if}
                   </div>
                   <div class="flex shrink-0 items-center gap-1">
-                    <TooltipIconButton type="button" class="h-9 w-9 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" label={$localizedText.templates.edit} tooltip={$localizedText.templates.edit} on:click={() => editTemplate(template)}>
+                    <TooltipIconButton type="button" class="h-9 w-9 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" label={$localizedText.templates.edit} tooltip={$localizedText.templates.edit} on:click={() => editTemplate(template)}>
                       <Pencil size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
-                    <TooltipIconButton type="button" class="h-9 w-9 rounded-full text-red-400 hover:bg-red-500/10" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => removeCustomTemplate(template)}>
+                    <TooltipIconButton type="button" class="h-9 w-9 rounded-md text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => requestRemoveCustomTemplate(template)}>
                       <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
                   </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-1.5">
                   {#if template.category}
-                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">{template.category}</span>
+                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">{template.category}</span>
                   {/if}
                   {#each template.tags as tag}
-                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">#{tag}</span>
+                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                   {/each}
                 </div>
               </article>
@@ -184,26 +197,26 @@
           <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">{$localizedText.templates.libraryTitle}</h2>
         </div>
 
-        <div class="space-y-7">
+        <div class="space-y-6">
           {#each libraryGroups as group (group.key)}
             <section>
               <div class="mb-3">
                 <div class="flex items-center gap-3">
-                  <h3 class="shrink-0 text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--text-secondary)]/80">{group.title}</h3>
+                  <h3 class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.22em] text-[var(--text-tertiary)]">{group.title}</h3>
                   <span class="h-px flex-1 bg-[var(--border-subtle)]"></span>
                 </div>
               </div>
               <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {#each group.templates as template (template.id)}
-                  <article class="rounded-2xl border border-[var(--border-subtle)] p-4 opacity-100 {template.hidden ? 'opacity-55' : ''}">
+                  <article class="rounded-xl border border-[var(--border-subtle)] p-4 opacity-100 {template.hidden ? 'opacity-55' : ''}">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <h4 class="truncate font-serif text-lg tracking-tight">{template.title}</h4>
-                        <div class="mt-1 text-[9px] uppercase tracking-[0.14em] text-[var(--text-secondary)]/60">{template.category}</div>
+                        <div class="mt-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{template.category}</div>
                       </div>
                       <TooltipIconButton
                         type="button"
-                        class="h-9 w-9 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                        class="h-9 w-9 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                         label={template.hidden ? $localizedText.templates.show : $localizedText.templates.hide}
                         tooltip={template.hidden ? $localizedText.templates.show : $localizedText.templates.hide}
                         on:click={() => toggleLibraryTemplate(template)}
@@ -217,7 +230,7 @@
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each template.tags as tag}
-                        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[var(--text-secondary)]/70">#{tag}</span>
+                        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
                   </article>
@@ -237,20 +250,20 @@
       <div class="grid gap-4">
       <div>
         <label for="template-manager-title" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.templateTitle}</label>
-        <input id="template-manager-title" bind:value={form.title} class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
+        <input id="template-manager-title" bind:value={form.title} class={formFieldClass()} />
       </div>
       <div>
         <label for="template-manager-description" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.description}</label>
-        <input id="template-manager-description" bind:value={form.description} class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
+        <input id="template-manager-description" bind:value={form.description} class={formFieldClass()} />
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label for="template-manager-category" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.folder}</label>
-          <input id="template-manager-category" bind:value={form.category} class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
+          <input id="template-manager-category" bind:value={form.category} class={formFieldClass()} />
         </div>
         <div>
           <label for="template-manager-tags" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.tags}</label>
-          <input id="template-manager-tags" bind:value={form.tags} placeholder={$localizedText.templates.tagsPlaceholder} class="w-full border-b border-[var(--border-subtle)] bg-transparent py-2 text-sm outline-none" />
+          <input id="template-manager-tags" bind:value={form.tags} placeholder={$localizedText.templates.tagsPlaceholder} class={formFieldClass()} />
         </div>
       </div>
       <div>
@@ -259,9 +272,9 @@
           id="template-manager-content"
           bind:value={form.content}
           rows="12"
-          class="w-full resize-y rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-3 font-mono text-xs leading-relaxed outline-none"
+          class="w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-3 font-mono text-xs leading-relaxed outline-none"
         ></textarea>
-        <p class="mt-2 text-[11px] text-[var(--text-secondary)]/60">{$localizedText.templates.placeholders}</p>
+        <p class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.templates.placeholders}</p>
       </div>
 
       </div>
@@ -276,4 +289,14 @@
       </button>
     </div>
   </ModalShell>
+{/if}
+
+{#if pendingDelete}
+  <ConfirmModal
+    danger={true}
+    title={$localizedText.templates.delete}
+    message={$localizedText.templates.deleteConfirm(pendingDelete.title)}
+    on:confirm={() => removeCustomTemplate(pendingDelete)}
+    on:cancel={cancelRemoveCustomTemplate}
+  />
 {/if}

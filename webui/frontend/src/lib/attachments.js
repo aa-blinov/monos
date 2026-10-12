@@ -218,3 +218,25 @@ export function replaceMarkdownImagePath(content, oldRelativePath, nextRelativeP
     oldValues.has(url) ? `![${nextAlt}](${nextUrl})` : fullMatch
   ));
 }
+
+/** Bytes as a short human string, for the orphan-attachments list. */
+export function formatAttachmentSize(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return '—';
+  if (value < 1024) return `${Math.round(value)} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let scaled = value / 1024;
+  let unit = 0;
+  while (scaled >= 1024 && unit < units.length - 1) {
+    scaled /= 1024;
+    unit += 1;
+  }
+  return `${scaled >= 10 ? Math.round(scaled) : Math.round(scaled * 10) / 10} ${units[unit]}`;
+}
+
+/** Files under `_attachments` that no note points at. */
+export async function fetchOrphanAttachments() {
+  const response = await fetch('/api/attachments/orphans');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}

@@ -16,7 +16,7 @@
     <div class="mx-auto max-w-6xl">
       <div class="mb-6 flex items-baseline justify-between gap-4">
         <div>
-          <div class="text-[10px] uppercase tracking-[0.22em] text-[var(--text-secondary)]">{$localizedText.searchResults.heading}</div>
+          <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.22em] text-[var(--text-secondary)]">{$localizedText.searchResults.heading}</div>
           <div class="mt-1 text-sm text-[var(--text-secondary)]">{$localizedText.searchResults.matches(results.length, query)}</div>
         </div>
       </div>

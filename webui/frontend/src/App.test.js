@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
 import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults } from './stores.js';
-import { homeRecentNotes } from './lib/dashboard.js';
+import { homeRecentNotes, homeRecentError } from './lib/dashboard.js';
 
 vi.mock('./components/Header.svelte', async () => ({
   default: (await import('./components/__mocks__/HeaderStub.svelte')).default,
@@ -111,7 +111,7 @@ test('App загружает shell главной страницы', async () =>
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  expect(screen.getByTestId('header-stub')).toBeTruthy();
+  expect(screen.getByTestId("header-stub")).toBeTruthy();
   expect(document.documentElement.classList.contains('dark')).toBe(false);
 }, 20000);
 
@@ -477,3 +477,55 @@ test('App позволяет менять ширину сайдбара на des
   await fireEvent.keyDown(resizer, { key: 'Enter' });
   expect(localStorage.getItem('sidebarWidth')).toBe('304');
 });
+
+test('App показывает пустое состояние доски, когда заметок ещё нет', async () => {
+  const emptyFetch = vi.fn(async (url) => {
+    if (url.endsWith('/api/notes/recent?limit=36&offset=0&sort=modified')) return jsonResponse([]);
+    return jsonResponse({}, false);
+  });
+  globalThis.fetch = emptyFetch;
+  window.fetch = emptyFetch;
+  homeRecentNotes.set([]);
+  homeRecentError.set(null);
+  noteView.set('board');
+
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
+  expect(screen.getByText(uiText.app.emptyDesktop)).toBeTruthy();
+  expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy();
+  // "Continue" is deliberately absent here: this state only renders when there
+  // are no notes at all, so there is nothing to continue into.
+  expect(screen.queryByRole('button', { name: uiText.app.homeActions.continueWork })).toBeNull();
+  expect(screen.getByRole('button', { name: uiText.app.homeActions.importNotes })).toBeTruthy();
+}, 20000);
+
+test('App показывает ошибку загрузки доски с повтором вместо пустого состояния', async () => {
+  const failingFetch = vi.fn(async (url) => {
+    if (url.endsWith('/api/notes/recent?limit=36&offset=0&sort=modified')) {
+      return { ok: false, status: 500, async json() { return { error: 'boom' }; } };
+    }
+    return jsonResponse({}, false);
+  });
+  globalThis.fetch = failingFetch;
+  window.fetch = failingFetch;
+  homeRecentNotes.set([]);
+  homeRecentError.set('HTTP 500');
+  noteView.set('board');
+
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(screen.getByText(uiText.app.board.loadFailed)).toBeTruthy());
+  expect(screen.getByText(uiText.app.board.loadFailedHint)).toBeTruthy();
+  expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();
+
+  const retry = screen.getByRole('button', { name: uiText.app.board.retry });
+  const callsBefore = failingFetch.mock.calls.filter(([u]) => u.includes('/api/notes/recent')).length;
+  await fireEvent.click(retry);
+  await waitFor(() => {
+    const callsAfter = failingFetch.mock.calls.filter(([u]) => u.includes('/api/notes/recent')).length;
+    expect(callsAfter).toBeGreaterThan(callsBefore);
+  });
+}, 20000);

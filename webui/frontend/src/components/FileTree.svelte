@@ -177,7 +177,7 @@
     <!-- Icon -->
     {#if node.is_dir}
       <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-        <Icon.ChevronRight class="w-3.5 h-3.5 transition-transform duration-200 {isExpanded ? 'rotate-90' : ''}" strokeWidth="2" aria-hidden="true" />
+        <Icon.ChevronRight class="w-3 h-3 transition-transform duration-200 {isExpanded ? 'rotate-90' : ''}" strokeWidth="1.7" aria-hidden="true" />
       </span>
       {#if node.icon && iconMap[node.icon]}
         <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
@@ -190,7 +190,7 @@
           <svelte:component this={iconMap[node.icon]} size="14" />
         </span>
       {:else}
-        <Icon.FileText class="w-3.5 h-3.5 opacity-30 shrink-0" strokeWidth="2" aria-hidden="true" />
+        <Icon.FileText class="w-3 h-3 opacity-30 shrink-0" strokeWidth="1.7" aria-hidden="true" />
       {/if}
     {/if}
 

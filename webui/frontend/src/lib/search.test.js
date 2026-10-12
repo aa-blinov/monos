@@ -38,3 +38,24 @@ test('searchSnippet показывает контекст вокруг совп�
   assert.doesNotMatch(result, /^Начало заметки/);
   assert.match(result, /^…/);
 });
+
+
+test('getSearchTerms убирает значение оператора updated:', () => {
+  assert.deepEqual(getSearchTerms('updated:2026-10 план'), ['план']);
+  assert.deepEqual(getSearchTerms('-body:черновик план'), ['черновик план', 'черновик', 'план']);
+});
+
+test('body: называет поле, а не слово — подсвечиваем его содержимое', () => {
+  assert.deepEqual(getSearchTerms('body:квартальные отчёт'), ['квартальные отчёт', 'квартальные', 'отчёт']);
+  assert.deepEqual(getSearchTerms('отчёт body:"cost centre"'), ['отчёт cost centre', 'centre', 'отчёт', 'cost']);
+});
+
+test('запрос только из операторов не подсвечивает ничего', () => {
+  assert.deepEqual(getSearchTerms('body:квартальные'), ['квартальные']);
+  assert.deepEqual(getSearchTerms('updated:2026-10'), []);
+  assert.deepEqual(getSearchTerms(''), []);
+});
+
+test('обычный запрос не меняется', () => {
+  assert.deepEqual(getSearchTerms('отчёт по продажам'), ['отчёт по продажам', 'продажам', 'отчёт', 'по']);
+});

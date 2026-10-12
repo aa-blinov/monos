@@ -1,0 +1,443 @@
+---
+name: Monos
+description: A calm notes app that does not trap your knowledge.
+colors:
+  paper-warm: "#fbf1c7"
+  paper-shade: "#ebdbb2"
+  paper-deep: "#d5c4a1"
+  ink: "#3c3836"
+  ink-soft: "#7c6f64"
+  ink-faint: "#928374"
+  rule: "#d5c4a1"
+  night-warm: "#282828"
+  night-shade: "#3c3836"
+  night-deep: "#504945"
+  parchment: "#ebdbb2"
+  parchment-soft: "#a89984"
+  clay-red: "#fb4934"
+  ember-orange: "#fe8019"
+  ochre-yellow: "#fabd2f"
+  olive-green: "#b8bb26"
+  sage-aqua: "#8ec07c"
+  slate-blue: "#83a598"
+  mauve-purple: "#d3869b"
+typography:
+  display:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "30px"
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: "-0.025em"
+  headline:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "24px"
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: "-0.025em"
+  title:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "20px"
+    fontWeight: 700
+    lineHeight: 1.3
+    letterSpacing: "-0.025em"
+  body:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.625
+    letterSpacing: "normal"
+  label:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "10px"
+    fontWeight: 400
+    lineHeight: 1.45
+    letterSpacing: "0.12em"
+rounded:
+  none: "0px"
+  micro: "2px"
+  field: "4px"
+  panel: "8px"
+  card: "16px"
+  card-lg: "24px"
+  pill: "9999px"
+spacing:
+  hair: "2px"
+  tight: "4px"
+  snug: "8px"
+  base: "12px"
+  comfortable: "16px"
+  roomy: "24px"
+  section: "32px"
+  field: "6px"
+  input: "10px"
+components:
+  button-primary:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "uppercase, 0.1em tracking, 700"
+    padding: "8px 16px"
+  button-primary-hover:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+  button-secondary:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-soft}"
+    typography: "uppercase, 0.1em tracking, 400"
+    padding: "8px 16px"
+  button-minimal:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "14px, 500"
+    padding: "8px 16px"
+  card-note:
+    backgroundColor: "{colors.paper-warm}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card-lg}"
+    padding: "16px"
+  field-underline:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    height: "32px"
+  chip-tag:
+    backgroundColor: "{colors.paper-warm}"
+    textColor: "{colors.ink-soft}"
+    rounded: "{rounded.pill}"
+    padding: "2px 8px"
+  icon-button:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-soft}"
+    rounded: "{rounded.pill}"
+    size: "36px"
+  modal-panel:
+    backgroundColor: "{colors.paper-warm}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "32px"
+    width: "384px"
+---
+
+# Design System: Monos
+
+## Overview
+
+**Creative North Star: "Стол с разложенными карточками"** (A desk with cards laid out)
+
+Monos looks like a desk under warm light. Notes are cards laid out on it — each one with its own tint, its own label, its own place in the stack. Nothing is "UI" pretending to be paper; the paper is warm because the palette is warm, and the layout is orderly because a desk is orderly. The system borrows the calm of a printed page rather than the energy of a tool.
+
+The reading is quiet and typographic. Every note title, tag, date, and control is set in the same monospace face, because a card index is sorted by legibility, not by personality. The monospace discipline is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library.
+
+Density is moderate and deliberate. Metadata shrinks to `9px`/`10px` with wide tracking so it whispers; titles sit at `18–24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
+
+Anti-reference, confirmed: **never "designer-made."** The system must not look styled, curated, or showcased. Nothing glows for effect, nothing has a gradient nobody asked for, no surface announces itself as important. The anti-reference is craft without ornament — and where restraint could turn into neglect, the standard is a well-set book, not a barebones tool.
+
+**Key Characteristics:**
+
+- Warm paper and ink, never pure white and never pure black
+- One typeface — monospace — everywhere, without exception
+- Metadata whispers at 9–10px with wide uppercase tracking
+- Flat at rest, lifted only in motion
+- Note color arrives as a tint and a soft glow, never as a border
+- Square modals, round cards — tension held deliberately
+
+## Colors
+
+The palette is warm, low-chroma, and paper-based: backgrounds are tinted creams and warm greys, never neutral greys, and accents are earthy rather than saturated.
+
+Six palettes ship (Gruvbox, GitHub, Dracula, Nord, Solarized, Catppuccin); **Gruvbox is the default** and defines the reference character. Every color below is a Gruvbox token. All other palettes expose the identical variable contract.
+
+Tokens live as CSS custom properties in `lib/themes.js` — the single source of truth. Components read them (`bg-[var(--bg-primary)]`); components never hardcode a color.
+
+**Code colours are derived, not chosen.** The accent tokens carry tags, borders and icons — never body text — and measured against `--bg-secondary` they fail AA 4.5:1 in most theme/mode pairs (`--yellow` is 1.28:1 on nord light). Using them raw for syntax would have made highlighted code *less* readable than the plain text it replaced. So eight `--code-*` roles (comment, keyword, string, number, function, type, tag, punctuation) take their hue from the matching accent and are walked toward black in light mode, white in dark, until they clear the threshold. Nothing is hand-tuned per theme; the derivation runs over the palettes at load and a test asserts AA across all twelve pairs.
+
+### Primary
+
+- **Warm Paper** (`#fbf1c7`, light) / **Night Warm** (`#282828`, dark) — the desk surface itself. Every screen, panel, and card sits on this. It is the app's background and the default card fill; the dark value is the desktop default because `gruvbox` ships in dark mode first.
+- **Paper Shade** (`#ebdbb2` / `#3c3836`) — the second surface layer: hovered rows, inline code, preformatted blocks, nested panels.
+- **Paper Deep** (`#d5c4a1` / `#504945`) — the third layer: scrollbar thumbs, blockquote-adjacent fills, anything that needs to sit *above* shade but below ink.
+
+### Secondary
+
+- **Ink** (`#3c3836` / `#ebdbb2`): every readable sentence. The highest-contrast token in the system and the only one allowed at full strength for body copy.
+- **Ink Soft** (`#7c6f64` / `#a89984`): supporting text — excerpts, subtitles, secondary labels. Reads as a quieter sentence, never as disabled text.
+- **Ink Faint** (`#928374`, both modes): the floor. Timestamps, counts, and de-emphasized chrome.
+- **Ink Quiet** (`--text-tertiary`): derived per theme to clear WCAG AA 4.5:1 on a tinted note card. Carries the metadata whisper; see docs/ARCHITECTURE.md.
+
+### Tertiary
+
+Accents are earthy and used sparingly, mostly as state signals rather than decoration:
+
+- **Clay Red** (`#cc241d` / `#fb4934`): destructive actions and error states.
+- **Ember Orange** (`#d65d0e` / `#fe8019`): warnings and attention.
+- **Ochre Yellow** (`#d79921` / `#fabd2f`): pending, unsaved, in-progress.
+- **Olive Green** (`#98971a` / `#b8bb26`): success and completed.
+- **Slate Blue** (`#458588` / `#83a598`): links and informational states.
+- **Sage Aqua** (`#689d6a` / `#8ec07c`) and **Mauve Purple** (`#b16286` / `#d3869b`): secondary accents and note-color variants.
+
+### Neutral
+
+- **Rule** (`#d5c4a1` / `#504945`) — the single border token, shared by `--border-subtle` and the third background layer. Every divider, field underline, card edge, and chip outline uses it.
+
+### Spacing
+
+One 4px grid. Nothing is an arbitrary value, and nothing is off-grid.
+
+| Token | Value | Role |
+|---|---|---|
+| `hair` | 2px | Icon-to-label, chip padding |
+| `field` | 6px | Underline-field padding |
+| `tight` | 4px | Inline control padding, chip padding |
+| `input` | 10px | Slightly looser inline control |
+| `snug` | 8px | Label-to-value, stack inside one control |
+| `base` | 12px | Card padding, grid gap between cards |
+| `comfortable` | 16px | Gap between sibling blocks, panel padding |
+| `roomy` | 24px | Gap between sections inside a surface |
+| `section` | 32px | Modal padding, space between page sections |
+
+The rule that keeps this from drifting: **the same role gets the same number
+everywhere.** A modal is 32px on all four sides in every dialog; a note card is
+12px on all four sides whether it is in the board, the dashboard, or search; a
+grid of cards is 16px apart regardless of what the cards are. When a surface
+needs more room than its role allows, the role changes (a dialog is a `section`,
+a card is a `base`) — not the number.
+
+Numbers like 28px, 36px and 40px are not part of this system. They appeared by
+accumulation rather than by decision and have been folded back into the grid;
+`space-y-7`→24, `space-y-10`→32, `gap-9`→16.
+
+### Control Sizes
+
+Every tappable thing sits on the 4px grid with no holes. Measured from the code,
+not invented:
+
+| Token | px | Tailwind | Role |
+|---|---|---|---|
+| `xs` | 24px | `h-6` | inline icon button, colour dot |
+| `sm` | 28px | `h-7` | dense rows, segment pills, tree header actions |
+| `md` | 32px | `h-8` | editor toolbar |
+| `lg` | 36px | `h-9` | default buttons, inputs, modal actions |
+| `xl` | 40px | `h-10` | header bar |
+| `2xl` | 44px | `h-11` | touch targets, sidebar footer |
+
+There is no "standard button" size, because there was never one: the scale is
+six even steps and each component picks by density. What is forbidden is a
+number that is not one of these.
+
+### Icon Sizes
+
+Four optical sizes, one stroke weight:
+
+| Token | px | Role |
+|---|---|---|
+| `xs` | 12px | inside text, chips, counters |
+| `sm` | 14px | tree rows, inline actions, secondary labels |
+| `md` | 16px | default: toolbar, icon buttons, navigation |
+| `lg` | 20px | page-level actions |
+| `xl` | 24px | rare, large affordances |
+
+`strokeWidth="1.7"` everywhere — a thinner set reads as text, a heavier one as
+decoration. Icons may be sized with `size="16"` or with `w-4 h-4`; both are
+unambiguous. What matters is that the number is on this list.
+
+### Corner Radius
+
+| Token | px | Role |
+|---|---|---|
+| `none` | 0px | cancelling an inherited radius — e.g. `code` inside `pre`, which otherwise picks up the inline-chip shape from the `code` rule |
+| `sm` | 2px | task checkboxes, inline code, scrollbar thumbs |
+| `md` | 6px | icon buttons (28px and 36px), note-type cards inside a modal |
+| `lg` | 8px | tooltips, context menus, small panels, fields |
+| `xl` | 12px | **the container radius**: note cards, modals, panels |
+| `full` | pill | tags, chips, colour dots, spinners, segmented controls, search fields |
+
+**One container radius.** A card, a modal and a panel are the same kind of thing
+to the eye — a surface floating above the page — so they share one radius, 12px:
+enough to read as a rounded square, far from a pill. Density changes the card's
+size and padding, never its shape: the compact and desktop variants of a note
+card are the same square, and a modal is that same square scaled up.
+
+The trap this replaces is real. Rounding the cards `12/16/24` by density while
+leaving modals square meant the same object looked like a different object
+depending on which view it was in, and a modal landing on a rounded board looked
+like a screenshot pasted on top. `2xl` and `3xl` are no longer used anywhere.
+
+`rounded-full` is not a default. A pill is a **shape with meaning** — a tag, a
+chip, a colour dot, a segmented control, a search field. A square control drawn
+as a circle is a square control drawn wrong: a round close button sitting on a
+12px card reads as a different design system, because the eye matches corner
+curvature before it reads anything else.
+
+The rule behind the whole scale: **radius follows size.** A 16px checkbox takes
+2px, a 28px or 36px button takes 6px, a card takes 12px. One radius everywhere looks
+uniform in the stylesheet and restless on screen, because the same curve that
+reads as calm on a 400px card reads as a blob on a 28px button.
+
+### Enforced, not just documented
+
+`webui/frontend/src/lib/design-tokens.test.js` fails the build when a control
+height, icon size, spacing step, radius or stroke width lands off its scale, and
+when this section drifts away from the numbers enforced there. The design system
+is a contract, not a page someone reads once.
+
+Radius is checked four ways, because each of the earlier attempts only caught
+what it already knew how to look for: the `rounded-*` classes, a bare `rounded`
+(4px, a step off the scale that the class-based check cannot see), `border-radius`
+written directly in CSS, and `rounded-full` sitting on a square of 28px or more.
+A separate test requires cards, modals and panels to share one radius, and
+another checks that this document's radius table matches the enforced scale.
+
+The remaining gap is stated rather than hidden: the source-level tests cannot
+know an element's rendered size, so "radius follows size" is verified by
+measuring computed radii in the browser, not by the build.
+
+### Named Rules
+
+**The Variable Rule.** Colors are only ever consumed as `var(--token)`. A hex literal inside a component is a defect, and the same rule is why adding a palette means editing `lib/themes.js` and nothing else.
+
+**The Paper Rule.** Backgrounds are always warm. Pure `#ffffff` and pure `#000000` do not appear as surfaces in any palette — a neutral grey reads as unfinished paper.
+
+**The Note Accent Rule.** A note's color appears as a 13% tint over the card plus an 18% blurred glow, never as a colored border or a colored title. The card stays paper; the note's identity arrives as light on it.
+
+## Typography
+
+**Display / Headline / Title / Body / Label Font:** JetBrains Mono (with `ui-monospace, monospace`)
+
+There is no second face. `lib/fonts.js` offers 12 alternatives to the user, but the default is JetBrains Mono and **the utility classes `.font-serif`, `.font-sans`, and `.font-mono` all resolve to it**. That collapse is deliberate: swapping the family changes every string in the app at once, by design, or nothing changes at all.
+
+**Character:** A card index in a typewriter hand. Even spacing makes columns of metadata align without effort, and the uniform stroke means no element can shout through typeface alone — hierarchy has to come from size and weight.
+
+### Hierarchy
+
+- **Display** (700, `30px`, 1.25, `-0.025em`): page titles only — Settings, Trash, Templates (`text-3xl`). The single largest type in the app.
+- **Headline** (700, `24px`, 1.25, `-0.025em`): modal titles (`text-2xl`) and the editor title at `xl`. The editor title scales with the window (`text-lg` → `lg:text-2xl` → `xl:text-[1.7rem]`) because it is the note's own title and should dominate its surface.
+- **Title** (700, `20px`, 1.3, `-0.025em`): `h1` (`text-xl`) and card titles at desktop.
+- **Body** (400, `14px`, 1.625): running text, note excerpts, descriptions. Reading measure is governed by `--content-width` (38/48/58/68rem or full), not by the type scale.
+- **Label** (400, `10px`, `0.12em`, uppercase): the metadata voice — timestamps, folder paths, tag text.
+
+`h1`/`h2`/`h3` use `tracking-tight`. Everything global carries `transition-colors duration-200`.
+
+### Named Rules
+
+**The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for — serif, sans, mono — resolves to the same monospace stack, so a stray class can never introduce a second voice.
+
+**The Scale Is Small.** The working range is `9px`–`30px`. `text-xs` and `text-sm` carry the interface; `text-[9px]` and `text-[10px]` carry metadata. `text-3xl` is page titles and `text-2xl` is modal titles; nothing in between them is allowed to grow.
+
+**The Whisper Rule.** Metadata is uppercase, `9–10px`, and tracked `0.1–0.16em`. It is set at or below `--text-secondary` opacity and never competes with the note title directly above it.
+
+## Layout
+
+A three-region app shell — resizable sidebar, main surface, optional inspector — inside a fixed `100vh` flex column with `overflow-hidden`. There is no page scroll; the main region scrolls independently.
+
+**Density:** compact and consistent. The modal rhythm is `gap-2` / `gap-3` / `gap-4`; the dominant padding pair is `px-4 py-2` for controls and `p-4` for panels.
+
+**Grid:** the note board is a responsive grid — 1 column on narrow, 2 at `sm`, 3 at `lg` (default), 4 at `xl`. Column count is user-configurable (`boardColumns`, default `3`). Grouped views collapse to 2 columns at `lg`.
+
+**Responsive:** `1024px` is the structural breakpoint, derived at runtime in `App.svelte` as `isMobile`, not a CSS media query. Below it the sidebar stops being a column and becomes a full-width `fixed inset-y-0` overlay that slides away on navigation. Tooltips are suppressed entirely below `640px`.
+
+**Editor measure:** `--content-width` sets the text column (38–68rem, or full), independent of the window. `--editor-font-size` (13–20px) and `--font-size-base` (14–20px) scale UI and editor separately.
+
+## Elevation & Depth
+
+**Flat at rest, lifted in motion.** Depth is a response to state, never a resting property. At rest every surface is flat: cards carry `shadow-sm shadow-black/[0.03]`, an opacity so low it reads as paper texture rather than as a shadow. Only two things in the system cast real shadows — a hovered card (`shadow-xl shadow-black/10`, lifted `translate-y(-0.5px)`) and a modal (`shadow-2xl`).
+
+Overlays dim with `bg-black/20` plus `backdrop-blur-sm` in light mode, and a `--bg-tertiary` wash in dark mode.
+
+### Shadow Vocabulary
+
+- **rest** (`0 1px 2px rgb(0 0 0 / 0.03)`): the resting card. Effectively invisible; it stops the card from dissolving into the page.
+- **lift** (`0 20px 25px -5px rgb(0 0 0 / 0.1)`): hover on a note card, paired with a 0.5px upward translate.
+- **overlay** (`shadow-2xl`): modals and the command palette — the only shadow that reads as *above* the app.
+- **scrollbar** (6px wide, `rounded-full`, `--bg-tertiary`, hover `--text-muted`): the system uses chrome thickness instead of shadow to define scroll affordances.
+
+### Named Rules
+
+**The Flat-By-Default Rule.** A surface at rest has no meaningful shadow. If a component is permanent rather than hovered, it earns separation from a border or a tonal step — not from depth.
+
+**The Lift Means Touch.** Elevation appears only when a thing is being approached (hover, focus) or is truly above everything (modal). There is no shadow that means "important."
+
+## Shapes
+
+The form language is one rule applied consistently: **radius follows size.**
+
+A surface is a rounded square. A card, a modal and a panel are the same kind of
+thing to the eye — a plane floating above the page — so they share one radius,
+12px, and the density of a card changes its size and padding, never its shape. A
+pill is a form with meaning: a tag, a chip, a colour dot, a spinner, a segmented
+control, a search field. A square control drawn as a circle is a square control
+drawn wrong, because the eye matches corner curvature before it reads anything.
+
+Field underlines have zero radius by definition; they are a single border line.
+
+## Components
+
+### Buttons
+
+**Shape:** text is the whole button, so a filled or outlined button contradicts the type. Corners still follow size: 6px (`rounded-md`) on a 28px or 36px control.
+
+- **Primary** (`getModalButtonClass('primary')`): `--text-primary`, `font-bold`, `text-sm`, `uppercase`, `tracking-widest`, `flex-1`, `py-2`. Hover is `opacity-70`; disabled is `opacity-30` with `cursor-not-allowed`.
+- **Secondary:** identical geometry with `--text-secondary` and `font-normal`; hover shifts the color to `--text-primary`.
+- **Minimal** (`.btn-minimal`): inline, `px-4 py-2 text-sm font-medium`, same opacity treatment.
+- **Icon buttons** (`TooltipIconButton`): `rounded-md` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. At 28px the radius drops to `rounded-sm` (2px). Always paired with a tooltip except below `640px`.
+
+### Chips
+
+- **Style:** `rounded-full`, 1px `--border-subtle` border, `--bg-primary` at 45% opacity, `--text-secondary`, `px-2 py-0.5 text-[10px]`.
+- **State:** tags are inert labels, not filters. Overflow collapses into a `+N` chip in the same style rather than into an ellipsis. On search highlight, matching text inside a tag is wrapped rather than restyled.
+
+### Cards / Containers
+
+- **Corner Style:** `rounded-xl` (12px) at every density.
+- **Background:** `--bg-primary`, with a `--note-tint` overlay (accent at 13%) that rises to full opacity on hover.
+- **Glow:** a 128px `--note-glow` blob (accent at 18%, `blur-2xl`) anchored off the top-right corner, clipped by `overflow-hidden`.
+- **Shadow Strategy:** see Elevation — rest at `3%`, lift to `10%` with a 0.5px rise.
+- **Border:** 1px `--border-subtle`, softening to `--text-secondary` at 40% on hover.
+- **Internal Padding:** `px-4 py-4`, stepping to `px-5` at `sm`. Compact cards use `px-3 pb-3.5 pt-3`.
+- **Internal rhythm:** title → path (`mt-1`) → excerpt (`mt-2`) → tags and timestamp pinned to the bottom with `mt-auto`. Excerpts clamp to 1 line compact, 2 lines desktop.
+
+### Inputs / Fields
+
+- **Style:** underline only — transparent background, 1px `--border-subtle` bottom border, no radius, `h-9 text-sm leading-6`. Shared via `formFieldClass()` so `<input>` and `<select>` sit on the same baseline.
+- **Height is declared, never derived:** `h-9`, not `py-* + leading-*`. A derived height silently grew by the 1px border and measured 37px against 36px elsewhere. The base rule in `app.css` sets colour and focus only; it carries no vertical geometry on purpose, and it lives inside `@layer base` so component utilities still apply. Any text field that needs its own height says so with `h-*` or `py-*`.
+- **Focus:** the bottom border shifts to `--text-secondary`. No glow, no outline, no ring. Boxed and pill fields may brighten to `--text-primary` on focus — they are a different object, not a form row.
+- **The base rule is a default, not an owner:** `app.css` gives every `input[type="text"]` / `textarea` the underline look, but its selector is wrapped in `:where()` and it carries no vertical geometry. Without `:where()`, `input[type="text"]` scores (0,1,1) against a field's (0,1,0) utility and silently wins — that cost the pill fields their `--bg-secondary` fill and their own focus colour. Source order cannot repair this; only equal specificity ties break by order.
+- **Disabled / Error:** fields keep the underline; errors are communicated through the `--red` token in text, not by changing the field's shape.
+- **Search and filter fields** are the exception: they are pills, because a field you type into should read as a distinct object, not as a form row.
+
+### Navigation
+
+The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) holding the file tree, search, and quick-note capture. Selected items are marked by `--text-primary` weight against `--text-secondary` siblings — no pill, no highlight bar. Below `1024px` it becomes a full-width overlay.
+
+### Modals
+
+`rounded-xl` (12px), `--bg-primary`, 1px `--border-subtle`, `p-8`, `shadow-2xl`, default `w-96`. The close control is a 36px `rounded-md` icon button pinned top-right — the same rounded square as the panel holding it. Footer buttons are the uppercase text-only pair described above, each `flex-1` so they split the row evenly.
+
+### Note content
+
+The editor renders Markdown constructs that a CommonMark parser does not know, and it writes them back unchanged:
+
+- **Task lists.** A list where every item carries `- [ ]` / `- [x]` becomes a `taskList`. A **mixed** list is split into consecutive runs so plain bullets keep their bullets and tasks keep their checkboxes; the order is preserved and the Markdown round-trips byte-for-byte.
+- **Formulas.** `$…$` inline and `$$…$$` as a block, rendered by KaTeX. `$5 and $10` stays text — the marker is only read when a non-space follows the opening `$`.
+- **Diagrams.** A ```mermaid fence becomes a rendered diagram, coloured from the live CSS variables so it follows the active theme. A diagram that fails to parse shows its source in `--red` rather than disappearing.
+- **The raw mode** is the same note as plain Markdown, toggled from the editor toolbar, for when the rich editor rebuilds something differently than intended. Because a note is a file in git, seeing the exact bytes matters.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** read every color through `var(--token)` and every family through the monospace stack.
+- **Do** keep surfaces flat at rest and let hover supply the lift — a 0.5px rise with `shadow-xl` is the system's only standard "this is alive" signal.
+- **Do** set metadata uppercase at `9–10px` with `0.1–0.16em` tracking, at or below `--text-secondary` opacity.
+- **Do** express a note's color as a 13% tint plus an 18% blurred glow.
+- **Do** let radius follow size: 2px on a 16px checkbox, 6px on a 28–36px control, 8px on a tooltip or field, 12px on any card, modal or panel. One radius everywhere reads uniform in the stylesheet and restless on screen.
+- **Do** extend the system by adding a token to `lib/themes.js` and confirming it across all six palettes.
+
+### Don't:
+
+- **Don't** introduce a second typeface. `.font-serif` and `.font-sans` resolve to the mono stack on purpose; overriding that collapses the system's central idea.
+- **Don't** introduce filled, bordered, or pill-shaped buttons. Text-only uppercase is the button, and a filled CTA would be the single most "designer-made" thing this app could do.
+- **Don't** draw a square control as a circle. A round close button on a rounded card reads as two design systems at once, because the eye compares corner curvature before it reads anything.
+- **Don't** let one surface change its radius per breakpoint. Density changes size and padding; the shape stays.
+- **Don't** use pure white or pure black as surfaces, and don't reach for neutral greys — the palette is warm paper by construction.
+- **Don't** give a permanent surface a resting shadow. Depth is a state response.
+- **Don't** use a functional accent color for decoration. Clay Red, Ember Orange, and Ochre Yellow mean error, warning, and pending; spending them on style spends their meaning.
+- **Don't** add animation that isn't a state change. The system moves at `duration-200` on `transition-colors` and goes no further.

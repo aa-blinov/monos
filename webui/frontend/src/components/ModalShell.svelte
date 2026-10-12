@@ -33,7 +33,7 @@
     on:keydown={handleKeydown}
   ></button>
   <div
-    class={`relative z-10 bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-8 shadow-2xl ${widthClass}`}
+    class={`relative z-10 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-8 shadow-2xl ${widthClass}`}
     role="document"
     on:wheel|stopPropagation
     on:touchmove|stopPropagation
@@ -48,7 +48,7 @@
     {/if}
     <TooltipIconButton
       type="button"
-      class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)]/50 hover:text-[var(--text-primary)]"
+      class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)]/50 hover:text-[var(--text-primary)]"
       label={$localizedText.modal.close}
       tooltip={$localizedText.modal.close}
       tooltipAlign="end"

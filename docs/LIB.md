@@ -109,6 +109,34 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `i18n/t.js` | `localizedText` derived store + `t(keyPath, ...args)` accessor |
 | `i18n/t.test.js` | Subscription, fallback to en on missing key, formatter functions |
 
+## Editor helpers
+
+| Module | Purpose |
+|--------|---------|
+| `outline.js` | Builds the heading outline from markdown/TipTap content for the outline panel |
+| `outline.test.js` | Nested headings, empty documents, heading-level edges |
+| `word-stats.js` | `wordStats(text)` — word/character counts and estimated reading time (200 wpm) |
+| `word-stats.test.js` | Empty text, rounding up to 1 minute, whitespace handling |
+| `quick-switcher.js` | Quick-switcher parsing and filtering: `note:`, `tag:` prefixes, fuzzy note matching |
+| `quick-switcher.test.js` | Prefix parsing, tag filters, ranking |
+
+## Backup, print and clipping
+
+| Module | Purpose |
+|--------|---------|
+| `backup.js` | ZIP export/import for the notes folder — shared by Settings and the empty board |
+| `backup.test.js` | Filename from headers, error paths, empty selection |
+| `print.js` | Print a note or a whole folder; PDF save, plus the browser print view |
+| `print.test.js` | Request shapes, desktop-only error, print-view URLs |
+| `clipper.js` | Reads the web-clipper token from the app (app origin only) |
+| `clipper.test.js` | Token fetch, refusal path |
+| `info.js` | Reads the real notes folder from `/api/info`, shown in Settings |
+| `info.test.js` | Path fetch, error path |
+| `git-sync.js` | Background pull: on launch and on a timer, never while a note is unsaved |
+| `design-tokens.test.js` | Design-system guard: control, icon, spacing, radius and stroke scales |
+| `conflict-markers.js` | Detects and resolves git merge-conflict markers inside a note's raw Markdown |
+| `conflict-markers.test.js` | Region parsing, zdiff3 base section, resolution, setext false positive |
+
 ## Icons and visual
 
 | Module | Purpose |

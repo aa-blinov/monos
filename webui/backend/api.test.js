@@ -47,7 +47,7 @@ function apiTest(name, fn) {
 }
 
 async function requestJson(url, options) {
-  const response = await fetch(url, options);
+  const response = await realFetch(url, options);
   const text = await response.text();
   let data = null;
 
@@ -70,38 +70,32 @@ function buildUrl(pathname, query = {}) {
   return url;
 }
 
-async function withMockedHttpsGet(mockImpl, fn) {
-  const originalGet = https.get;
-  https.get = mockImpl;
-  syncBuiltinESMExports();
+// GitHub is reached through the global fetch, so the mock replaces that rather
+// than https.get. Real fetch is kept aside: the test's own HTTP calls must
+// still reach the server under test.
+const realFetch = globalThis.fetch;
 
+async function withMockedFetch(mockImpl, fn) {
+  globalThis.fetch = mockImpl;
   try {
     await fn();
   } finally {
-    https.get = originalGet;
-    syncBuiltinESMExports();
+    globalThis.fetch = realFetch;
   }
 }
 
 function createJsonGetMock(routeMap) {
-  return (options, callback) => {
-    const req = new EventEmitter();
-
-    process.nextTick(() => {
-      const res = new EventEmitter();
-      callback(res);
-
-      const body = routeMap[options.path];
-      if (body instanceof Error) {
-        req.emit('error', body);
-        return;
-      }
-
-      res.emit('data', JSON.stringify(body ?? []));
-      res.emit('end');
-    });
-
-    return req;
+  return async (input) => {
+    const href = String(input && input.url ? input.url : input);
+    const pathname = href.replace('https://api.github.com', '');
+    const body = routeMap[pathname];
+    if (body instanceof Error) throw body;
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      async json() { return body ?? []; },
+    };
   };
 }
 
@@ -123,7 +117,7 @@ apiTest('GET /health отвечает статусом ok', async () => {
 });
 
 apiTest('backend ограничивает браузерные Origin локальным frontend', async () => {
-  const allowed = await fetch(buildUrl('/health'), {
+  const allowed = await realFetch(buildUrl('/health'), {
     headers: { Origin: 'http://localhost:5173' },
   });
   assert.equal(allowed.status, 200);
@@ -301,7 +295,7 @@ apiTest('attachments API сохраняет, отдаёт и переимено�
   assert.equal(upload.data.relativePath, '_attachments/clipboard-image.webp');
   assert.equal(fs.existsSync(path.join(notesDir, 'Topic', '_attachments', 'clipboard-image.webp')), true);
 
-  const raw = await fetch(buildUrl('/api/attachments/raw', { path: upload.data.path }));
+  const raw = await realFetch(buildUrl('/api/attachments/raw', { path: upload.data.path }));
   assert.equal(raw.status, 200);
   assert.equal(raw.headers.get('content-type'), 'image/webp');
   assert.deepEqual(new Uint8Array(await raw.arrayBuffer()), imageBytes);
@@ -444,6 +438,176 @@ apiTest('PUT /api/file/metadata и GET /api/tags обновляют title и tag
   assert.equal(tags.response.status, 200);
   assert.ok(tags.data.includes('edited'));
   assert.ok(tags.data.includes('shared'));
+});
+
+apiTest('закрепление живёт в файле и переживает переименование тега', async () => {
+  const pinnedPath = 'notes/Topic/Alpha.md';
+  const fileOnDisk = path.join(notesDir, 'Topic', 'Alpha.md');
+
+  const pin = await requestJson(buildUrl('/api/file/metadata', { path: pinnedPath }), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pinned: true }),
+  });
+  assert.equal(pin.response.status, 200);
+  assert.match(fs.readFileSync(fileOnDisk, 'utf-8'), /pinned: true/);
+
+  // Дерево — источник для сайдбара, значит закрепление должно быть в нём.
+  const tree = await requestJson(buildUrl('/api/tree'));
+  assert.equal(tree.response.status, 200);
+  const findNote = (node) => {
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        const found = findNote(child);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (!node || typeof node !== 'object') return null;
+    if (node.path === pinnedPath) return node;
+    return findNote(node.children);
+  };
+  assert.equal(findNote(tree.data)?.metadata?.pinned, true);
+
+  // Переименование тега перезаписывает шапку — закрепление обязано уцелеть.
+  const renamed = await requestJson(buildUrl('/api/tags/rename'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'edited', to: 'переименованный' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.ok(renamed.data.changed.includes(pinnedPath));
+  const after = fs.readFileSync(fileOnDisk, 'utf-8');
+  assert.ok(after.includes('pinned: true'), 'переименование тега сняло закрепление');
+  assert.ok(after.includes('переименованный'), 'новый тег не записан');
+
+  // И снятие закрепления убирает ключ, а не оставляет "pinned: false".
+  const unpin = await requestJson(buildUrl('/api/file/metadata', { path: pinnedPath }), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pinned: false }),
+  });
+  assert.equal(unpin.response.status, 200);
+  const cleared = fs.readFileSync(fileOnDisk, 'utf-8');
+  assert.ok(!cleared.includes('pinned'), 'ключ закрепления остался в файле');
+});
+
+apiTest('массовое тегирование помечает выбранные заметки и не трогает остальное', async () => {
+  const alpha = 'notes/Topic/Alpha.md';
+  const beta = 'notes/Beta.md';
+  const untouched = 'notes/Topic/Note.md';
+
+  const add = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: [alpha, beta], tag: 'общий' }),
+  });
+  assert.equal(add.response.status, 200);
+  assert.deepEqual(add.data.changed.sort(), [alpha, beta].sort());
+  assert.equal(add.data.missing.length, 0);
+
+  for (const file of [alpha, beta]) {
+    const content = fs.readFileSync(path.join(notesDir, path.relative('notes', file)), 'utf-8');
+    assert.ok(content.includes('общий'), `тег не записан в ${file}`);
+  }
+
+  // Повторное добавление того же тега не должен ничего менять.
+  const again = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: [alpha], tag: 'общий' }),
+  });
+  assert.equal(again.data.changed.length, 0, 'повторное тегирование должно быть холостым');
+
+  // Снятие тега убирает его, но не выкидывает остальные — включая закрепление.
+  // Массовое действие не должно тихо отменять то, что человек настроил раньше.
+  const withOther = await requestJson(buildUrl('/api/file/metadata', { path: alpha }), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags: ['общий', 'другой'], title: 'Alpha Note', pinned: true }),
+  });
+  assert.equal(withOther.response.status, 200);
+  assert.ok(fs.readFileSync(path.join(notesDir, 'Topic', 'Alpha.md'), 'utf-8').includes('pinned: true'));
+
+  const remove = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: [alpha], tag: 'общий', remove: true }),
+  });
+  assert.equal(remove.response.status, 200);
+  const afterRemove = fs.readFileSync(path.join(notesDir, 'Topic', 'Alpha.md'), 'utf-8');
+  assert.ok(!afterRemove.includes('"общий"'), 'тег остался в файле');
+  assert.ok(afterRemove.includes('другой'), 'соседний тег должен был уцелеть');
+  assert.ok(afterRemove.includes('pinned: true'), 'снятие тега отменило закрепление');
+
+  // Заметка вне списка не меняется.
+  const other = path.join(notesDir, 'Beta.md');
+  const otherBefore = fs.readFileSync(other, 'utf-8');
+  await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: [alpha], tag: 'другой-тег' }),
+  });
+  assert.equal(fs.readFileSync(other, 'utf-8'), otherBefore, 'заметка вне списка изменилась');
+});
+
+apiTest('массовое тегирование сообщает о пропавших заметках, а не падает', async () => {
+  const result = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      paths: ['notes/Topic/Alpha.md', 'notes/НетТакой.md', '../вне хранилища.md'],
+      tag: 'проверка',
+    }),
+  });
+  assert.equal(result.response.status, 200);
+  assert.deepEqual(result.data.changed, ['notes/Topic/Alpha.md']);
+  assert.equal(result.data.missing.length, 2, 'пропавшие должны быть перечислены');
+});
+
+apiTest('массовое тегирование требует и пути, и тег', async () => {
+  const noPaths = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tag: 'x' }),
+  });
+  assert.equal(noPaths.response.status, 400);
+
+  const noTag = await requestJson(buildUrl('/api/notes/bulk-tag'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: ['notes/Topic/Alpha.md'] }),
+  });
+  assert.equal(noTag.response.status, 400);
+});
+
+apiTest('дублирование копирует заметку рядом и не занимает то же имя', async () => {
+  const source = 'notes/Topic/Alpha.md';
+
+  const first = await requestJson(buildUrl('/api/notes/duplicate', { path: source }), { method: 'POST' });
+  assert.equal(first.response.status, 200);
+  assert.equal(first.data.name, 'Alpha копия.md');
+
+  const second = await requestJson(buildUrl('/api/notes/duplicate', { path: source }), { method: 'POST' });
+  assert.equal(second.response.status, 200);
+  assert.equal(second.data.name, 'Alpha копия 2.md', 'второе копия не должна перезаписать первое');
+
+  const original = fs.readFileSync(path.join(notesDir, 'Topic', 'Alpha.md'), 'utf-8');
+  const copy = fs.readFileSync(path.join(notesDir, 'Topic', 'Alpha копия.md'), 'utf-8');
+  // Тело совпадает, заголовок помечен как копия.
+  assert.ok(copy.includes('Первая') || copy.includes('Alpha'), 'тело должно было скопироваться');
+  assert.notEqual(original, copy);
+});
+
+apiTest('дублирование отказывает для папки и несуществующей заметки', async () => {
+  const missing = await requestJson(buildUrl('/api/notes/duplicate', { path: 'notes/НетТакой.md' }), { method: 'POST' });
+  assert.equal(missing.response.status, 404);
+
+  const dir = await requestJson(buildUrl('/api/notes/duplicate', { path: 'notes/Topic' }), { method: 'POST' });
+  assert.equal(dir.response.status, 404);
+
+  const outside = await requestJson(buildUrl('/api/notes/duplicate', { path: '../секрет.md' }), { method: 'POST' });
+  assert.ok(outside.response.status >= 400, 'путь вне хранилища должен быть отклонён');
 });
 
 apiTest('metadata migration переносит старый SQLite cache во frontmatter перед reindex', async () => {
@@ -688,7 +852,7 @@ apiTest('git-маршруты валидируют обязательные па
 });
 
 apiTest('git-маршруты GitHub API возвращают ожидаемые структуры', async () => {
-  await withMockedHttpsGet(createJsonGetMock({
+  await withMockedFetch(createJsonGetMock({
     '/user/repos?per_page=100&sort=updated': [
       { full_name: 'aa-blinov/zed-notes' },
       { full_name: 'aa-blinov/wiki' },
@@ -717,7 +881,7 @@ apiTest('git-маршруты GitHub API возвращают ожидаемые
 });
 
 apiTest('git-маршруты GitHub API возвращают 500 при сетевой ошибке', async () => {
-  await withMockedHttpsGet(createJsonGetMock({
+  await withMockedFetch(createJsonGetMock({
     '/user/repos?per_page=100&sort=updated': new Error('network down'),
   }), async () => {
     const repos = await requestJson(buildUrl('/api/git/repos', { token: 'ghp_test' }));
@@ -897,7 +1061,7 @@ apiTest('GET /api/backup/export возвращает ZIP с видимой ие�
   fs.mkdirSync(path.join(notesDir, '.monos'), { recursive: true });
   fs.writeFileSync(path.join(notesDir, '.monos', 'templates.json'), '{"customTemplates":[]}', 'utf-8');
 
-  const response = await fetch(buildUrl('/api/backup/export'));
+  const response = await realFetch(buildUrl('/api/backup/export'));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'application/zip');
   assert.match(response.headers.get('content-disposition'), /monos-notes-\d{4}-\d{2}-\d{2}\.zip/);
@@ -1373,4 +1537,28 @@ apiTest('conflict resolver закрывает rename/rename conflict выбор�
   assert.equal(fs.existsSync(path.join(notesDir, localPath)), true);
   assert.equal(fs.existsSync(path.join(notesDir, remotePath)), false);
   assert.equal(fs.existsSync(path.join(notesDir, basePath)), false);
+});
+
+apiTest('падающая команда git не роняет сервер и не отдаёт невалидный код ответа', async () => {
+  // Заведомо нерабочий адрес у ветки, за которой тянет pull: git завершится с
+  // кодом 1 и приложит к ошибке поле `status`. Раньше оно уходило прямо в
+  // res.status(), и Node падал с ERR_HTTP_INVALID_STATUS_CODE — вместе со всем
+  // бэкендом, а не только с этим запросом.
+  const before = execSync('git remote get-url origin', { cwd: notesDir, encoding: 'utf-8' }).trim();
+  execSync('git remote set-url origin https://invalid.invalid/definitely-not-here.git', { cwd: notesDir, stdio: 'pipe' });
+
+  try {
+    const failed = await requestJson(buildUrl('/api/git/pull'), { method: 'POST' });
+    assert.ok(
+      failed.response.status >= 200 && failed.response.status < 600,
+      `сервер ответил кодом ${failed.response.status}`,
+    );
+    assert.ok(failed.data?.detail, 'ответ должен объяснять, что произошло');
+
+    // Главное: процесс жив и продолжает отвечать на остальные запросы.
+    const alive = await requestJson(buildUrl('/api/git/status'));
+    assert.equal(alive.response.status, 200);
+  } finally {
+    execSync(`git remote set-url origin "${before}"`, { cwd: notesDir, stdio: 'pipe' });
+  }
 });

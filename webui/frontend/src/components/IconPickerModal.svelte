@@ -25,7 +25,7 @@
         {#each colorOptions as c}
           <TooltipIconButton
             on:click={() => dispatch('color', c)}
-            class="w-7 h-7 rounded-full border-2 transition-all {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
+            class="w-7 h-7 rounded-md border-2 transition-all {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
             style="background: {c}"
             label={c}
             tooltip={c}
@@ -37,13 +37,13 @@
   <div class="grid grid-cols-6 gap-3">
     <TooltipIconButton
       on:click={() => dispatch('icon', null)}
-      class="w-full aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[9px] uppercase tracking-tighter opacity-50"
+      class="w-full aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[length:var(--text-whisper)] uppercase tracking-tighter opacity-50"
       label={noneLabel}
     >{noneLabel}</TooltipIconButton>
     {#each iconOptions as icon}
       <TooltipIconButton
         on:click={() => dispatch('icon', icon)}
-        class="w-full aspect-square flex items-center justify-center hover:bg-[var(--border-subtle)] transition rounded border border-transparent hover:border-[var(--border-subtle)]"
+        class="w-full aspect-square flex items-center justify-center hover:bg-[var(--border-subtle)] transition rounded-md border border-transparent hover:border-[var(--border-subtle)]"
         label={icon}
         tooltip={icon}
       >

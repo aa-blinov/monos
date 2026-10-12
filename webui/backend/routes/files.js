@@ -164,7 +164,7 @@ export function registerFileRoutes(app) {
     try {
       const { path: filePath } = req.query;
       const fullPath = resolveNotesPath(filePath);
-      const { title, tags, category, content } = req.body;
+      const { title, tags, category, content, pinned } = req.body;
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       const originalContent = typeof content === 'string'
@@ -175,6 +175,7 @@ export function registerFileRoutes(app) {
         title: title ?? currentMetadata.title,
         category: category ?? currentMetadata.category,
         tags: Array.isArray(tags) ? tags : currentMetadata.tags,
+        pinned: typeof pinned === 'boolean' ? pinned : currentMetadata.pinned,
       };
       const nextContent = upsertFrontmatter(originalContent, nextMetadata);
       fs.writeFileSync(fullPath, nextContent, 'utf-8');

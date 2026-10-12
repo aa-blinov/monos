@@ -285,8 +285,8 @@ test('Editor удаляет заметку', async () => {
 
   editorAction.set('delete');
   await tick();
-  await waitFor(() => expect(screen.getByText(uiText.editor.deletePermanently)).toBeTruthy());
-  await fireEvent.click(screen.getByText(uiText.editor.deletePermanently));
+  await waitFor(() => expect(screen.getByText(uiText.editor.moveToTrash)).toBeTruthy());
+  await fireEvent.click(screen.getByText(uiText.editor.moveToTrash));
 
   await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));
   expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FInbox.md', { method: 'DELETE' });
@@ -613,4 +613,54 @@ test('Editor не очищает текущую поверхность, если
   expect(editorInput.value).toBe('Alpha body');
   expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull();
   expect(fetchMock.mock.calls.filter(([url]) => url === `/api/file?path=${encodeURIComponent(betaPath)}`).length).toBe(1);
+});
+
+test('переключатель показывает исходный Markdown и возвращает визуальный редактор', async () => {
+  const notePath = 'notes/Work/Alpha.md';
+  const encodedPath = encodeURIComponent(notePath);
+  const saved = [];
+  const fetchMock = vi.fn((url, options = {}) => {
+    const method = options.method || 'GET';
+    if (url === `/api/file?path=${encodedPath}` && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Строка один\n\n- [x] Сделано\n- [ ] Ждёт\n' }));
+    }
+    if (url === `/api/file?path=${encodedPath}` && method === 'POST') {
+      saved.push(options);
+      return Promise.resolve(jsonResponse({ message: 'ok' }));
+    }
+    if (url === `/api/file-info?path=${encodedPath}`) {
+      return Promise.resolve(jsonResponse({ created: '', modified: '', metadata: { title: 'Alpha', tags: [] } }));
+    }
+    if (url === `/api/notes/backlinks?path=${encodedPath}`) return Promise.resolve(jsonResponse([]));
+    if (url === '/api/settings' || url.includes('/api/settings')) return Promise.resolve(jsonResponse({}));
+    return Promise.resolve(jsonResponse({}));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  vi.useFakeTimers();
+  render(Editor, { currentFile: { path: notePath, name: 'Alpha.md', isDir: false } });
+  await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
+
+  const toggle = screen.getByTestId('toggle-raw-mode');
+  expect(screen.queryByTestId('raw-source')).toBeNull();
+
+  await fireEvent.click(toggle);
+  const raw = await screen.findByTestId('raw-source');
+  expect(raw.value).toContain('- [x] Сделано');
+  expect(screen.queryByTestId('rich-editor-input')).toBeNull();
+
+  await fireEvent.input(raw, { target: { value: 'Правка из исходника\n' } });
+  await waitFor(() => expect(screen.getByTestId('raw-source').value).toBe('Правка из исходника\n'));
+
+  await fireEvent.click(screen.getByTestId('toggle-raw-mode'));
+  await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('rich-editor-input').value).toBe('Правка из исходника\n'));
+
+  // Автосейв срабатывает через 1.5 секунды после последнего изменения.
+  await vi.advanceTimersByTimeAsync(1600);
+  await waitFor(() => expect(saved.length).toBeGreaterThan(0));
+  const payload = JSON.parse(String(saved.at(-1).body));
+  expect(payload.content).toContain('Правка из исходника');
+  vi.useRealTimers();
 });

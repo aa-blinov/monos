@@ -7,6 +7,11 @@
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
   import { formFieldClass } from '../lib/form-field.js';
+  import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
+  import { formatAttachmentSize as humanSize, fetchOrphanAttachments } from '../lib/attachments.js';
+  import { printTreeToPdf } from '../lib/print.js';
+  import { fetchClipperToken } from '../lib/clipper.js';
+  import { fetchNotesDir } from '../lib/info.js';
   import appPackage from '../../../../package.json';
 
   const dispatch = createEventDispatcher();
@@ -55,9 +60,57 @@
   let isCheckingStatus = false;
   let isExporting = false;
   let isImporting = false;
+  let orphans = [];
+  let orphanStatus = 'loading';
+  let orphanTotalSize = 0;
   let backupStatus = '';
   let backupError = '';
   let selectedArchiveName = '';
+  let printStatus = '';
+  let printError = '';
+  let clipperToken = '';
+  let clipperError = '';
+  let showClipperToken = false;
+  let repoSafety = null;
+  let scopeWarnings = [];
+  let notesDir = '';
+
+  onMount(async () => {
+    try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
+    loadOrphanAttachments();
+  });
+
+  async function loadOrphanAttachments() {
+    try {
+      const data = await fetchOrphanAttachments();
+      orphans = data.orphans || [];
+      orphanTotalSize = data.totalSize || 0;
+      orphanStatus = 'ready';
+    } catch {
+      orphanStatus = 'error';
+    }
+  }
+
+  async function printAllNotes() {
+    printStatus = '';
+    printError = '';
+    try {
+      await printTreeToPdf('');
+      printStatus = $localizedText.settings.printReady;
+    } catch (error) {
+      printError = $localizedText.settings.backupError(error?.message || String(error));
+    }
+  }
+
+  async function revealClipperToken() {
+    clipperError = '';
+    try {
+      clipperToken = await fetchClipperToken();
+      showClipperToken = true;
+    } catch (error) {
+      clipperError = $localizedText.settings.clipperError(error?.message || String(error));
+    }
+  }
   let archiveInput;
   let gitError = '';
 
@@ -155,7 +208,7 @@
       isAuthenticated = true;
       if (gitRepos.length === 1) settings.git_repo = getRepoOptionValue(gitRepos[0]);
       await saveSettings();
-      if (settings.git_repo) await loadBranches();
+      if (settings.git_repo) { await loadBranches(); await checkRepoSafety(); }
     } catch (e) { gitError = e.message; }
     finally { isConnecting = false; }
   }
@@ -164,7 +217,31 @@
     const repoFullName = getSelectedRepoFullName();
     if (repoFullName.includes('/')) settings.git_owner = repoFullName.split('/')[0];
     await saveSettings();
-    if (settings.git_repo) await loadBranches();
+    if (settings.git_repo) {
+      await loadBranches();
+      await checkRepoSafety();
+    }
+  }
+
+  /**
+   * Ask GitHub what this repository and this token actually allow, before
+   * anything is pushed. A public repo makes the whole vault public text, and
+   * history keeps it public after a note is deleted — that is a one-way door
+   * worth one extra request.
+   */
+  async function checkRepoSafety() {
+    repoSafety = null;
+    scopeWarnings = [];
+    const repo = getSelectedRepoFullName();
+    if (!repo.includes('/') || !settings.git_token) return;
+    try {
+      const res = await fetch(`/api/git/repo-check?token=${encodeURIComponent(settings.git_token)}&repo=${encodeURIComponent(repo)}`);
+      if (!res.ok) return;
+      repoSafety = await res.json();
+      scopeWarnings = repoSafety.scopeWarnings || [];
+    } catch {
+      repoSafety = null;
+    }
   }
 
   async function loadBranches() {
@@ -216,33 +293,16 @@
     finally { isSyncing = false; }
   }
 
-  function downloadNameFromResponse(response) {
-    const disposition = response.headers?.get?.('Content-Disposition') || '';
-    const match = disposition.match(/filename="?([^"]+)"?/i);
-    return match?.[1] || `monos-notes-${new Date().toISOString().slice(0, 10)}.zip`;
-  }
 
   async function exportNotes() {
     isExporting = true;
     backupStatus = '';
     backupError = '';
     try {
-      const response = await fetch('/api/backup/export');
-      if (!response.ok) {
-        const detail = await response.json().catch(() => ({}));
-        throw new Error(detail.detail || $localizedText.settings.exportFailed);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = downloadNameFromResponse(response);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      backupStatus = $localizedText.settings.exportComplete;
+      const name = await exportNotesArchive({
+        onError: (message) => { backupError = $localizedText.settings.backupError(message); },
+      });
+      if (name) backupStatus = $localizedText.settings.exportComplete;
     } catch (error) {
       backupError = $localizedText.settings.backupError(error.message);
     } finally {
@@ -256,13 +316,10 @@
     backupStatus = '';
     backupError = '';
     try {
-      const body = new FormData();
-      body.append('archive', file);
-      const response = await fetch('/api/backup/import', { method: 'POST', body });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || $localizedText.settings.importFailed);
-      backupStatus = $localizedText.settings.importComplete(data);
-      dispatch('notesImported', data);
+      const result = await importNotesArchive(file);
+      if (!result.ok) throw new Error(result.detail || $localizedText.settings.importFailed);
+      backupStatus = $localizedText.settings.importComplete(result.data);
+      dispatch('notesImported', result.data);
     } catch (error) {
       backupError = $localizedText.settings.backupError(error.message);
     } finally {
@@ -360,9 +417,104 @@
       </p>
     </div>
 
-    <div class="space-y-10">
+    <div class="space-y-8">
 
     <!-- Language -->
+    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
+      <div>
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.backup}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.backupHint}</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        <div class="min-w-0">
+          <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
+          <div class="flex flex-wrap gap-3">
+          <button
+            type="button"
+            on:click={printAllNotes}
+            disabled={isExporting || isImporting}
+            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          >
+            {$localizedText.settings.printAllNotes}
+          </button>
+          <button
+            type="button"
+            on:click={exportNotes}
+            disabled={isExporting}
+            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          >
+            {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
+          </button>
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <div id="notes-import-archive-label" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.importTitle}</div>
+          <div class="flex flex-wrap items-center gap-3">
+            <input
+              id="notes-import-archive"
+              bind:this={archiveInput}
+              type="file"
+              accept=".zip,application/zip,application/x-zip-compressed"
+              disabled={isImporting}
+              aria-labelledby="notes-import-archive-label"
+              on:change={handleImportChange}
+              class="sr-only"
+            />
+            <button
+              type="button"
+              on:click={openArchivePicker}
+              disabled={isImporting}
+              class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            >
+              {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
+            </button>
+            <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>
+          </div>
+        </div>
+      </div>
+
+      {#if printStatus}
+        <div class="text-xs text-[var(--text-tertiary)]">{printStatus}</div>
+      {/if}
+      {#if printError}
+        <div class="text-xs text-[var(--red)]">{printError}</div>
+      {/if}
+      {#if backupStatus}
+        <div class="text-xs text-[var(--green)]">{backupStatus}</div>
+      {/if}
+      {#if backupError}
+        <div class="text-xs text-[var(--red)]">{backupError}</div>
+      {/if}
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
+      {#if orphanStatus === 'loading'}
+        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLoading}</div>
+      {:else if orphanStatus === 'error'}
+        <div class="text-xs text-[var(--red)]">{$localizedText.settings.attachmentsError}</div>
+      {:else if orphans.length === 0}
+        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsClean}</div>
+      {:else}
+        <div class="text-xs text-[var(--text-secondary)]">
+          {$localizedText.settings.attachmentsFound.replace('{count}', orphans.length).replace('{size}', humanSize(orphanTotalSize))}
+        </div>
+        <ul class="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
+          {#each orphans as orphan (orphan.path)}
+            <li class="flex items-center justify-between gap-3 px-3 py-2">
+              <span class="min-w-0">
+                <span class="block truncate text-xs text-[var(--text-primary)]">{orphan.name}</span>
+                <span class="block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{orphan.folder}</span>
+              </span>
+              <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{humanSize(orphan.size)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+
     <section class="space-y-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.language}</h2>
       <div>
@@ -385,12 +537,12 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
+        <div class="grid grid-cols-3 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
           {#each themeModeOptions as option}
             <button
               type="button"
               on:click={() => { $themeMode = option.value; saveSettings(); }}
-              class="min-h-9 rounded-xl px-3 text-xs font-bold uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm shadow-black/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+              class="min-h-9 px-3 text-xs uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
             >
               {option.label()}
             </button>
@@ -474,7 +626,7 @@
       <!-- Help -->
       <details class="text-xs text-[var(--text-secondary)] group">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
-        <div class="mt-3 space-y-2 p-3 border border-[var(--border-subtle)] rounded leading-relaxed">
+        <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
             <p>{step}</p>
@@ -498,8 +650,27 @@
         </div>
       </form>
 
+      {#if repoSafety && !repoSafety.safe}
+        <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
+          <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
+        </div>
+      {/if}
+
+      {#if scopeWarnings.length}
+        <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+          <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
+          <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+            {#each scopeWarnings as warning}
+              <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
+            {/each}
+          </ul>
+          <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
+        </div>
+      {/if}
+
       {#if gitError}
-        <div class="text-xs text-[var(--red)] bg-[var(--bg-secondary)] px-3 py-2 rounded">{gitError}</div>
+        <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
       {/if}
 
       <div class="grid grid-cols-2 gap-6">
@@ -535,7 +706,7 @@
         </div>
         <div>
           <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
+          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
         </div>
       </div>
 
@@ -559,11 +730,11 @@
         <div>
           <label for="auto-sync-interval" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncInterval}</label>
           <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
-          <p class="text-[10px] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
+          <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
         </div>
         <div>
           <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
-          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
+          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
         </div>
       </div>
 
@@ -582,7 +753,7 @@
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
 
-      <div class="border border-[var(--border-subtle)] rounded p-5">
+      <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
         {#if isCheckingStatus}
           <div class="text-xs animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
         {:else if gitStatus?.initialized}
@@ -595,7 +766,7 @@
               </div>
               {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-              {#if gitStatus.last_sync}<div class="text-[10px] text-[var(--text-muted)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
+              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-muted)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
             </div>
             <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
@@ -620,7 +791,7 @@
     {#if gitConflicts.length > 0}
       <section class="space-y-4 pt-2">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.conflicts(gitConflicts.length)}</h2>
-        <div class="border border-[var(--border-subtle)] rounded p-4 space-y-2 max-h-48 overflow-y-auto">
+        <div class="border rounded-lg border border-[var(--border-subtle)] p-4 space-y-2 max-h-48 overflow-y-auto">
           {#each gitConflicts as conflict}
             <div class="flex items-center justify-between py-1 text-sm border-b border-[var(--border-subtle)] last:border-0">
               <span class="truncate font-mono text-xs">{getConflictLabel(conflict)}</span>
@@ -634,60 +805,102 @@
     {/if}
 
     <!-- Backup -->
+
+
+    <!-- Web clipper -->
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
       <div>
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.backup}</h2>
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.backupHint}</p>
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.clipper}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.clipperHint}</p>
       </div>
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-        <div class="min-w-0">
-          <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
-          <button
-            type="button"
-            on:click={exportNotes}
-            disabled={isExporting}
-            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
-          >
-            {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
-          </button>
-        </div>
-
-        <div class="min-w-0">
-          <div id="notes-import-archive-label" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.importTitle}</div>
-          <div class="flex flex-wrap items-center gap-3">
-            <input
-              id="notes-import-archive"
-              bind:this={archiveInput}
-              type="file"
-              accept=".zip,application/zip,application/x-zip-compressed"
-              disabled={isImporting}
-              aria-labelledby="notes-import-archive-label"
-              on:change={handleImportChange}
-              class="sr-only"
-            />
-            <button
-              type="button"
-              on:click={openArchivePicker}
-              disabled={isImporting}
-              class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
-            >
-              {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
-            </button>
-            <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          on:click={revealClipperToken}
+          disabled={showClipperToken}
+          class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+        >
+          {$localizedText.settings.clipperShowToken}
+        </button>
+        {#if showClipperToken}
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>
+            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
+            <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperTokenLabel}</div>
+            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
           </div>
-        </div>
+        {/if}
       </div>
-
-      {#if backupStatus}
-        <div class="text-xs text-[var(--green)]">{backupStatus}</div>
-      {/if}
-      {#if backupError}
-        <div class="text-xs text-[var(--red)]">{backupError}</div>
+      {#if clipperError}
+        <div class="text-xs text-[var(--red)]">{clipperError}</div>
       {/if}
     </section>
 
-    <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+
+
+    <!-- Documentation -->
+    <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
+      <div>
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
+        <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+          <li class="flex gap-3"><span class="text-[var(--text-muted)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-muted)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-muted)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
+        </ol>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
+        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
+            <dt class="tabular-nums text-[var(--text-primary)]">{keys}</dt>
+            <dd class="text-[var(--text-secondary)]">{label}</dd>
+          {/each}
+        </dl>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
+        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
+        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+          {#each [
+              [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
+              [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
+              [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
+              [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
+              [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
+              [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
+            ] as [op, hint]}
+            <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
+            <dd class="text-[var(--text-secondary)]">{hint}</dd>
+          {/each}
+        </dl>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
+        {#if notesDir}
+          <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+        {/if}
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
+        <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
+          <li>{$localizedText.settings.docsFrontmatter}</li>
+          <li>{$localizedText.settings.docsWikiLinks}</li>
+        </ul>
+      </div>
+    </section>
+
+
+    <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-secondary)]">
       <span class="opacity-40">{$localizedText.settings.version} {appVersion}</span>
     </footer>
 

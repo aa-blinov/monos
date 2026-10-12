@@ -62,6 +62,9 @@ function initTables() {
   if (!noteColumns.includes('modified_at')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN modified_at TEXT');
   }
+  if (!noteColumns.includes('pinned')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0');
+  }
   if (!noteColumns.includes('trashed_at')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN trashed_at TEXT');
   }

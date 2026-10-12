@@ -116,3 +116,83 @@ test('rankQuickSwitcherResults: respects path filter', () => {
   assert.equal(ranked.length, 1);
   assert.equal(ranked[0].item.name, 'Project Brief');
 });
+
+// --- extended operators -------------------------------------------------
+
+const notes = [
+  { name: 'Weekly Review', path: 'notes/base/Review.md', tags: ['work', 'habit'], metadata: { category: 'Journal', date: '2026-10-05' } },
+  { name: 'Список дел', path: 'notes/base/Tasks.md', tags: ['work'], metadata: { category: 'Tasks', date: '2026-09-12' } },
+  { name: 'Old Draft', path: 'notes/archive/2025/Draft.md', tags: ['archive'], metadata: { category: 'Journal', date: '2025-12-30' } },
+];
+
+test('tag: фильтрует по реальным тегам', () => {
+  const hits = rankQuickSwitcherResults('tag:work', notes);
+  assert.equal(hits.length, 2);
+  assert.deepEqual(hits.map((h) => h.item.name).sort(), ['Weekly Review', 'Список дел']);
+});
+
+test('tag: без свободного термина всё равно возвращает результаты', () => {
+  assert.equal(rankQuickSwitcherResults('tag:archive', notes).length, 1);
+});
+
+test('отсутствие тегов исключает заметку из tag:', () => {
+  assert.equal(rankQuickSwitcherResults('tag:nothing', notes).length, 0);
+});
+
+test('повтор оператора расширяет выборку', () => {
+  const parsed = parseQuickSwitcherQuery('tag:work tag:archive');
+  assert.deepEqual(parsed.filters.tag, ['work', 'archive']);
+  assert.equal(rankQuickSwitcherResults('tag:work tag:archive', notes).length, 3);
+});
+
+test('отрицание -tag: исключает', () => {
+  const hits = rankQuickSwitcherResults('-tag:archive', notes);
+  assert.equal(hits.length, 2);
+  assert.ok(hits.every((h) => !h.item.tags.includes('archive')));
+});
+
+test('отрицание сочетается с положительным фильтром', () => {
+  const hits = rankQuickSwitcherResults('tag:work -tag:archive', notes);
+  assert.deepEqual(hits.map((h) => h.item.name), ['Weekly Review', 'Список дел']);
+});
+
+test('folder: ищет по папке, а не по имени файла', () => {
+  const hits = rankQuickSwitcherResults('folder:archive', notes);
+  assert.deepEqual(hits.map((h) => h.item.name), ['Old Draft']);
+  assert.equal(rankQuickSwitcherResults('folder:base', notes).length, 2);
+});
+
+test('title: ищет по заголовку заметки', () => {
+  assert.deepEqual(rankQuickSwitcherResults('title:Weekly', notes).map((h) => h.item.name), ['Weekly Review']);
+});
+
+test('category: читает категорию из метаданных', () => {
+  assert.equal(rankQuickSwitcherResults('category:Journal', notes).length, 2);
+  assert.deepEqual(rankQuickSwitcherResults('category:Tasks', notes).map((h) => h.item.name), ['Список дел']);
+});
+
+test('created: сравнивает по префиксу даты', () => {
+  assert.deepEqual(rankQuickSwitcherResults('created:2026', notes).map((h) => h.item.name).sort(), ['Weekly Review', 'Список дел']);
+  assert.deepEqual(rankQuickSwitcherResults('created:2026-10', notes).map((h) => h.item.name), ['Weekly Review']);
+  assert.deepEqual(rankQuickSwitcherResults('created:2025', notes).map((h) => h.item.name), ['Old Draft']);
+});
+
+test('created: -created: как отрицание по префиксу', () => {
+  assert.equal(rankQuickSwitcherResults('-created:2025', notes).length, 2);
+});
+
+test('неизвестный оператор остаётся поисковым термином', () => {
+  const parsed = parseQuickSwitcherQuery('author:me draft');
+  assert.equal(parsed.term, 'author:me draft');
+  assert.deepEqual(parsed.filters, {});
+});
+
+test('термин соединяется с фильтрами', () => {
+  const hits = rankQuickSwitcherResults('tag:work weekly', notes);
+  assert.deepEqual(hits.map((h) => h.item.name), ['Weekly Review']);
+});
+
+test('теги читаются из metadata, когда item.tags отсутствует', () => {
+  const item = { name: 'X', path: 'notes/x.md', metadata: { tags: ['from-meta'] } };
+  assert.equal(rankQuickSwitcherResults('tag:from-meta', [item]).length, 1);
+});

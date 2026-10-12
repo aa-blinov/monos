@@ -78,9 +78,9 @@ test('оба варианта имеют transition для плавности', 
   assert.match(secondary, /transition/, 'secondary должен иметь transition');
 });
 
-test('primary поддерживает extraClass для специальных вариантов (например, red-500 для Delete)', () => {
-  const destroy = getModalButtonClass('primary', { extraClass: 'text-red-500' });
-  assert.match(destroy, /text-red-500/, 'primary должен принять text-red-500');
+test('primary поддерживает extraClass для специальных вариантов (например, var(--red) для Delete)', () => {
+  const destroy = getModalButtonClass('primary', { extraClass: 'text-[var(--red)]' });
+  assert.match(destroy, /text-\[var\(--red\)\]/, 'primary должен принять токен var(--red)');
   assert.match(destroy, /font-bold/, 'primary всё ещё font-bold');
   assert.match(destroy, /uppercase/, 'primary всё ещё uppercase');
 });

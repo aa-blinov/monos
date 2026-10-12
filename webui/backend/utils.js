@@ -109,12 +109,26 @@ export function nowISO() {
   return new Date().toISOString();
 }
 
+/**
+ * Strips fenced and inline code so `[[...]]` inside them is not mistaken for a
+ * wiki-link. Shell `[[ -n "$X" ]]` tests live in the backup scripts and were
+ * being indexed as six phantom links to notes that do not exist. Stripped
+ * characters become spaces so line structure survives.
+ */
+function stripCode(content) {
+  return String(content || '')
+    .replace(/```[\s\S]*?```/g, (block) => block.replace(/[^\n]/g, ' '))
+    .replace(/~~~[\s\S]*?~~~/g, (block) => block.replace(/[^\n]/g, ' '))
+    .replace(/`[^`\n]*`/g, (span) => span.replace(/[^\n]/g, ' '));
+}
+
 export function extractWikiLinks(content) {
   const re = /\[\[(.*?)\]\]/g;
   const links = [];
+  const source = stripCode(content);
   let match;
 
-  while ((match = re.exec(content)) !== null) {
+  while ((match = re.exec(source)) !== null) {
     links.push(match[1].split('|')[0].trim());
   }
 

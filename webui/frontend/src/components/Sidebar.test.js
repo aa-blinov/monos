@@ -48,6 +48,20 @@ function createTree() {
   };
 }
 
+/** Найти заметку в дереве по пути — нужно, чтобы замоканное закрепление возвращалось. */
+function treeNoteByPath(node, target) {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = treeNoteByPath(child, target);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!node || typeof node !== 'object') return null;
+  if (node.path === target && node.is_dir === false) return node;
+  return treeNoteByPath(node.children, target);
+}
+
 function createFetchMock() {
   let treeVersion = 0;
   let alphaPath = 'notes/Work/Alpha.md';
@@ -58,8 +72,20 @@ function createFetchMock() {
     const url = typeof input === 'string' ? input : input.url;
     const method = init.method || 'GET';
 
+    if (url.startsWith('/api/file/metadata') && method === 'PUT') {
+      const target = decodeURIComponent(url.split('path=')[1] || '');
+      const body = JSON.parse(init.body || '{}');
+      const node = treeNoteByPath(createTree(), target);
+      if (node) node.pinned = Boolean(body.pinned);
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+
     if (url === '/api/tree') {
       const tree = createTree();
+      // Закрепление теперь приезжает вместе с деревом — из шапки заметки.
+      for (const child of tree.children[0]?.children || []) {
+        if (typeof child.pinned === 'boolean') child.metadata = { ...child.metadata, pinned: child.pinned };
+      }
       if (alphaPath === 'notes/Alpha.md') {
         tree.children[0].children = tree.children[0].children.slice(1);
         tree.children.push({
@@ -244,7 +270,17 @@ test('Sidebar закрепляет заметку в Pinned через конт�
   await fireEvent.click(screen.getByText(uiText.sidebar.context.pin));
 
   expect(screen.getByText(uiText.sidebar.pinned)).toBeTruthy();
-  expect(localStorage.getItem('pinnedNotes')).toContain('notes/Work/Alpha.md');
+  // Пишется в заметку, а не в браузер: иначе закрепление не переедет на другое
+  // устройство и не попадёт в git.
+  const pinCall = fetchMock.mock.calls.find(([url, init]) => (
+    typeof url === 'string'
+      && url.startsWith('/api/file/metadata')
+      && (init?.method || 'GET') === 'PUT'
+      && String(init?.body || '').includes('"pinned":true')
+  ));
+  expect(pinCall).toBeTruthy();
+  expect(decodeURIComponent(pinCall[0].split('path=')[1])).toContain('Alpha.md');
+  expect(localStorage.getItem('pinnedNotes')).toBeNull();
 
   const pinnedButton = screen.getAllByText('Alpha')[0].closest('button');
   await fireEvent.click(pinnedButton);
@@ -255,6 +291,12 @@ test('Sidebar закрепляет заметку в Pinned через конт�
   await fireEvent.contextMenu(screen.getAllByText('Alpha').at(-1).closest('button'));
   await fireEvent.click(screen.getByText(uiText.sidebar.context.unpin));
   expect(screen.queryByText(uiText.sidebar.pinned)).toBeNull();
+  const unpinCall = fetchMock.mock.calls.find(([url, init]) => (
+    typeof url === 'string'
+      && url.startsWith('/api/file/metadata')
+      && String(init?.body || '').includes('"pinned":false')
+  ));
+  expect(unpinCall).toBeTruthy();
 });
 
 test('Sidebar создаёт today note с timestamp DD-MM-YY-HH-MM-SS', async () => {
@@ -520,6 +562,10 @@ test('Sidebar после удаления открытой заметки сбр
   await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
   await fireEvent.contextMenu(screen.getByText('Alpha').closest('button'));
   await fireEvent.click(screen.getByText(uiText.sidebar.context.delete));
+
+  // The sidebar delete flow now confirms through the designed modal.
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.modal.confirm })).toBeTruthy());
+  await fireEvent.click(screen.getByRole('button', { name: uiText.modal.confirm }));
 
   await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));
   expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FWork%2FAlpha.md', { method: 'DELETE' });

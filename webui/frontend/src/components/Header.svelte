@@ -3,7 +3,7 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { searchQuery, searchResults, isSearching, editorAction } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Clipboard, Search, ArrowLeft, X, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Bookmark, Clipboard, Search, ArrowLeft, X, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -122,22 +122,35 @@
 
   {#if showSearch}
   <div class="relative min-w-0 flex-1">
-    <Search size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
+    <Search size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
     <input
       bind:this={searchInputEl}
       type="text"
       placeholder={$localizedText.header.search}
+      title={$localizedText.header.searchHint}
       bind:value={$searchQuery}
       on:input={handleSearchInput}
       on:keydown={(e) => { if (e.key === 'Escape') clearSearch(); }}
       on:focus={loadTags}
-      class="h-10 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-9 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
+      class="h-10 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-16 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
     />
     {#if $searchQuery}
       <button
         type="button"
+        data-testid="save-current-search"
+        on:click={() => dispatch('saveSearch', $searchQuery)}
+        class="absolute right-8 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        aria-label={$localizedText.savedSearches.save}
+        title={$localizedText.savedSearches.save}
+      >
+        <Bookmark size="12" strokeWidth="1.7" aria-hidden="true" />
+      </button>
+    {/if}
+    {#if $searchQuery}
+      <button
+        type="button"
         on:click={clearSearch}
-        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-sm text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
         aria-label={$localizedText.header.closeSearch}
       >
         <X class="h-3.5 w-3.5" aria-hidden="true" />
@@ -167,9 +180,9 @@
     <div class="flex-1"></div>
     <TooltipIconButton
       on:click={() => editorAction.set('delete')}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-red-500/10"
-      label={$localizedText.editor.deleteNote}
-      tooltip={$localizedText.editor.deleteNote}
+      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
+      label={$localizedText.editor.moveToTrash}
+      tooltip={$localizedText.editor.moveToTrash}
       tooltipAlign="end"
     >
       <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />

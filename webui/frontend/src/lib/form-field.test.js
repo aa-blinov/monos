@@ -9,8 +9,10 @@ test('formFieldClass даёт одинаковый size для input и select',
   // leading-6 — фиксированный line-height, иначе <select> и <input> рендерят
   // текст на разной базовой линии (заметно в Template Library, FOLDER vs TITLE).
   assert.match(cls, /leading-6/, 'обязательно leading-6 для одинакового baseline');
-  // py-1.5 — одинаковый вертикальный padding
-  assert.match(cls, /py-1\.5/, 'обязательно py-1.5 для одинакового padding');
+  // h-9, а не высота из отступа + межстрочного: производная давала 37px против
+  // 36px на других экранах (лишний border-b), и поля выглядели разными.
+  assert.match(cls, /h-9/, 'обязательно h-9: высота задаётся, а не складывается');
+  assert.doesNotMatch(cls, /\bpy-/, 'вертикальный padding задал бы высоту поверх h-9');
   // border-b — общая стилистика underline
   assert.match(cls, /border-b/, 'обязательно border-b для подчёркивания');
 });
