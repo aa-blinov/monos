@@ -619,7 +619,7 @@
     const { words, readingMinutes } = wordStats(editedContent);
     wordCharStats = words === 0
       ? $localizedText.editorHeader.stats.empty
-      : `${$localizedText.editorHeader.stats.words(words)} · ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
+      : `${$localizedText.editorHeader.stats.words(words)}, ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
   }
 
   $: taskProgress = taskProgressOf(editedContent);

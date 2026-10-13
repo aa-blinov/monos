@@ -84,7 +84,7 @@
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
           <p class="hidden text-[var(--text-muted)] lg:block">
-            {$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)} · {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
+            {$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}, {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
           <span class="hidden tabular-nums text-[var(--text-muted)] sm:inline">{wordCharStats}</span>
           {#if taskProgress && taskProgress.total > 0}
