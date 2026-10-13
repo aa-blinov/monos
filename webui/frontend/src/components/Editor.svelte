@@ -683,7 +683,7 @@
     />
   {/if}
   <div class="border-b border-[var(--note-page-border)]"></div>
-  {#if !isLoading && backlinks.length > 0}
+  {#if backlinks.length > 0}
     <div class="border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="local-navigation">
       <div class="flex items-center gap-3 overflow-x-auto">
         <span class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
@@ -706,9 +706,12 @@
 
   <!-- Свойства заметки: то, что лежит в шапке файла, но редактировалось раньше
        только в настройках. Панель узкая и всегда на виду — иначе срок и теги
-       приходилось бы искать по интерфейсу, чтобы поставить галочку. -->
-  {#if !isLoading && visibleFile && !visibleFile.isDir}
-    <div class="flex flex-wrap items-center gap-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="note-properties">
+       приходилось бы искать по интерфейсу, чтобы поставить галочку.
+       Во время загрузки следующей заметки свойства и нижняя панель не снимаются
+       из DOM — иначе они моргали бы при каждом переключении. Вместо этого они
+       inert: их контролы относятся к запрошенной заметке, а текст ещё от прежней. -->
+  {#if displayedFile && !displayedFile.isDir}
+    <div class="flex flex-wrap items-center gap-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="note-properties" inert={isLoading}>
       <label class="flex items-center gap-1.5">
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyCategory}</span>
         <input
@@ -811,8 +814,8 @@
     </div>
   {/if}
 
-  {#if !isLoading && currentFile && !currentFile.isDir}
-    <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8">
+  {#if displayedFile && !displayedFile.isDir}
+    <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8" data-testid="editor-footer" inert={isLoading}>
       <div class="flex h-full items-center gap-2">
         <TooltipIconButton
           type="button"
