@@ -227,6 +227,95 @@ test('Editor сохраняет текущую поверхность при п�
   await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
 });
 
+test('Editor не пересоздаёт панели при переходе на другую заметку и блокирует их на время загрузки', async () => {
+  let resolveBetaContent;
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === '/api/file?path=notes%2FAlpha.md' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha body' }));
+    }
+    if (url === '/api/file-info?path=notes%2FAlpha.md') {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-07T10:00:00.000Z',
+        modified: '2026-05-07T12:00:00.000Z',
+        metadata: { title: 'Alpha', tags: [] },
+      }));
+    }
+    if (url === '/api/notes/backlinks?path=notes%2FAlpha.md') {
+      return Promise.resolve(jsonResponse([{ name: 'Gamma', path: 'notes/Gamma.md', type: 'backlink' }]));
+    }
+    if (url === '/api/file?path=notes%2FBeta.md' && method === 'GET') {
+      return new Promise((resolve) => {
+        resolveBetaContent = () => resolve(jsonResponse({ content: 'Beta body' }));
+      });
+    }
+    if (url === '/api/file-info?path=notes%2FBeta.md') {
+      return Promise.resolve(jsonResponse({
+        created: '2026-05-08T10:00:00.000Z',
+        modified: '2026-05-08T12:00:00.000Z',
+        metadata: { title: 'Beta', tags: [] },
+      }));
+    }
+    if (url === '/api/notes/backlinks?path=notes%2FBeta.md') {
+      return Promise.resolve(jsonResponse([]));
+    }
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  const properties = screen.getByTestId('note-properties');
+  const footer = screen.getByTestId('editor-footer');
+  const localNavigation = screen.getByTestId('local-navigation');
+
+  component.$set({ currentFile: { path: 'notes/Beta.md', name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === '/api/file?path=notes%2FBeta.md')).toBe(true));
+
+  // Пока грузится Beta, панели остаются теми же узлами. Моргание было в том,
+  // что {#if !isLoading} выбрасывал их из DOM и тут же возвращал на место.
+  expect(screen.getByTestId('note-properties')).toBe(properties);
+  expect(screen.getByTestId('editor-footer')).toBe(footer);
+  expect(screen.getByTestId('local-navigation')).toBe(localNavigation);
+  // Но свойства и нижняя панель действуют на запрошенную заметку (currentFile),
+  // а текст в редакторе ещё от прежней. Без inert правка свойств записала бы
+  // старое содержимое в файл, который ещё не открыт.
+  expect(properties.inert).toBe(true);
+  expect(footer.inert).toBe(true);
+
+  resolveBetaContent();
+  await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
+  expect(screen.getByTestId('note-properties')).toBe(properties);
+  expect(screen.getByTestId('editor-footer')).toBe(footer);
+  expect(properties.inert).toBe(false);
+  expect(footer.inert).toBe(false);
+});
+
+test('Editor не показывает панели свойств и подвала до загрузки первой заметки', async () => {
+  const body = deferred();
+  installFetchMock(createDefaultResponses('notes/Alpha.md', {
+    '/api/file?path=notes%2FAlpha.md': body.promise,
+  }));
+
+  render(Editor, {
+    currentFile: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+
+  expect(screen.queryByTestId('note-properties')).toBeNull();
+  expect(screen.queryByTestId('editor-footer')).toBeNull();
+
+  body.resolve(jsonResponse({ content: 'Alpha body' }));
+  await waitFor(() => expect(screen.getByTestId('note-properties')).toBeTruthy());
+  expect(screen.getByTestId('editor-footer')).toBeTruthy();
+});
+
 test('Editor переименовывает вложение и обновляет markdown-ссылку', async () => {
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
     '/api/file?path=notes%2FInbox.md': jsonResponse({ content: '![old](_attachments/old.webp)' }),

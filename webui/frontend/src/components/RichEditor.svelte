@@ -452,7 +452,10 @@
     });
     if (found && targetPos !== null) {
       try {
-        editor.commands.focus();
+        // scrollIntoView: false — иначе focus() в следующем кадре вызовет
+        // минимальную прокрутку к выделению и оборвёт плавную прокрутку ниже:
+        // дальний заголовок оказывался у низа экрана, а не у верха.
+        editor.commands.focus(null, { scrollIntoView: false });
         editor.commands.setTextSelection(targetPos);
         // Выделение само страницу не двигает. Ставим заголовок в начало поля
         // редактора, а не «как можно меньше»: минимальная прокрутка оставляла

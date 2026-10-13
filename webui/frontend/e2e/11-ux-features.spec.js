@@ -12,6 +12,7 @@ import {
   createBlankNote,
   editorBody,
   fillEditor,
+  openBoardCard,
   prepareMonos,
   uniqueTitle,
   waitForSavedContent,
@@ -55,6 +56,39 @@ test('outline panel показывает empty state если нет загол�
   const panel = page.getByTestId('outline-panel');
   await expect(panel).toBeVisible();
   await expect(panel.getByText(/no headings/i)).toBeVisible({ timeout: 3_000 });
+});
+
+// Заголовок далеко внизу: минимальная прокрутка уводит его к низу экрана, а
+// клик по оглавлению должен выровнять его по верхнему краю редактора.
+test('клик по оглавлению ставит курсор в заголовок и выравнивает его по верху', async ({ page }) => {
+  const title = uniqueTitle('Long Outline Note');
+  const paragraph = 'Paragraph text that makes this note long enough to scroll inside the editor. '.repeat(12);
+  const sections = Array.from({ length: 12 }, (_, index) => `## Section ${index + 1}\n\n${paragraph}\n`).join('\n');
+  const path = `notes/${title}.md`;
+  await page.request.post(`/api/file?path=${encodeURIComponent(path)}`, {
+    data: { content: `---\ntitle: "${title}"\n---\n\n# ${title}\n\n${sections}` },
+  });
+  await openBoardCard(page, title, path);
+
+  await page.getByTestId('outline-panel').getByText('Section 6', { exact: true }).click();
+
+  await expect.poll(async () => page.evaluate(() => {
+    const pm = document.querySelector('.ProseMirror');
+    let scroller = pm;
+    while (scroller && !(['auto', 'scroll'].includes(getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight)) {
+      scroller = scroller.parentElement;
+    }
+    const heading = [...pm.querySelectorAll('h2')].find((h) => h.textContent.trim() === 'Section 6');
+    return Math.round(heading.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
+  }), { timeout: 5_000 }).toBeLessThanOrEqual(2);
+
+  const caretAtHeadingStart = await page.evaluate(() => {
+    const heading = [...document.querySelectorAll('.ProseMirror h2')].find((h) => h.textContent.trim() === 'Section 6');
+    const selection = window.getSelection();
+    const firstText = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT).nextNode();
+    return (selection.anchorNode === firstText || selection.anchorNode === heading) && selection.anchorOffset === 0;
+  });
+  expect(caretAtHeadingStart).toBe(true);
 });
 
 test('quick switcher (Cmd+O) открывается и фильтрует заметки', async ({ page }) => {
