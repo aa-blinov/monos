@@ -12,16 +12,17 @@
 
   $: items = extractOutline(content).filter((it) => it.level <= maxLevel);
 
-  function clickAnchor(event, anchor) {
-    // Try to scroll the rendered heading into view; fall back to
-    // dispatching an event so the parent can do its own handling.
-    const target = document.getElementById(anchor);
+  function clickAnchor(event, item) {
+    // Заголовки в ProseMirror без id, поэтому getElementById почти всегда
+    // пуст. Родитель умеет прокручивать по тексту заголовка — значит, текст
+    // обязан уйти вместе с якорем, иначе цепочка обрывается молча.
+    const target = document.getElementById(item.anchor);
     if (target) {
       event.preventDefault();
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      history.replaceState(null, '', `#${anchor}`);
+      history.replaceState(null, '', `#${item.anchor}`);
     } else {
-      dispatch('navigate', { anchor });
+      dispatch('navigate', { anchor: item.anchor, text: item.text });
     }
   }
 </script>
@@ -46,7 +47,7 @@
         >
           <a
             href="#{item.anchor}"
-            on:click={(e) => clickAnchor(e, item.anchor)}
+            on:click={(e) => clickAnchor(e, item)}
             class="block truncate"
             data-testid="outline-item"
             data-anchor={item.anchor}

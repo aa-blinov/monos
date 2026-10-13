@@ -454,6 +454,9 @@
       try {
         editor.commands.focus();
         editor.commands.setTextSelection(targetPos);
+        // Установка выделения сама по себе не двигает страницу — без этой
+        // команды клик по оглавлению выделял заголовок, но не листал к нему.
+        editor.commands.scrollIntoView();
       } catch (_) {
         // ignore
       }
