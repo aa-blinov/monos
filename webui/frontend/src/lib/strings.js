@@ -549,8 +549,9 @@ const enText = {
   editor: {
     pinDo: 'Pin',
     pinUnpin: 'Unpin',
-    propertyCategory: 'Folder',
+    propertyCategory: 'Category',
     propertyCategoryEmpty: '—',
+    categorySuggestions: 'Category suggestions',
     propertyTags: 'Tags',
     propertyTagsEmpty: 'comma, separated',
     propertyDue: 'Due',
@@ -1255,8 +1256,9 @@ const ruText = {
   editor: {
     pinDo: 'Закрепить',
     pinUnpin: 'Открепить',
-    propertyCategory: 'Папка',
+    propertyCategory: 'Категория',
     propertyCategoryEmpty: '—',
+    categorySuggestions: 'Подсказки категорий',
     propertyTags: 'Теги',
     propertyTagsEmpty: 'через запятую',
     propertyDue: 'Срок',

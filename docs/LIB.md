@@ -119,6 +119,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `outline.test.js` | Nested headings, empty documents, heading-level edges |
 | `motion.js` | `scrollBehavior()`: `auto` when the user asked for reduced motion, `smooth` otherwise |
 | `motion.test.js` | Smooth by default, instant under `prefers-reduced-motion` |
+| `categories.js` | Category field helpers: `normalizeCategory`, `canonicalCategory` (reuses an existing spelling, ignoring case) and `filterCategories` for the suggestions |
+| `categories.test.js` | Whitespace cleanup, case-insensitive matching, prefix matches ranked first |
 | `word-stats.js` | `wordStats(text)` — word/character counts and estimated reading time (200 wpm) |
 | `word-stats.test.js` | Empty text, rounding up to 1 minute, whitespace handling |
 | `quick-switcher.js` | Quick-switcher parsing and filtering: `note:`, `tag:` prefixes, fuzzy note matching |

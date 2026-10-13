@@ -440,6 +440,32 @@ apiTest('PUT /api/file/metadata и GET /api/tags обновляют title и tag
   assert.ok(tags.data.includes('shared'));
 });
 
+apiTest('GET /api/categories считает заметки по категориям без корзины и без регистра', async () => {
+  const writeNote = async (name, category) => {
+    const saved = await requestJson(buildUrl('/api/file', { path: `notes/Topic/${name}.md` }), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: `---\ntitle: "${name}"\ncategory: "${category}"\n---\n\nBody\n` }),
+    });
+    assert.equal(saved.response.status, 200, `запись ${name}`);
+  };
+  await writeNote('CatOne', 'Zeta Cat');
+  await writeNote('CatTwo', 'zeta cat');
+  await writeNote('CatThree', 'Zeta Idea');
+  await writeNote('CatGone', 'Zeta Trashed');
+  const deleted = await requestJson(buildUrl('/api/file', { path: 'notes/Topic/CatGone.md' }), { method: 'DELETE' });
+  assert.equal(deleted.response.status, 200);
+
+  const categories = await requestJson(buildUrl('/api/categories'));
+  assert.equal(categories.response.status, 200);
+  const byName = Object.fromEntries(categories.data.map((item) => [item.name, item.count]));
+  assert.equal(byName['Zeta Cat'], 2, 'написания Zeta Cat и zeta cat — одна категория');
+  assert.equal(byName['Zeta Idea'], 1);
+  assert.equal(byName['Zeta Trashed'], undefined, 'заметка из корзины не считается');
+  const counts = categories.data.map((item) => item.count);
+  assert.deepEqual(counts, [...counts].sort((a, b) => b - a), 'сначала самые частые');
+});
+
 apiTest('закрепление живёт в файле и переживает переименование тега', async () => {
   const pinnedPath = 'notes/Topic/Alpha.md';
   const fileOnDisk = path.join(notesDir, 'Topic', 'Alpha.md');

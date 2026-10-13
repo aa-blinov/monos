@@ -2,6 +2,8 @@ import { get, post, put, del } from './api/client.js';
 
 export const loadFileContent = (filePath) => get('/api/file', { path: filePath });
 export const loadFileInfo = (filePath) => get('/api/file-info', { path: filePath });
+
+export const loadCategoriesRequest = () => get('/api/categories');
 export const loadBacklinksRequest = (filePath) => get('/api/notes/backlinks', { path: filePath });
 export const resolveWikiLink = (name) => get('/api/notes/resolve-link', { name });
 export const loadTrashNotesRequest = () => get('/api/notes/trash', { limit: 200 });
