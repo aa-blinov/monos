@@ -489,6 +489,28 @@ export function registerNoteRoutes(app) {
   });
 
   /**
+   * Categories used by the notes, each with the number of notes carrying it.
+   * Feeds the suggestions in a note's category field. Spellings that differ
+   * only by case count as one category, shown in its first spelling.
+   */
+  app.get('/api/categories', (req, res) => {
+    try {
+      const rows = getDb().prepare(
+        `SELECT MIN(category) AS name, COUNT(*) AS count FROM notes_index
+         WHERE is_dir = 0
+           AND category IS NOT NULL
+           AND category != ''
+           AND (trashed_at IS NULL OR trashed_at = '')
+         GROUP BY category COLLATE NOCASE
+         ORDER BY count DESC, name COLLATE NOCASE ASC`
+      ).all();
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  /**
    * Tags with the number of notes carrying each, for the tag panel.
    * Kept apart from `/api/tags`, which the search box consumes as a flat list
    * of names and must keep receiving.

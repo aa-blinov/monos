@@ -4,6 +4,7 @@
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
   import OutlinePanel from './OutlinePanel.svelte';
+  import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden } from '../stores.js';
@@ -15,6 +16,7 @@
   import {
     deleteFileRequest,
     loadBacklinksRequest,
+    loadCategoriesRequest,
     loadFileContent,
     loadFileInfo,
     renameAttachment,
@@ -103,6 +105,8 @@
   let backlinks = [];
   let editableTags = [];
   let editableCategory = '';
+  // Подсказки для поля категории: категории, уже встречающиеся в хранилище.
+  let categorySuggestions = [];
   let metadataTimer;
   const METADATA_DELAY = 1200;
   let loadedFilePath = null;
@@ -503,6 +507,21 @@
     void saveMetadataFields();
   }
 
+  async function loadCategorySuggestions() {
+    try {
+      categorySuggestions = await loadCategoriesRequest();
+    } catch (error) {
+      // Без подсказок поле продолжает работать как обычное текстовое.
+      console.error('Failed to load category suggestions:', error);
+      categorySuggestions = [];
+    }
+  }
+
+  function commitCategory(event) {
+    editableCategory = event.detail;
+    void saveMetadataFields();
+  }
+
   async function saveMetadataFields() {
     if (!currentFile || !fileInfo || !hasMetadataChanges()) return;
     if (metadataTimer) clearTimeout(metadataTimer);
@@ -736,17 +755,19 @@
        inert: их контролы относятся к запрошенной заметке, а текст ещё от прежней. -->
   {#if displayedFile && !displayedFile.isDir}
     <div class="flex flex-wrap items-center gap-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="note-properties" inert={isLoading}>
-      <label class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5">
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyCategory}</span>
-        <input
-          type="text"
-          data-testid="property-category"
-          bind:value={editableCategory}
-          on:change={saveMetadataFields}
+        <CategoryInput
+          value={editableCategory}
+          suggestions={categorySuggestions}
           placeholder={$localizedText.editor.propertyCategoryEmpty}
-          class="h-8 w-40 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+          label={$localizedText.editor.propertyCategory}
+          listLabel={$localizedText.editor.categorySuggestions}
+          testid="property-category"
+          on:open={loadCategorySuggestions}
+          on:commit={commitCategory}
         />
-      </label>
+      </div>
 
       <label class="flex items-center gap-1.5">
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyTags}</span>
