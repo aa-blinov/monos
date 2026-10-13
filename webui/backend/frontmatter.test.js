@@ -61,3 +61,11 @@ test('парсер понимает закрепление в разных на�
   assert.equal(read('pinned: 0'), false);
   assert.equal(parseFrontmatterMetadata('без шапки').pinned, false);
 });
+
+
+test('блочные теги видны индексу', () => {
+  // Поиск по тегу обязан находить заметку с обычным YAML-списком, иначе она
+  // выпадает из выдачи и из тегов в интерфейсе.
+  const parsed = parseFrontmatterMetadata('---\ntags:\n  - "раз"\n  - "два: три"\n---\n\nТело\n');
+  assert.deepEqual(parsed.tags, ['раз', 'два: три']);
+});

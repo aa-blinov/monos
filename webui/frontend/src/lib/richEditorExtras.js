@@ -366,16 +366,15 @@ async function resolveEmbed(name) {
   const { get } = await import('./api/client.js');
   const { resolveWikiLink } = await import('./editor-api.js');
   const resolved = await resolveWikiLink(name);
-  if (!resolved || resolved.path) {
-    // resolve-link возвращает пустой объект, когда заметки нет; при неоднозначном
-    // имени приходит ambiguous — показывать такое вставкой нельзя.
-    if (resolved && resolved.ambiguous) {
-      const value = { ok: false, reason: 'ambiguous' };
-      embedCache.set(key, value);
-      return value;
-    }
+  // Порядок важен: у неоднозначного ответа нет поля path, поэтому прежняя
+  // проверка `!resolved || resolved.path` была ложной, ветка «неоднозначно»
+  // недостижима, и вставка врала «заметка не найдена» при двух совпадениях.
+  if (resolved?.ambiguous) {
+    const value = { ok: false, reason: 'ambiguous', matches: resolved.matches || [] };
+    embedCache.set(key, value);
+    return value;
   }
-  if (!resolved || !resolved.path) {
+  if (!resolved?.path) {
     const value = { ok: false, reason: 'missing' };
     embedCache.set(key, value);
     return value;
@@ -437,10 +436,11 @@ export const NoteEmbed = Node.create({
         body.classList.remove('embed-missing', 'embed-cycle', 'embed-ambiguous');
         if (!result.ok) {
           body.classList.add(`embed-${result.reason}`);
+          const count = result.matches?.length || 0;
           body.textContent = {
             missing: 'Заметка не найдена',
             cycle: 'Циклическая ссылка — содержимое не разворачивается',
-            ambiguous: 'Под таким именем несколько заметок',
+            ambiguous: `Под этим именем ${count} заметки — вставка не знает какую`,
             empty: 'Пустая ссылка',
           }[result.reason] || 'Не удалось развернуть';
           return;

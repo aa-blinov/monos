@@ -63,7 +63,9 @@ export function parseFrontmatter(content) {
   const result = { title: '', category: '', tags: [], due: '', pinned: false };
   if (!frontmatter) return result;
 
-  for (const line of frontmatter.split(/\r?\n/)) {
+  const lines = frontmatter.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const separator = line.indexOf(':');
     if (separator === -1) continue;
     const key = line.slice(0, separator).trim().toLowerCase();
@@ -81,10 +83,22 @@ export function parseFrontmatter(content) {
     }
     if (key === 'tags') {
       const items = [];
-      for (const item of (value || '').match(/"([^"]*)"|'([^']*)'|[^,\[\]]+/g) || []) {
-        const trimmed = item.trim();
-        if (!trimmed) continue;
-        items.push(unquoteYamlString(trimmed));
+      // Блочный стиль — обычный YAML: `tags:` и список ниже. Раньше читался
+      // только однострочный вариант, и теги были не видны в панели, а при
+      // первом же сохранении пропадали совсем.
+      if (!value) {
+        while (index + 1 < lines.length && /^\s+-\s/.test(lines[index + 1])) {
+          index += 1;
+          const item = lines[index].trim().replace(/^-\s*/, '');
+          const unquoted = unquoteYamlString(item);
+          if (unquoted) items.push(unquoted);
+        }
+      } else {
+        for (const item of value.match(/"([^"]*)"|'([^']*)'|[^,\[\]]+/g) || []) {
+          const trimmed = item.trim();
+          if (!trimmed) continue;
+          items.push(unquoteYamlString(trimmed));
+        }
       }
       result.tags = items;
     }
@@ -106,6 +120,14 @@ function preservedLines(frontmatter) {
   let inManagedBlock = false;
   for (const line of frontmatter.split(/\r?\n/)) {
     if (!line.trim()) { inManagedBlock = false; continue; }
+    // Пункт списка начинается с «-» и может содержать двоеточие внутри
+    // значения: `- "срочно: очень"`. Раньше такая строка читалась как новый
+    // ключ, `inManagedBlock` сбрасывался, и она оставалась в шапке сиротой —
+    // YAML переставал разбираться во всём frontmatter.
+    if (/^\s+-\s/.test(line)) {
+      if (!inManagedBlock) kept.push(line);
+      continue;
+    }
     const separator = line.indexOf(':');
     if (separator === -1) {
       // Продолжение предыдущего ключа: чужое — оставляем, управляемое — нет.

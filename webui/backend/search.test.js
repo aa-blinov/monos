@@ -317,3 +317,30 @@ test('в отрывке нет markdown-разметки: галочки, фор
   assert.ok(!excerpt.includes('const a = 1'), `остался код: ${excerpt}`);
   assert.ok(excerpt.includes('Разослать'), `потерялся текст задачи: ${excerpt}`);
 });
+
+// --- Значение оператора: с пробелом, в кавычках, пустое --------------------
+
+test('оператор без значения забирает следующее слово', () => {
+  // Раньше регулярка требовала символ после двоеточия, и `path: MarfaTech`
+  // целиком уезжал в свободный текст — искал слово по телу заметок.
+  assert.deepEqual(parseSearchQuery('path: MarfaTech').path, { values: ['marfatech'], exclude: [] });
+  assert.deepEqual(parseSearchQuery('-path: base').path, { values: [], exclude: ['base'] });
+  assert.deepEqual(parseSearchQuery('tag: работа').tag, { values: ['работа'], exclude: [] });
+  assert.deepEqual(parseSearchQuery('updated: 2026-10').updated, { values: ['2026-10'], exclude: [] });
+});
+
+test('оператор без значения и без следующего слова не становится фильтром', () => {
+  // Пустой фильтр вернул бы всё дерево: «нет условий» — значит условие
+  // отсутствует, а не выполняется.
+  const parsed = parseSearchQuery('path:');
+  assert.deepEqual(parsed.path, { values: [], exclude: [] });
+  assert.deepEqual(parsed.text, []);
+});
+
+test('одинокий дефис не попадает в свободный текст', () => {
+  assert.deepEqual(parseSearchQuery('path:KODE - МФЦ').text, ['мфц']);
+});
+
+test('значение с пробелом берётся в кавычках', () => {
+  assert.deepEqual(parseSearchQuery('path:"KODE - МФЦ"').path, { values: ['kode - мфц'], exclude: [] });
+});

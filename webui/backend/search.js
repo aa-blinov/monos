@@ -66,7 +66,7 @@ function tokenizeQuery(input) {
 const FILTER_OPERATORS = new Set(['body', 'updated', 'path', 'tag']);
 
 function readOperatorToken(token) {
-  const match = /^(-?)([A-Za-z]+):(.+)$/.exec(token);
+  const match = /^(-?)([A-Za-z]+):(.*)$/.exec(token);
   if (!match) return null;
   const name = match[2].toLowerCase();
   if (!FILTER_OPERATORS.has(name)) return null;
@@ -107,6 +107,8 @@ export function parseSearchQuery(rawQuery) {
   const path = { values: [], exclude: [] };
   const tag = { values: [], exclude: [] };
 
+  // Куда складывать следующее слово: null — свободный текст, 'body' — тело
+  // заметки, либо сам массив корзины (значения или исключения).
   let collecting = null;
 
   for (const token of tokens) {
@@ -121,21 +123,20 @@ export function parseSearchQuery(rawQuery) {
         pushTerm(body.terms, operator.value);
       } else {
         // Значения операторов одиночные, поэтому слова после них остаются
-        // свободным текстом.
+        // свободным текстом. Значение с пробелом берётся в кавычках.
         const bucket = operator.name === 'updated' ? updated
           : operator.name === 'path' ? path
             : tag;
         if (operator.value) (operator.negated ? bucket.exclude : bucket.values).push(operator.value.toLowerCase());
-        else collecting = operator.negated ? null : operator.name;
+        else collecting = operator.negated ? bucket.exclude : bucket.values;
       }
       continue;
     }
 
     if (collecting === 'body') pushTerm(body.terms, token);
-    else if (collecting === 'updated') updated.values.push(token.toLowerCase());
-    else if (collecting === 'path') path.values.push(token.toLowerCase());
-    else if (collecting === 'tag') tag.values.push(token.toLowerCase());
-    else text.push(token.toLowerCase());
+    else if (Array.isArray(collecting)) collecting.push(token.toLowerCase());
+    // Одинокий дефис — опечатка, а не слово: в выдаче он только шумит.
+    else if (token !== '-') text.push(token.toLowerCase());
   }
 
   return { text, body, updated, path, tag };
@@ -212,7 +213,9 @@ export function parseFrontmatterMetadata(content) {
   let category = '';
   let pinned = false;
 
-  for (const line of match[1].split(/\r?\n/)) {
+  const lines = match[1].split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const separatorIndex = line.indexOf(':');
     if (separatorIndex === -1) continue;
 
@@ -223,8 +226,19 @@ export function parseFrontmatterMetadata(content) {
       title = stripWrappingQuotes(rawValue);
     }
 
-    if (key === 'tags' && rawValue) {
-      tags = parseFrontmatterTags(rawValue);
+    if (key === 'tags') {
+      if (rawValue) {
+        tags = parseFrontmatterTags(rawValue);
+      } else {
+        // Блочный YAML: список идёт следующими строками. Без этого теги были
+        // не видны поиску по тегу и по индексации, а первое же сохранение
+        // заметки их стирало.
+        while (index + 1 < lines.length && /^\s+-\s/.test(lines[index + 1])) {
+          index += 1;
+          const item = stripWrappingQuotes(lines[index].trim().replace(/^-\s*/, ''));
+          if (item) tags.push(item);
+        }
+      }
     }
 
     if (key === 'category' && rawValue) {
