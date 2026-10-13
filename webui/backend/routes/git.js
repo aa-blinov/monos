@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process';
 import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
-import { httpError, readTextFile } from '../utils.js';
+import { httpError, notesRelativePath, readTextFile } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
 
 export function buildGithubRemoteUrl(repo) {
@@ -78,16 +78,12 @@ function hasUnmergedFiles() {
 
 function assertSafeGitPath(filePath) {
   if (typeof filePath !== 'string' || !filePath) {
-    const error = new Error('Invalid conflict path');
-    error.status = 400;
-    throw error;
+    throw httpError(400, 'Invalid conflict path');
   }
 
   const normalized = path.posix.normalize(filePath.replace(/\\/g, '/'));
   if (path.isAbsolute(filePath) || normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) {
-    const error = new Error('Invalid conflict path');
-    error.status = 400;
-    throw error;
+    throw httpError(400, 'Invalid conflict path');
   }
 
   return normalized;
@@ -638,7 +634,7 @@ export function registerGitRoutes(app) {
       const { path: requestPath, content } = req.body || {};
       if (typeof content !== 'string') return res.status(400).json({ detail: 'Content is required' });
 
-      const safePath = assertSafeGitPath(requestPath || '');
+      const safePath = notesRelativePath(assertSafeGitPath(requestPath || ''));
       const absolute = path.join(NOTES_DIR, safePath);
       if (!fs.existsSync(absolute)) return res.status(404).json({ detail: 'Note not found' });
 
@@ -832,7 +828,7 @@ export function registerGitRoutes(app) {
 
       res.json({ revisions, tracked: true, path: safePath });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
   });
 
@@ -870,7 +866,7 @@ export function registerGitRoutes(app) {
         changed: oldText !== currentText,
       });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
   });
 

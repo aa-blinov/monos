@@ -55,6 +55,15 @@ export function resolveNotesChildPath(requestPath = '', { allowRoot = true } = {
   return fullPath;
 }
 
+/**
+ * The app addresses a note from ROOT_DIR ("notes/…"); git addresses the very
+ * same note from NOTES_DIR. A route that receives the app's path and hands it
+ * to git has to translate, or it looks for notes/notes/… and finds nothing.
+ */
+export function notesRelativePath(rootRelativePath) {
+  return path.relative(NOTES_DIR, resolveNotesPath(rootRelativePath)).replace(/\\/g, '/');
+}
+
 export function safePathName(name) {
   if (typeof name !== 'string' || name.trim() === '') {
     throw httpError(400, 'Name required');
