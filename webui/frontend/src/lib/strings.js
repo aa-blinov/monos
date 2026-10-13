@@ -547,6 +547,11 @@ const enText = {
     defaultCommitMessage: 'Sync notes from Monos',
   },
   editor: {
+    propertyCategory: 'Folder',
+    propertyCategoryEmpty: '—',
+    propertyTags: 'Tags',
+    propertyTagsEmpty: 'comma, separated',
+    propertyDue: 'Due',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
     archiveTitle: 'Move this note to trash?',
@@ -1243,6 +1248,11 @@ const ruText = {
     defaultCommitMessage: 'Синхронизация заметок из Monos',
   },
   editor: {
+    propertyCategory: 'Папка',
+    propertyCategoryEmpty: '—',
+    propertyTags: 'Теги',
+    propertyTagsEmpty: 'через запятую',
+    propertyDue: 'Срок',
     gatheringThoughts: 'Собираем мысли',
     beginWriting: 'Начните писать...',
     archiveTitle: 'Переместить заметку в корзину?',

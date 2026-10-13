@@ -12,7 +12,9 @@
  */
 
 /** Keys the UI owns and rewrites. Everything else in the block is preserved. */
-const MANAGED_KEYS = ['title', 'category', 'tags', 'due'];
+// `pinned` тоже управляемый: без него setFrontmatterKey возвращал текст
+// без изменений, и закрепление из редактора не записывалось вовсе.
+const MANAGED_KEYS = ['title', 'category', 'tags', 'due', 'pinned'];
 const BOM = '\uFEFF';
 
 function quoteYamlString(value) {
@@ -58,7 +60,7 @@ export function splitFrontmatter(content) {
  */
 export function parseFrontmatter(content) {
   const { frontmatter } = splitFrontmatter(content);
-  const result = { title: '', category: '', tags: [], due: '' };
+  const result = { title: '', category: '', tags: [], due: '', pinned: false };
   if (!frontmatter) return result;
 
   for (const line of frontmatter.split(/\r?\n/)) {
@@ -69,6 +71,12 @@ export function parseFrontmatter(content) {
 
     if (key === 'title' || key === 'category' || key === 'due') {
       result[key] = unquoteYamlString(value);
+      continue;
+    }
+    if (key === 'pinned') {
+      // Разбор нужен не только вставке свойств: без него кнопка закрепления
+      // всегда показывала «откреплено», потому что ключ просто не читался.
+      result.pinned = /^(true|yes|1)$/i.test(unquoteYamlString(value));
       continue;
     }
     if (key === 'tags') {
@@ -84,22 +92,43 @@ export function parseFrontmatter(content) {
   return result;
 }
 
-/** Keep only the lines the UI does not manage. */
+/**
+ * Keep only the lines the UI does not manage.
+ *
+ * A key may be written as a block — `tags:` on one line and the list under it.
+ * Such continuation lines carry no `:` and used to survive here, so after the
+ * first metadata save they ended up dangling inside the frontmatter, right
+ * under `due`. Two notes in the corpus still use the inline form, but the
+ * properties panel writes tags on every keystroke, so the trap was close.
+ */
 function preservedLines(frontmatter) {
-  return frontmatter
-    .split(/\r?\n/)
-    .filter((line) => {
-      if (!line.trim()) return false;
-      const separator = line.indexOf(':');
-      if (separator === -1) return true;
-      return !MANAGED_KEYS.includes(line.slice(0, separator).trim().toLowerCase());
-    });
+  const kept = [];
+  let inManagedBlock = false;
+  for (const line of frontmatter.split(/\r?\n/)) {
+    if (!line.trim()) { inManagedBlock = false; continue; }
+    const separator = line.indexOf(':');
+    if (separator === -1) {
+      // Продолжение предыдущего ключа: чужое — оставляем, управляемое — нет.
+      if (!inManagedBlock) kept.push(line);
+      continue;
+    }
+    const key = line.slice(0, separator).trim().toLowerCase();
+    inManagedBlock = MANAGED_KEYS.includes(key);
+    if (!inManagedBlock) kept.push(line);
+  }
+  return kept;
 }
 
 /**
  * Rewrite the managed keys and keep everything else.
+ *
+ * Ключ из MANAGED_KEYS, которого нет в `metadata`, считается снятым: именно
+ * так пустой срок убирает строку, а не пишет `due: ""`. Поэтому вызывающий
+ * обязан передавать все управляемые ключи, а не только изменившиеся — иначе
+ * молча теряется, например, закрепление.
+ *
  * @param {string} content full note text
- * @param {{title?: string, category?: string, tags?: string[], due?: string}} metadata
+ * @param {{title?: string, category?: string, tags?: string[], due?: string, pinned?: boolean}} metadata
  * @returns {string}
  */
 export function upsertFrontmatter(content, metadata = {}) {
@@ -113,6 +142,7 @@ export function upsertFrontmatter(content, metadata = {}) {
   lines.push(`tags: [${tags.map((tag) => quoteYamlString(tag)).join(', ')}]`);
   // An empty value removes the key instead of writing `due: ""`.
   if (metadata.due) lines.push(`due: ${metadata.due}`);
+  if (metadata.pinned) lines.push('pinned: true');
   lines.push(...preservedLines(frontmatter));
 
   return `${bom}---${eol}${lines.join(eol)}${eol}---${eol}${eol}${body.replace(/^\s*\r?\n/, '')}`;

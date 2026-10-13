@@ -17,18 +17,19 @@ test('splitFrontmatter отделяет шапку от тела', () => {
 
 test('заметка без шапки разбирается целиком как тело', () => {
   assert.deepEqual(parseFrontmatter('Просто текст\n'), {
-    title: '', category: '', tags: [], due: '',
+    title: '', category: '', tags: [], due: '', pinned: false,
   });
   assert.equal(splitFrontmatter('Просто текст\n').body, 'Просто текст\n');
 });
 
-test('читаются title, category, tags и due', () => {
-  const note = '---\ntitle: "План"\ncategory: "Работа"\ntags: ["llm", "исследования"]\ndue: 2026-10-20\n---\n\nТело\n';
+test('читаются title, category, tags, due и pinned', () => {
+  const note = '---\ntitle: "План"\ncategory: "Работа"\ntags: ["llm", "исследования"]\ndue: 2026-10-20\npinned: true\n---\n\nТело\n';
   assert.deepEqual(parseFrontmatter(note), {
     title: 'План',
     category: 'Работа',
     tags: ['llm', 'исследования'],
     due: '2026-10-20',
+    pinned: true,
   });
 });
 
@@ -142,4 +143,36 @@ test('тело CRLF-файла не смешивается с шапкой', () 
   const next = setFrontmatterKey(note, 'due', '2026-10-20');
   const withoutCrlf = next.replace(/\r\n/g, '');
   assert.ok(!withoutCrlf.includes('\n'), 'все переводы строк должны остаться CRLF');
+});
+
+// --- Свойства: закрепление и блочные теги ---------------------------------
+
+test('закрепление включается и снимается через setFrontmatterKey', async () => {
+  const { setFrontmatterKey } = await import('./frontmatter.js');
+  const note = '---\ntitle: "З"\ntags: ["a"]\n---\n\nТекст.\n';
+
+  const pinned = setFrontmatterKey(note, 'pinned', 'true');
+  assert.match(pinned, /pinned: true/);
+  assert.match(pinned, /title: "З"/);
+
+  // Ключ должен исчезнуть, а не остаться «pinned: false» в файле.
+  const unpinned = setFrontmatterKey(pinned, 'pinned', '');
+  assert.doesNotMatch(unpinned, /pinned/);
+  assert.match(unpinned, /title: "З"/);
+});
+
+test('блочные теги не протекают в тело при перезаписи шапки', async () => {
+  // tags: со списком на следующих строках — обычный YAML. Такие строки не
+  // содержат «:» и раньше переживали перезапись, оседая под due внутри
+  // frontmatter, то есть заметка портилась при первом же сохранении свойств.
+  const { upsertFrontmatter } = await import('./frontmatter.js');
+  const note = '---\ntitle: "З"\ntags:\n  - "старое"\n  - "ещё"\npinned: true\n---\n\nТекст.\n';
+
+  // Управляемый ключ, которого не передали, считается снятым —
+  // поэтому pinned здесь обязателен.
+  const next = upsertFrontmatter(note, { title: 'З', tags: ['новое'], due: '', pinned: true });
+  assert.match(next, /tags: \["новое"\]/);
+  assert.doesNotMatch(next, /- "старое"/);
+  assert.doesNotMatch(next, /- "ещё"/);
+  assert.match(next, /pinned: true/);
 });

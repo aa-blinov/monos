@@ -35,7 +35,7 @@
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
   import NoteHistoryModal from './NoteHistoryModal.svelte';
-  import { Palette, Trash2, FileText, Pencil, CalendarDays, X, Focus } from 'lucide-svelte';
+  import { Palette, Trash2, FileText, Pencil, CalendarDays, X, Focus, Pin } from 'lucide-svelte';
 
   let richEditor;
 
@@ -88,6 +88,7 @@
   const AUTOSAVE_DELAY = 1250;
   let backlinks = [];
   let editableTags = [];
+  let editableCategory = '';
   let metadataTimer;
   const METADATA_DELAY = 1200;
   let loadedFilePath = null;
@@ -165,7 +166,13 @@
 
   function hasMetadataChanges() {
     const currentTags = fileInfo?.metadata?.tags || [];
-    return editedTitle !== title || !tagsEqual(editableTags, currentTags);
+    return editedTitle !== title
+      || !tagsEqual(editableTags, currentTags)
+      || editableCategory !== (fileInfo?.metadata?.category || '')
+      // Закрепление живёт в той же шапке. Без этой строки переключение
+      // меняло содержимое в памяти и уходило дальше по коду: saveMetadataFields
+      // видел, что метаданные не тронуты, и выходил, ничего не записав.
+      || isPinned !== Boolean(fileInfo?.metadata?.pinned);
   }
 
   async function fetchBacklinks(filePath = currentFile?.path) {
@@ -309,6 +316,7 @@
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
       editedTitle = title;
       editableTags = fileInfo.metadata?.tags || [];
+      editableCategory = fileInfo.metadata?.category || '';
       backlinks = nextBacklinks;
       loadedFilePath = filePath;
       displayedFile = { ...currentFile };
@@ -463,17 +471,32 @@
 
   $: if (fileInfo) editedTitle, scheduleMetadataSave();
 
+  /** Теги вводятся через запятую — формат тот же, что у Obsidian. */
+  function applyTagsInput(value) {
+    editableTags = String(value || '')
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    void saveMetadataFields();
+  }
+
+  function togglePinned() {
+    editedContent = setFrontmatterKey(editedContent, 'pinned', isPinned ? '' : 'true');
+    void saveMetadataFields();
+  }
+
   async function saveMetadataFields() {
     if (!currentFile || !fileInfo || !hasMetadataChanges()) return;
     if (metadataTimer) clearTimeout(metadataTimer);
     const nextContent = upsertFrontmatter(editedContent, {
       title: editedTitle,
-      category: fileInfo.metadata?.category || '',
+      category: editableCategory,
       tags: editableTags,
       // Срок живёт в тех же ключах, что и заголовок: если его не передать,
       // upsertFrontmatter сочтёт его неуправляемым и молча удалит при
       // переименовании заметки.
       due: dueDate,
+      pinned: isPinned,
     });
     if (nextContent !== editedContent) editedContent = nextContent;
 
@@ -492,6 +515,7 @@
           title: meta.title || '',
           category: meta.category || '',
           tags: Array.isArray(meta.tags) ? meta.tags : editableTags,
+          pinned: Boolean(parseFrontmatter(meta.content || nextContent).pinned),
         },
       };
 
@@ -599,6 +623,7 @@
   }
 
   $: taskProgress = taskProgressOf(editedContent);
+  $: isPinned = Boolean(parseFrontmatter(editedContent).pinned);
 
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
@@ -669,6 +694,59 @@
           </TooltipIconButton>
         {/each}
       </div>
+    </div>
+  {/if}
+
+  <!-- Свойства заметки: то, что лежит в шапке файла, но редактировалось раньше
+       только в настройках. Панель узкая и всегда на виду — иначе срок и теги
+       приходилось бы искать по интерфейсу, чтобы поставить галочку. -->
+  {#if !isLoading && visibleFile && !visibleFile.isDir}
+    <div class="flex flex-wrap items-center gap-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="note-properties">
+      <label class="flex items-center gap-1.5">
+        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyCategory}</span>
+        <input
+          type="text"
+          data-testid="property-category"
+          bind:value={editableCategory}
+          on:change={saveMetadataFields}
+          placeholder={$localizedText.editor.propertyCategoryEmpty}
+          class="h-8 w-40 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+        />
+      </label>
+
+      <label class="flex items-center gap-1.5">
+        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyTags}</span>
+        <input
+          type="text"
+          data-testid="property-tags"
+          value={editableTags.join(', ')}
+          on:change={(e) => applyTagsInput(e.currentTarget.value)}
+          placeholder={$localizedText.editor.propertyTagsEmpty}
+          class="h-8 w-56 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+        />
+      </label>
+
+      <label class="flex items-center gap-1.5">
+        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyDue}</span>
+        <input
+          type="date"
+          data-testid="property-due"
+          bind:value={dueInput}
+          on:change={(e) => applyDue(e.currentTarget.value)}
+          class="h-8 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+        />
+      </label>
+
+      <TooltipIconButton
+        type="button"
+        data-testid="property-pin"
+        class="flex h-8 w-8 items-center justify-center rounded-md border {isPinned ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'} bg-[var(--bg-primary)] transition hover:border-[var(--text-secondary)]/50"
+        on:click={togglePinned}
+        label={isPinned ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+        tooltip={isPinned ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+      >
+        <Pin size="14" strokeWidth="1.7" aria-hidden="true" />
+      </TooltipIconButton>
     </div>
   {/if}
 
