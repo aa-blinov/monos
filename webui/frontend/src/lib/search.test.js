@@ -59,3 +59,13 @@ test('запрос только из операторов не подсвечи�
 test('обычный запрос не меняется', () => {
   assert.deepEqual(getSearchTerms('отчёт по продажам'), ['отчёт по продажам', 'продажам', 'отчёт', 'по']);
 });
+
+test('getSearchTerms выкидывает path: и tag:, а их значения не ищутся в тексте', () => {
+  // Значение оператора — это путь или тег, в тексте заметки его нет. Если бы
+  // оно осталось в подсветке, совпадений не нашлось бы вовсе.
+  assert.deepEqual(getSearchTerms('path:MarfaTech'), []);
+  assert.deepEqual(getSearchTerms('tag:срочное'), []);
+  assert.deepEqual(getSearchTerms('-path:base/EORA apt'), ['apt']);
+  assert.deepEqual(getSearchTerms('path:MarfaTech backup'), ['backup']);
+  assert.deepEqual(getSearchTerms('path:"KODE - МФЦ"'), []);
+});

@@ -108,7 +108,7 @@ test('parseSearchQuery раскладывает текст и операторы
   const parsed = parseSearchQuery('report body:quarterly updated:2026-10');
   assert.deepEqual(parsed.text, ['report']);
   assert.deepEqual(parsed.body, { terms: ['quarterly'], negated: false });
-  assert.deepEqual(parsed.updated, { values: ['2026-10'], negated: false });
+  assert.deepEqual(parsed.updated, { values: ['2026-10'], exclude: [] });
 });
 
 test('body: собирает следующие слова в тело, а не в свободный текст', () => {
@@ -131,7 +131,42 @@ test('оператор обрывается на следующем операт
 test('отрицание оператора помечается, а не теряется', () => {
   const parsed = parseSearchQuery('-body:draft');
   assert.deepEqual(parsed.body, { terms: ['draft'], negated: true });
-  assert.deepEqual(parseSearchQuery('-updated:2026-01').updated, { values: ['2026-01'], negated: true });
+  // У значений и исключений разные списки: один флаг на корзину сливал
+  // `path:A -path:B` в «исключить и A, и B».
+  assert.deepEqual(parseSearchQuery('-updated:2026-01').updated, { values: [], exclude: ['2026-01'] });
+  assert.deepEqual(parseSearchQuery('path:a -path:b').path, { values: ['a'], exclude: ['b'] });
+});
+
+test('path: и tag: раскладываются отдельно друг от друга', () => {
+  const parsed = parseSearchQuery('path:MarfaTech tag:work updated:2026-10');
+  assert.deepEqual(parsed.path, { values: ['marfatech'], exclude: [] });
+  assert.deepEqual(parsed.tag, { values: ['work'], exclude: [] });
+  assert.deepEqual(parsed.updated, { values: ['2026-10'], exclude: [] });
+  assert.deepEqual(parsed.text, []);
+});
+
+test('исключение не переворачивает знак положительного условия', () => {
+  // Регрессия: раньше оба значения попадали в одну корзину под negated=true,
+  // и `path:MarfaTech -path:KODE` возвращал почти всё дерево.
+  const entries = [
+    { path: 'notes/base/EORA/Проекты/MarfaTech/a.md', name: 'a', title: '', content: 'x', tags: '[]', modified_at: '2026-01-01' },
+    { path: 'notes/base/EORA/Проекты/KODE/b.md', name: 'b', title: '', content: 'x', tags: '[]', modified_at: '2026-01-01' },
+    { path: 'notes/base/Прочее/c.md', name: 'c', title: '', content: 'x', tags: '[]', modified_at: '2026-01-01' },
+  ];
+  const hits = searchEntries(entries, { query: 'path:MarfaTech -path:KODE' });
+  assert.equal(hits.length, 1, 'осталась только MarfaTech');
+  assert.equal(hits[0].path, 'notes/base/EORA/Проекты/MarfaTech/a.md');
+});
+
+test('path: сужает по папке, tag: — по тегу', () => {
+  const entries = [
+    { path: 'notes/base/EORA/a.md', name: 'a', title: '', content: 'x', tags: '["срочное"]', modified_at: '2026-01-01' },
+    { path: 'notes/base/IC/b.md', name: 'b', title: '', content: 'x', tags: '[]', modified_at: '2026-01-01' },
+  ];
+  assert.equal(searchEntries(entries, { query: 'path:EORA' }).length, 1);
+  assert.equal(searchEntries(entries, { query: 'tag:срочное' }).length, 1);
+  assert.equal(searchEntries(entries, { query: 'tag:нету' }).length, 0);
+  assert.equal(searchEntries(entries, { query: '-path:EORA' }).length, 1);
 });
 
 test('body: ищет внутри заметки даже без search_content', () => {

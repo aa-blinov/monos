@@ -162,6 +162,17 @@ export function searchFts(db, parsed, { searchContent = false } = {}) {
     if (!safe) return null;
     clauses.push(`content : ${safe}`);
   }
+  // `path:` и `tag:` тоже умеют в индексе: и path, и tags — его колонки.
+  // Без этого быстрый путь молча выкидывал бы фильтр, и `path:base/EORA`
+  // отвечал бы так же, как обычный текстовый запрос.
+  for (const [bucket, column] of [[parsed?.path, 'path'], [parsed?.tag, 'tags']]) {
+    if (bucket?.exclude?.length) return null; // исключения умеет только перебор
+    for (const value of bucket?.values || []) {
+      const safe = ftsTerm(value);
+      if (!safe) return null;
+      clauses.push(`${column} : ${safe}`);
+    }
+  }
   if (clauses.length === 0) return null;
 
   let rows;

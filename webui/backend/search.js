@@ -62,11 +62,13 @@ function tokenizeQuery(input) {
 }
 
 /** `body:"exact phrase"` → `{ name: 'body', value: 'exact phrase' }`. */
+const FILTER_OPERATORS = new Set(['body', 'updated', 'path', 'tag']);
+
 function readOperatorToken(token) {
   const match = /^(-?)([A-Za-z]+):(.+)$/.exec(token);
   if (!match) return null;
   const name = match[2].toLowerCase();
-  if (name !== 'body' && name !== 'updated') return null;
+  if (!FILTER_OPERATORS.has(name)) return null;
   return { negated: match[1] === '-', name, value: match[3] };
 }
 
@@ -95,7 +97,14 @@ export function parseSearchQuery(rawQuery) {
   const tokens = tokenizeQuery(String(rawQuery || '').replace(/^#/, ''));
   const text = [];
   const body = { terms: [], negated: false };
-  const updated = { values: [], negated: false };
+  // Значения и исключения лежат раздельно. Один флаг negated на корзину
+  // сливал `path:A -path:B` в «исключить и A, и B» — положительное условие
+  // молча меняло знак, и запрос возвращал почти всё дерево.
+  const updated = { values: [], exclude: [] };
+  // `path:` и `tag:` добавлены под реальное хранилище: папок больше шестидесяти,
+  // а тегов нет ни одного — искать по папке оказалось удобнее, чем по тегу.
+  const path = { values: [], exclude: [] };
+  const tag = { values: [], exclude: [] };
 
   let collecting = null;
 
@@ -110,32 +119,57 @@ export function parseSearchQuery(rawQuery) {
         collecting = 'body';
         pushTerm(body.terms, operator.value);
       } else {
-        // `updated:` takes a single value, so words after it stay free text.
-        updated.negated = updated.negated || operator.negated;
-        if (operator.value) updated.values.push(operator.value.toLowerCase());
-        else collecting = 'updated';
+        // Значения операторов одиночные, поэтому слова после них остаются
+        // свободным текстом.
+        const bucket = operator.name === 'updated' ? updated
+          : operator.name === 'path' ? path
+            : tag;
+        if (operator.value) (operator.negated ? bucket.exclude : bucket.values).push(operator.value.toLowerCase());
+        else collecting = operator.negated ? null : operator.name;
       }
       continue;
     }
 
     if (collecting === 'body') pushTerm(body.terms, token);
     else if (collecting === 'updated') updated.values.push(token.toLowerCase());
+    else if (collecting === 'path') path.values.push(token.toLowerCase());
+    else if (collecting === 'tag') tag.values.push(token.toLowerCase());
     else text.push(token.toLowerCase());
   }
 
-  return { text, body, updated };
+  return { text, body, updated, path, tag };
+}
+
+/** Условие по списку: все значения должны совпасть, ни одно исключение — не должно. */
+function matchesFilterList(haystacks, filter) {
+  const include = (filter.values || []).map(normalizeSearchText).filter(Boolean);
+  if (!include.every(value => haystacks.some(h => h.includes(value)))) return false;
+  const exclude = (filter.exclude || []).map(normalizeSearchText).filter(Boolean);
+  return !exclude.some(value => haystacks.some(h => h.includes(value)));
+}
+
+function matchesPath(entry, filter) {
+  return matchesFilterList([normalizeSearchText(entry.path)], filter);
+}
+
+function matchesTag(entry, filter) {
+  return matchesFilterList(parseTags(entry.tags).map(normalizeSearchText), filter);
+}
+
+/** Сколько условий в корзине — значений плюс исключений. */
+function countFilterValues(filter) {
+  return (filter?.values?.length || 0) + (filter?.exclude?.length || 0);
 }
 
 /** Prefix match so `updated:2026-10` finds the whole month. */
 function matchesUpdated(entry, filter) {
-  const candidates = (Array.isArray(filter.values) ? filter.values : [filter.values])
-    .map(value => String(value || '').toLowerCase())
-    .filter(Boolean);
-  if (candidates.length === 0) return true;
-
+  const include = (filter.values || []).map(value => String(value || '').toLowerCase()).filter(Boolean);
+  const exclude = (filter.exclude || []).map(value => String(value || '').toLowerCase()).filter(Boolean);
   const modified = String(entry.modified_at || '').toLowerCase();
-  if (!modified) return false;
-  return candidates.some(value => modified.startsWith(value));
+
+  if (include.length > 0 && !modified) return false;
+  if (include.some(value => !modified.startsWith(value))) return false;
+  return !exclude.some(value => modified.startsWith(value));
 }
 
 function stripWrappingQuotes(value) {
@@ -414,27 +448,31 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
     ? Array.from(new Set(parsed.text))
     : extractSearchTerms(rawQuery).terms;
   const cleanQuery = parsed ? textTerms.join(' ') : extractSearchTerms(rawQuery).cleanQuery;
-  const hasBodyFilter = Boolean(parsed && (parsed.body.terms.length > 0 || parsed.updated.values.length > 0));
+  const hasFilter = Boolean(parsed && (
+    parsed.body.terms.length > 0
+    || countFilterValues(parsed.updated) > 0
+    || countFilterValues(parsed.path) > 0
+    || countFilterValues(parsed.tag) > 0
+  ));
   // `body:` is an explicit request to look inside the note, so it searches the
   // content even when the caller did not ask for full-text search.
   const searchBody = Boolean(searchContent) || Boolean(parsed?.body.terms.length);
   const terms = textTerms;
 
-  if ((!cleanQuery || terms.length === 0) && !hasBodyFilter) {
+  if ((!cleanQuery || terms.length === 0) && !hasFilter) {
     return [];
   }
 
   return entries
     .map(entry => {
-      if (hasBodyFilter) {
+      if (hasFilter) {
         const bodyHit = parsed.body.terms.length === 0
           || matchSearchTerms([normalizeSearchText(entry.content)], parsed.body.terms);
         if (bodyHit === parsed.body.negated) return null;
 
-        if (parsed.updated.values.length > 0) {
-          const updatedHit = matchesUpdated(entry, parsed.updated);
-          if (updatedHit === parsed.updated.negated) return null;
-        }
+        if (countFilterValues(parsed.updated) > 0 && !matchesUpdated(entry, parsed.updated)) return null;
+        if (countFilterValues(parsed.path) > 0 && !matchesPath(entry, parsed.path)) return null;
+        if (countFilterValues(parsed.tag) > 0 && !matchesTag(entry, parsed.tag)) return null;
       }
 
       const ranked = isTagSearch
