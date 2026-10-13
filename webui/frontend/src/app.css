@@ -169,6 +169,11 @@
 
 .animate-toast-in { animation: toastIn 0.3s ease-out; }
 @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+/* Без движения: тост только проявляется, без сдвига. Подтверждение остаётся видимым. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in { animation-name: toastFade; }
+}
+@keyframes toastFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Hide native number input stepper arrows */
 input[type="number"] {
@@ -185,7 +190,6 @@ input[type="number"]::-webkit-outer-spin-button {
 .note-embed {
   margin: 1rem 0;
   border: 1px solid var(--border-subtle);
-  border-left: 2px solid var(--text-tertiary);
   border-radius: 8px;
   background: color-mix(in srgb, var(--bg-secondary) 45%, transparent);
   overflow: hidden;

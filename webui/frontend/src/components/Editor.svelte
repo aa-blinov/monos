@@ -1,11 +1,12 @@
 <script>
-  import { onDestroy, createEventDispatcher } from 'svelte';
+  import { onDestroy, createEventDispatcher, tick } from 'svelte';
   import EditorHeader from './EditorHeader.svelte';
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
   import OutlinePanel from './OutlinePanel.svelte';
+  import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction, noteSaveSignal, activeTheme } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -34,8 +35,7 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
-  import NoteHistoryModal from './NoteHistoryModal.svelte';
-  import { Palette, Trash2, FileText, Pencil, CalendarDays, X, Focus, Pin } from 'lucide-svelte';
+  import { ChevronLeft, Palette, Trash2, FileText, Pencil, CalendarDays, X, Focus, Pin } from 'lucide-svelte';
 
   let richEditor;
 
@@ -51,6 +51,20 @@
   // Режим фокуса: одна мысль на экране — узкая колонка и никакой второстепенной
   // панели. Мера текста в дизайн-системе уже есть, мы её переиспользуем.
   let focusMode = false;
+  // Оглавление на узком экране открывается поверх заметки (см. OutlinePanel).
+  let outlineOpen = false;
+  let outlinePanel;
+  let outlineRail;
+  // Стрелка на десктопе сворачивает колонку оглавления в полоску. Фокус
+  // переносим на видимый элемент, иначе он потерялся бы в скрытой панели.
+  function hideOutline() {
+    outlineHidden.set(true);
+    tick().then(() => outlineRail?.focus());
+  }
+  function showOutline() {
+    outlineHidden.set(false);
+    tick().then(() => outlinePanel?.focusHide());
+  }
   // Дедлайн заметки живёт в YAML-шапке и потому переживает перезагрузку,
   // экспорт в PDF и попадает в git как обычная строка.
   let dueDate = '';
@@ -335,7 +349,11 @@
       }
       dispatch('fileDeleted');
     } finally {
-      if (isCurrentLoad(requestId, filePath)) {
+      // Последний запрос завершает загрузку и тогда, когда пользователь уже
+      // вернулся на открытую заметку: новой загрузки в этом случае не будет.
+      // Без сброса loadingFilePath следующий клик по той же заметке тоже ничего
+      // не загрузит, а панели останутся в inert.
+      if (requestId === loadRequestId) {
         isLoading = false;
         loadingFilePath = null;
       }
@@ -553,12 +571,13 @@
   }
 
   function handleOutlineNavigate(event) {
-    const { text } = event.detail || {};
+    const { text, occurrence = 0 } = event.detail || {};
+    outlineOpen = false;
     if (!text || !richEditor) return;
-    if (!richEditor.scrollToHeadingText?.(text)) {
+    if (!richEditor.scrollToHeadingText?.(text, occurrence)) {
       // fallback: попробуем найти по anchor id, если рендерер когда-то добавит
       const target = document.getElementById(event.detail.anchor || '');
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target) target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     }
   }
 
@@ -673,14 +692,19 @@
     {taskProgress}
     historyAvailable={Boolean(loadedFilePath) && conflictCount === 0}
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
+    {outlineOpen}
+    onToggleOutline={() => { outlineOpen = !outlineOpen; }}
   />
 
   {#if showHistory && historyNote?.path}
-    <NoteHistoryModal
-      notePath={(historyNote.path || '').replace(/^notes\//, '')}
-      on:close={() => { showHistory = false; }}
-      on:restored={async () => { if (loadedFilePath) await loadFile(); }}
-    />
+    {#await import('./NoteHistoryModal.svelte') then historyModal}
+      <svelte:component
+        this={historyModal.default}
+        notePath={(historyNote.path || '').replace(/^notes\//, '')}
+        on:close={() => { showHistory = false; }}
+        on:restored={async () => { if (loadedFilePath) await loadFile(); }}
+      />
+    {/await}
   {/if}
   <div class="border-b border-[var(--note-page-border)]"></div>
   {#if backlinks.length > 0}
@@ -763,7 +787,7 @@
   <!-- Content Area -->
   {#if isLoading && !displayedFile}
     <div class="flex-1 flex items-center justify-center">
-      <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.editor.gatheringThoughts}</span>
+      <span class="text-xs uppercase tracking-widest motion-safe:animate-pulse">{$localizedText.editor.gatheringThoughts}</span>
     </div>
   {:else}
     <div class="flex-1 flex min-w-0 min-h-0">
@@ -809,7 +833,27 @@
         {/if}
       </div>
       {#if !focusMode}
-        <OutlinePanel content={content} on:navigate={handleOutlineNavigate} />
+        <OutlinePanel
+          bind:this={outlinePanel}
+          content={content}
+          open={outlineOpen}
+          collapsed={$outlineHidden}
+          on:navigate={handleOutlineNavigate}
+          on:close={() => { outlineOpen = false; }}
+          on:hide={hideOutline}
+        />
+        {#if $outlineHidden}
+          <button
+            type="button"
+            bind:this={outlineRail}
+            title={$localizedText.editor.showOutline}
+            aria-label={$localizedText.editor.showOutline}
+            class="hidden w-8 shrink-0 items-start justify-center border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] pt-5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:flex"
+            on:click={showOutline}
+          >
+            <ChevronLeft class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
+          </button>
+        {/if}
       {/if}
     </div>
   {/if}

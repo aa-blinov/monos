@@ -25,7 +25,7 @@
         {#each colorOptions as c}
           <TooltipIconButton
             on:click={() => dispatch('color', c)}
-            class="w-7 h-7 rounded-md border-2 transition-all {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
+            class="w-7 h-7 rounded-md border-2 transition-[border-color,transform] {selectedColor === c ? 'border-[var(--text-primary)] scale-110' : 'border-transparent hover:scale-105'}"
             style="background: {c}"
             label={c}
             tooltip={c}

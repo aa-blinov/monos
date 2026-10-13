@@ -84,6 +84,9 @@ export const NOTE_COLORS = {
 
 const DEFAULT_COLORS = NOTE_COLORS.gruvbox;
 
+/** Color a folder icon starts with, until the user picks another one. */
+export const DEFAULT_ICON_COLOR = NOTE_COLORS.gruvbox[0];
+
 /**
  * Return the 10-color note palette for the given theme. Falls back to gruvbox
  * if the theme is unknown.

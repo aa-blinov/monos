@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { editorAction } from '../stores.js';
+import { editorAction, outlineHidden } from '../stores.js';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Editor from './Editor.svelte';
 import { locale, uiText } from '../lib/strings.js';
@@ -314,6 +314,94 @@ test('Editor не показывает панели свойств и подва
   body.resolve(jsonResponse({ content: 'Alpha body' }));
   await waitFor(() => expect(screen.getByTestId('note-properties')).toBeTruthy());
   expect(screen.getByTestId('editor-footer')).toBeTruthy();
+});
+
+test('Editor открывает заметку снова после возврата на текущую, пока та грузилась', async () => {
+  let betaRequests = 0;
+  let resolveFirstBeta;
+  const fileInfo = (title) => jsonResponse({
+    created: '2026-05-07T10:00:00.000Z',
+    modified: '2026-05-07T12:00:00.000Z',
+    metadata: { title, tags: [] },
+  });
+  const fetchMock = vi.fn((url, init = {}) => {
+    const method = init.method || 'GET';
+
+    if (url === '/api/file?path=notes%2FAlpha.md' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ content: 'Alpha body' }));
+    }
+    if (url === '/api/file-info?path=notes%2FAlpha.md') return Promise.resolve(fileInfo('Alpha'));
+    if (url === '/api/notes/backlinks?path=notes%2FAlpha.md') return Promise.resolve(jsonResponse([]));
+
+    if (url === '/api/file?path=notes%2FBeta.md' && method === 'GET') {
+      betaRequests += 1;
+      if (betaRequests === 1) {
+        return new Promise((resolve) => {
+          resolveFirstBeta = () => resolve(jsonResponse({ content: 'Beta body' }));
+        });
+      }
+      return Promise.resolve(jsonResponse({ content: 'Beta body' }));
+    }
+    if (url === '/api/file-info?path=notes%2FBeta.md') return Promise.resolve(fileInfo('Beta'));
+    if (url === '/api/notes/backlinks?path=notes%2FBeta.md') return Promise.resolve(jsonResponse([]));
+
+    return Promise.resolve(jsonResponse({ message: `Unhandled request: ${method} ${url}` }, false));
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Editor, {
+    currentFile: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+
+  component.$set({ currentFile: { path: 'notes/Beta.md', name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(betaRequests).toBe(1));
+
+  // Вернулись на уже открытую Alpha, пока Beta ещё грузится: новой загрузки нет.
+  component.$set({ currentFile: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false } });
+  await tick();
+
+  // Ответ на Beta приходит после возврата и отбрасывается, но загрузка завершается.
+  resolveFirstBeta();
+  await waitFor(() => expect(screen.getByTestId('editor-footer').inert).toBe(false));
+
+  // Теперь Beta снова выбрана: она должна загрузиться, а не остаться на Alpha.
+  component.$set({ currentFile: { path: 'notes/Beta.md', name: 'Beta.md', isDir: false } });
+  await tick();
+  await waitFor(() => expect(betaRequests).toBe(2));
+  await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
+});
+
+test('Editor сворачивает оглавление стрелкой, помнит это и возвращает обратно', async () => {
+  installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
+    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: '# Alpha\n\nBody' }),
+    '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
+      created: '2026-05-07T10:00:00.000Z',
+      modified: '2026-05-07T12:00:00.000Z',
+      metadata: { title: 'Alpha', tags: [] },
+    }),
+  }));
+
+  render(Editor, {
+    currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+  expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.hideOutline }));
+  expect(screen.getByTestId('outline-panel').className).toContain('lg:hidden');
+  expect(localStorage.getItem('outlineHidden')).toBe('true');
+  const rail = screen.getByRole('button', { name: uiText.editor.showOutline });
+  await waitFor(() => expect(document.activeElement).toBe(rail));
+
+  await fireEvent.click(rail);
+  expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
+  expect(localStorage.getItem('outlineHidden')).toBe('false');
+  expect(screen.queryByRole('button', { name: uiText.editor.showOutline })).toBeNull();
+
+  outlineHidden.set(false);
 });
 
 test('Editor переименовывает вложение и обновляет markdown-ссылку', async () => {

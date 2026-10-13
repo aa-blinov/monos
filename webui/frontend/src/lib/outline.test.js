@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractOutline, slugifyAnchor } from './outline.js';
+import { extractOutline, findHeadingPos, slugifyAnchor, withOccurrences } from './outline.js';
 
 test('slugifyAnchor: ascii lowercase + дефисы', () => {
   assert.equal(slugifyAnchor('Hello World'), 'hello-world');
@@ -126,6 +126,29 @@ content`;
   const items = extractOutline(md);
   assert.equal(items.length, 1);
   assert.equal(items[0].text, 'Real heading');
+});
+
+test('withOccurrences: повторы одного текста нумеруются по порядку в документе', () => {
+  const items = withOccurrences(extractOutline('## Summary\n## Details\n### Summary\n## Summary'));
+  assert.deepEqual(items.map((it) => it.occurrence), [0, 0, 1, 2]);
+});
+
+test('findHeadingPos: берёт N-й заголовок с нужным текстом, а не первый', () => {
+  const headings = [
+    { text: 'Summary', pos: 10 },
+    { text: 'Details', pos: 40 },
+    { text: 'Summary', pos: 70 },
+  ];
+  assert.equal(findHeadingPos(headings, 'Summary', 0), 10);
+  assert.equal(findHeadingPos(headings, 'Summary', 1), 70);
+  assert.equal(findHeadingPos(headings, '  Summary  ', 1), 70);
+});
+
+test('findHeadingPos: нет такого заголовка или номера → null', () => {
+  const headings = [{ text: 'Summary', pos: 10 }];
+  assert.equal(findHeadingPos(headings, 'Summary', 1), null);
+  assert.equal(findHeadingPos(headings, 'Missing'), null);
+  assert.equal(findHeadingPos(headings, ''), null);
 });
 
 test('extractOutline: экранированный \\# внутри frontmatter распознаётся как heading', () => {

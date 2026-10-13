@@ -54,11 +54,11 @@
     markdownImage,
   } from '../lib/attachments.js';
   import { editorState, activeTheme } from '../stores.js';
-  import { getNoteColorOptions } from '../lib/note-colors.js';
+  import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata } from '../lib/template-preview.js';
   import { formFieldClass } from '../lib/form-field.js';
-  import * as Icon from 'lucide-svelte';
+  import { Icon } from '../lib/tree-icons.js';
 
   const dispatch = createEventDispatcher();
 
@@ -134,7 +134,7 @@
   /** @type {string} */
   let iconPickerTarget = null;
   /** @type {string} */
-  let selectedColor = '#a89984';
+  let selectedColor = DEFAULT_ICON_COLOR;
 
   $: colorOptions = getNoteColorOptions($activeTheme);
 
@@ -1030,7 +1030,7 @@
     >
     {#if isLoading}
       <div class="flex items-center justify-center h-32">
-        <span class="text-xs uppercase tracking-widest animate-pulse">{$localizedText.sidebar.loading}</span>
+        <span class="text-xs uppercase tracking-widest motion-safe:animate-pulse">{$localizedText.sidebar.loading}</span>
       </div>
     {:else if tree}
       <div class="space-y-0.5 lg:space-y-1">
@@ -1076,32 +1076,32 @@
   <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex h-16 shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
       {#if gitConfigured}
-        <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+        <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
           {#if isSyncing}
-            <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+            <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
           {:else}
             <Icon.RefreshCw size="20" strokeWidth="1.7" />
           {/if}
           <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
         </button>
       {/if}
-      <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.LayoutTemplate size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.templates}</span>
       </button>
-      <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Bookmark size="20" strokeWidth="1.7" />
         <span>{$localizedText.savedSearches.title}</span>
       </button>
-      <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Hash size="20" strokeWidth="1.7" />
         <span>{$localizedText.tags.title}</span>
       </button>
-      <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Trash2 size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.trash}</span>
       </button>
-      <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+      <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
       </button>
@@ -1120,7 +1120,7 @@
             tooltipAlign="end"
           >
             {#if isSyncing}
-              <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent animate-spin"></span>
+              <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
             {:else if autoPullState?.conflicts}
               <Icon.AlertTriangle class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {:else}
