@@ -24,6 +24,10 @@ export function getSearchTerms(query) {
     .replace(/(^|\s)-?updated:(?:"[^"]*"|\S*)/g, ' ')
     // `body:` only names the field — the words after it are still content.
     .replace(/(^|\s)-?body:(?:"([^"]*)"|)/g, (match, lead, phrase) => (phrase ? ` ${phrase}` : ' '))
+    // `path:` and `tag:` filter on metadata; their values never occur in the
+    // note text, so highlighting them would look for a word that isn't there.
+    .replace(/(^|\s)-?path:(?:"[^"]*"|\S*)/g, ' ')
+    .replace(/(^|\s)-?tag:(?:"[^"]*"|\S*)/g, ' ')
     .replace(/"/g, '')
     .trim()
     .toLowerCase()
