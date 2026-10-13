@@ -51,3 +51,4 @@ webui/frontend/playwright-report/
 .mavis/
 .impeccable/
 webui/frontend/.impeccable/
+brag-output-*/
