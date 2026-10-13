@@ -36,7 +36,7 @@ Use lowercase words when possible. Prefer a small number of useful tags over lon
 
 ### `category`
 
-Optional grouping label, usually matching the folder where the note lives.
+Optional grouping label, usually matching the folder where the note lives. In the note's properties it is the Category field; it does not move the file. The field suggests categories that already exist in the notes, and a name typed in a different case reuses the existing spelling.
 
 ```yaml
 category: Projects
