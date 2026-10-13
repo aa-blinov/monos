@@ -454,9 +454,12 @@
       try {
         editor.commands.focus();
         editor.commands.setTextSelection(targetPos);
-        // Установка выделения сама по себе не двигает страницу — без этой
-        // команды клик по оглавлению выделял заголовок, но не листал к нему.
-        editor.commands.scrollIntoView();
+        // Выделение само страницу не двигает. Ставим заголовок в начало поля
+        // редактора, а не «как можно меньше»: минимальная прокрутка оставляла
+        // его у верхнего края, иногда под самой шапкой заметки.
+        const { node } = editor.view.domAtPos(targetPos);
+        const element = node instanceof HTMLElement ? node : node?.parentElement;
+        element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (_) {
         // ignore
       }
