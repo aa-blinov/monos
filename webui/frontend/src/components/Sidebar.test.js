@@ -600,3 +600,32 @@ test('Sidebar после перемещения заметки открывае�
   })));
   await waitFor(() => expect(screen.getByText('Alpha').closest('button').className).toContain('bg-[var(--border-subtle)]'));
 });
+
+test('Sidebar при открытии заметки не пересоздаёт дерево', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  const { component } = render(Sidebar);
+  const navigateHandler = vi.fn();
+  component.$on('navigate', navigateHandler);
+  await component.loadTree();
+
+  // Раскрываем папку: первое раскрытие дерево действительно пересоздаёт.
+  await fireEvent.click(screen.getByText('Work').closest('button'));
+  const alpha = await waitFor(() => screen.getByText('Alpha').closest('button'));
+  await fireEvent.click(alpha);
+  await flushPromises();
+
+  // Дальше раскрытие уже не меняется, и {#key treeKey} не должен срабатывать:
+  // безусловный treeKey++ перерисовывал всю ветку — это было моргание.
+  const rowBefore = screen.getByText('Alpha').closest('button');
+  const nestedBefore = screen.getByText('Nested');
+  navigateHandler.mockClear();
+
+  await fireEvent.click(rowBefore);
+  await flushPromises();
+
+  expect(screen.getByText('Alpha').closest('button')).toBe(rowBefore);
+  expect(screen.getByText('Nested')).toBe(nestedBefore);
+});

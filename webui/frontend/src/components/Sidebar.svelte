@@ -399,9 +399,11 @@
 
   export function setSelected(path) {
     clearSelectedNotes();
-    expandToPath(tree, path, { replace: false });
+    // Пересоздавать дерево нужно только когда раскрытие реально изменилось.
+    // Безусловный treeKey++ перерисовывал всю ветку при каждом открытии
+    // заметки — это и было моргание.
+    if (expandToPath(tree, path, { replace: false })) treeKey++;
     selectedPath = path;
-    treeKey++;
   }
 
   function handleToggleExpand(event) {
