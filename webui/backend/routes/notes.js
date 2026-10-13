@@ -428,14 +428,19 @@ export function registerNoteRoutes(app) {
       // `LIMIT 1` used to pick one of them in silence, which is the worst
       // possible answer: the caller believes it resolved the link it asked
       // about. So all candidates are reported and the caller decides.
+      // Имя ищется по нормализованному ключу: на диске имена разложены (NFD),
+      // а связи набирают сложёнными (NFC) — «Запрос новой функциональности» не
+      // находился, хотя файл рядом.
+      const wanted = String(name || '').normalize('NFC');
+      const bare = wanted.replace(/\.md$/i, '');
       const rows = getDb().prepare(
         `SELECT path, name, title FROM notes_index
          WHERE is_dir = 0
            AND (trashed_at IS NULL OR trashed_at = '')
-           AND (title = ? OR name = ? OR name = ?)
+           AND (title = ? OR name_nfc = ? OR name_nfc = ?)
          ORDER BY path COLLATE NOCASE ASC
          LIMIT 10`
-      ).all(name, name, name + '.md');
+      ).all(bare, bare, `${bare}.md`);
 
       if (!rows.length) {
         res.json({});

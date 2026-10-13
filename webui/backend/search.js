@@ -1,5 +1,6 @@
 function normalizeSearchText(value) {
   return String(value || '')
+    .normalize('NFC')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();

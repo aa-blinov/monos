@@ -340,7 +340,11 @@ function splitMarkdownImages(text) {
 
 const EMBED_FORM = /^!\[\[([^\]|#]+?)\.(png|jpe?g|gif|webp|svg)\]\]$/i;
 const IMAGE_MARKDOWN_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
-const EMBED_ANYWHERE_RE = /!\[\[([^\]|#]+?)\.(png|jpe?g|gif|webp|svg)\]\]/gi;
+// Одна форма на оба случая: `![[image.png]]` и `![[Заметка]]`. Расширение в
+// конце необязательное, поэтому обе разбираются за один проход — иначе в тексте
+// «![[a.png]] и ![[Заметка]]» находилась только первая половина, а вторая
+// оставалась литералом.
+const EMBED_ANYWHERE_RE = /!\[\[([^\]|#\n]+?)(?:\.(png|jpe?g|gif|webp|svg))?\]\]/gi;
 
 function embedImageNode(target) {
   const name = String(target).split('/').pop() || target;
@@ -379,7 +383,10 @@ export function normalizeObsidianEmbeds(text) {
     if (match.index > lastIndex) {
       content.push({ type: 'text', text: source.slice(lastIndex, match.index) });
     }
-    content.push(embedImageNode(`${match[1].trim()}.${match[2].toLowerCase()}`));
+    const name = match[1].trim();
+    content.push(match[2]
+      ? embedImageNode(`${name}.${match[2].toLowerCase()}`)
+      : noteEmbedNode(name));
     lastIndex = match.index + match[0].length;
   }
   if (!content.length) return null;
@@ -387,6 +394,10 @@ export function normalizeObsidianEmbeds(text) {
     content.push({ type: 'text', text: source.slice(lastIndex) });
   }
   return content;
+}
+
+function noteEmbedNode(name) {
+  return { type: 'noteEmbed', attrs: { name } };
 }
 
 function normalizeMarkdownImageText(node) {
