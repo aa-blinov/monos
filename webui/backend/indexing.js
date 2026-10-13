@@ -112,6 +112,9 @@ export function indexDirectoryTree(dirPath) {
   indexFile(currentPath, '');
 }
 
+/** Есть ли в файле блок шапки вообще. */
+const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+
 export function migrateCachedMetadataToFrontmatter(db = getDb()) {
   const rows = db.prepare(`
     SELECT path, title, tags, category
@@ -137,6 +140,13 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
     if (!fs.existsSync(fullPath)) continue;
 
     const content = readTextFile(fullPath);
+    // Миграция существует для старых файлов, у которых метаданные жили только в
+    // БД. Файл, у которого шапка УЖЕ есть, — не легаси: шапка это источник
+    // истины. Раньше здесь бралось `currentMetadata.x || row.x`, и удалённое
+    // пользователем значение возвращалось из кэша при каждом старте бэкенда —
+    // ручная правка шапки отменялась молча.
+    if (FRONTMATTER_BLOCK.test(content)) continue;
+
     const currentMetadata = parseFrontmatterMetadata(content);
     const cachedTags = parseCachedTags(row.tags);
     const nextMetadata = {

@@ -782,6 +782,52 @@ apiTest('resolve-link находит заметку, даже если имя н
   fs.rmSync(file, { force: true });
 });
 
+apiTest('миграция НЕ возвращает удалённые из файла метаданные', async () => {
+  // Регрессия: ручная правка шапки отменялась при каждом старте бэкенда.
+  // Пользователь удалил category из файла, БД её помнил — и миграция писала
+  // значение обратно в markdown. Так в хранилище попало category: "Проверено".
+  const file = path.join(notesDir, 'Migrated.md');
+  fs.writeFileSync(file, '---\ntitle: "Своё"\ntags: []\n---\n\nТело.\n', 'utf8');
+  indexAllFiles();
+
+  // Имитируем рассинхрон: в БД категория осталась, в файле её удалили.
+  const Database = (await import('better-sqlite3')).default;
+  const db = new Database(path.join(tempRoot, '.data', 'notes.db'));
+  db.prepare("UPDATE notes_index SET category = ? WHERE path = ?").run('Проверено', 'notes/Migrated.md');
+  db.close();
+
+  const { migrateCachedMetadataToFrontmatter } = await import('./indexing.js');
+  migrateCachedMetadataToFrontmatter();
+
+  const after = fs.readFileSync(file, 'utf8');
+  assert.doesNotMatch(after, /category/, 'удалённая категория вернулась в файл');
+  assert.match(after, /title: "Своё"/);
+  assert.match(after, /Тело\./);
+  fs.rmSync(file, { force: true });
+});
+
+apiTest('миграция дописывает кэшированные метаданные в файл без шапки', async () => {
+  // Настоящий случай миграции: заметка старая, шапки у неё нет, а метаданные
+  // остались в БД от прежней версии. Восстанавливаем — так и задумано.
+  const file = path.join(notesDir, 'LegacyNote.md');
+  fs.writeFileSync(file, 'Просто тело без шапки.\n', 'utf8');
+  indexAllFiles();
+
+  const Database = (await import('better-sqlite3')).default;
+  const db = new Database(path.join(tempRoot, '.data', 'notes.db'));
+  db.prepare('UPDATE notes_index SET category = ? WHERE path = ?').run('Из кэша', 'notes/LegacyNote.md');
+  db.close();
+
+  const { migrateCachedMetadataToFrontmatter } = await import('./indexing.js');
+  migrateCachedMetadataToFrontmatter();
+
+  const after = fs.readFileSync(file, 'utf8');
+  assert.match(after, /^---\n/, 'у файла без шапки она должна появиться');
+  assert.match(after, /category: "Из кэша"/);
+  assert.match(after, /Просто тело/);
+  fs.rmSync(file, { force: true });
+});
+
 apiTest('GET /api/notes/resolve-link возвращает пустой объект для неизвестной заметки', async () => {
   const resolved = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Does Not Exist' }));
   assert.equal(resolved.response.status, 200);

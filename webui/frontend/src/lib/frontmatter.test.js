@@ -176,3 +176,17 @@ test('блочные теги не протекают в тело при пер�
   assert.doesNotMatch(next, /- "ещё"/);
   assert.match(next, /pinned: true/);
 });
+
+test('блочные теги читаются и не теряются при перезаписи', async () => {
+  const { parseFrontmatter, upsertFrontmatter } = await import('./frontmatter.js');
+  const note = '---\ntitle: "З"\ntags:\n  - "раз"\n  - "два: три"\n---\n\nТело.\n';
+
+  // Раньше блочный YAML не читался: теги были не видны в панели свойств и
+  // молча пропадали при первом сохранении.
+  assert.deepEqual(parseFrontmatter(note).tags, ['раз', 'два: три']);
+
+  const next = upsertFrontmatter(note, { title: 'З', category: '', tags: parseFrontmatter(note).tags, due: '', pinned: false });
+  assert.match(next, /"раз"/);
+  assert.match(next, /"два: три"/);
+  assert.doesNotMatch(next, /^\s+-\s/m, 'старый блочный список не должен оставаться в шапке');
+});

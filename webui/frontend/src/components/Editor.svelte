@@ -172,7 +172,7 @@
       // Закрепление живёт в той же шапке. Без этой строки переключение
       // меняло содержимое в памяти и уходило дальше по коду: saveMetadataFields
       // видел, что метаданные не тронуты, и выходил, ничего не записав.
-      || isPinned !== Boolean(fileInfo?.metadata?.pinned);
+      || noteIsPinned() !== Boolean(fileInfo?.metadata?.pinned);
   }
 
   async function fetchBacklinks(filePath = currentFile?.path) {
@@ -481,7 +481,7 @@
   }
 
   function togglePinned() {
-    editedContent = setFrontmatterKey(editedContent, 'pinned', isPinned ? '' : 'true');
+    editedContent = setFrontmatterKey(editedContent, 'pinned', noteIsPinned() ? '' : 'true');
     void saveMetadataFields();
   }
 
@@ -496,7 +496,7 @@
       // upsertFrontmatter сочтёт его неуправляемым и молча удалит при
       // переименовании заметки.
       due: dueDate,
-      pinned: isPinned,
+      pinned: noteIsPinned(),
     });
     if (nextContent !== editedContent) editedContent = nextContent;
 
@@ -623,7 +623,12 @@
   }
 
   $: taskProgress = taskProgressOf(editedContent);
-  $: isPinned = Boolean(parseFrontmatter(editedContent).pinned);
+  // Читаем из содержимого, а не из `$:`-переменной: та пересчитывается
+  // после текущего блока, и снятие закрепления успевало записать старое
+  // значение обратно — заметку было невозможно открепить.
+  function noteIsPinned() {
+    return Boolean(parseFrontmatter(editedContent).pinned);
+  }
 
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
@@ -740,10 +745,10 @@
       <TooltipIconButton
         type="button"
         data-testid="property-pin"
-        class="flex h-8 w-8 items-center justify-center rounded-md border {isPinned ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'} bg-[var(--bg-primary)] transition hover:border-[var(--text-secondary)]/50"
+        class="flex h-8 w-8 items-center justify-center rounded-md border {noteIsPinned() ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'} bg-[var(--bg-primary)] transition hover:border-[var(--text-secondary)]/50"
         on:click={togglePinned}
-        label={isPinned ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-        tooltip={isPinned ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+        label={noteIsPinned() ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+        tooltip={noteIsPinned() ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
       >
         <Pin size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>

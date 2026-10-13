@@ -141,7 +141,7 @@ const enText = {
   },
   header: {
     search: 'Search',
-    searchHint: 'Search. Operators: body:word — only inside the note, path:folder — inside a folder, tag:word — by tag, updated:2026-10 — changed since, -word — exclude.',
+    searchHint: 'Search. Operators: body:word — inside the note, path:folder — inside a folder, tag:word — by tag, updated:2026-10 — changed since, -word — exclude. Values with spaces go in quotes.',
     closeSearch: 'Close search',
     toggleSidebar: 'Toggle Sidebar',
     openSidebar: 'Open sidebar',
@@ -820,7 +820,7 @@ const ruText = {
   },
   header: {
     search: 'Поиск',
-    searchHint: 'Поиск. Операторы: body:слово — только внутри заметки, path:папка — внутри папки, tag:слово — по тегу, updated:2026-10 — изменена с, -слово — исключить.',
+    searchHint: 'Поиск. Операторы: body:слово — внутри заметки, path:папка — внутри папки, tag:слово — по тегу, updated:2026-10 — изменена с, -слово — исключить. Значения с пробелами — в кавычках.',
     closeSearch: 'Закрыть поиск',
     toggleSidebar: 'Показать или скрыть боковую панель',
     openSidebar: 'Открыть боковую панель',
