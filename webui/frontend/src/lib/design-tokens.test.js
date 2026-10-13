@@ -136,7 +136,10 @@ test('corner radii stay on the radius scale', () => {
     // Голое `rounded` — это 4px, шаг мимо шкалы. Проверка выше его не видит:
     // у неё есть дефис в регулярке, и именно поэтому такие углы доживали
     // незамеченными, пока их не посчитали глазами.
-    for (const m of read(file).matchAll(/(^|[\s"'])rounded([\s"']|$)/g)) {
+    // Разделителем может быть и `:` — так пишутся классы внутри
+    // произвольных вариантов Tailwind (`[&_.x]:rounded`), и такой случай
+    // проскакивал мимо проверки.
+    for (const m of read(file).matchAll(/(^|[\s"'`:])rounded([\s"'`:]|$)/g)) {
       offenders.push(`${path.basename(file)} rounded (4px, вне шкалы)`);
     }
   }

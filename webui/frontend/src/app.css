@@ -132,7 +132,7 @@
 }
 
 .prose-typography code {
-  @apply font-mono text-sm bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded;
+  @apply font-mono text-sm bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded-sm;
 }
 
 .prose-typography pre {

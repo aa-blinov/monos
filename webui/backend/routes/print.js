@@ -98,7 +98,9 @@ const STYLESHEET = `
   h3 { font-size: 12.5pt; margin-top: 16pt; }
   p { orphans: 3; widows: 3; }
   a { color: #458588; }
-  code { background: #ebdbb2; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.92em; }
+  /* Радиусы печатной таблицы тоже держатся шкалы: sm = 2px у инлайн-кода,
+     md = 6px у блока. Здесь стояло 3px — шаг мимо шкалы и мимо редактора. */
+  code { background: #ebdbb2; padding: 0.1em 0.3em; border-radius: 2px; font-size: 0.92em; }
   pre { background: #ebdbb2; padding: 10pt; border-radius: 6px; overflow: visible; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
   pre code { background: transparent; padding: 0; }
   /* Syntax colours are the same derived ramp the editor uses for gruvbox
