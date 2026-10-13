@@ -84,7 +84,7 @@
   {#if showBack}
     <TooltipIconButton
       on:click={goHome}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
       label={$localizedText.header.back}
       tooltip={$localizedText.header.back}
       tooltipAlign="start"
@@ -93,7 +93,7 @@
     </TooltipIconButton>
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -107,7 +107,7 @@
   {:else}
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -132,7 +132,7 @@
       on:input={handleSearchInput}
       on:keydown={(e) => { if (e.key === 'Escape') clearSearch(); }}
       on:focus={loadTags}
-      class="h-10 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-16 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
+      class="h-11 lg:h-10 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-16 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
     />
     {#if $searchQuery}
       <button
@@ -169,7 +169,7 @@
   </div>
   <TooltipIconButton
     on:click={createQuickNote}
-    class="inline-flex h-10 w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+    class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
     label={$localizedText.sidebar.quickNoteFromClipboard}
     tooltip={$localizedText.sidebar.quickNoteFromClipboard}
     tooltipAlign="end"
@@ -180,7 +180,7 @@
     <div class="flex-1"></div>
     <TooltipIconButton
       on:click={() => editorAction.set('delete')}
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
       label={$localizedText.editor.moveToTrash}
       tooltip={$localizedText.editor.moveToTrash}
       tooltipAlign="end"

@@ -119,4 +119,27 @@ export function extractOutline(markdown) {
   return out;
 }
 
+/**
+ * Number each item among the items that share its text, in document order.
+ * Headings can repeat ("Summary" twice), so the text alone does not say which
+ * one a click means; the occurrence does.
+ */
+export function withOccurrences(items) {
+  return items.map((item, index) => ({
+    ...item,
+    occurrence: items.slice(0, index).filter((it) => it.text === item.text).length,
+  }));
+}
+
+/**
+ * Position of the `occurrence`-th heading (0-based) whose text equals `text`.
+ * `headings` is `[{ text, pos }]` in document order. Returns null when absent.
+ */
+export function findHeadingPos(headings, text, occurrence = 0) {
+  const wanted = String(text || '').trim();
+  if (!wanted) return null;
+  const matches = headings.filter((h) => String(h.text || '').trim() === wanted);
+  return matches[occurrence]?.pos ?? null;
+}
+
 export { slugifyAnchor };

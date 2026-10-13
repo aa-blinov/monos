@@ -96,3 +96,12 @@
     </span>
   {/if}
 </span>
+
+<style>
+  /* The native select is transparent and takes the focus, so the visible
+     control has to show the focus ring for keyboard users. */
+  label:has(> select:focus-visible) {
+    outline: 1px solid var(--text-primary);
+    outline-offset: 2px;
+  }
+</style>
