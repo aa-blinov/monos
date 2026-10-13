@@ -113,7 +113,9 @@ export function indexDirectoryTree(dirPath) {
 }
 
 /** Есть ли в файле блок шапки вообще. */
-const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+// Блок без единого ключа (`---\n---`) — тоже шапка: раньше такой файл
+// считался легаси, и удалённые метаданные возвращались из кэша.
+const FRONTMATTER_BLOCK = /^\uFEFF?---(?:\r?\n)([\s\S]*?)(?:\r?\n)?---(?:\r?\n|$)/;
 
 export function migrateCachedMetadataToFrontmatter(db = getDb()) {
   const rows = db.prepare(`

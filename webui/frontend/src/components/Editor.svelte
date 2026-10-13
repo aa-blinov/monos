@@ -623,12 +623,14 @@
   }
 
   $: taskProgress = taskProgressOf(editedContent);
-  // Читаем из содержимого, а не из `$:`-переменной: та пересчитывается
-  // после текущего блока, и снятие закрепления успевало записать старое
-  // значение обратно — заметку было невозможно открепить.
+  // Логика читает содержимое напрямую: `$:`-переменная пересчитывается позже
+  // текущего блока, и снятие закрепления успевало записать старое значение
+  // обратно. Шаблон же должен видеть реактивную переменную — обычную функцию
+  // Svelte не пересчитывает, и кнопка не перерисовывалась до перезагрузки.
   function noteIsPinned() {
     return Boolean(parseFrontmatter(editedContent).pinned);
   }
+  $: pinnedNow = Boolean(parseFrontmatter(editedContent).pinned);
 
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
@@ -745,10 +747,10 @@
       <TooltipIconButton
         type="button"
         data-testid="property-pin"
-        class="flex h-8 w-8 items-center justify-center rounded-md border {noteIsPinned() ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'} bg-[var(--bg-primary)] transition hover:border-[var(--text-secondary)]/50"
+        class="flex h-8 w-8 items-center justify-center rounded-md border {pinnedNow ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'} bg-[var(--bg-primary)] transition hover:border-[var(--text-secondary)]/50"
         on:click={togglePinned}
-        label={noteIsPinned() ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-        tooltip={noteIsPinned() ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+        label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+        tooltip={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
       >
         <Pin size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>

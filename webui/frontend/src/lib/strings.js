@@ -547,6 +547,8 @@ const enText = {
     defaultCommitMessage: 'Sync notes from Monos',
   },
   editor: {
+    pinDo: 'Pin',
+    pinUnpin: 'Unpin',
     propertyCategory: 'Folder',
     propertyCategoryEmpty: '—',
     propertyTags: 'Tags',
@@ -1248,6 +1250,8 @@ const ruText = {
     defaultCommitMessage: 'Синхронизация заметок из Monos',
   },
   editor: {
+    pinDo: 'Закрепить',
+    pinUnpin: 'Открепить',
     propertyCategory: 'Папка',
     propertyCategoryEmpty: '—',
     propertyTags: 'Теги',
