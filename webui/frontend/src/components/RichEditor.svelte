@@ -341,8 +341,12 @@
     if (!editor || !suggestion || !wikiSuggestionRange) return;
     const insertText = suggestion.insertText || suggestion.name || '';
     if (!insertText) return;
-    const hasClosing = editor.state.doc.textBetween(wikiSuggestionRange.to, wikiSuggestionRange.to + 2) === ']]';
-    const to = hasClosing ? wikiSuggestionRange.to + 2 : wikiSuggestionRange.to;
+    // `[[` в конце абзаца: читать на 2 символа дальше нельзя, там конец
+    // документа — пикер падал на «nodeSize of undefined» и ссылка не вставлялась.
+    const rangeEnd = wikiSuggestionRange.to;
+    const hasClosing = rangeEnd + 2 <= editor.state.doc.content.size
+      && editor.state.doc.textBetween(rangeEnd, rangeEnd + 2) === ']]';
+    const to = hasClosing ? rangeEnd + 2 : rangeEnd;
     editor.chain().focus().deleteRange({ from: wikiSuggestionRange.from, to }).insertContent(`${insertText}]]`).run();
     closeWikiSuggestions();
   }

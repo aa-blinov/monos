@@ -437,10 +437,16 @@ export const NoteEmbed = Node.create({
         if (!result.ok) {
           body.classList.add(`embed-${result.reason}`);
           const count = result.matches?.length || 0;
+          // 1 заметка, 2–4 заметки, 5 и больше — заметок.
+          const word = count % 10 === 1 && count % 100 !== 11
+            ? 'заметка'
+            : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)
+              ? 'заметки'
+              : 'заметок';
           body.textContent = {
             missing: 'Заметка не найдена',
             cycle: 'Циклическая ссылка — содержимое не разворачивается',
-            ambiguous: `Под этим именем ${count} заметки — вставка не знает какую`,
+            ambiguous: `Под этим именем ${count} ${word} — вставка не знает какую`,
             empty: 'Пустая ссылка',
           }[result.reason] || 'Не удалось развернуть';
           return;
