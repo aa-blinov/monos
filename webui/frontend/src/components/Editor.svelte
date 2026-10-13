@@ -82,7 +82,10 @@
   let lastSaved = null;
   let saveMessage = '';
   let saveMessageTimeout;
-  const AUTOSAVE_DELAY = 1500;
+  // 1250 + 250 мс на сбор разметки редактором = прежние 1500 мс от последнего
+  // нажатия до сохранения. Без этой поправки отложенная сериализация незаметно
+  // удлинила бы окно, за которым правка ещё не записана на диск.
+  const AUTOSAVE_DELAY = 1250;
   let backlinks = [];
   let editableTags = [];
   let metadataTimer;
@@ -141,6 +144,19 @@
     return frontmatter
       ? `${frontmatter}\n\n${String(nextBody || '').replace(/^\s*\n/, '')}`
       : String(nextBody || '');
+  }
+
+  /**
+   * Отдать отложенную разметку редактора до того, как содержимое заметки
+   * прочитают снаружи. Без этого последние нажатия (до 250 мс) попали бы в
+   * файл только по счастливому совпадению таймингов.
+   */
+  function flushEditorMarkdown() {
+    try {
+      richEditor?.flushMarkdown?.();
+    } catch {
+      // Редактора ещё нет или он уже уничтожен — читать нечего.
+    }
   }
 
   function tagsEqual(a = [], b = []) {
@@ -319,7 +335,9 @@
   }
 
   async function savePendingLoadedFile(filePath) {
-    if (!filePath || !hasUnsavedChanges() || isSaving) return;
+    if (!filePath) return;
+    flushEditorMarkdown();
+    if (!hasUnsavedChanges() || isSaving) return;
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
       autosaveTimer = null;
@@ -393,7 +411,9 @@
 
   async function saveContent() {
     const filePath = loadedFilePath || currentFile?.path;
-    if (!filePath || !hasUnsavedChanges() || isSaving) return;
+    if (!filePath) return;
+    flushEditorMarkdown();
+    if (!hasUnsavedChanges() || isSaving) return;
     // A note with conflict markers cannot survive the editor round-trip: `marked`
     // turns the `=======` separator into a setext underline and the markers are
     // gone. Saving would write that damage over the file, so refuse instead.
@@ -547,6 +567,7 @@
   });
 
   onDestroy(() => {
+    flushEditorMarkdown();
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
       autosaveTimer = null;
@@ -727,7 +748,7 @@
           label={rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
           tooltip={rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
           tooltipAlign="start"
-          on:click={() => rawMode = !rawMode}
+          on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; }}
         >
           {#if rawMode}
             <Pencil class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />

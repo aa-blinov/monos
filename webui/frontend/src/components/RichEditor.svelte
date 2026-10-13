@@ -46,6 +46,15 @@
   let wikiSuggestionRequestId = 0;
   let lastWikiSuggestionKey = '';
   let lastAppliedContent = '';
+  /** Markdown, который мы сами отдали родителю последним. */
+  let lastEmittedMarkdown = null;
+  // Markdown собирается не на каждое нажатие, а один раз после паузы: полная
+  // сериализация заметки стоила ~2 мс на символ, и на длинных заметках ввод
+  // заметно подтормаживал. Всё, что читает содержимое наружу (сохранение,
+  // переключение заметки, сырой режим, выгрузка), сперва вызывает flushMarkdown().
+  const MARKDOWN_FLUSH_DELAY = 250;
+  let markdownTimer = null;
+  let pendingMarkdown = null;
 
   const WIKI_SUGGESTION_LIMIT = 8;
 
@@ -84,6 +93,23 @@
     return normalizeWikiLinkMarkdown(ed?.storage.markdown?.getMarkdown?.() || '');
   }
 
+  /**
+   * Отдать накопленную разметку немедленно, не дожидаясь паузы в печати.
+   * Обязателен перед сохранением и уходом из заметки: иначе последние
+   * нажатия остались бы в редакторе, но не в файле.
+   */
+  export function flushMarkdown() {
+    if (markdownTimer) {
+      clearTimeout(markdownTimer);
+      markdownTimer = null;
+    }
+    if (pendingMarkdown === null || !editor) return;
+    const md = pendingMarkdown;
+    pendingMarkdown = null;
+    lastEmittedMarkdown = md;
+    onUpdate(md);
+  }
+
   function createEditor() {
     if (editor) return;
     editor = new Editor({
@@ -96,8 +122,12 @@
       editable,
       onUpdate: ({ editor: ed }) => {
         if (!editable) return;
-        const md = editorMarkdown(ed);
-        onUpdate(md);
+        pendingMarkdown = editorMarkdown(ed);
+        if (markdownTimer) clearTimeout(markdownTimer);
+        markdownTimer = setTimeout(() => {
+          markdownTimer = null;
+          flushMarkdown();
+        }, MARKDOWN_FLUSH_DELAY);
         updateActive(ed);
       },
       onSelectionUpdate: ({ editor: ed }) => updateActive(ed),
@@ -440,10 +470,16 @@
   $: if (editor) {
     const nextContent = content || '';
     if (nextContent !== lastAppliedContent) {
-      const currentMarkdown = editorMarkdown(editor);
-      if (currentMarkdown !== nextContent) {
-        applyEditorContent(nextContent);
-        updateActive(editor);
+      // Разметка, которую мы сами отдали родителю мигновением назад, — это не
+      // внешнее изменение. Её не нужно ни сериализовать заново, ни применять
+      // обратно через setContent: это лишняя полная сериализация и лишняя
+      // пересборка документа на каждое нажатие.
+      if (nextContent !== lastEmittedMarkdown) {
+        const currentMarkdown = editorMarkdown(editor);
+        if (currentMarkdown !== nextContent) {
+          applyEditorContent(nextContent);
+          updateActive(editor);
+        }
       }
       lastAppliedContent = nextContent;
     }
