@@ -10,7 +10,6 @@ import { get } from 'svelte/store';
   import SavedSearchesPanel from './components/SavedSearchesPanel.svelte';
   import TagPanel from './components/TagPanel.svelte';
   import TrashView from './components/TrashView.svelte';
-  import TemplateManager from './components/TemplateManager.svelte';
   import SearchResults from './components/SearchResults.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import ModalShell from './components/ModalShell.svelte';
@@ -712,6 +711,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
                {!$sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
         data-testid="sidebar-shell"
+        inert={!$sidebarOpen}
         style={!isMobile && $sidebarOpen ? `width: ${$sidebarWidth}px;` : ''}
       >
         <Sidebar
@@ -771,7 +771,10 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
         </Route>
         <Route path="/templates">
-          <TemplateManager />
+          <!-- Редкий экран: его код грузится, только когда пользователь туда пришёл. -->
+          {#await import('./components/TemplateManager.svelte') then templateManager}
+            <svelte:component this={templateManager.default} />
+          {/await}
         </Route>
         <Route path="/">
           <div bind:this={boardScrollContainer} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-board-scroll on:scroll={handleBoardScroll}>

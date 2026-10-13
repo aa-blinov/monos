@@ -555,7 +555,7 @@
         {#each Object.entries(themes) as [key, t]}
           <button
             on:click={() => { $activeTheme = key; saveSettings(); }}
-            class="p-4 border text-left transition-all text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
+            class="p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
           >
             <div class="flex gap-1.5 mb-2">
               <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
@@ -631,7 +631,7 @@
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
             <p>{step}</p>
           {/each}
-          <p class="pt-1 text-[var(--text-muted)]">{$localizedText.settings.tokenHelpNote}</p>
+          <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
         </div>
       </details>
 
@@ -755,7 +755,7 @@
 
       <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
         {#if isCheckingStatus}
-          <div class="text-xs animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
+          <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
         {:else if gitStatus?.initialized}
           <div class="flex items-center justify-between">
             <div class="space-y-1.5 text-sm">
@@ -766,7 +766,7 @@
               </div>
               {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-muted)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
+              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
             </div>
             <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
@@ -848,9 +848,9 @@
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
         <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-          <li class="flex gap-3"><span class="text-[var(--text-muted)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-muted)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-muted)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
         </ol>
       </div>
 

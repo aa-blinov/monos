@@ -37,6 +37,7 @@ Current persisted stores:
 | `noteView` | `'board'` | `board` / `list` |
 | `boardColumns` | `'3'` | |
 | `boardGroupByColor` | `false` | boolean via `serialize`/`deserialize` |
+| `outlineHidden` | `false` | desktop only: the editor's outline column is folded into a rail; boolean via `serialize`/`deserialize` |
 | `contentWidth` | `'wide'` | has a `migrate` function for a 1.x → 1.2 transition |
 
 Adding a new persisted store: define it in `stores.js` next to the others, document it here.

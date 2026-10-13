@@ -10,6 +10,8 @@
   export let taskProgress = null;
   export let historyAvailable = false;
   export let onOpenHistory = () => {};
+  export let outlineOpen = false;
+  export let onToggleOutline = () => {};
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   const formatDateTime = (value) => {
@@ -79,17 +81,17 @@
         class="text-lg lg:text-2xl xl:text-[1.7rem] leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />
       {#if fileInfo}
-        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)]">
-          <p class="text-[var(--text-muted)] lg:hidden">
+        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
+          <p class="text-[var(--text-tertiary)] lg:hidden">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
-          <p class="hidden text-[var(--text-muted)] lg:block">
+          <p class="hidden text-[var(--text-tertiary)] lg:block">
             {$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}, {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
-          <span class="hidden tabular-nums text-[var(--text-muted)] sm:inline">{wordCharStats}</span>
+          <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
           {#if taskProgress && taskProgress.total > 0}
             <span
-              class="hidden items-center gap-2 text-[var(--text-muted)] sm:inline-flex"
+              class="hidden items-center gap-2 text-[var(--text-tertiary)] sm:inline-flex"
               data-testid="task-progress"
               title={taskProgress.isComplete
                 ? $localizedText.editorHeader.taskProgress.complete
@@ -117,9 +119,17 @@
           <span class="ml-auto flex items-center gap-4">
             <button
               type="button"
+              aria-expanded={outlineOpen}
+              on:click={onToggleOutline}
+              class="-my-4 py-4 uppercase tracking-[0.12em] transition hover:text-[var(--text-primary)] lg:hidden {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            >
+              {$localizedText.editor.outline}
+            </button>
+            <button
+              type="button"
               disabled={isPrinting}
               on:click={exportPdf}
-              class="inline-flex items-center gap-1.5 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-30"
+              class="-my-4 inline-flex items-center gap-1.5 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-30 lg:my-0 lg:py-0"
             >
               <Printer size="12" strokeWidth="1.7" aria-hidden="true" />
               {$localizedText.editorHeader.exportPdf}
@@ -128,7 +138,7 @@
               <button
                 type="button"
                 on:click={onOpenHistory}
-                class="inline-flex items-center gap-1.5 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+                class="-my-4 inline-flex items-center gap-1.5 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
               >
                 <History size="12" strokeWidth="1.7" aria-hidden="true" />
                 {$localizedText.editorHeader.historyButton}
@@ -137,7 +147,7 @@
             <button
               type="button"
               on:click={browserPrint}
-              class="uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+              class="-my-4 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
             >
               {$localizedText.editorHeader.print}
             </button>

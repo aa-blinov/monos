@@ -28,6 +28,11 @@ export const boardGroupByColor = persisted('boardGroupByColor', false, {
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
 });
+// Оглавление на десктопе свёрнуто в узкую полоску; на телефоне не используется.
+export const outlineHidden = persisted('outlineHidden', false, {
+  serialize: (v) => String(v),
+  deserialize: (s) => s === 'true',
+});
 
 export const contentWidth = persisted('contentWidth', 'wide', {
   migrate: (saved, read) => {

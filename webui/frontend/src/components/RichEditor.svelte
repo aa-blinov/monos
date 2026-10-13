@@ -10,6 +10,8 @@
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
   import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
+  import { findHeadingPos } from '../lib/outline.js';
+  import { scrollBehavior } from '../lib/motion.js';
   import { firstImageFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { localizedText } from '../lib/strings.js';
@@ -433,23 +435,20 @@
   export function getMarkdown() { return editor ? editorMarkdown(editor) : content; }
 
   /**
-   * Scroll the editor to the first heading whose text matches `headingText`.
-   * Used by the OutlinePanel for click-to-jump.
+   * Scroll the editor to the `occurrence`-th heading (0-based) whose text
+   * matches `headingText`. Used by the OutlinePanel for click-to-jump: a note
+   * can repeat a heading, and the occurrence tells the repeats apart.
    * Returns true if found and scrolled, false otherwise.
    */
-  export function scrollToHeadingText(headingText) {
+  export function scrollToHeadingText(headingText, occurrence = 0) {
     if (!editor || !headingText) return false;
-    let found = false;
-    let targetPos = null;
+    const headings = [];
     editor.state.doc.descendants((node, pos) => {
-      if (found) return false;
-      if (node.type.name === 'heading' && node.textContent.trim() === headingText.trim()) {
-        targetPos = pos + 1;
-        found = true;
-        return false;
-      }
-      return true;
+      if (node.type.name === 'heading') headings.push({ text: node.textContent, pos });
     });
+    const headingPos = findHeadingPos(headings, headingText, occurrence);
+    const found = headingPos !== null;
+    const targetPos = found ? headingPos + 1 : null;
     if (found && targetPos !== null) {
       try {
         // scrollIntoView: false — иначе focus() в следующем кадре вызовет
@@ -462,7 +461,7 @@
         // его у верхнего края, иногда под самой шапкой заметки.
         const { node } = editor.view.domAtPos(targetPos);
         const element = node instanceof HTMLElement ? node : node?.parentElement;
-        element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        element?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       } catch (_) {
         // ignore
       }
@@ -528,7 +527,7 @@
 
 <div class="flex flex-col flex-1 min-h-0">
   <!-- Toolbar -->
-  <div class="flex items-center gap-0.5 px-2 lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] overflow-x-auto toolbar-scroll" on:mousedown|preventDefault role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
+  <div class="flex flex-wrap items-center gap-0.5 px-2 lg:flex-nowrap lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] overflow-x-auto toolbar-scroll" on:mousedown|preventDefault role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
     <!-- Undo/Redo -->
     <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={$localizedText.richEditor.undo}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={$localizedText.richEditor.redo}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>

@@ -93,6 +93,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `sidebar-utils.test.js` | Tree shape edge cases |
 | `sidebar-pinned.js` | `pinnedNotes` store + `pinNote` / `unpinNote` / `updatePinnedPath` actions |
 | `sidebar-pinned.test.js` | Pin/unpin flow, reordering, stale-path repair after rename |
+| `tree-icons.js` | Named lucide icons used by the tree and sidebar, exported as one `Icon` object (no namespace import, so unused icons are tree-shaken) |
+| `tree-icons.test.js` | Every imported icon is exported by `lucide-svelte` |
 | `sidebar-api.js` | Wrappers for the sidebar's HTTP endpoints (see also API wrappers above) |
 | `context-menu-position.js` | `computeContextMenuPosition(rect, menuSize, viewport)` — keeps the right-click menu inside the viewport |
 | `context-menu-position.test.js` | Bottom overflow, left overflow, exact fit |
@@ -115,6 +117,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 |--------|---------|
 | `outline.js` | Builds the heading outline from markdown/TipTap content for the outline panel |
 | `outline.test.js` | Nested headings, empty documents, heading-level edges |
+| `motion.js` | `scrollBehavior()`: `auto` when the user asked for reduced motion, `smooth` otherwise |
+| `motion.test.js` | Smooth by default, instant under `prefers-reduced-motion` |
 | `word-stats.js` | `wordStats(text)` — word/character counts and estimated reading time (200 wpm) |
 | `word-stats.test.js` | Empty text, rounding up to 1 minute, whitespace handling |
 | `quick-switcher.js` | Quick-switcher parsing and filtering: `note:`, `tag:` prefixes, fuzzy note matching |

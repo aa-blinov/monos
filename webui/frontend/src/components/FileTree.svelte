@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import * as Icon from 'lucide-svelte';
+  import { Icon } from '../lib/tree-icons.js';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
 
   const dispatch = createEventDispatcher();
@@ -156,7 +156,7 @@
 
 <div class="group text-sm lg:text-xs">
   <button
-    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-all lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
+    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-[background-color,border-color,opacity] lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
     class:border-[var(--text-primary)]={active || (node.is_dir && isDragOver)}
     class:bg-[var(--border-subtle)]={(active && !hasColor) || (node.is_dir && isDragOver)}
     style={activeBgStyle}
