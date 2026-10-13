@@ -30,6 +30,9 @@ export function indexFile(filePath, content) {
   const db = getDb();
   const relativePath = relPath(filePath);
   const name = path.basename(filePath);
+  // Имена с диска приходят разложенными (NFD), связи набирают сложёнными
+  // (NFC). Ключ поиска нормализован, чтобы сравнение не зависело от формы.
+  const nameNfc = name.normalize('NFC');
   const parentPath = path.dirname(relativePath).replace(/\\/g, '/');
   const stats = fs.statSync(filePath);
   const isDir = stats.isDirectory();
@@ -39,10 +42,11 @@ export function indexFile(filePath, content) {
 
   if (existing) {
     db.prepare(`
-      UPDATE notes_index SET name = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?, pinned = ?
+      UPDATE notes_index SET name = ?, name_nfc = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?, pinned = ?
       WHERE path = ?
     `).run(
       name,
+      nameNfc,
       isDir ? 1 : 0,
       parentPath,
       metadata.title || '',
@@ -55,11 +59,12 @@ export function indexFile(filePath, content) {
     );
   } else {
     db.prepare(`
-      INSERT INTO notes_index (path, name, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened, pinned)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened, pinned)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       relativePath,
       name,
+      nameNfc,
       isDir ? 1 : 0,
       parentPath,
       metadata.title,
@@ -176,9 +181,9 @@ export function indexAllFiles() {
         if (!existing) {
           const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
           db.prepare(`
-            INSERT INTO notes_index (path, name, is_dir, parent_path, content, date_created, modified_at, last_opened)
-            VALUES (?, ?, 1, ?, '', ?, ?, ?)
-          `).run(relativePath, entry.name, parentPath, nowISO(), modifiedAt, nowISO());
+            INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, content, date_created, modified_at, last_opened)
+            VALUES (?, ?, ?, 1, ?, '', ?, ?, ?)
+          `).run(relativePath, entry.name, entry.name.normalize('NFC'), parentPath, nowISO(), modifiedAt, nowISO());
         } else {
           const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
           db.prepare('UPDATE notes_index SET name = ?, parent_path = ?, modified_at = ? WHERE path = ?')

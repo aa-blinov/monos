@@ -756,6 +756,32 @@ apiTest('POST /api/notes/create индексирует новую папку к�
   assert.ok(dailyDir.children.some((child) => child.path === 'notes/Daily/02-06-26-10-20-36.md'));
 });
 
+apiTest('resolve-link находит заметку, даже если имя на диске разложено (NFD)', async () => {
+  // macOS отдаёт имена файлов разложенными, а связку набирают сложёнными.
+  // Сравнение байт в SQL такое не прощает: «Запрос новой функциональности» не
+  // находился, хотя файл лежал рядом. В корпусе таких имён было 19 из 109.
+  const nfc = 'Запрос новой функциональности';
+  const nfd = nfc.normalize('NFD');
+  assert.notEqual(nfc, nfd, 'проверка бессмысленна: строки совпали');
+
+  const dir = path.join(notesDir, 'NFCTest');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${nfd}.md`);
+  fs.writeFileSync(file, 'тело заметки\n', 'utf8');
+  indexAllFiles();
+
+  const resolved = await requestJson(buildUrl('/api/notes/resolve-link', { name: nfc }));
+  assert.equal(resolved.response.status, 200);
+  assert.ok(resolved.data.path, `заметка не нашлась по сложенному имени: ${JSON.stringify(resolved.data)}`);
+  // Путь из ответа относителен к корню заметок, а он в тесте — временный.
+  assert.ok(
+    fs.existsSync(path.join(tempRoot, resolved.data.path)),
+    'путь из ответа обязан существовать на диске',
+  );
+
+  fs.rmSync(file, { force: true });
+});
+
 apiTest('GET /api/notes/resolve-link возвращает пустой объект для неизвестной заметки', async () => {
   const resolved = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Does Not Exist' }));
   assert.equal(resolved.response.status, 200);

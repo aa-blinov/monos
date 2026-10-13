@@ -68,10 +68,18 @@ function initTables() {
   if (!noteColumns.includes('trashed_at')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN trashed_at TEXT');
   }
+  // Имя в нормализованной форме. macOS отдаёт имена файлов разложенными
+  // (NFD), а человек набирает связки сложёнными (NFC) — строки расходятся
+  // на один байт и не находятся. Сравнение байт в SQL такое не прощает,
+  // поэтому рядом с именем лежит ключ поиска.
+  if (!noteColumns.includes('name_nfc')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN name_nfc TEXT');
+  }
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_modified_at ON notes_index(modified_at)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_board_order ON notes_index(board_order)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_trashed_at ON notes_index(trashed_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notes_name_nfc ON notes_index(name_nfc)');
 
   // Migrate: add settings table
   db.exec(`

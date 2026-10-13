@@ -117,8 +117,19 @@ test('вложенный путь сохраняется', () => {
 });
 
 test('wiki-ссылка на заметку не превращается в картинку', () => {
-  assert.equal(normalizeObsidianEmbeds('![[Заметка]]'), null);
+  // Без расширения — это вставка заметки, а не изображение. Ошибка здесь
+  // выглядела бы как пустая рамка вместо содержимого.
+  const nodes = normalizeObsidianEmbeds('![[Заметка]]');
+  assert.equal(nodes.length, 1);
+  assert.equal(nodes[0].type, 'noteEmbed');
+  assert.equal(nodes[0].attrs.name, 'Заметка');
   assert.equal(normalizeObsidianEmbeds('обычный текст'), null);
+});
+
+test('картинка и вставка заметки разбираются в одном проходе', () => {
+  // Раньше находилась только первая форма, и вторая оставалась литералом.
+  const nodes = normalizeObsidianEmbeds('![[a.png]] и ![[Заметка]]');
+  assert.deepEqual(nodes.map((n) => n.type), ['image', 'text', 'noteEmbed']);
 });
 
 test('вставка доходит до документа целиком', () => {
