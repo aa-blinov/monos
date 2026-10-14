@@ -1577,6 +1577,12 @@
     font-size: 0.7rem;
   }
 
+  /* Задача рисуется чекбоксом без маркера, как в редакторе. */
+  :global(.template-preview li:has(> input[type='checkbox'])) {
+    list-style: none;
+    margin-left: -1.1rem;
+  }
+
   :global(.template-preview table) {
     width: 100%;
     border-collapse: collapse;

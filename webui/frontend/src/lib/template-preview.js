@@ -63,5 +63,9 @@ export function extractTemplateMetadata(markdown) {
  * @returns {string}
  */
 export function normalizeEmptyListItems(markdown) {
-  return String(markdown == null ? '' : markdown).replace(/^([ \t]*(?:[-*+]|\d+[.)]))[ \t]+$/gm, '$1');
+  return String(markdown == null ? '' : markdown)
+    .replace(/^([ \t]*(?:[-*+]|\d+[.)]))[ \t]+$/gm, '$1')
+    // marked считает задачей только пункт с текстом после «[ ] ». Пустая задача получает
+    // невидимый нулевой пробел: чекбокс есть, текста «[ ]» нет.
+    .replace(/^([ \t]*[-*+][ \t]+\[[ xX]\])[ \t]*$/gm, '$1 ​');
 }
