@@ -14,7 +14,7 @@ export async function flushOpenNote() {
 }
 
 /** Reports the links the server rewrote: the open note reloads if it is among the paths. */
-export function announceNoteLinksUpdated({ updatedLinks = 0, updatedPaths = [] } = {}) {
-  if (!updatedLinks) return;
-  window.dispatchEvent(new CustomEvent(NOTE_LINKS_UPDATED_EVENT, { detail: { updatedLinks, updatedPaths } }));
+export function announceNoteLinksUpdated({ updatedLinks = 0, updatedPaths = [], failedPaths = [] } = {}) {
+  if (!updatedLinks && !failedPaths.length) return;
+  window.dispatchEvent(new CustomEvent(NOTE_LINKS_UPDATED_EVENT, { detail: { updatedLinks, updatedPaths, failedPaths } }));
 }

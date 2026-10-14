@@ -1802,3 +1802,95 @@ apiTest('не переписывает ссылки, пока то же имя �
   assert.equal(renamed.data.updatedLinks, 0);
   assert.match(fs.readFileSync(path.join(notesDir, 'Twin Holder.md'), 'utf-8'), /\[\[Twin Name\]\]/);
 });
+
+apiTest('переименование заметки с исходящими [[ссылками]] работает, обратные ссылки остаются верными', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const goal = await create({ title: 'Outgoing Goal', category: '', tags: [], content: 'Цель.' });
+  const linker = await create({ title: 'Outgoing Linker', category: '', tags: [], content: 'Ведёт на [[Outgoing Goal]].' });
+  assert.equal(goal.response.status, 200);
+  assert.equal(linker.response.status, 200);
+
+  const renamed = await requestJson(buildUrl('/api/file/rename', { path: linker.data.path }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'Outgoing Linker 2.md' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 0);
+
+  const backlinks = await requestJson(buildUrl('/api/notes/backlinks', { path: goal.data.path }));
+  assert.deepEqual(backlinks.data.map((note) => note.path), [renamed.data.path]);
+});
+
+apiTest('перенос не перезаписывает заметку с тем же именем в целевой папке', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  await create({ title: 'Clash Note', category: 'Clash Folder', tags: [], content: 'Копия в папке.' });
+  const moving = await create({ title: 'Clash Note', category: '', tags: [], content: 'Переносимая.' });
+  const moved = await requestJson(buildUrl('/api/file/move', { source: moving.data.path, target: 'notes/Clash Folder' }), {
+    method: 'POST',
+  });
+  assert.equal(moved.response.status, 409);
+  assert.match(fs.readFileSync(path.join(notesDir, 'Clash Folder', 'Clash Note.md'), 'utf-8'), /Копия в папке\./);
+  assert.match(fs.readFileSync(path.join(notesDir, 'Clash Note.md'), 'utf-8'), /Переносимая\./);
+});
+
+apiTest('заметка не в UTF-8 не портится при переписывании ссылок, а ответ называет её', async () => {
+  const { indexFile } = await import('./indexing.js');
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const legacyPath = path.join(notesDir, 'Legacy Link.md');
+  const legacyBytes = Buffer.concat([
+    Buffer.from([0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2, 0x20]),
+    Buffer.from('[[Legacy Goal]]\n', 'utf-8'),
+  ]);
+  fs.writeFileSync(legacyPath, legacyBytes);
+  indexFile(legacyPath, legacyBytes.toString('utf-8'));
+  const goal = await create({ title: 'Legacy Goal', category: '', tags: [], content: 'Цель.' });
+
+  const renamed = await requestJson(buildUrl('/api/file/rename', { path: goal.data.path }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'Legacy Goal 2.md' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.deepEqual(renamed.data.failedPaths, ['notes/Legacy Link.md']);
+  assert.equal(fs.readFileSync(legacyPath).equals(legacyBytes), true);
+});
+
+apiTest('если одну заметку переписать нельзя, остальные переписываются, а ответ её называет', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const goal = await create({ title: 'Partial Goal', category: '', tags: [], content: 'Цель.' });
+  const locked = await create({ title: 'Partial Locked', category: '', tags: [], content: 'Смотри [[Partial Goal]].' });
+  await create({ title: 'Partial Open', category: '', tags: [], content: 'Тоже [[Partial Goal]].' });
+  const lockedPath = path.join(notesDir, 'Partial Locked.md');
+  fs.chmodSync(lockedPath, 0o444);
+  try {
+    const renamed = await requestJson(buildUrl('/api/file/rename', { path: goal.data.path }), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_name: 'Partial Goal 2.md' }),
+    });
+    assert.equal(renamed.response.status, 200);
+    assert.equal(renamed.data.updatedLinks, 1);
+    assert.deepEqual(renamed.data.failedPaths, [locked.data.path]);
+    assert.match(fs.readFileSync(path.join(notesDir, 'Partial Open.md'), 'utf-8'), /\[\[Partial Goal 2\]\]/);
+    assert.match(fs.readFileSync(lockedPath, 'utf-8'), /\[\[Partial Goal\]\]/);
+  } finally {
+    fs.chmodSync(lockedPath, 0o644);
+  }
+});

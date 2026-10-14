@@ -26,9 +26,18 @@ test('ссылки в коде не меняются, ссылка вне код
   });
 });
 
-test('ссылка с кодом внутри подписи не переписывается', () => {
-  const text = '[[Old|см. `код`]]';
-  assert.deepEqual(rewriteWikiTargets(text, 'Old', 'New'), { content: text, count: 0 });
+test('ссылка с кодом в подписи переписывается, код в подписи не меняется', () => {
+  assert.deepEqual(rewriteWikiTargets('[[Old|см. `код`]]', 'Old', 'New'), {
+    content: '[[New|см. `код`]]',
+    count: 1,
+  });
+});
+
+test('ссылка внутри двойных обратных кавычек не меняется', () => {
+  assert.deepEqual(rewriteWikiTargets('``[[Old]]`` и [[Old]]', 'Old', 'New'), {
+    content: '``[[Old]]`` и [[New]]',
+    count: 1,
+  });
 });
 
 test('имя сравнивается по NFC: разложенный и сложённый вид совпадают', () => {

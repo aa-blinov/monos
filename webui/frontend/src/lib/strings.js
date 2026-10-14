@@ -56,6 +56,9 @@ const enText = {
     linksUpdated(count) {
       return `Links updated: ${count}`;
     },
+    linksNotUpdated(count) {
+      return `Notes not updated: ${count}`;
+    },
     closeMenu: 'Close menu',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are plain Markdown files on your own disk — not rows in someone\'s database. Monos is just a comfortable way to read, write and find them.',
@@ -328,6 +331,9 @@ const enText = {
       understood: 'Got it',
     },
     errors: {
+      move(message) {
+        return `Failed to move: ${message}`;
+      },
       loadTree(message) {
         return `Failed to load tree: ${message}`;
       },
@@ -810,6 +816,9 @@ const ruText = {
     linksUpdated(count) {
       return `Ссылок обновлено: ${count}`;
     },
+    linksNotUpdated(count) {
+      return `Заметок не обновлено: ${count}`;
+    },
     closeMenu: 'Закрыть меню',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Ваши заметки — обычные файлы Markdown на вашем диске, а не строки в чужой базе. Monos просто удобный способ их читать, писать и находить.',
@@ -1094,6 +1103,9 @@ const ruText = {
       understood: 'Понятно',
     },
     errors: {
+      move(message) {
+        return `Не удалось переместить: ${message}`;
+      },
       loadTree(message) {
         return `Не удалось загрузить дерево: ${message}`;
       },

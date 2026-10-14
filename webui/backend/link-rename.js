@@ -41,34 +41,56 @@ export function planLinkUpdate(db, oldPath, newPath) {
 }
 
 /**
- * Runs after the move. Rewrites `[[old]]` in the notes that named the renamed file and
- * indexes the renamed note again, so its own outgoing links follow it. A rewritten file
- * keeps its modification time, so the board order does not change.
+ * Rewrites the links in one file and returns how many changed. Throws when the file cannot
+ * be rewritten safely: it is not valid UTF-8, so encoding it again would replace characters,
+ * or the write fails (for example a read-only file). A rewritten file keeps its modification
+ * time, so the board order does not change.
+ */
+function rewriteFile(fullPath, oldName, newName) {
+  const raw = fs.readFileSync(fullPath);
+  const text = raw.toString('utf-8');
+  if (!Buffer.from(text, 'utf-8').equals(raw)) throw new Error('not UTF-8');
+  const result = rewriteWikiTargets(text, oldName, newName);
+  if (result.count === 0) return 0;
+  const { atime, mtime } = fs.statSync(fullPath);
+  fs.writeFileSync(fullPath, result.content, 'utf-8');
+  fs.utimesSync(fullPath, atime, mtime);
+  return result.count;
+}
+
+/**
+ * Runs after the move. Rewrites `[[old]]` in the notes that named the renamed file, and
+ * indexes every touched note again, so the renamed note's own outgoing links follow it.
+ * One note that cannot be rewritten does not stop the others; it is listed in failedPaths.
  */
 export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
   const oldName = nameOf(oldPath);
   const newName = nameOf(newPath);
   const notePaths = new Set([newPath, ...sources.map((source) => (source === oldPath ? newPath : source))]);
   const updatedPaths = [];
+  const failedPaths = [];
   let updatedLinks = 0;
 
   for (const notePath of notePaths) {
     const fullPath = resolveNotesPath(notePath);
     if (!fs.existsSync(fullPath)) continue;
-    let content = readTextFile(fullPath);
     if (relink) {
-      const result = rewriteWikiTargets(content, oldName, newName);
-      if (result.count > 0) {
-        const { atime, mtime } = fs.statSync(fullPath);
-        fs.writeFileSync(fullPath, result.content, 'utf-8');
-        fs.utimesSync(fullPath, atime, mtime);
-        content = result.content;
-        updatedLinks += result.count;
-        updatedPaths.push(notePath);
+      try {
+        const count = rewriteFile(fullPath, oldName, newName);
+        if (count > 0) {
+          updatedLinks += count;
+          updatedPaths.push(notePath);
+        }
+      } catch {
+        failedPaths.push(notePath);
       }
     }
-    indexFile(fullPath, content);
+    try {
+      indexFile(fullPath, readTextFile(fullPath));
+    } catch {
+      if (!failedPaths.includes(notePath)) failedPaths.push(notePath);
+    }
   }
 
-  return { updatedLinks, updatedPaths };
+  return { updatedLinks, updatedPaths, failedPaths };
 }

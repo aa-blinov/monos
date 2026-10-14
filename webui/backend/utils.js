@@ -170,6 +170,7 @@ function stripCode(content) {
   return String(content || '')
     .replace(/```[\s\S]*?```/g, (block) => block.replace(/[^\n]/g, ' '))
     .replace(/~~~[\s\S]*?~~~/g, (block) => block.replace(/[^\n]/g, ' '))
+    .replace(/(`{2,})[^\n]*?\1/g, (span) => span.replace(/[^\n]/g, ' '))
     .replace(/`[^`\n]*`/g, (span) => span.replace(/[^\n]/g, ' '));
 }
 
@@ -189,8 +190,8 @@ export function extractWikiLinks(content) {
 /**
  * Points every `[[oldName]]` and `[[oldName|alias]]` at `newName`. The alias, the spaces
  * around the name and anything in code stay as they are. Only the exact name changes:
- * `[[oldName Notes]]` is another note and is left alone. Returns the new text and how
- * many links changed.
+ * `[[oldName Notes]]` is another note and is left alone. A target with code inside it is
+ * left alone too. Returns the new text and how many links changed.
  */
 export function rewriteWikiTargets(content, oldName, newName) {
   const text = String(content || '');
@@ -202,11 +203,11 @@ export function rewriteWikiTargets(content, oldName, newName) {
   let count = 0;
 
   for (const match of source.matchAll(/\[\[(.*?)\]\]/g)) {
-    const inner = match[1];
-    // A link with code inside it was masked in `source`, so its text differs; leave it alone.
-    if (text.slice(match.index + 2, match.index + 2 + inner.length) !== inner) continue;
+    const start = match.index + 2;
+    const inner = text.slice(start, start + match[1].length);
     const pipe = inner.indexOf('|');
     const rawTarget = pipe === -1 ? inner : inner.slice(0, pipe);
+    if (source.slice(start, start + rawTarget.length) !== rawTarget) continue;
     if (rawTarget.trim().normalize('NFC') !== wanted) continue;
     const leading = rawTarget.match(/^\s*/)[0];
     const trailing = rawTarget.slice(rawTarget.trimEnd().length);

@@ -31,14 +31,18 @@ test('flushOpenNote без открытой заметки завершаетс�
   await flushOpenNote();
 });
 
-test('announceNoteLinksUpdated сообщает только о реально переписанных ссылках', () => {
+test('announceNoteLinksUpdated сообщает о переписанных и необновлённых заметках, без изменений молчит', () => {
   const received = [];
   const listener = (event) => received.push(event.detail);
   window.addEventListener(NOTE_LINKS_UPDATED_EVENT, listener);
   try {
     announceNoteLinksUpdated({ updatedLinks: 0, updatedPaths: [] });
     announceNoteLinksUpdated({ updatedLinks: 2, updatedPaths: ['notes/A.md'] });
-    assert.deepEqual(received, [{ updatedLinks: 2, updatedPaths: ['notes/A.md'] }]);
+    announceNoteLinksUpdated({ updatedLinks: 0, updatedPaths: [], failedPaths: ['notes/B.md'] });
+    assert.deepEqual(received, [
+      { updatedLinks: 2, updatedPaths: ['notes/A.md'], failedPaths: [] },
+      { updatedLinks: 0, updatedPaths: [], failedPaths: ['notes/B.md'] },
+    ]);
   } finally {
     window.removeEventListener(NOTE_LINKS_UPDATED_EVENT, listener);
   }
