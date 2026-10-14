@@ -126,6 +126,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `categories.js` | Category field helpers: `normalizeCategory`, `canonicalCategory` (reuses an existing spelling, ignoring case) and `filterCategories` for the suggestions |
 | `categories.test.js` | Whitespace cleanup, case-insensitive matching, prefix matches ranked first |
 | `frontmatter.js` | YAML frontmatter helpers: `splitFrontmatter`, `parseFrontmatter`, `upsertFrontmatter`, `setFrontmatterKey`, plus the due-date helpers `dueStatus` and `dueLabel` |
+| `due-input.js` | `parseDueInput(text)` accepts an ISO (`2026-12-24`) or dotted (`24.12.2026`) date and returns the stored `YYYY-MM-DD`, or refuses it; `formatDueInput(due, locale)` is the reverse for the field |
+| `due-input.test.js` | Dotted and ISO input, two-digit years, impossible dates, leap years, the display form per language |
 | `git-history.js` | Note history served by git: list the revisions of a note, read one with its diff, restore one (`noteHistoryRequest`, `noteRevisionRequest`, `restoreNoteRevisionRequest`) |
 | `git-history.test.js` | Request paths and methods, error text taken from the backend |
 | `markdown-extras.js` | Turns TipTap math and Mermaid nodes back into markdown (`convertMarkdownExtras`) and finds inline `$…$` formulas (`findInlineMath`) |
