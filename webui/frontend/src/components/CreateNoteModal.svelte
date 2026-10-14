@@ -1,6 +1,7 @@
 <script>
   import ModalShell from './ModalShell.svelte';
-  import { localizedText } from '../lib/strings.js';
+  import { localizedText, locale } from '../lib/strings.js';
+  import { localeStamp } from '../lib/date-format.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -110,16 +111,8 @@
     onPickTemplate();
   }
 
-  function padDatePart(n) { return String(n).padStart(2, '0'); }
   function formatTodayNoteTitle(date = new Date()) {
-    return [
-      padDatePart(date.getDate()),
-      padDatePart(date.getMonth() + 1),
-      padDatePart(date.getFullYear() % 100),
-      padDatePart(date.getHours()),
-      padDatePart(date.getMinutes()),
-      padDatePart(date.getSeconds()),
-    ].join('-');
+    return localeStamp(date, $locale);
   }
 </script>
 

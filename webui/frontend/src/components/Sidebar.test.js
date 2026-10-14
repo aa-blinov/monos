@@ -299,7 +299,7 @@ test('Sidebar закрепляет заметку в Pinned через конт�
   expect(unpinCall).toBeTruthy();
 });
 
-test('Sidebar создаёт today note с timestamp DD-MM-YY-HH-MM-SS', async () => {
+test('Sidebar создаёт today note с timestamp по языку интерфейса', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2026, 5, 2, 5, 4, 3));
   const fetchMock = createFetchMock();
@@ -317,14 +317,14 @@ test('Sidebar создаёт today note с timestamp DD-MM-YY-HH-MM-SS', async (
   await waitFor(() => expect(navigateHandler).toHaveBeenCalled());
   const createCall = fetchMock.mock.calls.find(([url]) => url === '/api/notes/create');
   expect(JSON.parse(createCall[1].body)).toEqual({
-    title: '02-06-26-05-04-03',
+    title: '2026-06-02 05-04-03',
     category: 'Daily',
     tags: [],
     content: '',
   });
   expect(navigateHandler.mock.calls.at(-1)[0].detail).toEqual({
-    path: 'notes/Daily/02-06-26-05-04-03.md',
-    name: '02-06-26-05-04-03',
+    path: 'notes/Daily/2026-06-02 05-04-03.md',
+    name: '2026-06-02 05-04-03',
     isDir: false,
   });
 });
@@ -352,15 +352,15 @@ test('Sidebar создаёт quick note из буфера обмена в Quick 
 
   const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
   expect(JSON.parse(createCall[1].body)).toEqual({
-    title: '02-06-26-19-36-39',
+    title: '2026-06-02 19-36-39',
     category: 'Quick Notes',
     tags: [],
     content: 'Captured from clipboard',
   });
   await waitFor(() => expect(savedHandler).toHaveBeenCalled());
   expect(savedHandler.mock.calls.at(-1)[0].detail).toEqual({
-    path: 'notes/Quick Notes/02-06-26-19-36-39.md',
-    name: '02-06-26-19-36-39',
+    path: 'notes/Quick Notes/2026-06-02 19-36-39.md',
+    name: '2026-06-02 19-36-39',
     isDir: false,
   });
 });
@@ -392,14 +392,14 @@ test('Sidebar создаёт quick note из изображения в буфе�
 
   const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
   expect(JSON.parse(createCall[1].body)).toEqual({
-    title: '02-06-26-19-36-39',
+    title: '2026-06-02 19-36-39',
     category: 'Quick Notes',
     tags: [],
     content: '',
   });
-  expect(fetchMock.mock.calls.some(([url]) => url.startsWith('/api/attachments?notePath=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md'))).toBe(true);
+  expect(fetchMock.mock.calls.some(([url]) => url.startsWith('/api/attachments?notePath=notes%2FQuick%20Notes%2F2026-06-02%2019-36-39.md'))).toBe(true);
 
-  const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md' && init?.method === 'POST');
+  const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F2026-06-02%2019-36-39.md' && init?.method === 'POST');
   expect(JSON.parse(saveCall[1].body).content).toContain('![image](_attachments/image.webp)');
   await waitFor(() => expect(savedHandler).toHaveBeenCalled());
 });
@@ -427,14 +427,14 @@ test('Sidebar создаёт quick note из base64 image data URL в текст
 
   const createCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/notes/create' && init.method === 'POST');
   expect(JSON.parse(createCall[1].body)).toEqual({
-    title: '02-06-26-19-36-39',
+    title: '2026-06-02 19-36-39',
     category: 'Quick Notes',
     tags: [],
     content: '',
   });
-  expect(fetchMock.mock.calls.some(([url]) => url.startsWith('/api/attachments?notePath=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md'))).toBe(true);
+  expect(fetchMock.mock.calls.some(([url]) => url.startsWith('/api/attachments?notePath=notes%2FQuick%20Notes%2F2026-06-02%2019-36-39.md'))).toBe(true);
 
-  const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F02-06-26-19-36-39.md' && init?.method === 'POST');
+  const saveCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/file?path=notes%2FQuick%20Notes%2F2026-06-02%2019-36-39.md' && init?.method === 'POST');
   expect(JSON.parse(saveCall[1].body).content).toContain('![image](_attachments/image.webp)');
   await waitFor(() => expect(savedHandler).toHaveBeenCalled());
 });

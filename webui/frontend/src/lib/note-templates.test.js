@@ -47,10 +47,17 @@ test('название шаблона с датой пишется ISO, как �
   assert.equal(daily.suggestedTitle(ctx), 'Daily 2026-01-15');
 });
 
-test('getTemplateContext возвращает isoDate и time', () => {
+test('по-русски даты в шаблонах пишутся через точку', () => {
+  const daily = noteTemplates.find((template) => template.id === 'daily-note');
+  const date = new Date(2026, 0, 15, 9, 30);
+  assert.equal(daily.suggestedTitle(getTemplateContext('', date, 'ru')), 'Daily 15.01.2026');
+  assert.match(buildTemplateContent(daily, 'Утро', date, 'ru'), /Date: 15\.01\.2026/);
+});
+
+test('getTemplateContext возвращает localDate и time', () => {
   const ctx = getTemplateContext('My Title', new Date(2026, 0, 15, 14, 30, 45));
   assert.equal(ctx.title, 'My Title');
-  assert.match(ctx.isoDate, /2026-01-15/);
+  assert.match(ctx.localDate, /2026-01-15/);
   assert.match(ctx.time, /14:30/);
 });
 
