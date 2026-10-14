@@ -253,25 +253,32 @@
    * Filter a featured section: drop anything failing the operators, then fuzzy
    * match the remaining free term. Recent items are described by their backend
    * payload (tags, category, date), pinned ones by the tree.
+   *
+   * The query arrives as arguments, not through the closure: Svelte re-runs a `$:`
+   * statement only for the variables it names. Reading parsedQuery inside this
+   * function left Pinned and Recent unfiltered whenever their lists had loaded
+   * before the user typed.
    */
-  function filterFeatured(items, limit) {
+  function filterFeatured(items, limit, parsed, term) {
     return items
-      .filter((item) => matchesNoteFilters(parsedQuery, {
+      .filter((item) => matchesNoteFilters(parsed, {
         name: item.label,
         path: item.path,
         tags: item.tags ?? [],
         metadata: item.metadata ?? null,
       }))
-      .filter((item) => !freeTerm || fuzzyMatch(item, freeTerm))
-      .sort((a, b) => matchScore(a, freeTerm) - matchScore(b, freeTerm))
+      .filter((item) => !term || fuzzyMatch(item, term))
+      .sort((a, b) => matchScore(a, term) - matchScore(b, term))
       .slice(0, limit);
   }
 
   $: commandItems = mode === 'notes' ? [] : filterItems(commands(), freeTerm);
-  $: visiblePinnedItems = filterFeatured(pinnedItems, 4);
+  $: visiblePinnedItems = filterFeatured(pinnedItems, 4, parsedQuery, freeTerm);
   $: visibleRecentItems = filterFeatured(
     recentItems.filter((item) => !pinnedItems.some((pinned) => pinned.path === item.path)),
     4,
+    parsedQuery,
+    freeTerm,
   );
   $: visibleTemplateItems = filterItems(templateItems(), freeTerm).slice(0, mode === 'notes' ? 4 : 3);
   $: noteItems = mode === 'notes'

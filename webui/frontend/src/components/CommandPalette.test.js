@@ -67,6 +67,19 @@ test('CommandPalette показывает Pinned, Recent и Templates', async ()
   expect(commandHandler.mock.calls[0][0].detail).toEqual({ id: 'openTemplate', templateId: 'meeting-note' });
 });
 
+test('Pinned и Recent сужаются по вводу, даже если загрузились до него', async () => {
+  render(CommandPalette, { open: true, mode: 'notes' });
+  // The Recent header only renders once its items are loaded: type after that.
+  await waitFor(() => expect(screen.getByText(uiText.commandPalette.sections.recent)).toBeTruthy());
+  await waitFor(() => expect(screen.queryAllByText(/Alpha Note/).length).toBeGreaterThan(0));
+
+  const input = screen.getByPlaceholderText(uiText.commandPalette.quickSwitcherPlaceholder);
+  await fireEvent.input(input, { target: { value: 'path:NONEXISTENT_XYZ' } });
+
+  expect(screen.queryAllByText(/Alpha Note/)).toHaveLength(0);
+  expect(screen.queryAllByText(/Research/)).toHaveLength(0);
+});
+
 test('CommandPalette показывает шаблоны на русском языке', async () => {
   locale.set('ru');
   const ruText = translations.ru;

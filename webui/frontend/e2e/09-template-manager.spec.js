@@ -19,7 +19,8 @@ test('template manager creates custom templates and hides library templates', as
   await page.getByLabel('Template title').fill(templateTitle);
   await page.getByLabel('Description').fill('E2E managed template');
   await page.getByLabel('Folder').fill('Managed Templates');
-  await page.getByLabel('Tags').fill('managed, e2e');
+  // The header's own "Tags" button shares this label, so target the field by id.
+  await page.locator('#template-manager-tags').fill('managed, e2e');
   await page.getByLabel('Markdown content').fill(`# {{title}}\n\nManaged body {{date}}`);
   await page.getByRole('button', { name: 'Create template' }).click();
 

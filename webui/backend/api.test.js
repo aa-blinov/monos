@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { execSync } from 'child_process';
 import { EventEmitter } from 'node:events';
 import fs from 'fs';
+import http from 'node:http';
 import https from 'node:https';
 import { syncBuiltinESMExports } from 'node:module';
 import os from 'os';
@@ -36,7 +37,7 @@ fs.writeFileSync(path.join(notesDir, '.secret', 'Hidden.md'), '# Hidden\n', 'utf
 process.env.NOTES_ROOT = tempRoot;
 
 const { startServer, stopServer } = await import('./index.js');
-const { buildGithubRemoteUrl } = await import('./routes/git.js');
+const { buildGithubRemoteUrl, gitEnv } = await import('./routes/git.js');
 const { getDb } = await import('./database.js');
 const { indexAllFiles, migrateCachedMetadataToFrontmatter } = await import('./indexing.js');
 
@@ -129,6 +130,73 @@ apiTest('backend ограничивает браузерные Origin локал
   });
   assert.equal(blocked.response.status, 403);
   assert.equal(blocked.data.detail, 'Origin not allowed');
+});
+
+apiTest('страница с origin самого сервера проходит проверку Origin', async () => {
+  const port = new URL(baseUrl).port;
+  const own = await realFetch(buildUrl('/health'), {
+    headers: { Origin: `http://127.0.0.1:${port}` },
+  });
+  assert.equal(own.status, 200);
+
+  const foreign = await realFetch(buildUrl('/health'), {
+    headers: { Origin: 'https://evil.example' },
+  });
+  assert.equal(foreign.status, 403);
+});
+
+apiTest('backend слушает только loopback, а не все интерфейсы', async () => {
+  const { server } = await startServer({ port: 0 });
+  assert.equal(server.address().address, '127.0.0.1');
+});
+
+// Raw HTTP: fetch does not let a caller choose the Host header.
+function rawStatus(port, requestPath, headers) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({ host: '127.0.0.1', port, path: requestPath, headers }, (response) => {
+      response.resume();
+      resolve(response.statusCode);
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
+
+apiTest('запрос с чужим Host отклоняется (защита от DNS rebinding)', async () => {
+  const port = new URL(baseUrl).port;
+  assert.equal(await rawStatus(port, '/health', { Host: `127.0.0.1:${port}` }), 200);
+  assert.equal(await rawStatus(port, '/health', { Host: `localhost:${port}` }), 200);
+  assert.equal(await rawStatus(port, '/health', { Host: `evil.example:${port}` }), 403);
+});
+
+apiTest('заметка длиннее 100 kB сохраняется, а не отвечает 413', async () => {
+  const notePath = 'notes/Topic/Long.md';
+  const content = `# Long\n\n${'Длинный абзац. '.repeat(10_000)}`;
+  assert.ok(Buffer.byteLength(content) > 100 * 1024);
+
+  const { response } = await requestJson(buildUrl('/api/file', { path: notePath }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  assert.equal(response.status, 200);
+
+  const saved = fs.readFileSync(path.join(tempRoot, notePath), 'utf-8');
+  assert.equal(saved, content);
+
+  // Later tests count the notes, so this one must not outlive the test.
+  const removed = await realFetch(buildUrl('/api/file', { path: notePath, permanent: 1 }), { method: 'DELETE' });
+  assert.equal(removed.status, 200);
+});
+
+apiTest('токен GitHub передаётся git через окружение, а не через аргументы', () => {
+  assert.equal(gitEnv('').GIT_CONFIG_COUNT, undefined);
+
+  const env = gitEnv('ghp_example');
+  assert.equal(env.GIT_CONFIG_COUNT, '1');
+  assert.equal(env.GIT_CONFIG_KEY_0, 'http.https://github.com/.extraheader');
+  const header = env.GIT_CONFIG_VALUE_0.replace(/^AUTHORIZATION: basic /, '');
+  assert.equal(Buffer.from(header, 'base64').toString(), 'x-access-token:ghp_example');
 });
 
 apiTest('GET /api/tree индексирует заметки и игнорирует скрытые папки', async () => {

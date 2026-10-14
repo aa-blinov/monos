@@ -89,7 +89,7 @@
   $: openedDateTitle = cardDateTitle(cardDateValue, $locale);
   $: cardStyle = `--note-accent: ${accent}; --note-tint: color-mix(in srgb, ${accent} 13%, transparent); --note-glow: color-mix(in srgb, ${accent} 18%, transparent);`;
   $: cardClass = compact
-    ? 'note-card group relative flex h-36 w-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
+    ? 'note-card group relative flex min-h-36 w-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'
     : 'note-card group relative flex h-48 w-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-4 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40 sm:px-5 sm:hover:-translate-y-0.5 sm:hover:shadow-xl sm:hover:shadow-black/10';
 </script>
 

@@ -121,6 +121,16 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `motion.test.js` | Smooth by default, instant under `prefers-reduced-motion` |
 | `categories.js` | Category field helpers: `normalizeCategory`, `canonicalCategory` (reuses an existing spelling, ignoring case) and `filterCategories` for the suggestions |
 | `categories.test.js` | Whitespace cleanup, case-insensitive matching, prefix matches ranked first |
+| `frontmatter.js` | YAML frontmatter helpers: `splitFrontmatter`, `parseFrontmatter`, `upsertFrontmatter`, `setFrontmatterKey`, plus the due-date helpers `dueStatus` and `dueLabel` |
+| `git-history.js` | Note history served by git: list the revisions of a note, read one with its diff, restore one (`noteHistoryRequest`, `noteRevisionRequest`, `restoreNoteRevisionRequest`) |
+| `git-history.test.js` | Request paths and methods, error text taken from the backend |
+| `markdown-extras.js` | Turns TipTap math and Mermaid nodes back into markdown (`convertMarkdownExtras`) and finds inline `$…$` formulas (`findInlineMath`) |
+| `reminders.js` | Due-date reminders: notification permission, and at most one native notification per note and due date (`notifyDue`, `wasNotified`) |
+| `richEditorExtras.js` | TipTap nodes for inline math, math blocks, Mermaid diagrams and note embeds |
+| `richEditorExtras.test.js` | Node names, which TipTap uses to tell the nodes apart |
+| `saved-searches.js` | Saved searches stored next to the notes: load, add (saving the same query again only renames it), rename, remove; rolls back when the disk write fails |
+| `saved-searches.test.js` | Add, rename and remove; the empty query; rollback on a failed write |
+| `task-progress.js` | Counts finished and total task-list items in a note (`taskProgress`) and formats the status line (`formatTaskProgress`) |
 | `word-stats.js` | `wordStats(text)` — word/character counts and estimated reading time (200 wpm) |
 | `word-stats.test.js` | Empty text, rounding up to 1 minute, whitespace handling |
 | `quick-switcher.js` | Quick-switcher parsing and filtering: `note:`, `tag:` prefixes, fuzzy note matching |

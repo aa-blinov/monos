@@ -12,10 +12,18 @@ export function buildGithubRemoteUrl(repo) {
   return `https://github.com/${repo}.git`;
 }
 
-function gitArgsWithAuth(args, token) {
-  if (!token) return args;
+// The token travels in the environment, not in `git -c` arguments: `ps` shows
+// every process's arguments to all local users. GIT_CONFIG_COUNT needs git 2.31+.
+export function gitEnv(token) {
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  if (!token) return env;
   const credentials = Buffer.from(`x-access-token:${token}`).toString('base64');
-  return ['-c', `http.https://github.com/.extraheader=AUTHORIZATION: basic ${credentials}`, ...args];
+  return {
+    ...env,
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
+    GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${credentials}`,
+  };
 }
 
 function gitExec(args, options = {}) {
@@ -23,11 +31,11 @@ function gitExec(args, options = {}) {
   const token = typeof options === 'string' ? '' : options.token || '';
 
   try {
-    return execFileSync('git', gitArgsWithAuth(args, token), {
+    return execFileSync('git', args, {
       cwd,
       encoding: 'utf-8',
       timeout: 30000,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      env: gitEnv(token),
     }).trim();
   } catch (error) {
     const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
@@ -46,11 +54,11 @@ function gitExecBuffer(args, options = {}) {
   const token = typeof options === 'string' ? '' : options.token || '';
 
   try {
-    return execFileSync('git', gitArgsWithAuth(args, token), {
+    return execFileSync('git', args, {
       cwd,
       timeout: 30000,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      env: gitEnv(token),
     });
   } catch (error) {
     const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
