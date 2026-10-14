@@ -53,7 +53,7 @@
     firstImageFileFromText,
     markdownImage,
   } from '../lib/attachments.js';
-  import { editorState, activeTheme } from '../stores.js';
+  import { editorState, activeTheme, templateRequest } from '../stores.js';
   import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
@@ -97,6 +97,10 @@
   let templateQuery = '';
   /** @type {string} */
   let templateTitle = '';
+  // Ошибка создания из шаблона: видна в самой модалке, а не за её пределами.
+  let templateError = '';
+  // Путь заметки с тем же названием: модалка предложит открыть её или создать копию.
+  let templateDuplicatePath = '';
   /** @type {string} */
   let templateCategory = '';
   /** @type {string} */
@@ -483,8 +487,17 @@
     templateCategory = template.category || '';
   }
 
+  // Менеджер шаблонов передаёт сюда id: модалка открывается уже на этом шаблоне.
+  $: if ($templateRequest) {
+    const requestedId = $templateRequest;
+    templateRequest.set(null);
+    openTemplates(requestedId);
+  }
+
   export function openTemplates(templateId = selectedTemplateId) {
     templateQuery = '';
+    templateError = '';
+    templateDuplicatePath = '';
     templateLocale = $locale;
     const template = getTemplateCatalogById(templateId, $locale, $hiddenLibraryTemplateIds, $customNoteTemplates) || selectedTemplate;
     selectedTemplateId = template?.id;
@@ -577,6 +590,8 @@
     if (!selectedTemplate || !templateTitle.trim()) return;
     try {
       isCreating = true;
+      templateError = '';
+      templateDuplicatePath = '';
       const title = templateTitle.trim();
       const data = await createNoteRequest({
         title,
@@ -584,14 +599,60 @@
         tags: selectedTemplate.tags || [],
         content: buildRuntimeTemplateContent(selectedTemplate, title),
       });
-      showTemplatesModal = false;
-      templateTitle = '';
-      templateQuery = '';
-      await loadTree();
-      await loadDirectories();
-      dispatch('navigate', { path: data.path, name: title, isDir: false });
+      await finishTemplateCreate(data, title);
     } catch (err) {
-      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
+      templateDuplicatePath = err.status === 409 && err.body?.path ? err.body.path : '';
+      templateError = err.status === 409
+        ? $localizedText.sidebar.errors.duplicateNote
+        : $localizedText.sidebar.errors.createNote(err.message);
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  // Модалка закрывается, заметка открывается: и для новой, и для уже существующей.
+  async function finishTemplateCreate(data, title) {
+    showTemplatesModal = false;
+    templateTitle = '';
+    templateQuery = '';
+    await loadTree();
+    await loadDirectories();
+    dispatch('navigate', { path: data.path, name: title, isDir: false });
+  }
+
+  async function openExistingTemplateNote() {
+    const path = templateDuplicatePath;
+    const title = templateTitle.trim();
+    templateError = '';
+    templateDuplicatePath = '';
+    await finishTemplateCreate({ path }, title);
+  }
+
+  // Имя занято: создаём копию с номером — первое свободное из 2…20, как при обычном создании.
+  async function createTemplateNumberedCopy() {
+    if (isCreating || !selectedTemplate) return;
+    const base = templateTitle.trim();
+    try {
+      isCreating = true;
+      templateError = '';
+      for (let n = 2; n <= 20; n += 1) {
+        const title = `${base} ${n}`;
+        try {
+          const data = await createNoteRequest({
+            title,
+            category: templateCategory,
+            tags: selectedTemplate.tags || [],
+            content: buildRuntimeTemplateContent(selectedTemplate, title),
+          });
+          await finishTemplateCreate(data, title);
+          return;
+        } catch (err) {
+          if (err.status !== 409) throw err;
+        }
+      }
+      templateError = $localizedText.sidebar.errors.duplicateNote;
+    } catch (err) {
+      templateError = $localizedText.sidebar.errors.createNote(err.message);
     } finally {
       isCreating = false;
     }
@@ -1397,8 +1458,7 @@
                         <div class="font-serif text-base leading-snug">{template.title}</div>
                         <p class="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">{template.description}</p>
                       </div>
-                      <span class="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">{template.category}</span>
-                    </div>
+                                          </div>
                     <div class="mt-2 flex flex-wrap gap-1">
                       {#each template.tags as tag}
                         <span class="rounded-full bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
@@ -1420,6 +1480,7 @@
               id="template-title"
               type="text"
               bind:value={templateTitle}
+              on:input={() => { templateError = ''; templateDuplicatePath = ''; }}
               class={formFieldClass()}
             />
           </div>
@@ -1434,6 +1495,9 @@
                 <option value={dir}>{dir || $localizedText.sidebar.modals.root}</option>
               {/each}
             </select>
+            {#if templateCategory && !directoryList.includes(templateCategory)}
+              <p class="mt-1.5 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.templateNewFolder(templateCategory)}</p>
+            {/if}
           </div>
         </div>
 
@@ -1469,6 +1533,17 @@
           </div>
         </div>
 
+        {#if templateError}
+          <div role="alert" class="mt-5 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+            <p class="text-sm leading-relaxed text-[var(--red)]">{templateError}</p>
+            {#if templateDuplicatePath}
+              <div class="mt-3 flex flex-wrap gap-4">
+                <button type="button" class={getModalButtonClass('secondary')} on:click={openExistingTemplateNote}>{$localizedText.sidebar.modals.openExisting}</button>
+                <button type="button" class={getModalButtonClass('primary')} disabled={isCreating} on:click={createTemplateNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${templateTitle.trim()} 2`)}</button>
+              </div>
+            {/if}
+          </div>
+        {/if}
         <div class="mt-5 flex gap-4">
           <button on:click={() => showTemplatesModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
           <button

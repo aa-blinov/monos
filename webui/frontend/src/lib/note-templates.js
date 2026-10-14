@@ -23,7 +23,8 @@ function timeLabel(date = new Date()) {
 }
 
 function titleWithDate(prefix, date = new Date()) {
-  return `${prefix} ${shortDate(date)}`;
+  // ISO, как даты внутри шаблона: в названии и тексте одна и та же запись даты.
+  return `${prefix} ${isoDate(date)}`;
 }
 
 function context(title, date = new Date()) {

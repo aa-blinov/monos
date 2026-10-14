@@ -51,6 +51,8 @@ export const searchResults = writable([]);
 export const isSearching = writable(false);
 export const editorState = writable({ path: null, dirty: false, saving: false });
 export const editorAction = writable(null);
+// Id шаблона, из которого менеджер просит создать заметку: модалка создания откроется на нём.
+export const templateRequest = writable(null);
 export const noteSaveSignal = writable(null);
 
 themeMode.subscribe(value => {

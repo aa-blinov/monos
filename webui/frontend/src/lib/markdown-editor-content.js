@@ -106,7 +106,8 @@ function parsedMarkdownContent(markdown) {
   return withCodeLanguages(content, markdown);
 }
 
-const TASK_MARKER = /^\[([ xX])\]\s+/;
+// Пустая задача «- [ ]» — тоже задача: текста после маркера может не быть.
+const TASK_MARKER = /^\[([ xX])\](?:\s+|$)/;
 
 /**
  * Turn GitHub task-list items into the `taskList`/`taskItem` nodes TipTap uses.
@@ -179,10 +180,11 @@ function convertListItemToTaskItem(item) {
   // несколько узлов (смешанный список режется на группы), поэтому разворачиваем
   // всё, а не забираем первый элемент — иначе хвост просто исчезает.
   const nested = item.content.slice(1).flatMap((child) => convertTaskLists([child]));
+  // TipTap требует абзац внутри задачи, даже пустой: без него пустая задача не встанет в схему.
   return {
     type: 'taskItem',
     attrs: { checked },
-    content: paragraph.content.length ? [paragraph, ...nested] : nested,
+    content: [paragraph, ...nested],
   };
 }
 
