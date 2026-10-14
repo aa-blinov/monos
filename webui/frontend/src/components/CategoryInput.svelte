@@ -114,7 +114,7 @@
     on:blur={handleBlur}
     on:input={handleInput}
     on:keydown={handleKeydown}
-    class="h-8 w-40 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+    class="h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
   />
   {#if showList}
     <ul
