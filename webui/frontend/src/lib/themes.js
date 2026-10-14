@@ -8,7 +8,7 @@
  * upstream palettes, which is an owner decision, not a mechanical fix — see
  * docs/ARCHITECTURE.md.
  *
- * `--text-tertiary` is new and covers the metadata whisper (9–10px paths and
+ * `--text-tertiary` is new and covers the metadata whisper (11px paths and
  * timestamps), which previously stacked opacity onto `--text-secondary` and
  * fell to ~2.2:1. Its value is derived per theme/mode to clear AA 4.5:1
  * against the worst tinted card, so metadata is now readable everywhere.

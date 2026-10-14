@@ -8,7 +8,8 @@ test.beforeEach(async ({ page }) => {
 test('opens seeded notes and navigates through the shell', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
+  // The tree opens by default on a wide screen, so the toggle reads "Close sidebar" there.
+  await expect(page.getByRole('button', { name: /(Open|Close) sidebar/ }).first()).toBeVisible();
   await openBoardCard(page, 'Welcome', 'notes/Welcome.md');
   await expect(page.getByText(/Welcome to Monos/i)).toBeVisible();
 

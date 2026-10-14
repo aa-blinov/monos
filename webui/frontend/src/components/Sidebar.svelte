@@ -1100,7 +1100,7 @@
   </div>
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 flex-col gap-2 border-t border-[var(--border-subtle)] px-3 py-2.5 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
@@ -1141,7 +1141,7 @@
           <TooltipIconButton
             on:click={handleSync}
             disabled={isSyncing || $editorState.saving || $editorState.dirty}
-            class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30"
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30"
             label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
             tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
             tooltipAlign="end"
@@ -1158,7 +1158,7 @@
         {/if}
         <TooltipIconButton
           on:click={() => dispatch('openTemplatesManager')}
-          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.templates}
           tooltip={$localizedText.sidebar.templates}
           tooltipAlign="end"
@@ -1169,7 +1169,7 @@
         <TooltipIconButton
           data-testid="open-saved-searches"
           on:click={() => dispatch('openSavedSearches')}
-          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.savedSearches.title}
           tooltip={$localizedText.savedSearches.title}
           tooltipAlign="end"
@@ -1180,7 +1180,7 @@
         <TooltipIconButton
           data-testid="open-tags"
           on:click={() => dispatch('openTags')}
-          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.tags.title}
           tooltip={$localizedText.tags.title}
           tooltipAlign="end"
@@ -1190,7 +1190,7 @@
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
-          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.trash}
           tooltip={$localizedText.sidebar.trash}
           tooltipAlign="end"
@@ -1200,7 +1200,7 @@
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}
-          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.settings}
           tooltip={$localizedText.sidebar.settings}
           tooltipAlign="end"

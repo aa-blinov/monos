@@ -94,7 +94,8 @@ test('удаление тега из всех заметок требует по
   await expect.poll(async () => (await page.request.get('/api/tags')).text()).toContain(tag);
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open sidebar' }).click();
+  const toggle = page.getByRole('button', { name: 'Open sidebar' });
+  if (await toggle.isVisible()) await toggle.click();
   await page.locator('[data-testid="open-tags"]:visible').first().click();
 
   const row = page.locator('ul li').filter({ has: page.getByTestId('tag-delete') }).filter({ hasText: tag });

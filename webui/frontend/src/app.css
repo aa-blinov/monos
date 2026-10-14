@@ -9,7 +9,7 @@
    are the 16px-base defaults. Use text-[var(--text-whisper)], never a literal
    px size — a literal does not scale with the interface size setting. */
 :root {
-  --text-whisper: 10px;
+  --text-whisper: 11px;
   --text-whisper-lg: 11px;
 }
 
