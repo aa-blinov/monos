@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
-  import { RotateCcw, Trash2 } from 'lucide-svelte';
+  import { RotateCcw, Trash2, XCircle } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { deleteFilePermanentlyRequest, loadTrashNotesRequest, restoreNoteRequest } from '../lib/editor-api.js';
@@ -149,7 +149,7 @@
                   disabled={busyPath === note.path}
                   on:click={() => requestDeleteForever(note)}
                 >
-                  <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />
+                  <XCircle size="16" strokeWidth="1.7" aria-hidden="true" />
                 </TooltipIconButton>
               </div>
             </div>

@@ -14,6 +14,7 @@
   let newNoteTitle = '';
   let newNoteCategory = category;
   let isCreating = false;
+  let createError = '';
 
   $: if (open) {
     newNoteCategory = category;
@@ -21,18 +22,31 @@
     newNoteTitle = '';
     newNoteCategory = '';
     isCreating = false;
+    createError = '';
+  }
+
+  // A taken name is refused by the backend (409). Today's note opens the one that
+  // already exists; any other name stays in the field with the reason shown.
+  function createFailureText(err) {
+    return err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
   }
 
   async function createToday() {
     if (isCreating) return;
+    const title = formatTodayNoteTitle();
     try {
       isCreating = true;
-      const title = formatTodayNoteTitle();
+      createError = '';
       const data = await createNoteRequest({ title, category: 'Daily', tags: [], content: '' });
       onClose();
       onCreated(data, title);
     } catch (err) {
-      console.error('Failed to create today note:', err);
+      if (err.status === 409 && err.body?.path) {
+        onClose();
+        onCreated({ path: err.body.path, name: `${title}.md`, isDir: false }, title);
+      } else {
+        createError = createFailureText(err);
+      }
     } finally {
       isCreating = false;
     }
@@ -40,14 +54,15 @@
 
   async function submitCreateNote() {
     if (!newNoteTitle.trim() || isCreating) return;
+    const title = newNoteTitle.trim();
     try {
       isCreating = true;
-      const title = newNoteTitle.trim();
+      createError = '';
       const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
       onClose();
       onCreated(data, title);
     } catch (err) {
-      console.error('Failed to create note:', err);
+      createError = createFailureText(err);
     } finally {
       isCreating = false;
     }
@@ -109,6 +124,7 @@
           id="create-note-title"
           type="text"
           bind:value={newNoteTitle}
+          on:input={() => { createError = ''; }}
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
           class={formFieldClass()}
           on:keydown={(e) => {
@@ -118,6 +134,9 @@
           autofocus
         />
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
+        {#if createError}
+          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{createError}</p>
+        {/if}
       </div>
     </div>
     <div class="flex gap-6 mt-10">

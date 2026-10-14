@@ -598,7 +598,8 @@ test('Sidebar после перемещения заметки открывае�
   await waitFor(() => expect(navigateHandler).toHaveBeenCalledWith(expect.objectContaining({
     detail: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
   })));
-  await waitFor(() => expect(screen.getByText('Alpha').closest('button').className).toContain('bg-[var(--border-subtle)]'));
+  // The selected row is marked for assistive tech and set in bold; DESIGN.md forbids a fill or bar.
+  await waitFor(() => expect(screen.getByText('Alpha').closest('button').getAttribute('aria-current')).toBe('true'));
 });
 
 test('Sidebar при открытии заметки не пересоздаёт дерево', async () => {

@@ -11,7 +11,7 @@
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
-  import { dueLabel, dueStatus, parseFrontmatter, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
+  import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { notifyDue } from '../lib/reminders.js';
   import {
     deleteFileRequest,
@@ -156,13 +156,6 @@
 
   function richEditorBody(noteContent) {
     return splitFrontmatter(noteContent).body;
-  }
-
-  function replaceContentBody(noteContent, nextBody) {
-    const { frontmatter } = splitFrontmatter(noteContent);
-    return frontmatter
-      ? `${frontmatter}\n\n${String(nextBody || '').replace(/^\s*\n/, '')}`
-      : String(nextBody || '');
   }
 
   /**
@@ -383,10 +376,8 @@
       markFileSaved(filePath, saved);
     } catch (error) {
       console.error('Save before note switch failed:', error);
+      // A failed save stays visible until a later save succeeds: the text is not on disk.
       saveMessage = $localizedText.editor.saveFailed;
-      saveMessageTimeout = setTimeout(() => {
-        if (saveMessage === $localizedText.editor.saveFailed) saveMessage = '';
-      }, 5000);
     } finally {
       isSaving = false;
     }
@@ -486,10 +477,8 @@
         if (saveMessage === $localizedText.editor.saved) saveMessage = '';
       }, 3000);
     } catch (error) {
+      // Stays on screen until the next save succeeds; the text is still in the editor.
       saveMessage = $localizedText.editor.saveFailed;
-      saveMessageTimeout = setTimeout(() => {
-        if (saveMessage === $localizedText.editor.saveFailed) saveMessage = '';
-      }, 5000);
       console.error('Save failed:', error);
     } finally {
       isSaving = false;
@@ -648,7 +637,17 @@
   // is the only chance to save then.
   onMount(() => {
     window.monosFlushPendingEdits = flushPendingEdits;
+    // In a browser, leaving the page with unsaved text asks first. The desktop shell
+    // saves before it closes, and a prompt there would keep the window from closing.
+    const inDesktopShell = /Electron\//.test(navigator.userAgent);
+    const warnBeforeLeaving = (event) => {
+      if (!hasUnsavedChanges() || isSaving) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    if (!inDesktopShell) window.addEventListener('beforeunload', warnBeforeLeaving);
     return () => {
+      if (!inDesktopShell) window.removeEventListener('beforeunload', warnBeforeLeaving);
       if (window.monosFlushPendingEdits === flushPendingEdits) delete window.monosFlushPendingEdits;
     };
   });
@@ -768,6 +767,7 @@
             tooltip={`${item.path} · ${relationLabel(item.type)}`}
           >
             <span class="max-w-40 truncate text-xs font-medium">{item.name}</span>
+            <span class="shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
           </TooltipIconButton>
         {/each}
       </div>
@@ -812,6 +812,7 @@
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyDue}</span>
         <input
           type="date"
+          lang={$locale}
           data-testid="property-due"
           bind:value={dueInput}
           on:change={(e) => applyDue(e.currentTarget.value)}
@@ -875,7 +876,7 @@
           onImageFile={handleImageFile}
           resolveImageSrc={resolveEditorImageSrc}
           resolveImagePath={resolveEditorImagePath}
-          onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceContentBody(editedContent, md); ignoreRichUpdate = false; }}
+          onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceFrontmatterBody(editedContent, md); ignoreRichUpdate = false; }}
           on:imageClick={openImageRename}
         />
         {/if}
@@ -909,6 +910,7 @@
   {#if displayedFile && !displayedFile.isDir}
     <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8" data-testid="editor-footer" inert={isLoading}>
       <div class="flex h-full items-center gap-2">
+        <p role="status" aria-live="polite" class="order-last ml-auto whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}</p>
         <TooltipIconButton
           type="button"
           data-testid="toggle-focus-mode"
@@ -970,6 +972,7 @@
             <input
               data-testid="due-input"
               type="date"
+              lang={$locale}
               class="bg-transparent text-[length:var(--text-whisper-lg)] text-[var(--text-primary)] outline-none"
               bind:value={dueInput}
               on:change={(e) => applyDue(e.currentTarget.value)}

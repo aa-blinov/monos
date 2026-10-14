@@ -53,6 +53,7 @@ const ruColorNames = {
 const enText = {
   app: {
     closeSidebar: 'Close sidebar',
+    closeMenu: 'Close menu',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are plain Markdown files on your own disk — not rows in someone\'s database. Monos is just a comfortable way to read, write and find them.',
     emptyMobile: 'Your notes are plain Markdown files on your own disk. Open the menu to pick one or start writing.',
@@ -85,6 +86,7 @@ const enText = {
       retry: 'Try again',
       filter: 'Search notes',
       filterPlaceholder: 'Search notes...',
+      columnsShort: 'cols',
       opened: 'Opened',
       modified: 'Modified',
       columns(count) {
@@ -122,6 +124,11 @@ const enText = {
     drop(tag) {
       return `Remove tag ${tag} from all notes`;
     },
+    dropConfirmTitle: 'Remove tag',
+    dropConfirm(tag, count) {
+      return `Remove #${tag} from ${count} note${count === 1 ? '' : 's'}? Their files will change.`;
+    },
+    dropConfirmAction: 'Remove tag',
   },
   savedSearches: {
     title: 'Saved searches',
@@ -156,6 +163,8 @@ const enText = {
     heading: 'Search Results',
     searching: 'Searching',
     noResults: 'No results',
+    noResultsHint: 'Try other words, or check the search operators in Settings.',
+    clear: 'Clear search',
     matches(count, query) {
       return `${count} ${count === 1 ? 'match' : 'matches'} for “${query}”`;
     },
@@ -185,6 +194,10 @@ const enText = {
       continueWork: 'Continue working',
       openSettings: 'Open settings',
       toggleSidebar: 'Toggle sidebar',
+      newNote: 'New note',
+      openTemplates: 'Open templates',
+      openTags: 'Open tags',
+      openTrash: 'Open trash',
       toggleTheme: 'Toggle theme',
     },
     commandDetails: {
@@ -192,6 +205,10 @@ const enText = {
       continueWork: 'Return to a note you opened recently',
       openSettings: 'Go to the settings screen',
       toggleSidebar: 'Show or hide the knowledge tree',
+      newNote: 'Create a note with a title',
+      openTemplates: 'Manage the note templates',
+      openTags: 'See the tags and rename or remove them',
+      openTrash: 'Restore or empty deleted notes',
       toggleTheme: 'Switch between light and dark mode',
     },
   },
@@ -269,7 +286,7 @@ const enText = {
       creating: 'Creating...',
       create: 'Create',
       newNote: 'New Note',
-      createStart: 'Need a frame?',
+      createStart: 'Start from',
       blankNote: 'Start from a blank page',
       blankNoteHint: 'For a thought that needs room',
       todayNote: 'Daily note',
@@ -299,6 +316,7 @@ const enText = {
       createNote(message) {
         return `Failed to create note: ${message}`;
       },
+      duplicateNote: 'A note with this name already exists in this folder. Choose another name.',
       clipboardEmpty: 'Clipboard is empty. Copy some text first.',
       clipboardUnavailable: 'Clipboard is not available in this browser.',
       rename(message) {
@@ -345,6 +363,7 @@ const enText = {
     content: 'Markdown content',
     placeholders: 'Variables: {{title}}, {{date}}, {{shortDate}}, {{time}}.',
     createTemplate: 'Create template',
+    createTemplateHint: 'Give the template a title first.',
     saveChanges: 'Save changes',
     myTemplates: 'My Templates',
     myTemplatesHint: 'These appear before the built-in templates when creating a note.',
@@ -367,6 +386,16 @@ const enText = {
       medium: 'Medium',
       large: 'Large',
       xlarge: 'Extra Large',
+      xs: 'XS',
+      sm: 'Sm',
+      md: 'Md',
+      lg: 'Lg',
+      xl: 'XL',
+    },
+    fontCategory: {
+      mono: 'mono',
+      sans: 'sans',
+      serif: 'serif',
     },
     lineHeight: {
       compact: 'Compact',
@@ -392,6 +421,9 @@ const enText = {
     interfaceLanguage: 'Interface Language',
     theme: 'Theme',
     themeMode: 'Theme mode',
+    resetGitTitle: 'Sign out of GitHub',
+    resetGitMessage: 'The saved token and repository choice are removed from this app. You can sign in again at any time.',
+    resetGitAction: 'Sign out',
     themeModeSystem: 'System',
     themeModeLight: 'Light',
     themeModeDark: 'Dark',
@@ -553,7 +585,7 @@ const enText = {
     propertyCategoryEmpty: '—',
     categorySuggestions: 'Category suggestions',
     propertyTags: 'Tags',
-    propertyTagsEmpty: 'comma, separated',
+    propertyTagsEmpty: 'project, idea',
     propertyDue: 'Due',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
@@ -673,6 +705,7 @@ const enText = {
     resizeContent: 'Resize source content',
   },
   richEditor: {
+    bodyLabel: 'Note text',
     beginWriting: 'Begin writing...',
     toolbar: 'Editor toolbar',
     undo: 'Undo (Ctrl+Z)',
@@ -738,6 +771,7 @@ const enText = {
 const ruText = {
   app: {
     closeSidebar: 'Закрыть боковую панель',
+    closeMenu: 'Закрыть меню',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Ваши заметки — обычные файлы Markdown на вашем диске, а не строки в чужой базе. Monos просто удобный способ их читать, писать и находить.',
     emptyMobile: 'Ваши заметки — обычные файлы Markdown на вашем диске. Откройте меню, чтобы выбрать или начать писать.',
@@ -770,6 +804,7 @@ const ruText = {
       retry: 'Повторить',
       filter: 'Поиск по заметкам',
       filterPlaceholder: 'Искать заметки...',
+      columnsShort: 'кол.',
       opened: 'Открыта',
       modified: 'Изменена',
       columns(count) {
@@ -807,6 +842,11 @@ const ruText = {
     drop(tag) {
       return `Убрать тег ${tag} из всех заметок`;
     },
+    dropConfirmTitle: 'Убрать тег',
+    dropConfirm(tag, count) {
+      return `Убрать #${tag} из заметок: ${count}? Файлы этих заметок будут изменены.`;
+    },
+    dropConfirmAction: 'Убрать тег',
   },
   savedSearches: {
     title: 'Сохранённые поиски',
@@ -841,6 +881,8 @@ const ruText = {
     heading: 'Результаты поиска',
     searching: 'Идёт поиск',
     noResults: 'Ничего не найдено',
+    noResultsHint: 'Попробуйте другие слова или посмотрите операторы поиска в настройках.',
+    clear: 'Очистить поиск',
     matches(count, query) {
       const form = count === 1 ? 'совпадение' : count > 1 && count < 5 ? 'совпадения' : 'совпадений';
       return `${count} ${form} по запросу «${query}»`;
@@ -871,6 +913,10 @@ const ruText = {
       continueWork: 'Продолжить работу',
       openSettings: 'Открыть настройки',
       toggleSidebar: 'Переключить боковую панель',
+      newNote: 'Новая заметка',
+      openTemplates: 'Открыть шаблоны',
+      openTags: 'Открыть теги',
+      openTrash: 'Открыть корзину',
       toggleTheme: 'Переключить тему',
     },
     commandDetails: {
@@ -878,6 +924,10 @@ const ruText = {
       continueWork: 'Вернуться к недавно открытой заметке',
       openSettings: 'Открыть экран настроек',
       toggleSidebar: 'Показать или скрыть дерево знаний',
+      newNote: 'Создать заметку с названием',
+      openTemplates: 'Управлять шаблонами заметок',
+      openTags: 'Посмотреть теги, переименовать или убрать их',
+      openTrash: 'Восстановить или очистить удалённые заметки',
       toggleTheme: 'Переключить светлую и тёмную тему',
     },
   },
@@ -966,7 +1016,7 @@ const ruText = {
       creating: 'Создание...',
       create: 'Создать',
       newNote: 'Новая заметка',
-      createStart: 'Нужна опора?',
+      createStart: 'Начать с',
       blankNote: 'С чистого листа',
       blankNoteHint: 'Для мысли, которой нужен простор',
       todayNote: 'Дневная заметка',
@@ -996,6 +1046,7 @@ const ruText = {
       createNote(message) {
         return `Не удалось создать заметку: ${message}`;
       },
+      duplicateNote: 'Заметка с таким названием уже есть в этой папке. Выберите другое название.',
       clipboardEmpty: 'Буфер обмена пуст. Сначала скопируйте текст.',
       clipboardUnavailable: 'Буфер обмена недоступен в этом браузере.',
       rename(message) {
@@ -1049,6 +1100,7 @@ const ruText = {
     content: 'Markdown-содержимое',
     placeholders: 'Переменные: {{title}}, {{date}}, {{shortDate}}, {{time}}.',
     createTemplate: 'Создать шаблон',
+    createTemplateHint: 'Сначала задайте шаблону название.',
     saveChanges: 'Сохранить',
     myTemplates: 'Мои шаблоны',
     myTemplatesHint: 'Они показываются перед библиотечными шаблонами при создании заметки.',
@@ -1071,6 +1123,16 @@ const ruText = {
       medium: 'Средний',
       large: 'Большой',
       xlarge: 'Очень большой',
+      xs: 'Очень маленький',
+      sm: 'Маленький',
+      md: 'Средний',
+      lg: 'Большой',
+      xl: 'Очень большой',
+    },
+    fontCategory: {
+      mono: 'моно',
+      sans: 'гротеск',
+      serif: 'с засечками',
     },
     lineHeight: {
       compact: 'Компактный',
@@ -1096,6 +1158,9 @@ const ruText = {
     interfaceLanguage: 'Язык интерфейса',
     theme: 'Тема',
     themeMode: 'Режим темы',
+    resetGitTitle: 'Выйти из GitHub',
+    resetGitMessage: 'Сохранённый токен и выбор репозитория будут удалены из приложения. Войти снова можно в любой момент.',
+    resetGitAction: 'Выйти',
     themeModeSystem: 'Система',
     themeModeLight: 'Светлая',
     themeModeDark: 'Тёмная',
@@ -1260,7 +1325,7 @@ const ruText = {
     propertyCategoryEmpty: '—',
     categorySuggestions: 'Подсказки категорий',
     propertyTags: 'Теги',
-    propertyTagsEmpty: 'через запятую',
+    propertyTagsEmpty: 'проект, идея',
     propertyDue: 'Срок',
     gatheringThoughts: 'Собираем мысли',
     beginWriting: 'Начните писать...',
@@ -1400,6 +1465,7 @@ const ruText = {
     resizeContent: 'Изменить ширину source-контента',
   },
   richEditor: {
+    bodyLabel: 'Текст заметки',
     beginWriting: 'Начните писать...',
     toolbar: 'Панель редактора',
     undo: 'Отменить (Ctrl+Z)',

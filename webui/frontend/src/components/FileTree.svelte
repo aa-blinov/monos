@@ -98,6 +98,22 @@
     });
   }
 
+  // A button already turns Enter and Space into a click, so the row needs no keydown of
+  // its own for them (a second handler toggled a folder twice and looked dead). The
+  // context menu had only a mouse route; the Menu key and Shift+F10 open it here.
+  function onKeyboardMenu(e) {
+    if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    dispatch('rightClick', {
+      x: rect.left + 24,
+      y: rect.bottom,
+      path: node.path,
+      name: node.name,
+      isDir: node.is_dir
+    });
+  }
+
   function handleDragStart(e) {
     hideFileTooltip();
     isDragging = true;
@@ -157,12 +173,15 @@
 <div class="group text-sm lg:text-xs">
   <button
     class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-[background-color,border-color,opacity] lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
-    class:border-[var(--text-primary)]={active || (node.is_dir && isDragOver)}
-    class:bg-[var(--border-subtle)]={(active && !hasColor) || (node.is_dir && isDragOver)}
+    class:border-[var(--text-primary)]={node.is_dir && isDragOver}
+    class:bg-[var(--border-subtle)]={node.is_dir && isDragOver}
+    class:font-semibold={active}
+    aria-current={active ? 'true' : undefined}
+    aria-expanded={node.is_dir ? String(isExpanded) : undefined}
     style={activeBgStyle}
     on:click={handleSelect}
     on:contextmenu={onRightClick}
-    on:keydown={(e) => e.key === 'Enter' && handleSelect(e)}
+    on:keydown={onKeyboardMenu}
     on:mouseenter={showFileTooltip}
     on:mouseleave={hideFileTooltip}
     on:focus={showFileTooltip}

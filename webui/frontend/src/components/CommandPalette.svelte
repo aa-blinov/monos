@@ -136,6 +136,34 @@
         detail: $localizedText.commandPalette.commandDetails.openSettings,
       },
       {
+        id: 'newNote',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.newNote,
+        detail: $localizedText.commandPalette.commandDetails.newNote,
+      },
+      {
+        id: 'openTemplates',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openTemplates,
+        detail: $localizedText.commandPalette.commandDetails.openTemplates,
+      },
+      {
+        id: 'openTags',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openTags,
+        detail: $localizedText.commandPalette.commandDetails.openTags,
+      },
+      {
+        id: 'openTrash',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openTrash,
+        detail: $localizedText.commandPalette.commandDetails.openTrash,
+      },
+      {
         id: 'toggleSidebar',
         type: 'command',
         section: 'commands',
@@ -184,6 +212,10 @@
 
   function close() {
     dispatch('close');
+    // Escape and a click outside hand focus back to where the user was; without it
+    // focus fell to the page body and a keyboard user lost their place.
+    returnFocusEl?.focus?.();
+    returnFocusEl = null;
   }
 
   function selectItem(item) {
@@ -228,7 +260,10 @@
     }
   }
 
+  let returnFocusEl = null;
+
   async function activatePalette() {
+    returnFocusEl = typeof document !== 'undefined' ? document.activeElement : null;
     lastOpen = true;
     lastMode = mode;
     query = '';
@@ -300,7 +335,7 @@
       .filter(Boolean);
   }
   $: filteredItems = mode === 'notes'
-    ? [...visiblePinnedItems, ...visibleRecentItems, ...noteItems.slice(0, 10), ...visibleTemplateItems]
+    ? [...visiblePinnedItems, ...visibleRecentItems, ...noteItems.slice(0, 10)]
     : [...commandItems, ...visiblePinnedItems, ...visibleRecentItems, ...visibleTemplateItems, ...noteItems.slice(0, Math.max(0, 10 - commandItems.length))];
   $: if (activeIndex >= filteredItems.length) activeIndex = 0;
 </script>
@@ -309,7 +344,12 @@
   <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/20 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
     <button class="absolute inset-0 cursor-default" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
 
-    <div class="relative w-full max-w-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl">
+    <div
+      class="relative w-full max-w-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcher : $localizedText.commandPalette.title}
+    >
       <div class="border-b border-[var(--border-subtle)] px-5 py-4">
         <div class="mb-3 flex items-center justify-between gap-4">
           <div>
@@ -331,6 +371,11 @@
           bind:this={inputEl}
           bind:value={query}
           on:keydown={handleKeydown}
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="command-palette-results"
+          aria-autocomplete="list"
+          aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
           placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
           class="w-full bg-transparent py-1.5 text-xl font-serif outline-none placeholder:text-[var(--text-tertiary)]"
           autocomplete="off"
@@ -338,7 +383,7 @@
         />
       </div>
 
-      <div class="max-h-[55vh] overflow-y-auto py-2">
+      <div id="command-palette-results" role="listbox" class="max-h-[55vh] overflow-y-auto py-2">
         {#if isLoading && !filteredItems.length}
           <div class="px-5 py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.commandPalette.loading}</div>
         {:else if filteredItems.length}
@@ -350,6 +395,8 @@
             {/if}
             <button
               class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition {activeIndex === index ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]/70'}"
+              role="option"
+              aria-selected={activeIndex === index}
               on:mouseenter={() => activeIndex = index}
               on:click={() => selectItem(item)}
             >

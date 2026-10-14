@@ -189,6 +189,28 @@ apiTest('заметка длиннее 100 kB сохраняется, а не о
   assert.equal(removed.status, 200);
 });
 
+apiTest('создание заметки с занятым именем не перезаписывает существующую', async () => {
+  const create = (content) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Guarded note', content }),
+  });
+
+  const first = await create('original body that must survive');
+  assert.equal(first.response.status, 200);
+
+  const second = await create('second body');
+  assert.equal(second.response.status, 409);
+  assert.equal(second.data.path, 'notes/Guarded note.md');
+
+  const saved = fs.readFileSync(path.join(tempRoot, 'notes', 'Guarded note.md'), 'utf-8');
+  assert.match(saved, /original body that must survive/);
+  assert.doesNotMatch(saved, /second body/);
+
+  const removed = await realFetch(buildUrl('/api/file', { path: 'notes/Guarded note.md', permanent: 1 }), { method: 'DELETE' });
+  assert.equal(removed.status, 200);
+});
+
 apiTest('токен GitHub передаётся git через окружение, а не через аргументы', () => {
   assert.equal(gitEnv('').GIT_CONFIG_COUNT, undefined);
 

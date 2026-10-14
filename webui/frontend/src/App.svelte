@@ -97,7 +97,9 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     fontSizeOptions,
     fontOptions,
   });
-  $: activeSearchQuery = isDashboardRoute ? ($searchQuery.trim() || $urlSearchQuery) : '';
+  // An emptied search field ends the search. The query from the URL only seeds the
+  // field on first load (below); falling back to it here kept old results on screen.
+  $: activeSearchQuery = isDashboardRoute ? $searchQuery.trim() : '';
   $: if (!$searchUrlReady && isDashboardRoute && $urlSearchQuery && !$restoredInitialUrlSearch) {
     restoredInitialUrlSearch.set(true);
     $searchQuery = $urlSearchQuery;
@@ -148,6 +150,11 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   }
 
   function handleKeydown(e) {
+    // Escape closes the narrow-window menu, unless the palette or a dialog already used it.
+    if (e.key === 'Escape' && isMobile && $sidebarOpen && !e.defaultPrevented) {
+      setSidebarOpen(false);
+      return;
+    }
     const key = e.key.toLowerCase();
     const target = e.target;
     const isTypingTarget = target
@@ -624,6 +631,10 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     if (event.detail === 'continueWork') openContinueWork();
     if (event.detail === 'openSettings') openSettings();
     if (event.detail === 'toggleSidebar') toggleSidebar();
+    if (event.detail === 'newNote') openNewNoteFlow();
+    if (event.detail === 'openTemplates') openTemplatesManager();
+    if (event.detail === 'openTags') openTagPanel();
+    if (event.detail === 'openTrash') openTrash();
   }
 
   function refreshAfterTrashChange() {
@@ -702,7 +713,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
         <button
           class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
           on:click={toggleSidebar}
-          aria-label={$localizedText.app.closeSidebar}
+          aria-label={$localizedText.app.closeMenu}
         ></button>
       {/if}
 
@@ -759,6 +770,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
             mobile={isMobile}
             on:openResult={(e) => handleNavigate({ detail: { path: e.detail.path, name: e.detail.name, isDir: false } })}
             on:reveal={revealInTree}
+            on:clear={clearSearch}
           />
         {:else}
         <Route path="/notes/*" let:params>
