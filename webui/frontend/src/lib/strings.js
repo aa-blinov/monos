@@ -151,6 +151,7 @@ const enText = {
     searchHint: 'Search. Operators: body:word — inside the note, path:folder — inside a folder, tag:word — by tag, updated:2026-10 — changed since, -word — exclude. Values with spaces go in quotes.',
     closeSearch: 'Close search',
     toggleSidebar: 'Toggle Sidebar',
+    quickNote: 'Quick note',
     openSidebar: 'Open sidebar',
     closeSidebar: 'Close sidebar',
     toggleTheme: 'Toggle Theme',
@@ -287,6 +288,10 @@ const enText = {
       create: 'Create',
       newNote: 'New Note',
       createStart: 'Start from',
+      openExisting: 'Open the existing note',
+      createNumbered(name) {
+        return `Create as ${name}`;
+      },
       blankNote: 'Start from a blank page',
       blankNoteHint: 'For a thought that needs room',
       todayNote: 'Daily note',
@@ -599,6 +604,7 @@ const enText = {
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
+    retry: 'Retry',
     noteNotFound(target) {
       return `Note "${target}" not found.`;
     },
@@ -869,6 +875,7 @@ const ruText = {
     searchHint: 'Поиск. Операторы: body:слово — внутри заметки, path:папка — внутри папки, tag:слово — по тегу, updated:2026-10 — изменена с, -слово — исключить. Значения с пробелами — в кавычках.',
     closeSearch: 'Закрыть поиск',
     toggleSidebar: 'Показать или скрыть боковую панель',
+    quickNote: 'Быстрая заметка',
     openSidebar: 'Открыть боковую панель',
     closeSidebar: 'Закрыть боковую панель',
     toggleTheme: 'Переключить тему',
@@ -1017,6 +1024,10 @@ const ruText = {
       create: 'Создать',
       newNote: 'Новая заметка',
       createStart: 'Начать с',
+      openExisting: 'Открыть существующую',
+      createNumbered(name) {
+        return `Создать как ${name}`;
+      },
       blankNote: 'С чистого листа',
       blankNoteHint: 'Для мысли, которой нужен простор',
       todayNote: 'Дневная заметка',
@@ -1339,6 +1350,7 @@ const ruText = {
     saving: 'Сохранение…',
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',
+    retry: 'Повторить',
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
     },

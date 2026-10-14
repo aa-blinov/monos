@@ -222,9 +222,9 @@
                         on:click={() => toggleLibraryTemplate(template)}
                       >
                         {#if template.hidden}
-                          <Eye size="16" strokeWidth="1.7" aria-hidden="true" />
-                        {:else}
                           <EyeOff size="16" strokeWidth="1.7" aria-hidden="true" />
+                        {:else}
+                          <Eye size="16" strokeWidth="1.7" aria-hidden="true" />
                         {/if}
                       </TooltipIconButton>
                     </div>

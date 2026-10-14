@@ -23,7 +23,8 @@
   let activeIndex = 0;
 
   function displayPath(itemPath) {
-    return itemPath?.startsWith('notes/') ? itemPath.slice(6) : itemPath;
+    const relative = itemPath?.startsWith('notes/') ? itemPath.slice(6) : itemPath;
+    return relative?.replace(/\.md$/i, '');
   }
 
   function noteTitle(node) {

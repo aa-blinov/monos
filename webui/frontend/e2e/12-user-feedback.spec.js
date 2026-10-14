@@ -177,3 +177,91 @@ test('поиск без результатов предлагает очисти
   await expect(search).toHaveValue('');
   await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
 });
+
+test('Enter после заголовка со ссылкой [[…]] начинает обычный абзац', async ({ page }) => {
+  const title = uniqueTitle('Wiki Heading Note');
+  const notePath = `notes/${title}.md`;
+
+  await createBlankNote(page, title);
+  await editorBody(page).click();
+  await page.keyboard.type('## See also [[Welcome]]');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('next line');
+
+  await expect.poll(() => fileContent(page, notePath)).toContain('next line');
+  const content = await fileContent(page, notePath);
+  expect(content).toMatch(/^## See also \[\[Welcome\]\]$/m);
+  expect(content).not.toMatch(/^#+ .*next line/m);
+});
+
+test('занятое название предлагает создать копию с номером', async ({ page }) => {
+  const title = uniqueTitle('Numbered Copy Note');
+
+  await createBlankNote(page, title);
+  await fillEditor(page, 'Original text.');
+
+  await page.goto('/');
+  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.getByLabel('Title').fill(title);
+  await page.getByRole('button', { name: /^Create$/ }).click();
+  await expect(page.getByRole('alert')).toContainText(/already exists/i);
+
+  await page.getByRole('button', { name: `Create as ${title} 2` }).click();
+  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue(`${title} 2`);
+});
+
+test('занятое название предлагает открыть существующую заметку', async ({ page }) => {
+  const title = uniqueTitle('Open Existing Note');
+  const notePath = `notes/${title}.md`;
+
+  await createBlankNote(page, title);
+  await fillEditor(page, 'Existing text.');
+  await expect.poll(() => fileContent(page, notePath)).toContain('Existing text.');
+
+  await page.goto('/');
+  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.getByLabel('Title').fill(title);
+  await page.getByRole('button', { name: /^Create$/ }).click();
+  await expect(page.getByRole('alert')).toContainText(/already exists/i);
+
+  await page.getByRole('button', { name: 'Open the existing note' }).click();
+  await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue(title);
+  await expect(editorBody(page)).toContainText('Existing text.');
+});
+
+test('после сбоя сохранения кнопка «Retry» сохраняет текст снова', async ({ page }) => {
+  const title = uniqueTitle('Retry Save Note');
+  const notePath = `notes/${title}.md`;
+
+  await createBlankNote(page, title);
+  await page.route('**/api/file?*', (route) => (route.request().method() === 'POST'
+    ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"disk full"}' })
+    : route.continue()));
+  await fillEditor(page, 'Retry text.');
+
+  const retry = page.getByRole('status').getByRole('button', { name: 'Retry', exact: true });
+  await expect(retry).toBeVisible({ timeout: 8000 });
+  await page.unroute('**/api/file?*');
+  await retry.click();
+
+  await expect.poll(() => fileContent(page, notePath)).toContain('Retry text.');
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 8000 });
+});
+
+test('контекстное меню дерева открывается с клавиатуры и ходит стрелками', async ({ page }) => {
+  await page.goto('/');
+  const toggle = page.getByRole('button', { name: 'Open sidebar' });
+  if (await toggle.isVisible()) await toggle.click();
+
+  const folderRow = page.locator('button[aria-expanded]').filter({ hasText: 'Work' }).first();
+  await expect(folderRow).toBeVisible();
+  await folderRow.focus();
+  await page.keyboard.press('Shift+F10');
+
+  await expect(page.getByRole('menu')).toBeVisible();
+  await expect(page.getByRole('menuitem').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem').nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
