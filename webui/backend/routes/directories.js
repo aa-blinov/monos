@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { getDb } from '../database.js';
 import { NOTES_DIR } from '../config.js';
-import { relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertFileName, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
 
 export function registerDirectoryRoutes(app) {
@@ -33,6 +33,8 @@ export function registerDirectoryRoutes(app) {
       if (typeof dirPath !== 'string' || dirPath.trim() === '') {
         return res.status(400).json({ detail: 'Path required' });
       }
+      // Имя папки — последний сегмент пути; его ОС должна уметь создать.
+      assertFileName(path.basename(dirPath));
       const fullPath = dirPath.startsWith('notes/')
         ? resolveNotesPath(dirPath, { allowRoot: true })
         : resolveNotesChildPath(dirPath);

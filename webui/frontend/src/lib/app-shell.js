@@ -29,9 +29,10 @@ export function applyTypographyVars({
   root.style.setProperty('--font-size-base', `${baseSize}px`);
   // The metadata whisper must scale with the UI size. Hard-coded px sizes do
   // not, so bumping the interface size used to grow the headings while leaving
-  // the whisper small — inverting the hierarchy. 11px at the default 16px base.
+  // the whisper small — inverting the hierarchy. 11px for the metadata whisper and
+  // 12px (text-xs) for its labels, at the default 16px base.
   root.style.setProperty('--text-whisper', `${(baseSize * 0.6875).toFixed(2)}px`);
-  root.style.setProperty('--text-whisper-lg', `${(baseSize * 0.6875).toFixed(2)}px`);
+  root.style.setProperty('--text-whisper-lg', `${(baseSize * 0.75).toFixed(2)}px`);
   root.style.setProperty('--font-family', fontOptions.find((item) => item.family.includes(fontFamily) || item.name === fontFamily)?.family || fontFamily);
 }
 

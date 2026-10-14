@@ -160,12 +160,12 @@
             {$localizedText.templates.noCustomTemplates}
           </div>
         {:else}
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {#each filteredCustomTemplates as template (template.id)}
               <article class="rounded-xl border border-[var(--border-subtle)] p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <h3 class="truncate font-serif text-lg tracking-tight">{template.title}</h3>
+                    <h3 class="break-words font-serif text-lg tracking-tight">{template.title}</h3>
                     {#if template.description}
                       <p class="mt-1 line-clamp-1 text-xs text-[var(--text-secondary)]">{template.description}</p>
                     {/if}
@@ -187,7 +187,7 @@
                 <div class="mt-4 flex justify-end">
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                    class="inline-flex h-8 items-center whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
                     on:click={() => templateRequest.set(template.id)}
                   >
                     {$localizedText.templates.createNote}
@@ -213,12 +213,12 @@
                   <span class="h-px flex-1 bg-[var(--border-subtle)]"></span>
                 </div>
               </div>
-              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {#each group.templates as template (template.id)}
                   <article class="rounded-xl border border-[var(--border-subtle)] p-4 opacity-100 {template.hidden ? 'opacity-55' : ''}">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
-                        <h4 class="truncate font-serif text-lg tracking-tight">{template.title}</h4>
+                        <h4 class="break-words font-serif text-lg tracking-tight">{template.title}</h4>
                       </div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
@@ -226,10 +226,10 @@
                         <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
-                    <div class="mt-4 flex items-center justify-between gap-2">
+                    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                       <button
                         type="button"
-                        class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                        class="inline-flex h-8 mr-auto shrink-0 items-center gap-1.5 rounded-md px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                         on:click={() => toggleLibraryTemplate(template)}
                       >
                         {#if template.hidden}
@@ -243,7 +243,7 @@
                       {#if !template.hidden}
                         <button
                           type="button"
-                          class="inline-flex h-8 items-center rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                          class="inline-flex h-8 items-center whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
                           on:click={() => templateRequest.set(template.id)}
                         >
                           {$localizedText.templates.createNote}

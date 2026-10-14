@@ -62,7 +62,7 @@
         type="text"
         bind:value={editedTitle}
         placeholder={$localizedText.editorHeader.noteTitle}
-        class="text-lg lg:text-2xl xl:text-[1.7rem] leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
+        class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />
       {#if fileInfo}
         <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">

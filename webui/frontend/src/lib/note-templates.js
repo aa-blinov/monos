@@ -137,7 +137,7 @@ Participants:
     description: 'A lightweight one-on-one template for context, agenda, feedback, and follow-ups.',
     category: 'People',
     tags: ['meeting', '1on1'],
-    suggestedTitle: (ctx) => titleWithDate('1:1', ctx),
+    suggestedTitle: (ctx) => titleWithDate('1-1', ctx),
     content: ({ localDate }) => `# 1:1
 
 Date: ${localDate}
@@ -240,7 +240,7 @@ Project:
     description: 'Capture context, options, decision, trade-offs, and revisit date.',
     category: 'Decisions',
     tags: ['decision', 'adr'],
-    suggestedTitle: () => 'Decision - ',
+    suggestedTitle: () => 'Decision -',
     content: ({ title, localDate }) => `# ${title}
 
 Date: ${localDate}
@@ -277,7 +277,7 @@ Signal:
     description: 'Research question, sources, evidence, synthesis, and confidence.',
     category: 'Research',
     tags: ['research'],
-    suggestedTitle: () => 'Research - ',
+    suggestedTitle: () => 'Research -',
     content: ({ title, localDate }) => `# ${title}
 
 Date: ${localDate}
@@ -310,7 +310,7 @@ Confidence: Low / Medium / High
     description: 'Map of content for a topic with entry points, key notes, and unanswered questions.',
     category: 'Maps',
     tags: ['moc', 'topic'],
-    suggestedTitle: () => 'MOC - ',
+    suggestedTitle: () => 'MOC -',
     content: ({ title }) => `# ${title}
 
 ## Overview
@@ -340,7 +340,7 @@ Confidence: Low / Medium / High
     description: 'One idea per note with context, claim, evidence, and links.',
     category: 'Zettelkasten',
     tags: ['zettel', 'idea'],
-    suggestedTitle: () => 'Idea - ',
+    suggestedTitle: () => 'Idea -',
     content: ({ title }) => `# ${title}
 
 ## Idea
@@ -368,7 +368,7 @@ Write one clear idea in your own words.
     description: 'Bibliographic info, thesis, chapter notes, quotes, and actions.',
     category: 'Books',
     tags: ['book', 'reading'],
-    suggestedTitle: () => 'Book - ',
+    suggestedTitle: () => 'Book -',
     content: ({ title }) => `# ${title}
 
 Author:
@@ -402,7 +402,7 @@ Finished:
     description: 'Structured capture for papers, essays, reports, and links from the web.',
     category: 'Reading',
     tags: ['article', 'paper'],
-    suggestedTitle: () => 'Review - ',
+    suggestedTitle: () => 'Review -',
     content: ({ title, localDate }) => `# ${title}
 
 Captured: ${localDate}
@@ -436,7 +436,7 @@ URL:
     description: 'People CRM note: context, relationship, projects, promises, and follow-ups.',
     category: 'People',
     tags: ['person'],
-    suggestedTitle: () => 'Person - ',
+    suggestedTitle: () => 'Person -',
     content: ({ title }) => `# ${title}
 
 Role:
@@ -470,7 +470,7 @@ Last Contact:
     description: 'Define a skill, curriculum, practice loop, resources, and milestones.',
     category: 'Learning',
     tags: ['learning'],
-    suggestedTitle: () => 'Learning Plan - ',
+    suggestedTitle: () => 'Learning Plan -',
     content: ({ title }) => `# ${title}
 
 Skill:
@@ -504,7 +504,7 @@ Target Level:
     description: 'Incident or project retro: impact, timeline, causes, actions, and prevention.',
     category: 'Reviews',
     tags: ['postmortem', 'retro'],
-    suggestedTitle: () => 'Postmortem - ',
+    suggestedTitle: () => 'Postmortem -',
     content: ({ title, localDate }) => `# ${title}
 
 Date: ${localDate}
@@ -703,7 +703,7 @@ Week of ${localDate}
     description: 'A reusable recipe note with ingredients, steps, timing, and improvements.',
     category: 'Recipes',
     tags: ['recipe', 'food'],
-    suggestedTitle: () => 'Recipe - ',
+    suggestedTitle: () => 'Recipe -',
     content: ({ title }) => `# ${title}
 
 Servings:
@@ -733,7 +733,7 @@ Cook time:
     description: 'Plan route, lodging, documents, budget, activities, and daily itinerary.',
     category: 'Travel',
     tags: ['travel', 'planning'],
-    suggestedTitle: () => 'Trip - ',
+    suggestedTitle: () => 'Trip -',
     content: ({ title }) => `# ${title}
 
 Destination:
@@ -1131,7 +1131,7 @@ const ruTemplateTranslations = {
     title: 'Встреча 1:1',
     description: 'Лёгкий шаблон для контекста, повестки, обратной связи и договорённостей.',
     category: 'Люди',
-    suggestedTitle: (ctx) => titleWithDate('1:1', ctx),
+    suggestedTitle: (ctx) => titleWithDate('1-1', ctx),
     content: ({ localDate }) => `# 1:1
 
 Дата: ${localDate}
@@ -1228,7 +1228,7 @@ const ruTemplateTranslations = {
     title: 'Запись решения',
     description: 'Контекст, варианты, решение, компромиссы и дата пересмотра.',
     category: 'Решения',
-    suggestedTitle: () => 'Решение - ',
+    suggestedTitle: () => 'Решение -',
     content: ({ title, localDate }) => `# ${title}
 
 Дата: ${localDate}
@@ -1263,7 +1263,7 @@ const ruTemplateTranslations = {
     title: 'Исследовательская заметка',
     description: 'Вопрос исследования, источники, факты, выводы и уровень уверенности.',
     category: 'Исследования',
-    suggestedTitle: () => 'Исследование - ',
+    suggestedTitle: () => 'Исследование -',
     content: ({ title, localDate }) => `# ${title}
 
 Дата: ${localDate}
@@ -1294,7 +1294,7 @@ const ruTemplateTranslations = {
     title: 'Тема / MOC',
     description: 'Карта содержания по теме: точки входа, ключевые заметки и открытые вопросы.',
     category: 'Карты',
-    suggestedTitle: () => 'MOC - ',
+    suggestedTitle: () => 'MOC -',
     content: ({ title }) => `# ${title}
 
 ## Обзор
@@ -1322,7 +1322,7 @@ const ruTemplateTranslations = {
     title: 'Атомарная заметка / Zettel',
     description: 'Одна идея на заметку: контекст, тезис, доказательства и связи.',
     category: 'Зеттелькастен',
-    suggestedTitle: () => 'Идея - ',
+    suggestedTitle: () => 'Идея -',
     content: ({ title }) => `# ${title}
 
 ## Идея
@@ -1348,7 +1348,7 @@ const ruTemplateTranslations = {
     title: 'Заметки по книге',
     description: 'Библиография, тезис, заметки по главам, цитаты и действия.',
     category: 'Книги',
-    suggestedTitle: () => 'Книга - ',
+    suggestedTitle: () => 'Книга -',
     content: ({ title }) => `# ${title}
 
 Автор:
@@ -1380,7 +1380,7 @@ const ruTemplateTranslations = {
     title: 'Обзор статьи / работы',
     description: 'Структура для статей, эссе, отчётов и ссылок из интернета.',
     category: 'Чтение',
-    suggestedTitle: () => 'Обзор - ',
+    suggestedTitle: () => 'Обзор -',
     content: ({ title, localDate }) => `# ${title}
 
 Сохранено: ${localDate}
@@ -1412,7 +1412,7 @@ URL:
     title: 'Человек',
     description: 'Личная CRM-заметка: контекст, отношения, проекты, обещания и follow-up.',
     category: 'Люди',
-    suggestedTitle: () => 'Человек - ',
+    suggestedTitle: () => 'Человек -',
     content: ({ title }) => `# ${title}
 
 Роль:
@@ -1444,7 +1444,7 @@ URL:
     title: 'План обучения',
     description: 'Определите навык, программу, практику, ресурсы и этапы.',
     category: 'Обучение',
-    suggestedTitle: () => 'План обучения - ',
+    suggestedTitle: () => 'План обучения -',
     content: ({ title }) => `# ${title}
 
 Навык:
@@ -1476,7 +1476,7 @@ URL:
     title: 'Постмортем',
     description: 'Разбор инцидента или проекта: влияние, таймлайн, причины, действия и профилактика.',
     category: 'Обзоры',
-    suggestedTitle: () => 'Постмортем - ',
+    suggestedTitle: () => 'Постмортем -',
     content: ({ title, localDate }) => `# ${title}
 
 Дата: ${localDate}
@@ -1663,7 +1663,7 @@ URL:
     title: 'Карточка рецепта',
     description: 'Переиспользуемый рецепт с ингредиентами, шагами, временем и улучшениями.',
     category: 'Рецепты',
-    suggestedTitle: () => 'Рецепт - ',
+    suggestedTitle: () => 'Рецепт -',
     content: ({ title }) => `# ${title}
 
 Порции:
@@ -1691,7 +1691,7 @@ URL:
     title: 'План поездки',
     description: 'Маршрут, жильё, документы, бюджет, активности и расписание по дням.',
     category: 'Поездки',
-    suggestedTitle: () => 'Поездка - ',
+    suggestedTitle: () => 'Поездка -',
     content: ({ title }) => `# ${title}
 
 Куда:

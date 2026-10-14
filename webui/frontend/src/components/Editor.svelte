@@ -13,6 +13,7 @@
   import { formFieldClass } from '../lib/form-field.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
+  import { fileNameProblem } from '../lib/file-name.js';
   import { extractOutline } from '../lib/outline.js';
   import { notifyDue } from '../lib/reminders.js';
   import { downloadFile, exportFileName, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
@@ -122,6 +123,8 @@
   let showDeleteConfirm = false;
   let imageRename = null;
   let attachmentNewName = '';
+  // Имя картинки — имя файла во вложениях: то же правило, что и для заметок.
+  $: attachmentProblem = fileNameProblem(attachmentNewName);
   let autosaveTimer;
   let lastSaved = null;
   let saveMessage = '';
@@ -388,7 +391,7 @@
 
   async function saveImageRename() {
     const filePath = visibleFile?.path || loadedFilePath || currentFile?.path;
-    if (!filePath || !imageRename?.path || !attachmentNewName.trim()) return;
+    if (!filePath || !imageRename?.path || !attachmentNewName.trim() || attachmentProblem) return;
     try {
       const renamed = await renameAttachment(filePath, imageRename.path, attachmentNewName.trim());
       if (loadedFilePath !== filePath) return;
@@ -1319,12 +1322,15 @@
         class={formFieldClass()}
         on:keydown={(e) => { if (e.key === 'Enter') saveImageRename(); if (e.key === 'Escape') imageRename = null; }}
       />
+      {#if attachmentProblem && attachmentProblem !== 'empty'}
+        <p role="alert" class="text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(attachmentProblem)}</p>
+      {/if}
     </div>
     <div class="mt-8 flex gap-6">
       <button on:click={() => imageRename = null} class={getModalButtonClass('secondary')}>
         {$localizedText.editor.cancel}
       </button>
-      <button on:click={saveImageRename} disabled={!attachmentNewName.trim()} class={getModalButtonClass('primary', { disabled: !attachmentNewName.trim() })}>
+      <button on:click={saveImageRename} disabled={!attachmentNewName.trim() || Boolean(attachmentProblem)} class={getModalButtonClass('primary', { disabled: !attachmentNewName.trim() || Boolean(attachmentProblem) })}>
         {$localizedText.editor.renameImage}
       </button>
     </div>

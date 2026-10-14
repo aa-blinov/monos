@@ -127,7 +127,7 @@ Monos looks like a desk under warm light. Notes are cards laid out on it — eac
 
 The reading is quiet and typographic. Every note title, tag, date, and control is set in the same monospace face, because a card index is sorted by legibility, not by personality. The monospace discipline is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library.
 
-Density is moderate and deliberate. Metadata shrinks to `9px`/`10px` with wide tracking so it whispers; titles sit at `18–24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
+Density is moderate and deliberate. Metadata shrinks to `11px` with wide tracking so it whispers; titles sit at `18–24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
 
 Anti-reference, confirmed: **never "designer-made."** The system must not look styled, curated, or showcased. Nothing glows for effect, nothing has a gradient nobody asked for, no surface announces itself as important. The anti-reference is craft without ornament — and where restraint could turn into neglect, the standard is a well-set book, not a barebones tool.
 
@@ -135,7 +135,7 @@ Anti-reference, confirmed: **never "designer-made."** The system must not look s
 
 - Warm paper and ink, never pure white and never pure black
 - One typeface — monospace — everywhere, without exception
-- Metadata whispers at 9–10px with wide uppercase tracking
+- Metadata whispers at 11px with wide uppercase tracking; its labels step up to 12px
 - Flat at rest, lifted only in motion
 - Note color arrives as a tint and a soft glow, never as a border
 - Square modals, round cards — tension held deliberately
@@ -320,7 +320,7 @@ There is no second face. `lib/fonts.js` offers 12 alternatives to the user, but 
 
 **The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for — serif, sans, mono — resolves to the same monospace stack, so a stray class can never introduce a second voice.
 
-**The Scale Is Small.** The working range is `9px`–`30px`. `text-xs` and `text-sm` carry the interface; `text-[9px]` and `text-[10px]` carry metadata. `text-3xl` is page titles and `text-2xl` is modal titles; nothing in between them is allowed to grow.
+**The Scale Is Small.** The working range is `11px`–`30px`. `text-xs` and `text-sm` carry the interface; `--text-whisper` (11px) carries metadata and `--text-whisper-lg` (12px) its labels. No arbitrary pixel sizes. `text-3xl` is page titles and `text-2xl` is modal titles; nothing in between them is allowed to grow.
 
 **The Whisper Rule.** Metadata is uppercase, `9–10px`, and tracked `0.1–0.16em`. It is set at or below `--text-secondary` opacity and never competes with the note title directly above it.
 
