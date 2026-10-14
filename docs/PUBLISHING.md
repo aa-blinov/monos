@@ -65,3 +65,13 @@ git ls-files notes
 ```
 
 The command should print nothing.
+
+## Site screenshots
+
+The screenshots in `site/media/` are captured from the running app, never drawn or edited by hand. Recapture them whenever the UI changes:
+
+```bash
+npm run site:screenshots
+```
+
+The script starts its own backend and frontend on temporary notes, so no personal data is shown. If Playwright's Chromium is not installed, point the script at an installed browser with `MONOS_CHROMIUM_PATH`. The site's JetBrains Mono files in `site/fonts/` come from `webui/frontend/public/fonts/` and keep their OFL license beside them. The app icon in `site/media/icon.svg` is copied from `build/icon.svg`.
