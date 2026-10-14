@@ -587,8 +587,15 @@ const enText = {
     pinDo: 'Pin',
     pinUnpin: 'Unpin',
     propertyCategory: 'Category',
-    propertyCategoryEmpty: '—',
+    propertyCategoryEmpty: 'Add category',
     categorySuggestions: 'Category suggestions',
+    propertiesToggle: 'Properties',
+    tagRemove(tag) {
+      return `Remove tag ${tag}`;
+    },
+    dueFormat: 'YYYY-MM-DD',
+    dueInvalid: 'Not a date. Use 2026-12-24 or 24.12.2026.',
+    moreActions: 'More actions',
     propertyTags: 'Tags',
     propertyTagsEmpty: 'project, idea',
     propertyDue: 'Due',
@@ -712,6 +719,7 @@ const enText = {
   },
   richEditor: {
     bodyLabel: 'Note text',
+    more: 'More tools',
     beginWriting: 'Begin writing...',
     toolbar: 'Editor toolbar',
     undo: 'Undo (Ctrl+Z)',
@@ -1333,8 +1341,15 @@ const ruText = {
     pinDo: 'Закрепить',
     pinUnpin: 'Открепить',
     propertyCategory: 'Категория',
-    propertyCategoryEmpty: '—',
+    propertyCategoryEmpty: 'Добавить категорию',
     categorySuggestions: 'Подсказки категорий',
+    propertiesToggle: 'Свойства',
+    tagRemove(tag) {
+      return `Убрать тег ${tag}`;
+    },
+    dueFormat: 'ДД.ММ.ГГГГ',
+    dueInvalid: 'Это не дата. Введите 2026-12-24 или 24.12.2026.',
+    moreActions: 'Ещё',
     propertyTags: 'Теги',
     propertyTagsEmpty: 'проект, идея',
     propertyDue: 'Срок',
@@ -1478,6 +1493,7 @@ const ruText = {
   },
   richEditor: {
     bodyLabel: 'Текст заметки',
+    more: 'Ещё инструменты',
     beginWriting: 'Начните писать...',
     toolbar: 'Панель редактора',
     undo: 'Отменить (Ctrl+Z)',

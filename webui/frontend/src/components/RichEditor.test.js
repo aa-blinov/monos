@@ -144,6 +144,8 @@ test('RichEditor exposes dropdowns for editor layout settings', async () => {
     onUpdate: () => {},
   });
 
+  // Настройки вида лежат в меню «ещё инструменты» на десктопе.
+  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.more }));
   await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.contentWidth }), {
     target: { value: 'narrow' },
   });
