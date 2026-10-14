@@ -53,6 +53,8 @@ test('outline panel показывает empty state если нет загол�
   await createBlankNote(page, title);
   await fillEditor(page, 'Just a plain paragraph without any headings.');
   await page.waitForTimeout(500);
+  // Без заголовков оглавление свёрнуто; по кнопке оно открывается с подсказкой.
+  await page.getByRole('button', { name: 'Show outline' }).click();
   const panel = page.getByTestId('outline-panel');
   await expect(panel).toBeVisible();
   await expect(panel.getByText(/no headings/i)).toBeVisible({ timeout: 3_000 });

@@ -95,7 +95,8 @@ test('Editor загружает заметку и показывает local nav
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
   expect(screen.getByTestId('rich-editor-input').value).toBe('Alpha body');
-  expect(screen.queryByText('#alpha')).toBeNull();
+  // Теги теперь чипами в строке свойств, а не текстом в навигации.
+  expect(within(screen.getByTestId('note-properties')).getByText('#alpha')).toBeTruthy();
   expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Gamma').length).toBeGreaterThan(0);
   const localNavigation = screen.getByTestId('local-navigation');
@@ -127,7 +128,7 @@ test('Editor показывает breadcrumb без отдельного reveal/
   expect(screen.getByText('Work')).toBeTruthy();
   expect(screen.queryByText(uiText.editorHeader.revealInTree)).toBeNull();
   expect(screen.queryByPlaceholderText(uiText.editorHeader.tagPlaceholder)).toBeNull();
-  expect(screen.queryByText('#release')).toBeNull();
+  expect(within(screen.getByTestId('note-properties')).getByText('#release')).toBeTruthy();
 });
 
 test('Editor позволяет перекрасить открытую заметку из нижней палитры', async () => {
@@ -149,7 +150,8 @@ test('Editor позволяет перекрасить открытую заме
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
   expect(screen.getByTestId('editor-shell').getAttribute('style')).toContain('--note-accent: #fabd2f');
-  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.noteColor }));
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.moreActions }));
+  await fireEvent.click(screen.getByRole('menuitem', { name: uiText.editor.noteColor }));
   await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#8ec07c') }));
 
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/directory/icon?path=notes%2FInbox.md', expect.objectContaining({
@@ -721,7 +723,8 @@ test('Editor не применяет результат смены цвета к
   ));
   vi.useRealTimers();
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.noteColor }));
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.moreActions }));
+  await fireEvent.click(screen.getByRole('menuitem', { name: uiText.editor.noteColor }));
   await fireEvent.click(screen.getByRole('button', { name: uiText.app.board.applyColor('#83a598') }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
     `/api/directory/icon?path=${encodeURIComponent(alphaPath)}`,
@@ -819,6 +822,7 @@ test('переключатель показывает исходный Markdown 
   render(Editor, { currentFile: { path: notePath, name: 'Alpha.md', isDir: false } });
   await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
 
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.moreActions }));
   const toggle = screen.getByTestId('toggle-raw-mode');
   expect(screen.queryByTestId('raw-source')).toBeNull();
 
@@ -830,6 +834,7 @@ test('переключатель показывает исходный Markdown 
   await fireEvent.input(raw, { target: { value: 'Правка из исходника\n' } });
   await waitFor(() => expect(screen.getByTestId('raw-source').value).toBe('Правка из исходника\n'));
 
+  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.moreActions }));
   await fireEvent.click(screen.getByTestId('toggle-raw-mode'));
   await waitFor(() => expect(screen.getByTestId('rich-editor-input')).toBeTruthy());
   await waitFor(() => expect(screen.getByTestId('rich-editor-input').value).toBe('Правка из исходника\n'));

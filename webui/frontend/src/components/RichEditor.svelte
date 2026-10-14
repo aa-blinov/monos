@@ -21,8 +21,21 @@
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    Maximize2, WrapText, Type
+    Maximize2, WrapText, Type, MoreHorizontal
   } from 'lucide-svelte';
+
+  // Everyday formatting stays in the toolbar; the rest sits behind "More tools".
+  let moreOpen = false;
+  function runMore(action) {
+    action();
+    moreOpen = false;
+  }
+  function closeMoreOnOutsideClick(event) {
+    if (moreOpen && !event.target.closest?.('[data-more-tools]')) moreOpen = false;
+  }
+  function closeMoreOnEscape(event) {
+    if (moreOpen && event.key === 'Escape') moreOpen = false;
+  }
 
   export let content = '';
   export let onUpdate = (md) => {};
@@ -542,9 +555,11 @@
   />
 {/if}
 
+<svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} />
 <div class="flex flex-col flex-1 min-h-0">
-  <!-- Toolbar -->
-  <div class="flex flex-wrap items-center gap-0.5 px-2 lg:flex-nowrap lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] overflow-x-auto toolbar-scroll" on:mousedown|preventDefault role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
+  <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
+  <div class="relative flex items-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
+    <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
     <!-- Undo/Redo -->
     <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.redo)}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>
@@ -552,14 +567,11 @@
 
     <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.bold)}><Bold size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.italic)}><Italic size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleStrike')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.strike ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.strikethrough}><Strikethrough size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleCode')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.code ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.inlineCode)}><Code size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 1 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 1 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading1}><Heading1 size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 2 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 2 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading2}><Heading2 size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 3 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 3 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading3}><Heading3 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleHeading', { level: 4 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 4 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading4}><Heading4 size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleBulletList')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bullet ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.bulletList}><List size="16" aria-hidden="true" /></TooltipIconButton>
@@ -568,38 +580,79 @@
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleBlockquote')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.blockquote}><Quote size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleCodeBlock')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.codeBlock ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.codeBlock}><Code2 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('hr')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.horizontalRule}><Minus size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('table')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.insertTable}><Table2 size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" aria-hidden="true" /></TooltipIconButton>
-    <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
+    </div>
 
-    <TooltipIconSelect
-      bind:value={$contentWidth}
-      options={localizedContentWidthOptions}
-      label={$localizedText.richEditor.contentWidth}
-      class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+    <button
+      type="button"
+      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+      aria-label={$localizedText.richEditor.more}
+      aria-haspopup="menu"
+      aria-expanded={moreOpen}
+      on:click={() => moreOpen = !moreOpen}
     >
-      <Maximize2 size="16" aria-hidden="true" />
-    </TooltipIconSelect>
-    <TooltipIconSelect
-      bind:value={$lineHeight}
-      options={localizedLineHeightOptions}
-      label={$localizedText.richEditor.lineHeight}
-      class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
-    >
-      <WrapText size="16" aria-hidden="true" />
-    </TooltipIconSelect>
-    <TooltipIconSelect
-      bind:value={$editorFontSize}
-      options={localizedEditorFontSizeOptions}
-      label={$localizedText.richEditor.fontSize}
-      class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
-    >
-      <Type size="16" aria-hidden="true" />
-    </TooltipIconSelect>
+      <MoreHorizontal size="16" aria-hidden="true" />
+    </button>
+
+    {#if moreOpen}
+      <div class="absolute right-2 top-full z-30 mt-1 w-72 border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleStrike'))}>
+          <Strikethrough size="16" aria-hidden="true" />{$localizedText.richEditor.strikethrough}
+        </button>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleCode'))}>
+          <Code size="16" aria-hidden="true" />{shortcutLabel($localizedText.richEditor.inlineCode)}
+        </button>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleHeading', { level: 4 }))}>
+          <Heading4 size="16" aria-hidden="true" />{$localizedText.richEditor.heading4}
+        </button>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleCodeBlock'))}>
+          <Code2 size="16" aria-hidden="true" />{$localizedText.richEditor.codeBlock}
+        </button>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('hr'))}>
+          <Minus size="16" aria-hidden="true" />{$localizedText.richEditor.horizontalRule}
+        </button>
+        <button type="button" role="menuitem" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('table'))}>
+          <Table2 size="16" aria-hidden="true" />{$localizedText.richEditor.insertTable}
+        </button>
+        <div class="mt-1 flex flex-col border-t border-[var(--border-subtle)] pt-1">
+          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
+            <TooltipIconSelect
+              bind:value={$contentWidth}
+              options={localizedContentWidthOptions}
+              label={$localizedText.richEditor.contentWidth}
+              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+            >
+              <Maximize2 size="16" aria-hidden="true" />
+            </TooltipIconSelect>
+            <span>{$localizedText.richEditor.contentWidth}</span>
+          </div>
+          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
+            <TooltipIconSelect
+              bind:value={$lineHeight}
+              options={localizedLineHeightOptions}
+              label={$localizedText.richEditor.lineHeight}
+              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+            >
+              <WrapText size="16" aria-hidden="true" />
+            </TooltipIconSelect>
+            <span>{$localizedText.richEditor.lineHeight}</span>
+          </div>
+          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
+            <TooltipIconSelect
+              bind:value={$editorFontSize}
+              options={localizedEditorFontSizeOptions}
+              label={$localizedText.richEditor.fontSize}
+              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+            >
+              <Type size="16" aria-hidden="true" />
+            </TooltipIconSelect>
+            <span>{$localizedText.richEditor.fontSize}</span>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 
   <!-- Editor -->
