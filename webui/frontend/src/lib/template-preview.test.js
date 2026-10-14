@@ -133,3 +133,11 @@ test('an empty numbered list renders as an ordered list, not a paragraph', () =>
   assert.equal((html.match(/<li><\/li>/g) || []).length, 3);
   assert.doesNotMatch(html, /<p>1\./);
 });
+
+test('empty task items become checkboxes, not the literal "[ ]"', () => {
+  assert.equal(normalizeEmptyListItems('- [ ]\n- [x]  '), '- [ ] ​\n- [x] ​');
+  const html = marked.parse(normalizeEmptyListItems('## Open Loops\n- [ ]\n- [x]\n- [ ] Real task'));
+  assert.equal((html.match(/type="checkbox"/g) || []).length, 3);
+  assert.match(html, /<input checked="" disabled="" type="checkbox"> ​/);
+  assert.doesNotMatch(html, /\[ \]/);
+});
