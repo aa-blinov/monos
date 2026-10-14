@@ -46,6 +46,7 @@
     checkGitStatus,
   } from '../lib/sidebar-api.js';
   import { bulkTagRequest, duplicateNoteRequest, loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
+  import { announceNoteLinksUpdated, flushOpenNote } from '../lib/note-refresh.js';
   import {
     convertImageToWebp,
     defaultImageName,
@@ -853,7 +854,9 @@
     try {
       isCreating = true;
       const requestName = renameRequestName(nextInputName, target.name, target.isDir);
+      await flushOpenNote();
       const data = await renameItemRequest(target.path, requestName);
+      announceNoteLinksUpdated(data);
       closeRenameModal();
       
       const affectedSelectedPath = selectedPath && isSameOrDescendant(selectedPath, target.path)

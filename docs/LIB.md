@@ -49,6 +49,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `markdown-editor-content.js` | TipTap-friendly serialization of the editor's content |
 | `wiki-links.js` | `parseWikiLink`, `findWikiLinks`, `replaceWikiLinks` for `[[Note Title]]` syntax |
 | `wiki-links.test.js` | Multiple links per line, deduplication, malformed input, trailing punctuation |
+| `note-refresh.js` | `flushOpenNote` and `announceNoteLinksUpdated`: window events that save the open note before a rename and reload it when the server rewrote its links |
+| `note-refresh.test.js` | Flush waits for every listener's save; announce stays silent when no links changed |
 | `richEditorExtensions.js` | TipTap extension set used by the rich editor |
 | `rich-editor-paste.js` | Paste handler for the rich editor: images, links, plain text fallbacks |
 | `markdown-burst.js` | `isMarkdownBurst(text)` tells an input event that carries Markdown (dictation, IME, a line inserted at once) from typing, so the rich editor parses it instead of keeping the syntax as escaped text |

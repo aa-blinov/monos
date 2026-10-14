@@ -1750,3 +1750,55 @@ apiTest('падающая команда git не роняет сервер и �
     execSync(`git remote set-url origin "${before}"`, { cwd: notesDir, stdio: 'pipe' });
   }
 });
+
+apiTest('переименование заметки переписывает [[ссылки]] на неё; код и подписи сохраняются', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const target = await create({ title: 'Relink Target', category: '', tags: [], content: 'Цель.' });
+  assert.equal(target.response.status, 200);
+  const source = await create({
+    title: 'Relink Source',
+    category: '',
+    tags: [],
+    content: 'См. [[Relink Target]] и [[Relink Target|цель]].\n\n```\n[[Relink Target]]\n```\n',
+  });
+  assert.equal(source.response.status, 200);
+
+  const renamed = await requestJson(buildUrl('/api/file/rename', { path: target.data.path }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'Relink Target 2.md' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 2);
+  assert.deepEqual(renamed.data.updatedPaths, [source.data.path]);
+
+  const after = fs.readFileSync(path.join(notesDir, 'Relink Source.md'), 'utf-8');
+  assert.match(after, /См\. \[\[Relink Target 2\]\] и \[\[Relink Target 2\|цель\]\]\./);
+  assert.match(after, /```\n\[\[Relink Target\]\]\n```/);
+});
+
+apiTest('не переписывает ссылки, пока то же имя есть у другой заметки', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const first = await create({ title: 'Twin Name', category: '', tags: [], content: 'Первая.' });
+  const second = await create({ title: 'Twin Name', category: 'Twin Folder', tags: [], content: 'Вторая.' });
+  const holder = await create({ title: 'Twin Holder', category: '', tags: [], content: 'Ведёт на [[Twin Name]].' });
+  assert.equal(second.response.status, 200);
+  assert.equal(holder.response.status, 200);
+
+  const renamed = await requestJson(buildUrl('/api/file/rename', { path: first.data.path }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'Twin Moved.md' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 0);
+  assert.match(fs.readFileSync(path.join(notesDir, 'Twin Holder.md'), 'utf-8'), /\[\[Twin Name\]\]/);
+});

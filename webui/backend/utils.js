@@ -186,6 +186,40 @@ export function extractWikiLinks(content) {
   return links;
 }
 
+/**
+ * Points every `[[oldName]]` and `[[oldName|alias]]` at `newName`. The alias, the spaces
+ * around the name and anything in code stay as they are. Only the exact name changes:
+ * `[[oldName Notes]]` is another note and is left alone. Returns the new text and how
+ * many links changed.
+ */
+export function rewriteWikiTargets(content, oldName, newName) {
+  const text = String(content || '');
+  const source = stripCode(text);
+  const wanted = String(oldName).normalize('NFC');
+  const replacement = String(newName).normalize('NFC');
+  let out = '';
+  let last = 0;
+  let count = 0;
+
+  for (const match of source.matchAll(/\[\[(.*?)\]\]/g)) {
+    const inner = match[1];
+    // A link with code inside it was masked in `source`, so its text differs; leave it alone.
+    if (text.slice(match.index + 2, match.index + 2 + inner.length) !== inner) continue;
+    const pipe = inner.indexOf('|');
+    const rawTarget = pipe === -1 ? inner : inner.slice(0, pipe);
+    if (rawTarget.trim().normalize('NFC') !== wanted) continue;
+    const leading = rawTarget.match(/^\s*/)[0];
+    const trailing = rawTarget.slice(rawTarget.trimEnd().length);
+    const rest = pipe === -1 ? '' : inner.slice(pipe);
+    out += `${text.slice(last, match.index)}[[${leading}${replacement}${trailing}${rest}]]`;
+    last = match.index + match[0].length;
+    count += 1;
+  }
+
+  if (count === 0) return { content: text, count };
+  return { content: out + text.slice(last), count };
+}
+
 export function humanSize(bytes) {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];

@@ -11,6 +11,7 @@
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
+  import { FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT } from '../lib/note-refresh.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
   import { fileNameProblem } from '../lib/file-name.js';
@@ -802,6 +803,21 @@
     return () => {
       if (!inDesktopShell) window.removeEventListener('beforeunload', warnBeforeLeaving);
       if (window.monosFlushPendingEdits === flushPendingEdits) delete window.monosFlushPendingEdits;
+    };
+  });
+
+  // Rename coordination (lib/note-refresh.js): save before the sidebar renames a file,
+  // and reload when the server rewrote links in the note that is open.
+  onMount(() => {
+    const flushOnRequest = (event) => event.detail.pending.push(flushPendingEdits());
+    const reloadIfRewritten = (event) => {
+      if (loadedFilePath && event.detail.updatedPaths.includes(loadedFilePath)) loadFile();
+    };
+    window.addEventListener(FLUSH_OPEN_NOTE_EVENT, flushOnRequest);
+    window.addEventListener(NOTE_LINKS_UPDATED_EVENT, reloadIfRewritten);
+    return () => {
+      window.removeEventListener(FLUSH_OPEN_NOTE_EVENT, flushOnRequest);
+      window.removeEventListener(NOTE_LINKS_UPDATED_EVENT, reloadIfRewritten);
     };
   });
 

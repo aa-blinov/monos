@@ -53,6 +53,9 @@ const ruColorNames = {
 const enText = {
   app: {
     closeSidebar: 'Close sidebar',
+    linksUpdated(count) {
+      return `Links updated: ${count}`;
+    },
     closeMenu: 'Close menu',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are plain Markdown files on your own disk — not rows in someone\'s database. Monos is just a comfortable way to read, write and find them.',
@@ -804,6 +807,9 @@ const enText = {
 const ruText = {
   app: {
     closeSidebar: 'Закрыть боковую панель',
+    linksUpdated(count) {
+      return `Ссылок обновлено: ${count}`;
+    },
     closeMenu: 'Закрыть меню',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Ваши заметки — обычные файлы Markdown на вашем диске, а не строки в чужой базе. Monos просто удобный способ их читать, писать и находить.',
