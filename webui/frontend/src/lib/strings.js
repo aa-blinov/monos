@@ -232,6 +232,16 @@ const enText = {
     templateNewFolder(name) {
       return `New folder "${name}" will be created with the note.`;
     },
+    nameProblem(problem) {
+      switch (problem) {
+        case 'empty': return 'Enter a name.';
+        case 'forbidden-characters': return 'These characters are not allowed in names: < > : " / \\ | ? *';
+        case 'edge-dot-or-space': return 'A name cannot end with a dot or a space.';
+        case 'reserved': return 'This name is reserved by the system.';
+        case 'too-long': return 'This name is too long.';
+        default: return '';
+      }
+    },
     templatePreview: 'Preview',
     templatePreviewEmpty: 'No template selected',
     templatePreviewEmptyHint: 'Choose a template on the left to see how your note will look.',
@@ -972,6 +982,16 @@ const ruText = {
     templateFolder: 'Папка',
     templateNewFolder(name) {
       return `Папка «${name}» будет создана вместе с заметкой.`;
+    },
+    nameProblem(problem) {
+      switch (problem) {
+        case 'empty': return 'Введите название.';
+        case 'forbidden-characters': return 'В названиях нельзя использовать символы: < > : " / \\ | ? *';
+        case 'edge-dot-or-space': return 'Название не может заканчиваться точкой или пробелом.';
+        case 'reserved': return 'Такое название зарезервировано системой.';
+        case 'too-long': return 'Слишком длинное название.';
+        default: return '';
+      }
     },
     templatePreview: 'Предпросмотр',
     templatePreviewEmpty: 'Шаблон не выбран',

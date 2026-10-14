@@ -2,6 +2,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText, locale } from '../lib/strings.js';
   import { localeStamp } from '../lib/date-format.js';
+  import { fileNameProblem } from '../lib/file-name.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -111,6 +112,9 @@
     onPickTemplate();
   }
 
+  // Название станет именем файла: то, что ОС не создаст, называем до отправки.
+  $: titleProblem = fileNameProblem(newNoteTitle);
+
   function formatTodayNoteTitle(date = new Date()) {
     return localeStamp(date, $locale);
   }
@@ -158,12 +162,15 @@
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
           class={formFieldClass()}
           on:keydown={(e) => {
-            if (e.key === 'Enter' && newNoteTitle.trim()) submitCreateNote();
+            if (e.key === 'Enter' && newNoteTitle.trim() && !titleProblem) submitCreateNote();
             if (e.key === 'Escape') onClose();
           }}
           autofocus
         />
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
+        {#if titleProblem && titleProblem !== 'empty'}
+          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(titleProblem)}</p>
+        {/if}
         {#if createError}
           <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{createError}</p>
           {#if duplicatePath}
@@ -179,8 +186,8 @@
       <button on:click={onClose} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
       <button
         on:click={submitCreateNote}
-        disabled={isCreating || !newNoteTitle.trim()}
-        class={getModalButtonClass('primary', { disabled: isCreating || !newNoteTitle.trim() })}
+        disabled={isCreating || !newNoteTitle.trim() || Boolean(titleProblem)}
+        class={getModalButtonClass('primary', { disabled: isCreating || !newNoteTitle.trim() || Boolean(titleProblem) })}
       >
         {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
       </button>

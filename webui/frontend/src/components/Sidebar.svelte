@@ -58,6 +58,7 @@
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
   import { localeStamp } from '../lib/date-format.js';
+  import { fileNameProblem } from '../lib/file-name.js';
   import { formFieldClass } from '../lib/form-field.js';
   import { Icon } from '../lib/tree-icons.js';
 
@@ -240,6 +241,7 @@
     ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title, new Date(), $locale)
     : '';
   $: templatePreviewParts = extractTemplateMetadata(templatePreview);
+  $: templateTitleProblem = fileNameProblem(templateTitle);
   $: templatePreviewBodyHtml = sanitizePreviewHtml(marked.parse(normalizeEmptyListItems(templatePreviewParts.rest)));
   $: templatePreviewGridCols = templatePreviewParts.metadata.length >= 3 ? 3 : templatePreviewParts.metadata.length || 1;
   $: if (showTemplatesModal && templateLocale !== $locale) {
@@ -538,8 +540,11 @@
     }
   }
 
+  // Имя папки станет именем каталога на диске: то, что ОС не создаст, отклоняем сразу.
+  $: folderNameProblem = fileNameProblem(newFolderNameInput);
+
   async function createFolder() {
-    if (!newFolderNameInput.trim()) return;
+    if (!newFolderNameInput.trim() || folderNameProblem) return;
     const fullPath = newFolderName ? `${newFolderName}/${newFolderNameInput}` : newFolderNameInput;
     try {
       isCreating = true;
@@ -578,7 +583,7 @@
   }
 
   async function createNoteFromTemplate() {
-    if (!selectedTemplate || !templateTitle.trim()) return;
+    if (!selectedTemplate || !templateTitle.trim() || templateTitleProblem) return;
     try {
       isCreating = true;
       templateError = '';
@@ -1392,14 +1397,17 @@
   <ModalShell title={$localizedText.sidebar.modals.newSection} closeOnEscape={true} on:close={() => showCreateFolderModal = false}>
       <div>
         <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
-        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class={formFieldClass()} on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim()) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
+        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class={formFieldClass()} on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim() && !folderNameProblem) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
+        {#if folderNameProblem && folderNameProblem !== 'empty'}
+          <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(folderNameProblem)}</p>
+        {/if}
       </div>
       <div class="flex gap-6 mt-12">
         <button on:click={() => showCreateFolderModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
         <button
           on:click={createFolder}
-          disabled={isCreating || !newFolderNameInput.trim()}
-          class={getModalButtonClass('primary', { disabled: isCreating || !newFolderNameInput.trim() })}
+          disabled={isCreating || !newFolderNameInput.trim() || Boolean(folderNameProblem)}
+          class={getModalButtonClass('primary', { disabled: isCreating || !newFolderNameInput.trim() || Boolean(folderNameProblem) })}
         >
           {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
         </button>
@@ -1474,6 +1482,9 @@
               on:input={() => { templateError = ''; templateDuplicatePath = ''; }}
               class={formFieldClass()}
             />
+            {#if templateTitleProblem && templateTitleProblem !== 'empty'}
+              <p role="alert" class="mt-2 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(templateTitleProblem)}</p>
+            {/if}
           </div>
           <div>
             <label for="template-category" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.templateFolder}</label>
@@ -1540,8 +1551,8 @@
           <button
             on:click={createNoteFromTemplate}
             style="white-space: nowrap;"
-            disabled={isCreating || !templateTitle.trim()}
-            class={getModalButtonClass('primary', { disabled: isCreating || !templateTitle.trim() })}
+            disabled={isCreating || !templateTitle.trim() || Boolean(templateTitleProblem)}
+            class={getModalButtonClass('primary', { disabled: isCreating || !templateTitle.trim() || Boolean(templateTitleProblem) })}
           >
             {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.useTemplate}
           </button>

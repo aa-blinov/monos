@@ -4,6 +4,7 @@
   import { localizedText } from '../lib/strings.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
+  import { fileNameProblem } from '../lib/file-name.js';
 
   /** Whether the target is a folder (changes the title suffix). */
   export let isDir = false;
@@ -17,11 +18,13 @@
 
   let newName = currentName;
   $: if (currentName !== undefined) newName = currentName;
+  // Новое имя станет именем файла: то, что ОС не создаст, называем до отправки.
+  $: nameProblem = fileNameProblem(newName);
 
   const dispatch = createEventDispatcher();
 
   function submit() {
-    if (!newName.trim() || newName === currentName) return;
+    if (!newName.trim() || newName === currentName || nameProblem) return;
     dispatch('submit', { newName });
   }
 
@@ -46,14 +49,17 @@
         class={formFieldClass()}
         on:keydown={onKeydown}
       />
+      {#if nameProblem && nameProblem !== 'empty'}
+        <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(nameProblem)}</p>
+      {/if}
     </div>
   </div>
   <div class="flex gap-6 mt-12">
     <button on:click={() => dispatch('close')} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
     <button
       on:click={submit}
-      disabled={busy || !newName.trim() || newName === currentName}
-      class={getModalButtonClass('primary', { disabled: busy || !newName.trim() || newName === currentName })}
+      disabled={busy || !newName.trim() || newName === currentName || Boolean(nameProblem)}
+      class={getModalButtonClass('primary', { disabled: busy || !newName.trim() || newName === currentName || Boolean(nameProblem) })}
     >
       {busy ? $localizedText.sidebar.modals.renaming : $localizedText.sidebar.modals.rename}
     </button>

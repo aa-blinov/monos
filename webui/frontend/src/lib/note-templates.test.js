@@ -7,6 +7,7 @@ import {
   getTemplateContext,
   buildTemplateContent,
 } from './note-templates.js';
+import { fileNameProblem } from './file-name.js';
 
 test('noteTemplates — непустой массив', () => {
   assert.ok(Array.isArray(noteTemplates));
@@ -45,6 +46,14 @@ test('название шаблона с датой пишется ISO, как �
   const daily = noteTemplates.find((template) => template.id === 'daily-note');
   const ctx = getTemplateContext('', new Date(2026, 0, 15, 9, 30));
   assert.equal(daily.suggestedTitle(ctx), 'Daily 2026-01-15');
+});
+
+test('каждый шаблон предлагает название, которое можно создать в любой ОС', () => {
+  const ctx = getTemplateContext('', new Date(2026, 0, 15, 9, 30), 'ru');
+  for (const template of noteTemplates) {
+    const title = template.suggestedTitle?.(ctx) || template.title;
+    assert.equal(fileNameProblem(title), null, `${template.id}: «${title}»`);
+  }
 });
 
 test('по-русски даты в шаблонах пишутся через точку', () => {

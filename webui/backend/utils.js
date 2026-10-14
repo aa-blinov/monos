@@ -64,6 +64,48 @@ export function notesRelativePath(rootRelativePath) {
   return path.relative(NOTES_DIR, resolveNotesPath(rootRelativePath)).replace(/\\/g, '/');
 }
 
+// Имена заметок, папок и вложений — только то, что создаст любая ОС. Берём самые
+// строгие правила (Windows): если там не открывается, то и здесь не создаём.
+// Пользователь получает понятный отказ, а не тихую замену символов.
+const FORBIDDEN_NAME_CHARS = /[<>:"/\\|?*\u0000-\u001f\u007f]/;
+const RESERVED_WINDOWS_NAME = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
+const MAX_NAME_BYTES = 200;
+
+export const FORBIDDEN_NAME_CHARACTERS = '< > : " / \\ | ? *';
+
+const NAME_PROBLEM_MESSAGES = {
+  empty: 'Name required',
+  'forbidden-characters': `Name must not contain these characters: ${FORBIDDEN_NAME_CHARACTERS}`,
+  'edge-dot-or-space': 'Name must not end with a dot or a space',
+  reserved: 'This name is reserved by the system',
+  'too-long': 'Name is too long',
+};
+
+/** Какая именно проблема с именем, или null, если имя можно создать в любой ОС. */
+export function fileNameProblem(name) {
+  if (typeof name !== 'string' || name.trim() === '') return 'empty';
+  if (FORBIDDEN_NAME_CHARS.test(name)) return 'forbidden-characters';
+  if (/[. ]$/.test(name)) return 'edge-dot-or-space';
+  if (RESERVED_WINDOWS_NAME.test(name.replace(/\.[^.]*$/, ''))) return 'reserved';
+  if (Buffer.byteLength(name, 'utf8') > MAX_NAME_BYTES) return 'too-long';
+  return null;
+}
+
+export function assertFileName(name) {
+  const problem = fileNameProblem(name);
+  if (problem) throw httpError(400, NAME_PROBLEM_MESSAGES[problem]);
+  return name;
+}
+
+/** Для имён, которые придумывает сама программа: запрещённое заменяем, сохранение не падает. */
+export function toSafeFileName(name, fallback = 'note') {
+  const cleaned = String(name || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '_')
+    .replace(/[. ]+$/, '');
+  return cleaned || fallback;
+}
+
 export function safePathName(name) {
   if (typeof name !== 'string' || name.trim() === '') {
     throw httpError(400, 'Name required');
@@ -73,7 +115,7 @@ export function safePathName(name) {
     throw httpError(400, 'Name must not include path separators');
   }
 
-  return name;
+  return assertFileName(name);
 }
 
 export function decodeTextBuffer(buffer) {

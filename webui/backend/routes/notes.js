@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries, parseSearchQuery } from '../search.js';
 import { searchFts } from '../fts.js';
 import { NOTES_DIR } from '../config.js';
-import { httpError, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertFileName, httpError, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { isEncryptedSecret, protectSecret, revealSecret } from './secret-store.js';
@@ -15,8 +15,11 @@ export function registerNoteRoutes(app) {
   app.post('/api/notes/create', (req, res) => {
     try {
       requireBodyFields(req, 'title');
-      const { title, category, tags, content } = req.body;
-      const fileName = title.replace(/[/\\?%*:|"<>]/g, '_') + '.md';
+      const { category, tags, content } = req.body;
+      // Название заметки — её имя на диске. То, что ОС не создаст, отклоняем сразу,
+      // а не заменяем тихо: пользователь видит, что именно не так.
+      const title = assertFileName(String(req.body.title).trim());
+      const fileName = title + '.md';
       const dirPath = category ? resolveNotesChildPath(category) : NOTES_DIR;
       fs.mkdirSync(dirPath, { recursive: true });
       if (category) indexDirectoryTree(dirPath);

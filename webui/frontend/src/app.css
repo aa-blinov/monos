@@ -10,7 +10,7 @@
    px size — a literal does not scale with the interface size setting. */
 :root {
   --text-whisper: 11px;
-  --text-whisper-lg: 11px;
+  --text-whisper-lg: 12px;
 }
 
 @layer base {

@@ -227,6 +227,27 @@ test('the documented scales in DESIGN.md match the ones enforced here', () => {
   }
 });
 
+test('размер текста — только из шкалы: два токена подписей и ступени Tailwind', () => {
+  // 11px — подписи (--text-whisper), 12px — их вторичные подписи (--text-whisper-lg),
+  // дальше стандартные ступени Tailwind. Произвольный px или rem в тексте — дрейф.
+  const SIZE_TOKENS = ['--text-whisper', '--text-whisper-lg', '--editor-font-size'];
+  const offenders = [];
+  for (const file of files) {
+    for (const m of read(file).matchAll(/text-\[([^\]]+)\]/g)) {
+      const value = m[1];
+      if (value.startsWith('length:')) {
+        const token = /^length:var\((--[a-z-]+)/.exec(value)?.[1];
+        if (!SIZE_TOKENS.includes(token)) offenders.push(`${path.basename(file)} text-[${value}]`);
+        continue;
+      }
+      // Цвета (var, color-mix, hex) — не размер.
+      if (/var\(|color-mix|#|rgb|hsl/.test(value)) continue;
+      offenders.push(`${path.basename(file)} text-[${value}]`);
+    }
+  }
+  assert.deepEqual(offenders, [], `размер текста вне шкалы: ${offenders.join(', ')}`);
+});
+
 test('окна и карточки делят один радиус', () => {
   // Модалка и карточка — одна и та же поверхность. Если у них разные углы,
   // окно выглядит вклеенным поверх доски.
