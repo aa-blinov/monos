@@ -259,11 +259,16 @@ async function main() {
 
     const playwright = await import(pathToFileURL(path.join(frontendDir, 'node_modules', 'playwright', 'index.js')).href);
     const { chromium } = playwright.default || playwright;
-    const browser = await chromium.launch();
+    // MONOS_CHROMIUM_PATH points at an already installed Chromium when Playwright's own build is missing.
+    const browser = await chromium.launch(process.env.MONOS_CHROMIUM_PATH
+      ? { executablePath: process.env.MONOS_CHROMIUM_PATH }
+      : undefined);
     const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
     await page.addInitScript(() => {
       localStorage.setItem('locale', 'en');
-      localStorage.setItem('darkMode', 'true');
+      // The site shows the warm paper light theme; dark is one toggle away in the app.
+      localStorage.setItem('themeMode', 'light');
+      localStorage.setItem('darkMode', 'false');
       localStorage.setItem('noteView', 'board');
       localStorage.setItem('boardColumns', '3');
       localStorage.setItem('editMode', 'rich');
@@ -272,11 +277,26 @@ async function main() {
     await page.goto(frontendUrl);
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
-    await page.screenshot({ path: path.join(outputDir, 'monos-dashboard.png'), fullPage: false });
+    // Only the board itself: the cards are the subject, the empty margins are not.
+    await page.screenshot({
+      path: path.join(outputDir, 'monos-dashboard.png'),
+      clip: { x: 120, y: 56, width: 1200, height: 904 },
+    });
 
     await page.getByPlaceholder('Search').fill('sync');
     await page.getByText('Search Results').waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-search.png'), fullPage: false });
+
+    // Quick switcher: the keyboard path for jumping to any note by title.
+    await page.getByPlaceholder('Search').fill('');
+    await page.keyboard.press('Escape');
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('Meta+O');
+    await page.locator('text=/quick switcher|command palette/i').first().waitFor();
+    await page.keyboard.type('launch');
+    await page.getByText('Launch Plan').first().waitFor();
+    await page.screenshot({ path: path.join(outputDir, 'monos-quick-switcher.png'), fullPage: false });
+    await page.keyboard.press('Escape');
 
     const openSidebar = page.getByRole('button', { name: 'Open sidebar' });
     if (await openSidebar.isVisible()) await openSidebar.click();
