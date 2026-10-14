@@ -1506,6 +1506,7 @@
         <div class="mt-4 min-h-0 flex flex-1 flex-col overflow-hidden">
           <h3 class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreview}</h3>
           <div
+            style:--template-empty-label={`"${$localizedText.templates.emptyItem}"`}
             class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
             data-testid="template-preview-scroll"
           >
@@ -1638,7 +1639,7 @@
     line-height: 1.4;
   }
 
-  /* Пустой пункт маркированного списка подписан «— empty». Пункт нумерованного
+  /* Пустой пункт маркированного списка подписан строкой templates.emptyItem. Пункт нумерованного
      списка остаётся с номером, как в редакторе. */
   :global(.template-preview ul > li:empty),
   :global(.template-preview ul > li > p:only-child:empty) {
@@ -1650,7 +1651,7 @@
   }
 
   :global(.template-preview ul > li:empty::before) {
-    content: '— empty';
+    content: var(--template-empty-label, "");
     font-size: 0.7rem;
   }
 
