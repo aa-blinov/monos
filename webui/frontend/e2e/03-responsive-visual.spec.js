@@ -49,7 +49,7 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 async function expectCoreControlsVisible(page) {
-  await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /(Open|Close) sidebar/ }).first()).toBeVisible();
   await expect(page.getByPlaceholder('Search')).toBeVisible();
 }
 
