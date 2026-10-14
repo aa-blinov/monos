@@ -667,6 +667,81 @@ Participants:
 `,
   },
   {
+    id: 'interview-notes',
+    group: 'Work',
+    title: 'Interview Notes',
+    description: 'Candidate, role, scored criteria, evidence from the interview, and the hiring decision.',
+    category: 'Hiring',
+    tags: ['interview', 'hiring'],
+    suggestedTitle: (ctx) => titleWithDate('Interview', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
+
+Date: ${localDate}
+Time: ${time}
+Candidate:
+Role:
+Interviewers:
+
+## Criteria (1-5)
+- Skills:
+- Problem solving:
+- Communication:
+- Team fit:
+
+## Evidence
+-
+
+## Strengths
+-
+
+## Concerns
+-
+
+## Questions Asked
+-
+
+## Decision
+- [ ] Hire
+- [ ] No hire
+- [ ] Another round needed
+
+## Notes
+-
+`,
+  },
+  {
+    id: 'okr-review',
+    group: 'Planning',
+    title: 'OKR Review',
+    description: 'Objectives, key results with progress, what worked, what did not, and changes for the next period.',
+    category: 'Goals',
+    tags: ['okr', 'goals'],
+    suggestedTitle: () => 'OKR Review -',
+    content: ({ title, localDate }) => `# ${title}
+
+Date: ${localDate}
+Period:
+Owner:
+
+## Objectives
+### 1.
+- Key result 1 (progress %):
+- Key result 2 (progress %):
+
+## What Worked
+-
+
+## What Did Not
+-
+
+## Changes for Next Period
+-
+
+## Decisions
+- [ ] Owner - Action - Due
+`,
+  },
+  {
     id: 'eisenhower-matrix',
     group: 'Planning',
     title: 'Eisenhower Matrix',
@@ -1151,6 +1226,8 @@ const templateApproaches = {
   'design-doc': 'work',
   'bug-report': 'work',
   'client-call': 'work',
+  'interview-notes': 'work',
+  'okr-review': 'planning',
   'research-note': 'knowledge',
   'topic-moc': 'knowledge',
   zettel: 'knowledge',
@@ -1765,6 +1842,77 @@ URL:
 
 ## Следующие шаги
 - [ ] Задача - Владелец - Срок
+`,
+  },
+  'interview-notes': {
+    group: 'Работа',
+    title: 'Интервью',
+    description: 'Кандидат, роль, оценки по критериям, факты из интервью и решение по найму.',
+    category: 'Найм',
+    suggestedTitle: (ctx) => titleWithDate('Интервью', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
+
+Дата: ${localDate}
+Время: ${time}
+Кандидат:
+Роль:
+Интервьюеры:
+
+## Критерии (1-5)
+- Навыки:
+- Решение задач:
+- Коммуникация:
+- Соответствие команде:
+
+## Факты
+-
+
+## Сильные стороны
+-
+
+## Сомнения
+-
+
+## Заданные вопросы
+-
+
+## Решение
+- [ ] Нанять
+- [ ] Не нанимать
+- [ ] Нужен ещё один раунд
+
+## Заметки
+-
+`,
+  },
+  'okr-review': {
+    group: 'Планирование',
+    title: 'Обзор целей (OKR)',
+    description: 'Цели, ключевые результаты с прогрессом, что сработало, что нет и что меняем в следующем периоде.',
+    category: 'Цели',
+    suggestedTitle: () => 'OKR -',
+    content: ({ title, localDate }) => `# ${title}
+
+Дата: ${localDate}
+Период:
+Ответственный:
+
+## Цели
+### 1.
+- Ключевой результат 1 (прогресс %):
+- Ключевой результат 2 (прогресс %):
+
+## Что сработало
+-
+
+## Что не сработало
+-
+
+## Что меняем в следующем периоде
+-
+
+## Решения
+- [ ] Владелец - Действие - Срок
 `,
   },
   'eisenhower-matrix': {
