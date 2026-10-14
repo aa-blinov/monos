@@ -1,7 +1,7 @@
 <script>
   import { locale, localizedText } from '../lib/strings.js';
-  import { printNoteToPdf, openPrintView } from '../lib/print.js';
-  import { Printer, History } from 'lucide-svelte';
+  import { openPrintView } from '../lib/print.js';
+  import { History } from 'lucide-svelte';
 
   export let editedTitle = '';
   export let currentFile = null;
@@ -25,22 +25,6 @@
       minute: '2-digit',
     }).format(date);
   };
-
-  let printError = '';
-  let isPrinting = false;
-
-  async function exportPdf() {
-    if (!currentFile?.path || isPrinting) return;
-    printError = '';
-    isPrinting = true;
-    try {
-      await printNoteToPdf(currentFile.path);
-    } catch (error) {
-      printError = error?.message || String(error);
-    } finally {
-      isPrinting = false;
-    }
-  }
 
   function browserPrint() {
     if (!currentFile?.path) return;
@@ -125,15 +109,6 @@
             >
               {$localizedText.editor.outline}
             </button>
-            <button
-              type="button"
-              disabled={isPrinting}
-              on:click={exportPdf}
-              class="-my-4 inline-flex items-center gap-1.5 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-30 lg:my-0 lg:py-0"
-            >
-              <Printer size="12" strokeWidth="1.7" aria-hidden="true" />
-              {$localizedText.editorHeader.exportPdf}
-            </button>
             {#if historyAvailable}
               <button
                 type="button"
@@ -153,9 +128,6 @@
             </button>
           </span>
         </div>
-        {#if printError}
-          <p class="mt-2 text-[length:var(--text-whisper)] text-[var(--red)]">{printError}</p>
-        {/if}
       {/if}
     </div>
   </div>

@@ -15,6 +15,8 @@
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
   import { extractOutline } from '../lib/outline.js';
   import { notifyDue } from '../lib/reminders.js';
+  import { downloadFile, exportFileName, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
+  import { printNoteToPdf } from '../lib/print.js';
   import {
     deleteFileRequest,
     loadBacklinksRequest,
@@ -39,7 +41,7 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
-  import { ChevronLeft, Palette, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Palette, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
 
   let richEditor;
 
@@ -79,13 +81,24 @@
   let dueInvalid = false;
   let tagDraft = '';
   let footerMoreOpen = false;
-  // На телефоне свойства свёрнуты, чтобы текст заметки был выше.
-  let viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
-  let propsOpen = false;
+  // Свойства открываются окошками над нижней панелью. Открыто не больше одного:
+  // 'category' | 'tags' | 'due' | 'related' | 'color' | null.
+  let propertyPanel = null;
+  let propertyTriggers = {};
+  // Экспорт: файлы для просмотра вне Monos. Ошибка показывается в самом окошке.
+  let exporting = false;
+  let exportError = '';
 
   $: dueDate = parseFrontmatter(editedContent).due;
   $: if (!dueFocused && !dueInvalid) dueText = formatDueInput(dueDate, $locale);
-  $: propertiesVisible = viewportWidth >= 1024 || propsOpen;
+  $: notePath = currentFile?.path ?? null;
+  $: notePath, resetPropertyPanel();
+  $: exportFormats = [
+    { id: 'md', label: $localizedText.editor.exportMarkdown, extension: 'md' },
+    { id: 'html', label: $localizedText.editor.exportHtml, extension: 'html' },
+    { id: 'txt', label: $localizedText.editor.exportText, extension: 'txt' },
+    { id: 'pdf', label: $localizedText.editor.exportPdf, extension: 'pdf' },
+  ];
   // Пустое оглавление не занимает колонку: показывать там нечего.
   $: hasHeadings = extractOutline(splitFrontmatter(editedContent).body).length > 0;
   // Без заголовков оглавление свёрнуто, но по кнопке показывает пустое состояние с подсказкой.
@@ -130,7 +143,6 @@
   let visibleFile = null;
   let loadRequestId = 0;
   let failedLoadPath = null;
-  let colorPaletteOpen = false;
   let currentNoteColor = '';
   let isColorSaving = false;
 
@@ -187,13 +199,93 @@
     applyDue('');
   }
 
-  function closeFooterMenuOnOutsideClick(event) {
-    if (footerMoreOpen && !event.target.closest?.('[data-footer-more]')) footerMoreOpen = false;
+  // Окошко свойств открыто одно. Ввод, который ещё не принят (тег, срок), принимается
+  // при закрытии, а не пропадает вместе с окошком.
+  function togglePropertyPanel(panel) {
+    if (propertyPanel === panel) {
+      closePropertyPanel({ restoreFocus: true });
+      return;
+    }
+    closePropertyPanel();
+    footerMoreOpen = false;
+    exportError = '';
+    propertyPanel = panel;
   }
 
-  function closeFooterMenuOnEscape(event) {
-    if (footerMoreOpen && event.key === 'Escape') footerMoreOpen = false;
+  function closePropertyPanel({ restoreFocus = false } = {}) {
+    const panel = propertyPanel;
+    if (!panel) return;
+    if (panel === 'tags') addTagsFromDraft();
+    if (panel === 'due' && dueFocused) commitDueText();
+    dueFocused = false;
+    dueInvalid = false;
+    propertyPanel = null;
+    if (restoreFocus) propertyTriggers[panel]?.focus();
   }
+
+  // Окошко и черновики относятся к одной заметке. При переходе на другую они
+  // закрываются без записи: ввод прежней заметки уже принят при уходе фокуса.
+  function resetPropertyPanel() {
+    propertyPanel = null;
+    footerMoreOpen = false;
+    exportError = '';
+    tagDraft = '';
+    dueFocused = false;
+    dueInvalid = false;
+  }
+
+  // Нажатие вне окошка или меню закрывает его, как в обычных меню.
+  function closePopoversOnPress(event) {
+    const target = event.target;
+    if (footerMoreOpen && !target.closest?.('[data-footer-more]')) footerMoreOpen = false;
+    if (propertyPanel && !target.closest?.(`[data-panel-anchor="${propertyPanel}"]`)) closePropertyPanel();
+  }
+
+  function closePopoversOnEscape(event) {
+    if (event.key !== 'Escape') return;
+    footerMoreOpen = false;
+    if (propertyPanel) closePropertyPanel({ restoreFocus: true });
+  }
+
+  // Экспорт сначала отдаёт правки редактора и дожидается сохранения: HTML и PDF
+  // собирает сервер из файла на диске, поэтому им нужна сохранённая версия.
+  async function exportNote(format) {
+    if (!currentFile?.path || exporting) return;
+    exporting = true;
+    exportError = '';
+    try {
+      await flushPendingEdits();
+      const name = editedTitle || title || currentFile.name?.replace(/\.md$/, '') || 'note';
+      if (format === 'md') {
+        downloadFile(exportFileName(name, 'md'), editedContent, 'text/markdown');
+      } else if (format === 'txt') {
+        downloadFile(exportFileName(name, 'txt'), markdownToPlainText(splitFrontmatter(editedContent).body));
+      } else if (format === 'html') {
+        downloadFile(exportFileName(name, 'html'), await fetchNoteHtml(currentFile.path), 'text/html');
+      } else {
+        await printNoteToPdf(currentFile.path);
+      }
+      if (propertyPanel === 'export') closePropertyPanel({ restoreFocus: true });
+    } catch (error) {
+      exportError = error?.message || String(error);
+    } finally {
+      exporting = false;
+    }
+  }
+
+  // Окошко получает фокус сразу: поле ввода или первый пункт.
+  function focusFirstControl(node) {
+    tick().then(() => (node.querySelector('input') || node.querySelector('button'))?.focus());
+  }
+
+  function tagsSummaryText(tags, emptyLabel) {
+    if (!tags.length) return emptyLabel;
+    return tags.length > 1 ? `#${tags[0]} +${tags.length - 1}` : `#${tags[0]}`;
+  }
+
+  // Окошко над нижней панелью. На телефоне это широкая шторка над той же панелью.
+  const panelClass = 'absolute bottom-full left-0 z-30 mb-2 w-72 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 shadow-2xl max-sm:fixed max-sm:inset-x-3 max-sm:bottom-14 max-sm:w-auto';
+  const panelLabelClass = 'mb-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]';
 
   function richEditorBody(noteContent) {
     return splitFrontmatter(noteContent).body;
@@ -782,7 +874,7 @@
   }
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} on:click={closeFooterMenuOnOutsideClick} on:keydown={closeFooterMenuOnEscape} />
+<svelte:window on:pointerdown={closePopoversOnPress} on:keydown={closePopoversOnEscape} />
 
 <div
   class="h-full flex flex-col bg-[var(--note-page-bg)] overflow-hidden relative min-h-0"
@@ -812,152 +904,6 @@
     {/await}
   {/if}
   <div class="border-b border-[var(--note-page-border)]"></div>
-  {#if backlinks.length > 0}
-    <div class="border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="local-navigation">
-      <div class="flex items-center gap-3 overflow-x-auto">
-        <span class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
-          {$localizedText.editor.localNavigation}
-        </span>
-        {#each backlinks.slice(0, 8) as item}
-          <TooltipIconButton
-            type="button"
-            class="group flex shrink-0 items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
-            on:click={() => openLinkedNote(item)}
-            label={relatedNoteLabel(item)}
-            tooltip={`${item.path} · ${relationLabel(item.type)}`}
-          >
-            <span class="max-w-40 truncate text-xs font-medium">{item.name}</span>
-            <span class="shrink-0 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
-          </TooltipIconButton>
-        {/each}
-      </div>
-    </div>
-  {/if}
-
-  <!-- Свойства заметки: то, что лежит в шапке файла, но редактировалось раньше
-       только в настройках. Панель узкая и всегда на виду — иначе срок и теги
-       приходилось бы искать по интерфейсу, чтобы поставить галочку.
-       Во время загрузки следующей заметки свойства и нижняя панель не снимаются
-       из DOM — иначе они моргали бы при каждом переключении. Вместо этого они
-       inert: их контролы относятся к запрошенной заметке, а текст ещё от прежней. -->
-  {#if displayedFile && !displayedFile.isDir}
-    <div class="flex items-center gap-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-1.5 lg:hidden" data-testid="properties-toggle-row">
-      <button
-        type="button"
-        data-testid="properties-toggle"
-        aria-expanded={propsOpen}
-        class="inline-flex h-8 items-center gap-2 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.16em] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-        on:click={() => propsOpen = !propsOpen}
-      >
-        {$localizedText.editor.propertiesToggle}
-        {#if dueDate}<span class="text-[var(--text-tertiary)]">{dueLabelOf}</span>{/if}
-      </button>
-    </div>
-
-    {#if propertiesVisible}
-    <div class="flex flex-wrap items-start gap-x-5 gap-y-2 border-b border-[var(--note-page-border)] bg-[var(--note-page-soft)] px-4 py-2 lg:px-12" data-testid="note-properties" inert={isLoading}>
-      <div class="flex items-center gap-1.5">
-        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyCategory}</span>
-        <CategoryInput
-          value={editableCategory}
-          suggestions={categorySuggestions}
-          placeholder={$localizedText.editor.propertyCategoryEmpty}
-          label={$localizedText.editor.propertyCategory}
-          listLabel={$localizedText.editor.categorySuggestions}
-          testid="property-category"
-          on:open={loadCategorySuggestions}
-          on:commit={commitCategory}
-        />
-      </div>
-
-      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyTags}</span>
-        {#each editableTags as tag (tag)}
-          <span class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-0.5 pl-2.5 pr-1 text-xs text-[var(--text-primary)]">
-            #{tag}
-            <button
-              type="button"
-              class="inline-flex h-6 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              aria-label={$localizedText.editor.tagRemove(tag)}
-              on:click={() => removeTag(tag)}
-            >
-              <X size="12" aria-hidden="true" />
-            </button>
-          </span>
-        {/each}
-        <input
-          type="text"
-          data-testid="property-tags"
-          aria-label={$localizedText.editor.propertyTags}
-          bind:value={tagDraft}
-          on:keydown={onTagDraftKeydown}
-          on:blur={addTagsFromDraft}
-          placeholder={editableTags.length ? '' : $localizedText.editor.propertyTagsEmpty}
-          class="h-8 min-w-[7rem] flex-1 bg-transparent px-1 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
-        />
-      </div>
-
-      <div class="flex flex-wrap items-center gap-1.5">
-        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{$localizedText.editor.propertyDue}</span>
-        <div class="relative flex items-center">
-          <input
-            type="text"
-            inputmode="numeric"
-            data-testid="property-due"
-            aria-label={$localizedText.editor.propertyDue}
-            aria-invalid={dueInvalid}
-            placeholder={$localizedText.editor.dueFormat}
-            bind:value={dueText}
-            on:focus={() => dueFocused = true}
-            on:blur={() => { dueFocused = false; commitDueText(); }}
-            on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitDueText(); } }}
-            on:input={() => dueInvalid = false}
-            class="h-8 w-36 rounded-md border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
-          />
-          {#if dueText}
-            <button
-              type="button"
-              data-testid="clear-due"
-              aria-label={$localizedText.editor.dueClear}
-              class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              on:click={clearDue}
-            >
-              <X size="12" aria-hidden="true" />
-            </button>
-          {/if}
-        </div>
-        {#if dueDate}
-          <span
-            data-testid="due-label"
-            data-status={dueStatusOf}
-            class="rounded-full px-2.5 py-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] {dueStatusOf === 'overdue'
-              ? 'bg-[color-mix(in_srgb,var(--red)_14%,transparent)] text-[var(--red)]'
-              : dueStatusOf === 'today'
-                ? 'bg-[color-mix(in_srgb,var(--yellow)_18%,transparent)] text-[var(--yellow)]'
-                : 'text-[var(--text-muted)]'}"
-          >
-            {dueLabelOf}
-          </span>
-        {/if}
-        {#if dueInvalid}
-          <span role="alert" class="text-[length:var(--text-whisper-lg)] text-[var(--red)]">{$localizedText.editor.dueInvalid}</span>
-        {/if}
-      </div>
-
-      <button
-        type="button"
-        data-testid="property-pin"
-        aria-pressed={pinnedNow}
-        class="inline-flex h-8 items-center gap-1.5 rounded-md border bg-[var(--bg-primary)] px-2.5 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)]/50 {pinnedNow ? 'border-[var(--text-secondary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-        on:click={togglePinned}
-      >
-        <Pin size="14" strokeWidth="1.7" aria-hidden="true" />
-        {pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-      </button>
-    </div>
-    {/if}
-  {/if}
-
   <!-- Content Area -->
   {#if isLoading && !displayedFile}
     <div class="flex-1 flex items-center justify-center">
@@ -1033,58 +979,305 @@
   {/if}
 
   {#if displayedFile && !displayedFile.isDir}
-    <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8" data-testid="editor-footer" inert={isLoading}>
-      <div class="flex h-full items-center gap-2">
-        <p role="status" aria-live="polite" class="order-last ml-auto flex items-center gap-2 whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+    <!-- Нижняя панель: свойства заметки открываются окошками над ней, поэтому текст
+         не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
+         относятся к запрошенной заметке, а текст ещё от прежней. -->
+    <div class="relative flex h-11 shrink-0 items-center gap-2 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-3 lg:px-6" data-testid="editor-footer" inert={isLoading}>
+      <div class="flex min-w-0 items-center gap-1" data-testid="note-properties" inert={isLoading}>
+        <div class="relative" data-panel-anchor="category">
+          <button
+            type="button"
+            bind:this={propertyTriggers.category}
+            data-testid="property-category-button"
+            aria-haspopup="dialog"
+            aria-expanded={propertyPanel === 'category'}
+            aria-label={editableCategory ? `${$localizedText.editor.propertyCategory}: ${editableCategory}` : $localizedText.editor.propertyCategoryEmpty}
+            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            on:click={() => togglePropertyPanel('category')}
+          >
+            <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="hidden max-w-[9rem] truncate sm:inline">{editableCategory || $localizedText.editor.propertyCategoryEmpty}</span>
+          </button>
+          {#if propertyPanel === 'category'}
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>
+              <p class={panelLabelClass}>{$localizedText.editor.propertyCategory}</p>
+              <CategoryInput
+                value={editableCategory}
+                suggestions={categorySuggestions}
+                placeholder={$localizedText.editor.propertyCategoryEmpty}
+                label={$localizedText.editor.propertyCategory}
+                listLabel={$localizedText.editor.categorySuggestions}
+                testid="property-category"
+                on:open={loadCategorySuggestions}
+                on:commit={commitCategory}
+              />
+            </div>
+          {/if}
+        </div>
+
+        <div class="relative" data-panel-anchor="tags">
+          <button
+            type="button"
+            bind:this={propertyTriggers.tags}
+            data-testid="property-tags-button"
+            aria-haspopup="dialog"
+            aria-expanded={propertyPanel === 'tags'}
+            aria-label={editableTags.length ? `${$localizedText.editor.propertyTags}: ${editableTags.map((tag) => `#${tag}`).join(' ')}` : $localizedText.editor.propertyTags}
+            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            on:click={() => togglePropertyPanel('tags')}
+          >
+            <Tag size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="hidden max-w-[9rem] truncate sm:inline">{tagsSummaryText(editableTags, $localizedText.editor.propertyTags)}</span>
+            {#if editableTags.length}<span class="tabular-nums sm:hidden">{editableTags.length}</span>{/if}
+          </button>
+          {#if propertyPanel === 'tags'}
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyTags} data-testid="property-panel" data-panel="tags" class={panelClass}>
+              <p class={panelLabelClass}>{$localizedText.editor.propertyTags}</p>
+              <div class="flex flex-wrap gap-1.5">
+                {#each editableTags as tag (tag)}
+                  <span class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-0.5 pl-2.5 pr-1 text-xs text-[var(--text-primary)]">
+                    #{tag}
+                    <button
+                      type="button"
+                      class="inline-flex h-6 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      aria-label={$localizedText.editor.tagRemove(tag)}
+                      on:click={() => removeTag(tag)}
+                    >
+                      <X size="12" aria-hidden="true" />
+                    </button>
+                  </span>
+                {/each}
+              </div>
+              <input
+                type="text"
+                data-testid="property-tags"
+                aria-label={$localizedText.editor.propertyTags}
+                bind:value={tagDraft}
+                on:keydown={onTagDraftKeydown}
+                on:blur={addTagsFromDraft}
+                placeholder={editableTags.length ? '' : $localizedText.editor.propertyTagsEmpty}
+                class="mt-2 h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
+              />
+            </div>
+          {/if}
+        </div>
+
+        <div class="relative" data-panel-anchor="due">
+          <button
+            type="button"
+            bind:this={propertyTriggers.due}
+            data-testid="property-due-button"
+            aria-haspopup="dialog"
+            aria-expanded={propertyPanel === 'due'}
+            aria-label={dueDate ? `${$localizedText.editor.propertyDue}: ${dueLabelOf}` : $localizedText.editor.propertyDue}
+            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            on:click={() => togglePropertyPanel('due')}
+          >
+            <CalendarDays size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="hidden sm:inline">{dueDate ? dueLabelOf : $localizedText.editor.propertyDue}</span>
+          </button>
+          {#if propertyPanel === 'due'}
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyDue} data-testid="property-panel" data-panel="due" class={panelClass}>
+              <p class={panelLabelClass}>{$localizedText.editor.propertyDue}</p>
+              <div class="flex items-center gap-2">
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    data-testid="property-due"
+                    aria-label={$localizedText.editor.propertyDue}
+                    aria-invalid={dueInvalid}
+                    placeholder={$localizedText.editor.dueFormat}
+                    bind:value={dueText}
+                    on:focus={() => dueFocused = true}
+                    on:blur={() => { dueFocused = false; commitDueText(); }}
+                    on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitDueText(); } }}
+                    on:input={() => dueInvalid = false}
+                    class="h-8 w-36 rounded-md border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
+                  />
+                  {#if dueText}
+                    <button
+                      type="button"
+                      data-testid="clear-due"
+                      aria-label={$localizedText.editor.dueClear}
+                      class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      on:click={clearDue}
+                    >
+                      <X size="12" aria-hidden="true" />
+                    </button>
+                  {/if}
+                </div>
+                {#if dueDate}
+                  <span
+                    data-testid="due-label"
+                    data-status={dueStatusOf}
+                    class="rounded-full px-2.5 py-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] {dueStatusOf === 'overdue'
+                      ? 'bg-[color-mix(in_srgb,var(--red)_14%,transparent)] text-[var(--red)]'
+                      : dueStatusOf === 'today'
+                        ? 'bg-[color-mix(in_srgb,var(--yellow)_18%,transparent)] text-[var(--yellow)]'
+                        : 'text-[var(--text-muted)]'}"
+                  >
+                    {dueLabelOf}
+                  </span>
+                {/if}
+              </div>
+              {#if dueInvalid}
+                <p role="alert" class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--red)]">{$localizedText.editor.dueInvalid}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        {#if backlinks.length > 0}
+          <div class="relative" data-panel-anchor="related">
+            <button
+              type="button"
+              bind:this={propertyTriggers.related}
+              data-testid="property-related-button"
+              aria-haspopup="dialog"
+              aria-expanded={propertyPanel === 'related'}
+              aria-label={`${$localizedText.editor.localNavigation}: ${backlinks.length}`}
+              class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              on:click={() => togglePropertyPanel('related')}
+            >
+              <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
+              <span class="hidden sm:inline">{$localizedText.editor.localNavigation}</span>
+              <span class="tabular-nums">{backlinks.length}</span>
+            </button>
+            {#if propertyPanel === 'related'}
+              <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class={panelClass}>
+                <p class={panelLabelClass}>{$localizedText.editor.localNavigation}</p>
+                <ul class="-mx-1 max-h-64 overflow-y-auto">
+                  {#each backlinks as item}
+                    <li>
+                      <button
+                        type="button"
+                        aria-label={relatedNoteLabel(item)}
+                        title={item.path}
+                        class="flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-[var(--bg-secondary)]"
+                        on:click={() => { closePropertyPanel(); openLinkedNote(item); }}
+                      >
+                        <span class="min-w-0 truncate font-medium text-[var(--text-primary)]">{item.name}</span>
+                        <span class="shrink-0 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
+                      </button>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <button
+          type="button"
+          data-testid="property-pin"
+          aria-pressed={pinnedNow}
+          aria-label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+          class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          on:click={togglePinned}
+        >
+          <Pin size="14" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />
+          <span class="hidden sm:inline">{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}</span>
+        </button>
+      </div>
+
+      <div class="ml-auto flex shrink-0 items-center gap-2">
+        {#if propertyPanel === 'color'}
+          <div class="relative" data-panel-anchor="color">
+            <div use:focusFirstControl role="group" aria-label={$localizedText.editor.noteColor} data-testid="property-panel" data-panel="color" class="{panelClass} sm:left-auto sm:right-0">
+              <p class={panelLabelClass}>{$localizedText.editor.noteColor}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="flex h-8 shrink-0 items-center rounded-md border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+                  disabled={isColorSaving}
+                  on:click={() => setNoteColor('')}
+                >
+                  {$localizedText.editor.noColor}
+                </button>
+                {#each colorOptions as color}
+                  <button
+                    type="button"
+                    class="h-8 w-8 shrink-0 rounded-sm border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
+                    style="background: {color};"
+                    disabled={isColorSaving}
+                    aria-label={$localizedText.app.board.applyColor(color)}
+                    on:click={() => setNoteColor(color)}
+                  ></button>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+
+        <div class="relative" data-panel-anchor="export">
+          <button
+            type="button"
+            bind:this={propertyTriggers.export}
+            data-testid="export-button"
+            aria-haspopup="dialog"
+            aria-expanded={propertyPanel === 'export'}
+            aria-label={$localizedText.editor.exportLabel}
+            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            on:click={() => togglePropertyPanel('export')}
+          >
+            <Download size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="hidden sm:inline">{$localizedText.editor.exportLabel}</span>
+          </button>
+          {#if propertyPanel === 'export'}
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.exportLabel} data-testid="property-panel" data-panel="export" class="{panelClass} sm:left-auto sm:right-0">
+              <p class={panelLabelClass}>{$localizedText.editor.exportLabel}</p>
+              <ul class="flex flex-col">
+                {#each exportFormats as format (format.id)}
+                  <li>
+                    <button
+                      type="button"
+                      data-testid="export-{format.id}"
+                      disabled={exporting}
+                      class="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] disabled:opacity-40"
+                      on:click={() => exportNote(format.id)}
+                    >
+                      <span class="text-[var(--text-primary)]">{format.label}</span>
+                      <span class="text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">.{format.extension}</span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+              {#if exportError}
+                <p role="alert" class="mt-2 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--red)]">{exportError}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
         <div class="relative" data-footer-more>
           <TooltipIconButton
             type="button"
             data-testid="editor-more"
-            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
             label={$localizedText.editor.moreActions}
             tooltip={$localizedText.editor.moreActions}
-            tooltipAlign="start"
+            tooltipPosition="top"
+            tooltipAlign="end"
             on:click={() => footerMoreOpen = !footerMoreOpen}
           >
-            <MoreHorizontal class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+            <MoreHorizontal class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
           </TooltipIconButton>
           {#if footerMoreOpen}
-            <div class="absolute bottom-full left-0 z-30 mb-2 w-56 border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
+            <div class="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
               <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>
               <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; footerMoreOpen = false; }}>
                 <FileText size="16" strokeWidth="1.7" aria-hidden="true" />{rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
               </button>
-              <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { colorPaletteOpen = !colorPaletteOpen; footerMoreOpen = false; }}>
+              <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
                 <Palette size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.noteColor}
               </button>
             </div>
           {/if}
         </div>
-
-        {#if colorPaletteOpen}
-          <div class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1" aria-label={$localizedText.editor.noteColor}>
-            <button
-              type="button"
-              class="flex h-8 shrink-0 items-center rounded-md border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-              disabled={isColorSaving}
-              on:click={() => setNoteColor('')}
-            >
-              {$localizedText.editor.noColor}
-            </button>
-            {#each colorOptions as color}
-              <button
-                type="button"
-                class="h-8 w-8 shrink-0 rounded-sm border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
-                style="background: {color};"
-                disabled={isColorSaving}
-                aria-label={$localizedText.app.board.applyColor(color)}
-                on:click={() => setNoteColor(color)}
-              ></button>
-            {/each}
-          </div>
-        {/if}
       </div>
     </div>
   {/if}

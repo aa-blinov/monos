@@ -149,6 +149,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `backup.js` | ZIP export/import for the notes folder — shared by Settings and the empty board |
 | `backup.test.js` | Filename from headers, error paths, empty selection |
 | `print.js` | Print a note or a whole folder; PDF save, plus the browser print view |
+| `note-export.js` | `exportFileName(title, ext)` makes a safe file name; `markdownToPlainText(md)` drops the markup; `fetchNoteHtml(path)` reads the print view; `downloadFile(name, content, type)` starts the download |
+| `note-export.test.js` | File names from titles, plain text from Markdown (headings, lists, task marks, code, tables), the print view request and its errors |
 | `print.test.js` | Request shapes, desktop-only error, print-view URLs |
 | `clipper.js` | Reads the web-clipper token from the app (app origin only) |
 | `clipper.test.js` | Token fetch, refusal path |

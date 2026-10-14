@@ -74,7 +74,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('Editor загружает заметку и показывает local navigation', async () => {
+test('Editor загружает заметку, показывает теги и связанные заметки', async () => {
   installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
     '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: 'Alpha body' }),
     '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
@@ -95,13 +95,14 @@ test('Editor загружает заметку и показывает local nav
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
   expect(screen.getByTestId('rich-editor-input').value).toBe('Alpha body');
-  // Теги теперь чипами в строке свойств, а не текстом в навигации.
+  // Теги видны на кнопке нижней панели, связанные заметки — в окошке по её кнопке.
   expect(within(screen.getByTestId('note-properties')).getByText('#alpha')).toBeTruthy();
-  expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Gamma').length).toBeGreaterThan(0);
-  const localNavigation = screen.getByTestId('local-navigation');
-  expect(within(localNavigation).getByText(uiText.editor.localNavigation)).toBeTruthy();
-  await fireEvent.click(within(localNavigation).getByRole('button', { name: /Beta/ }));
+  await fireEvent.click(screen.getByTestId('property-related-button'));
+  const related = screen.getByTestId('property-panel');
+  expect(within(related).getByText(uiText.editor.localNavigation)).toBeTruthy();
+  expect(within(related).getByText('Beta')).toBeTruthy();
+  expect(within(related).getByText('Gamma')).toBeTruthy();
+  await fireEvent.click(within(related).getByRole('button', { name: /Beta/ }));
   expect(componentNavigateHandler).toHaveBeenCalledWith(expect.objectContaining({
     detail: { path: 'notes/Beta.md', name: 'Beta', isDir: false },
   }));
@@ -275,7 +276,6 @@ test('Editor не пересоздаёт панели при переходе н
   await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
   const properties = screen.getByTestId('note-properties');
   const footer = screen.getByTestId('editor-footer');
-  const localNavigation = screen.getByTestId('local-navigation');
 
   component.$set({ currentFile: { path: 'notes/Beta.md', name: 'Beta.md', isDir: false } });
   await tick();
@@ -285,7 +285,6 @@ test('Editor не пересоздаёт панели при переходе н
   // что {#if !isLoading} выбрасывал их из DOM и тут же возвращал на место.
   expect(screen.getByTestId('note-properties')).toBe(properties);
   expect(screen.getByTestId('editor-footer')).toBe(footer);
-  expect(screen.getByTestId('local-navigation')).toBe(localNavigation);
   // Но свойства и нижняя панель действуют на запрошенную заметку (currentFile),
   // а текст в редакторе ещё от прежней. Без inert правка свойств записала бы
   // старое содержимое в файл, который ещё не открыт.
@@ -845,4 +844,59 @@ test('переключатель показывает исходный Markdown 
   const payload = JSON.parse(String(saved.at(-1).body));
   expect(payload.content).toContain('Правка из исходника');
   vi.useRealTimers();
+});
+
+test('окошко свойств открывается по кнопке нижней панели и закрывается по Escape', async () => {
+  installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
+    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: 'Alpha body' }),
+    '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
+      created: '2026-05-07T10:00:00.000Z',
+      modified: '2026-05-07T12:00:00.000Z',
+      metadata: { title: 'Alpha', tags: ['alpha'] },
+    }),
+  }));
+
+  render(Editor, {
+    currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+
+  const tagsButton = screen.getByTestId('property-tags-button');
+  expect(screen.queryByTestId('property-panel')).toBeNull();
+  await fireEvent.click(tagsButton);
+  expect(screen.getByTestId('property-panel').getAttribute('data-panel')).toBe('tags');
+  expect(tagsButton.getAttribute('aria-expanded')).toBe('true');
+
+  // Одно окошко за раз: открытие другого свойства заменяет текущее.
+  await fireEvent.click(screen.getByTestId('property-due-button'));
+  expect(screen.getByTestId('property-panel').getAttribute('data-panel')).toBe('due');
+
+  await fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByTestId('property-panel')).toBeNull();
+  expect(screen.getByTestId('property-due-button').getAttribute('aria-expanded')).toBe('false');
+});
+
+test('экспорт открывается окошком и предлагает Markdown, HTML, текст и PDF', async () => {
+  installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
+    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: 'Alpha body' }),
+    '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
+      created: '2026-05-07T10:00:00.000Z',
+      modified: '2026-05-07T12:00:00.000Z',
+      metadata: { title: 'Alpha', tags: [] },
+    }),
+  }));
+
+  render(Editor, {
+    currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+
+  await fireEvent.click(screen.getByTestId('export-button'));
+  const panel = screen.getByTestId('property-panel');
+  expect(panel.getAttribute('data-panel')).toBe('export');
+  for (const id of ['md', 'html', 'txt', 'pdf']) {
+    expect(within(panel).getByTestId(`export-${id}`)).toBeTruthy();
+  }
+  await fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByTestId('property-panel')).toBeNull();
 });
