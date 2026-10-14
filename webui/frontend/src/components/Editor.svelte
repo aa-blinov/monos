@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy, createEventDispatcher, tick } from 'svelte';
+  import { onDestroy, onMount, createEventDispatcher, tick } from 'svelte';
   import EditorHeader from './EditorHeader.svelte';
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
@@ -402,6 +402,21 @@
   }
 
   /**
+   * Write whatever the editor still holds before the window goes away. The
+   * autosave timer would otherwise be dropped with the page, taking the last
+   * edits (up to AUTOSAVE_DELAY old) with it. Waits briefly for a save already
+   * in flight, then saves through the same guarded path as autosave.
+   */
+  async function flushPendingEdits() {
+    flushEditorMarkdown();
+    const deadline = Date.now() + 3000;
+    while (isSaving && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (hasUnsavedChanges() && !isSaving) await saveContent();
+  }
+
+  /**
    * Apply per-region choices made in the conflict view.
    *
    * The result is composed from the raw file text, never from the editor, so
@@ -628,13 +643,25 @@
     saving: isSaving,
   });
 
+  // The desktop shell asks the page to flush before it closes the window; see
+  // electron/main.cjs. Components are not destroyed on window close, so this hook
+  // is the only chance to save then.
+  onMount(() => {
+    window.monosFlushPendingEdits = flushPendingEdits;
+    return () => {
+      if (window.monosFlushPendingEdits === flushPendingEdits) delete window.monosFlushPendingEdits;
+    };
+  });
+
   onDestroy(() => {
     flushEditorMarkdown();
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
       autosaveTimer = null;
     }
-    if (loadedFilePath && hasUnsavedChanges() && !isSaving) {
+    // Same guard as saveContent: a note with conflict markers must not be written
+    // back from the editor, where the markers no longer survive the round-trip.
+    if (loadedFilePath && hasUnsavedChanges() && !isSaving && conflictCount === 0) {
       const filePath = loadedFilePath;
       const savedContent = editedContent;
       const savedTitle = editedTitle;

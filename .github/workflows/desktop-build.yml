@@ -32,9 +32,11 @@ jobs:
         working-directory: webui/frontend
       - run: npm run check:backend
       - run: npm run test:backend
+      - run: npm run test:frontend
       - run: npm run check:frontend
+      - run: node --test docs/docs-freshness.test.js
       - run: npm --prefix webui/frontend exec playwright install --with-deps chromium
-      - run: npm run test:scale
+      - run: npm run test:e2e
 
   build:
     needs: test

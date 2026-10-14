@@ -55,7 +55,7 @@
   }
 
   $: gridClass = mobile
-    ? 'grid grid-cols-2 items-start gap-3 md:grid-cols-3'
+    ? 'grid grid-cols-2 items-stretch gap-3 md:grid-cols-3'
     : $boardColumns === '2'
       ? 'grid items-start gap-4 lg:grid-cols-2'
       : $boardColumns === '4'

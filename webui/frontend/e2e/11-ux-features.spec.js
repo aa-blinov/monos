@@ -26,13 +26,13 @@ test('word count + reading time отображаются в status bar', async (
   const title = uniqueTitle('Word Count Note');
   await createBlankNote(page, title);
   // 200 слов → reading time считается по фактическому содержимому (включая
-  // любые префиксные элементы). Проверяем что формат X words · Y min read появился.
+  // любые префиксные элементы). Проверяем что формат "X words, Y min read" появился.
   const longText = Array(200).fill('word').join(' ');
   await fillEditor(page, longText);
   // status bar находится в EditorHeader — ищем в toolbar
   const statusBar = page.locator('span.tabular-nums').first();
   await expect(statusBar).toBeVisible({ timeout: 5_000 });
-  await expect(statusBar).toHaveText(/\d+ words? · \d+ min read/);
+  await expect(statusBar).toHaveText(/\d+ words?, \d+ min read/);
 });
 
 test('outline panel появляется в редакторе с заголовками', async ({ page }) => {
@@ -127,10 +127,15 @@ test('quick switcher поддерживает inline-фильтр path:', async 
   // click on body чтобы убрать фокус из input
   await page.locator('body').click({ position: { x: 5, y: 5 } });
 
-  // open quick switcher
+  // open quick switcher; Recent loads on open, and the filter must still apply
+  // when the user types after that load (this order used to leave Recent unfiltered)
+  const recentLoaded = page.waitForResponse((response) => response.url().includes('/api/notes/recent'));
   await page.keyboard.press('Meta+O');
+  await recentLoaded;
   const header = page.locator('text=/quick switcher|command palette/i').first();
   await expect(header).toBeVisible({ timeout: 5_000 });
+  // Keys typed before the field has focus go to the page and are lost, so wait for focus.
+  await expect(page.locator('div.fixed.inset-0.z-\\[300\\] input').first()).toBeFocused();
 
   // вводим "path:NONEXISTENT_XYZ" → палитра не должна показать наши заметки
   // (path-фильтр применяется через rankQuickSwitcherResults, тест проверяет,

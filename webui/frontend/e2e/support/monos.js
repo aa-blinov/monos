@@ -56,7 +56,13 @@ export async function openNote(page, name) {
 
 export async function openBoardCard(page, title, filePath = '') {
   if (filePath) {
-    await page.request.post(`/api/notes/touch?path=${encodeURIComponent(filePath)}`);
+    // The board sorts by modification time, and earlier specs leave many notes
+    // behind, so an older seeded note can sit out of the rendered cards. Re-saving
+    // the same text makes it the most recent note again.
+    const query = `path=${encodeURIComponent(filePath)}`;
+    const { content } = await (await page.request.get(`/api/file?${query}`)).json();
+    await page.request.post(`/api/file?${query}`, { data: { content } });
+    await page.request.post(`/api/notes/touch?${query}`);
   }
   await page.goto('/');
   const card = page.locator('main').getByRole('button', { name: new RegExp(`^${escapeRegExp(title)}\\b`) }).first();

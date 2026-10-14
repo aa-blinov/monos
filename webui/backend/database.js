@@ -6,11 +6,17 @@ import { ROOT_DIR } from './config.js';
 const DB_PATH = path.join(ROOT_DIR, '.data', 'notes.db');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
+// better-sqlite3 is a native addon, and each runtime needs its own build: this
+// folder's copy is built for plain Node (the tests), while Electron loads a copy
+// built for its own runtime. The desktop shell sets MONOS_SQLITE_BINDING to that
+// file in development; packaged builds and tests leave it unset.
+const SQLITE_BINDING = process.env.MONOS_SQLITE_BINDING;
+
 let db;
 
 export function getDb() {
   if (!db) {
-    db = new Database(DB_PATH);
+    db = new Database(DB_PATH, SQLITE_BINDING ? { nativeBinding: SQLITE_BINDING } : {});
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
     initTables();
