@@ -70,7 +70,7 @@ test('менеджер шаблонов: «Create from template» открыва
 test('пустая задача в заметке остаётся чекбоксом, а отметка сохраняется в файле', async ({ page }) => {
   const title = uniqueTitle('Task Checkbox Note');
   const notePath = `notes/${title}.md`;
-  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}`, {
+  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}&create=1`, {
     data: { content: `---\ntitle: "${title}"\n---\n\n# Tasks\n\n- [ ]\n- [x] Done\n` },
   });
   await openBoardCard(page, title, notePath);

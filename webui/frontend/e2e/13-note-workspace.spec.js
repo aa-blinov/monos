@@ -96,10 +96,10 @@ test('связанные заметки открываются окошком п
   const source = uniqueTitle('Linking Source');
   const targetPath = `notes/${target}.md`;
 
-  await page.request.post(`/api/file?path=${encodeURIComponent(targetPath)}`, {
+  await page.request.post(`/api/file?path=${encodeURIComponent(targetPath)}&create=1`, {
     data: { content: `---\ntitle: "${target}"\n---\n\nTarget body` },
   });
-  await page.request.post(`/api/file?path=${encodeURIComponent(`notes/${source}.md`)}`, {
+  await page.request.post(`/api/file?path=${encodeURIComponent(`notes/${source}.md`)}&create=1`, {
     data: { content: `---\ntitle: "${source}"\n---\n\nSee [[${target}]]` },
   });
   await openBoardCard(page, target, targetPath);

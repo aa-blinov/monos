@@ -67,7 +67,7 @@ test('клик по оглавлению ставит курсор в загол
   const paragraph = 'Paragraph text that makes this note long enough to scroll inside the editor. '.repeat(12);
   const sections = Array.from({ length: 12 }, (_, index) => `## Section ${index + 1}\n\n${paragraph}\n`).join('\n');
   const path = `notes/${title}.md`;
-  await page.request.post(`/api/file?path=${encodeURIComponent(path)}`, {
+  await page.request.post(`/api/file?path=${encodeURIComponent(path)}&create=1`, {
     data: { content: `---\ntitle: "${title}"\n---\n\n# ${title}\n\n${sections}` },
   });
   await openBoardCard(page, title, path);

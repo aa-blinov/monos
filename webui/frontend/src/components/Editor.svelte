@@ -394,6 +394,7 @@
     const filePath = visibleFile?.path || loadedFilePath || currentFile?.path;
     if (!filePath || !imageRename?.path || !attachmentNewName.trim() || attachmentProblem) return;
     try {
+      await flushPendingEdits();
       const renamed = await renameAttachment(filePath, imageRename.path, attachmentNewName.trim());
       if (loadedFilePath !== filePath) return;
       const nextContent = replaceMarkdownImagePath(

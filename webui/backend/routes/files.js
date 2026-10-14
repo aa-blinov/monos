@@ -55,6 +55,10 @@ export function registerFileRoutes(app) {
       const fullPath = resolveNotesPath(filePath);
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
+      // Saving does not recreate a note that was renamed or deleted; creating one is explicit.
+      if (!fs.existsSync(fullPath) && req.query.create !== '1') {
+        return res.status(404).json({ detail: 'File not found' });
+      }
       fs.writeFileSync(fullPath, content, 'utf-8');
       indexFile(fullPath, content);
       const updated = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath);

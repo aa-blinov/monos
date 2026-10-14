@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { indexFile } from './indexing.js';
-import { readTextFile, resolveNotesPath, rewriteWikiTargets } from './utils.js';
+import { NOTES_DIR } from './config.js';
+import { readTextFile, relPath, resolveNotesPath, rewriteWikiTargets } from './utils.js';
 
 // A wiki-link names its note by file name without `.md` (or by the note's title),
 // so the links break only when the file name changes. Moving a note to another
@@ -9,14 +10,27 @@ import { readTextFile, resolveNotesPath, rewriteWikiTargets } from './utils.js';
 
 const nameOf = (notePath) => path.basename(notePath).replace(/\.md$/i, '').normalize('NFC');
 
-/** Notes with a wiki-link to the note at `notePath`. Read before the note moves. */
-function linkingNotePaths(db, notePath) {
-  const name = nameOf(notePath);
-  const forms = [...new Set([name, name.normalize('NFD')])];
-  const marks = forms.map(() => '?').join(', ');
-  return db.prepare(`SELECT DISTINCT source_path FROM note_links WHERE target_name IN (${marks})`)
-    .all(...forms)
-    .map((row) => row.source_path);
+/**
+ * Notes whose text mentions `name`. The files are read, not the index: a link written
+ * outside the app is not in the index yet, and it still has to follow the rename.
+ */
+export function notesMentioning(name) {
+  const forms = [...new Set([name.normalize('NFC'), name.normalize('NFD')])];
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.name.endsWith('.md')) {
+        const text = fs.readFileSync(fullPath, 'utf-8');
+        if (forms.some((form) => text.includes(form))) found.push(relPath(fullPath));
+      }
+    }
+  };
+  walk(NOTES_DIR);
+  return found;
 }
 
 /** True when another live note still answers to the same name, so links to it must not move. */
@@ -37,20 +51,21 @@ function nameStillAnswers(db, notePath) {
 export function planLinkUpdate(db, oldPath, newPath) {
   const renamed = nameOf(oldPath) !== nameOf(newPath);
   if (!renamed || nameStillAnswers(db, oldPath)) return { relink: false, sources: [] };
-  return { relink: true, sources: linkingNotePaths(db, oldPath) };
+  return { relink: true, sources: notesMentioning(nameOf(oldPath)) };
 }
 
 /**
- * Rewrites the links in one file and returns how many changed. Throws when the file cannot
- * be rewritten safely: it is not valid UTF-8, so encoding it again would replace characters,
- * or the write fails (for example a read-only file). A rewritten file keeps its modification
- * time, so the board order does not change.
+ * Rewrites one note file with `transform(text)`, which returns `{ content, count }`, and
+ * returns how many changes were made. Throws when the file cannot be rewritten safely: it is
+ * not valid UTF-8, so encoding it again would replace characters, or the write fails (for
+ * example a read-only file). A rewritten file keeps its modification time, so the board
+ * order does not change.
  */
-function rewriteFile(fullPath, oldName, newName) {
+export function rewriteNoteFile(fullPath, transform) {
   const raw = fs.readFileSync(fullPath);
   const text = raw.toString('utf-8');
   if (!Buffer.from(text, 'utf-8').equals(raw)) throw new Error('not UTF-8');
-  const result = rewriteWikiTargets(text, oldName, newName);
+  const result = transform(text);
   if (result.count === 0) return 0;
   const { atime, mtime } = fs.statSync(fullPath);
   fs.writeFileSync(fullPath, result.content, 'utf-8');
@@ -59,14 +74,11 @@ function rewriteFile(fullPath, oldName, newName) {
 }
 
 /**
- * Runs after the move. Rewrites `[[old]]` in the notes that named the renamed file, and
- * indexes every touched note again, so the renamed note's own outgoing links follow it.
- * One note that cannot be rewritten does not stop the others; it is listed in failedPaths.
+ * Applies `transform(text, notePath)` to each listed note, writes the notes that changed and
+ * indexes every listed note again. One note that cannot be rewritten does not stop the others:
+ * it is listed in failedPaths instead.
  */
-export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
-  const oldName = nameOf(oldPath);
-  const newName = nameOf(newPath);
-  const notePaths = new Set([newPath, ...sources.map((source) => (source === oldPath ? newPath : source))]);
+export function updateNotes(notePaths, transform) {
   const updatedPaths = [];
   const failedPaths = [];
   let updatedLinks = 0;
@@ -74,16 +86,14 @@ export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
   for (const notePath of notePaths) {
     const fullPath = resolveNotesPath(notePath);
     if (!fs.existsSync(fullPath)) continue;
-    if (relink) {
-      try {
-        const count = rewriteFile(fullPath, oldName, newName);
-        if (count > 0) {
-          updatedLinks += count;
-          updatedPaths.push(notePath);
-        }
-      } catch {
-        failedPaths.push(notePath);
+    try {
+      const count = rewriteNoteFile(fullPath, (text) => transform(text, notePath));
+      if (count > 0) {
+        updatedLinks += count;
+        updatedPaths.push(notePath);
       }
+    } catch {
+      failedPaths.push(notePath);
     }
     try {
       indexFile(fullPath, readTextFile(fullPath));
@@ -93,4 +103,17 @@ export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
   }
 
   return { updatedLinks, updatedPaths, failedPaths };
+}
+
+/**
+ * Runs after a note file moved. Rewrites `[[old]]` in the notes that named it and indexes the
+ * renamed note again, so its own outgoing links follow it. Without a change of name it only
+ * refreshes the index.
+ */
+export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
+  if (!relink) return updateNotes([newPath], (text) => ({ content: text, count: 0 }));
+  const oldName = nameOf(oldPath);
+  const newName = nameOf(newPath);
+  const notePaths = [...new Set([newPath, ...sources.map((source) => (source === oldPath ? newPath : source))])];
+  return updateNotes(notePaths, (text) => rewriteWikiTargets(text, oldName, newName));
 }
