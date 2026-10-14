@@ -219,7 +219,6 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
       replaceUnknownRouteWithLastKnown();
     }
     if (routePath === '/') $noteView = 'board';
-    if (routePath === '/' && $noteView === 'board' && !isMobile) setSidebarOpen(false);
     if ($noteView === 'board' && routePath.startsWith('/notes/')) {
       setRoutePath('/');
       navigate('/');
@@ -438,7 +437,8 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   function showDashboard({ refreshTree = false, replace = false, closeSidebar = true } = {}) {
     const shouldRestoreBoardScroll = isNoteOpen && !refreshTree;
     $noteView = 'board';
-    if (closeSidebar) setSidebarOpen(false);
+    // The tree stays where the user left it on a wide screen; only the narrow menu closes here.
+    if (closeSidebar && isMobile) setSidebarOpen(false);
     setRoutePath('/');
     navigate('/', { replace });
     clearSearch();
@@ -718,7 +718,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
       {/if}
 
       <div
-        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full' : 'relative shrink-0'}
+        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full flex flex-col' : 'relative shrink-0 flex flex-col'}
                {!$sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
         data-testid="sidebar-shell"

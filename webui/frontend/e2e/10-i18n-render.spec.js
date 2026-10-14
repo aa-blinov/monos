@@ -13,7 +13,7 @@ test.describe('i18n rendering', () => {
     await prepareWithLocale(page, 'en');
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: /Open sidebar/i }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /(Open|Close) sidebar/i }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /New note/i }).first()).toBeVisible();
   });
 
