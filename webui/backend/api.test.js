@@ -174,7 +174,7 @@ apiTest('заметка длиннее 100 kB сохраняется, а не о
   const content = `# Long\n\n${'Длинный абзац. '.repeat(10_000)}`;
   assert.ok(Buffer.byteLength(content) > 100 * 1024);
 
-  const { response } = await requestJson(buildUrl('/api/file', { path: notePath }), {
+  const { response } = await requestJson(buildUrl('/api/file', { path: notePath, create: '1' }), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content }),
@@ -532,7 +532,7 @@ apiTest('PUT /api/file/metadata и GET /api/tags обновляют title и tag
 
 apiTest('GET /api/categories считает заметки по категориям без корзины и без регистра', async () => {
   const writeNote = async (name, category) => {
-    const saved = await requestJson(buildUrl('/api/file', { path: `notes/Topic/${name}.md` }), {
+    const saved = await requestJson(buildUrl('/api/file', { create: '1', path: `notes/Topic/${name}.md` }), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: `---\ntitle: "${name}"\ncategory: "${category}"\n---\n\nBody\n` }),
@@ -1893,4 +1893,68 @@ apiTest('если одну заметку переписать нельзя, о�
   } finally {
     fs.chmodSync(lockedPath, 0o644);
   }
+});
+
+apiTest('переименование вложения переписывает ссылки на картинку, код не трогает', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const holder = await create({
+    title: 'Shot Holder',
+    category: '',
+    tags: [],
+    content: 'Снимок: ![shot](_attachments/shot.png) и ![[shot.png]].\n\n`![shot](_attachments/shot.png)`\n',
+  });
+  assert.equal(holder.response.status, 200);
+  fs.mkdirSync(path.join(notesDir, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(notesDir, '_attachments', 'shot.png'), Buffer.from([0x89, 0x50, 0x4E, 0x47]));
+
+  const renamed = await requestJson(buildUrl('/api/attachments/rename'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notePath: holder.data.path, path: 'notes/_attachments/shot.png', newName: 'shot-renamed' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 2);
+  assert.deepEqual(renamed.data.updatedPaths, [holder.data.path]);
+
+  const after = fs.readFileSync(path.join(notesDir, 'Shot Holder.md'), 'utf-8');
+  assert.match(after, /!\[shot\]\(_attachments\/shot-renamed\.png\) и !\[\[shot-renamed\.png\]\]/);
+  assert.match(after, /`!\[shot\]\(_attachments\/shot\.png\)`/);
+});
+
+apiTest('ссылка, добавленная в заметку вне приложения, переписывается при переименовании цели', async () => {
+  const create = (body) => requestJson(buildUrl('/api/notes/create'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const goal = await create({ title: 'External Goal', category: '', tags: [], content: 'Цель.' });
+  const holder = await create({ title: 'External Holder', category: '', tags: [], content: 'Пусто.' });
+  assert.equal(goal.response.status, 200);
+  assert.equal(holder.response.status, 200);
+  // Written straight to the file, so the index does not know the link yet.
+  const holderFile = path.join(notesDir, 'External Holder.md');
+  fs.writeFileSync(holderFile, fs.readFileSync(holderFile, 'utf-8').replace('Пусто.', 'Ссылка [[External Goal]].'), 'utf-8');
+
+  const renamed = await requestJson(buildUrl('/api/file/rename', { path: goal.data.path }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_name: 'External Goal 2.md' }),
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 1);
+  assert.match(fs.readFileSync(holderFile, 'utf-8'), /\[\[External Goal 2\]\]/);
+});
+
+apiTest('сохранение в несуществующий путь без create=1 отвечает 404 и файл не создаёт', async () => {
+  const response = await requestJson(buildUrl('/api/file', { path: 'notes/Gone Note.md' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: 'Вернулась.' }),
+  });
+  assert.equal(response.response.status, 404);
+  assert.equal(fs.existsSync(path.join(notesDir, 'Gone Note.md')), false);
 });

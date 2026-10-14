@@ -3,6 +3,7 @@ import path from 'path';
 import multer from 'multer';
 import { NOTES_DIR } from '../config.js';
 import { relPath, resolveNotesPath, safePathName, httpError, readTextFile } from '../utils.js';
+import { rewriteAttachmentReferences } from '../attachment-refs.js';
 
 const ATTACHMENTS_DIR = '_attachments';
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -154,12 +155,14 @@ export function registerAttachmentRoutes(app) {
       }
 
       fs.renameSync(oldFullPath, nextFullPath);
+      const references = rewriteAttachmentReferences({ oldFullPath, newFullPath: nextFullPath });
       res.json({
         path: relPath(nextFullPath),
         relativePath: attachmentRelativePath(notePath, nextFullPath),
         name: path.basename(nextFullPath),
         oldPath: relPath(oldFullPath),
         oldRelativePath: attachmentRelativePath(notePath, oldFullPath),
+        ...references,
       });
     } catch (error) {
       sendError(res, error);

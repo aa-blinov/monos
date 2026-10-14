@@ -51,3 +51,29 @@ test('без совпадений текст возвращается тем ж�
     count: 0,
   });
 });
+
+test('отступ-код после пустой строки не переписывается, абзац после него переписывается', () => {
+  assert.deepEqual(rewriteWikiTargets('Текст.\n\n    [[Old]]\n\nЕщё [[Old]].', 'Old', 'New'), {
+    content: 'Текст.\n\n    [[Old]]\n\nЕщё [[New]].',
+    count: 1,
+  });
+});
+
+test('подпункт списка с отступом переписывается: это не код', () => {
+  assert.deepEqual(rewriteWikiTargets('- пункт\n\n    [[Old]] в подпункте\n', 'Old', 'New'), {
+    content: '- пункт\n\n    [[New]] в подпункте\n',
+    count: 1,
+  });
+});
+
+test('продолжение абзаца с отступом переписывается: без пустой строки это не код', () => {
+  assert.deepEqual(rewriteWikiTargets('Абзац [[Old]]\n    продолжение [[Old]]', 'Old', 'New'), {
+    content: 'Абзац [[New]]\n    продолжение [[New]]',
+    count: 2,
+  });
+});
+
+test('блок отступом целиком остаётся как есть', () => {
+  const text = '\n    [[Old]]\n    [[Old]]\n';
+  assert.deepEqual(rewriteWikiTargets(text, 'Old', 'New'), { content: text, count: 0 });
+});

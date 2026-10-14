@@ -111,7 +111,7 @@ test('sidebar keeps only the tree area scrollable', async ({ page }) => {
 
   for (let index = 0; index < 36; index += 1) {
     const padded = String(index + 1).padStart(2, '0');
-    await page.request.post(`/api/file?path=${encodeURIComponent(`notes/Scroll Test ${padded}.md`)}`, {
+    await page.request.post(`/api/file?path=${encodeURIComponent(`notes/Scroll Test ${padded}.md`)}&create=1`, {
       data: {
         content: `---
 title: "Scroll Test ${padded}"

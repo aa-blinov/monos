@@ -65,7 +65,7 @@ Link to another note by its title or its file name:
 See [[Project Ideas]] for related thoughts.
 ```
 
-Monos indexes wiki links and displays backlinks in the editor. Renaming a note rewrites the `[[old name]]` links to it in other notes, and links inside code are left alone. Moving a note to another folder does not affect its links, because they match names rather than paths. If another note still has the old name, the links stay as they are, so they never switch to a different note.
+Monos indexes wiki links and displays backlinks in the editor. Renaming a note rewrites the `[[old name]]` links to it in other notes, and links inside code are left alone. Renaming an image attachment updates its image references in the same way. Moving a note to another folder does not affect its links, because they match names rather than paths. If another note still has the old name, the links stay as they are, so they never switch to a different note.
 
 ## Storage
 

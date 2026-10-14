@@ -88,7 +88,7 @@ test('удаление тега из всех заметок требует по
   const title = uniqueTitle('Tag Probe Note');
   const notePath = `notes/${title}.md`;
 
-  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}`, {
+  await page.request.post(`/api/file?path=${encodeURIComponent(notePath)}&create=1`, {
     data: { content: `---\ntitle: ${title}\ntags: [${tag}]\n---\n\nBody.\n` },
   });
   await expect.poll(async () => (await page.request.get('/api/tags')).text()).toContain(tag);

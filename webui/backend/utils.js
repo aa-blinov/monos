@@ -161,17 +161,45 @@ export function nowISO() {
 }
 
 /**
- * Strips fenced and inline code so `[[...]]` inside them is not mistaken for a
- * wiki-link. Shell `[[ -n "$X" ]]` tests live in the backup scripts and were
- * being indexed as six phantom links to notes that do not exist. Stripped
- * characters become spaces so line structure survives.
+ * Blanks out code so `[[...]]` inside it is not mistaken for a wiki-link. Indented code (four
+ * spaces or a tab after a blank line, and not inside a list) is blanked first, then fenced
+ * blocks, then inline code spans. Blanked characters become spaces, so the text keeps its length
+ * and its line structure.
  */
 function stripCode(content) {
-  return String(content || '')
+  return maskIndentedCode(String(content || ''))
     .replace(/```[\s\S]*?```/g, (block) => block.replace(/[^\n]/g, ' '))
     .replace(/~~~[\s\S]*?~~~/g, (block) => block.replace(/[^\n]/g, ' '))
     .replace(/(`{2,})[^\n]*?\1/g, (span) => span.replace(/[^\n]/g, ' '))
     .replace(/`[^`\n]*`/g, (span) => span.replace(/[^\n]/g, ' '));
+}
+
+const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/;
+
+function maskIndentedCode(text) {
+  const lines = text.split('\n');
+  let inCode = false;
+  let afterBlank = true;
+  let inList = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === '') {
+      afterBlank = true;
+      continue;
+    }
+    if (!/^( {4}|\t)/.test(line)) {
+      inCode = false;
+      inList = LIST_ITEM.test(line);
+      afterBlank = false;
+      continue;
+    }
+    if (inCode || (afterBlank && !inList)) {
+      inCode = true;
+      lines[index] = line.replace(/./g, ' ');
+    }
+    afterBlank = false;
+  }
+  return lines.join('\n');
 }
 
 export function extractWikiLinks(content) {
@@ -217,6 +245,30 @@ export function rewriteWikiTargets(content, oldName, newName) {
     count += 1;
   }
 
+  if (count === 0) return { content: text, count };
+  return { content: out + text.slice(last), count };
+}
+
+/**
+ * Runs `replacer` on each match of `pattern` that lies outside code. The replacer gets the matched
+ * text and its groups, and returns the new text, or null to leave the match alone. Returns the new
+ * text and how many matches changed.
+ */
+export function replaceOutsideCode(content, pattern, replacer) {
+  const text = String(content || '');
+  const source = stripCode(text);
+  let out = '';
+  let last = 0;
+  let count = 0;
+  for (const match of source.matchAll(pattern)) {
+    const original = text.slice(match.index, match.index + match[0].length);
+    if (original !== match[0]) continue;
+    const replacement = replacer(original, ...match.slice(1));
+    if (replacement === null || replacement === undefined) continue;
+    out += `${text.slice(last, match.index)}${replacement}`;
+    last = match.index + original.length;
+    count += 1;
+  }
   if (count === 0) return { content: text, count };
   return { content: out + text.slice(last), count };
 }
