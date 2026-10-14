@@ -10,6 +10,25 @@ import { removeNoteFromFts } from '../fts.js';
 import { planLinkUpdate, refreshNotesAfterRename } from '../link-rename.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
 
+/**
+ * Moves the index rows of a note or folder, and of everything inside a folder, to their new
+ * paths, so dates, board order and folder settings stay with the note. note_links references
+ * notes_index by path, so its rows for the old paths go first; re-indexing rebuilds them.
+ */
+function relocateIndexRows(db, oldPath, newPath, newName, newParent) {
+  const moved = db.prepare("SELECT path FROM notes_index WHERE path = ? OR path LIKE ? || '/%'").all(oldPath, oldPath);
+  db.prepare("DELETE FROM note_links WHERE source_path = ? OR source_path LIKE ? || '/%'").run(oldPath, oldPath);
+  for (const row of moved) removeNoteFromFts(db, row.path);
+  db.prepare('UPDATE notes_index SET path = ?, name = ?, parent_path = ? WHERE path = ?').run(newPath, newName, newParent, oldPath);
+  for (const row of moved) {
+    if (row.path === oldPath) continue;
+    const next = newPath + row.path.slice(oldPath.length);
+    db.prepare('UPDATE notes_index SET path = ?, parent_path = ? WHERE path = ?').run(next, path.dirname(next).replace(/\\/g, '/'), row.path);
+  }
+  db.prepare('UPDATE folder_config SET path = ? WHERE path = ?').run(newPath, oldPath);
+  db.prepare("UPDATE folder_config SET path = ? || SUBSTR(path, ?) WHERE path LIKE ? || '/%'").run(newPath, oldPath.length + 1, oldPath);
+}
+
 export function registerFileRoutes(app) {
   app.get('/api/file', (req, res) => {
     try {
@@ -88,36 +107,15 @@ export function registerFileRoutes(app) {
         return res.status(409).json({ detail: 'Target already exists' });
       }
       const newRelativePath = relPath(newFullPath);
+      const isDir = fs.statSync(fullPath).isDirectory();
       // Decided before the move: the index still knows the linking notes by the old name.
-      const linkPlan = fs.statSync(fullPath).isDirectory() ? null : planLinkUpdate(getDb(), filePath, newRelativePath);
+      const linkPlan = isDir ? null : planLinkUpdate(getDb(), filePath, newRelativePath);
       fs.renameSync(fullPath, newFullPath);
+      relocateIndexRows(getDb(), filePath, newRelativePath, newName, path.dirname(newRelativePath).replace(/\\/g, '/'));
 
-      const db = getDb();
-      const isDir = fs.statSync(newFullPath).isDirectory();
-      db.prepare('UPDATE notes_index SET path = ?, name = ? WHERE path = ?').run(newRelativePath, newName, filePath);
-
-      if (isDir) {
-        const children = db.prepare('SELECT path FROM notes_index WHERE path LIKE ? || \'/%\'').all(filePath);
-        for (const child of children) {
-          const newChildPath = child.path.replace(filePath, newRelativePath);
-          db.prepare('UPDATE notes_index SET path = ?, parent_path = ? WHERE path = ?').run(
-            newChildPath,
-            path.dirname(newChildPath).replace(/\\/g, '/'),
-            child.path
-          );
-        }
-        db.prepare('UPDATE folder_config SET path = ? WHERE path = ?').run(newRelativePath, filePath);
-        db.prepare('UPDATE folder_config SET path = ? || SUBSTR(path, ?) WHERE path LIKE ? || \'/%\'')
-          .run(newRelativePath, filePath.length + 1, filePath);
-        indexAllFiles();
-      }
-
-      let links = { updatedLinks: 0, updatedPaths: [] };
-      if (linkPlan) {
-        removeNoteFromFts(db, filePath);
-        db.prepare('DELETE FROM note_links WHERE source_path = ?').run(filePath);
-        links = refreshNotesAfterRename({ oldPath: filePath, newPath: newRelativePath, ...linkPlan });
-      }
+      let links = { updatedLinks: 0, updatedPaths: [], failedPaths: [] };
+      if (isDir) indexAllFiles();
+      else links = refreshNotesAfterRename({ oldPath: filePath, newPath: newRelativePath, ...linkPlan });
       res.json({ path: newRelativePath, name: newName, ...links });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
@@ -129,7 +127,14 @@ export function registerFileRoutes(app) {
       const { source, target } = req.query;
       const sourceFull = resolveNotesPath(source);
       const targetDir = target === 'notes' ? NOTES_DIR : resolveNotesPath(target, { allowRoot: true });
-      fs.renameSync(sourceFull, path.join(targetDir, path.basename(sourceFull)));
+      const destination = path.join(targetDir, path.basename(sourceFull));
+      // rename() would silently replace a note with the same name in the target folder.
+      if (path.resolve(destination) !== path.resolve(sourceFull) && fs.existsSync(destination)) {
+        return res.status(409).json({ detail: 'Target already exists' });
+      }
+      const newRelativePath = relPath(destination);
+      fs.renameSync(sourceFull, destination);
+      relocateIndexRows(getDb(), source, newRelativePath, path.basename(destination), path.dirname(newRelativePath).replace(/\\/g, '/'));
       indexAllFiles();
       res.json({ message: 'Moved' });
     } catch (error) {

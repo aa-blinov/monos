@@ -863,12 +863,11 @@
         ? replacePathPrefix(selectedPath, target.path, data.path)
         : null;
       
-      await loadTree();
-      await loadDirectories();
-      
       if (affectedSelectedPath) {
         navigateToPath(affectedSelectedPath, target.isDir && affectedSelectedPath === data.path);
       }
+      await loadTree();
+      await loadDirectories();
     } catch (err) {
       error = $localizedText.sidebar.errors.rename(err.message);
     } finally {
@@ -929,7 +928,7 @@
       if (activeMoveIndex >= 0) navigateToPath(movedPaths[activeMoveIndex], false);
       else if (movedPaths.length === 1) navigateToPath(movedPaths[0], false);
     } catch (err) {
-      console.error('Failed to move file:', err);
+      error = $localizedText.sidebar.errors.move(err.message);
     }
   }
 

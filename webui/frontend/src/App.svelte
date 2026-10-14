@@ -32,7 +32,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   import { loadShellSettings } from './lib/shell-settings.js';
   import { runSearch } from './lib/search-results.js';
   import { createNoteRequest, renameItemRequest } from './lib/sidebar-api.js';
-  import { NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
+  import { announceNoteLinksUpdated, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
@@ -60,10 +60,14 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   let linksNoticeTimer;
 
   function showLinksNotice(event) {
-    if (!event.detail.updatedLinks) return;
-    linksNotice = $localizedText.app.linksUpdated(event.detail.updatedLinks);
+    const { updatedLinks, failedPaths = [] } = event.detail;
+    const parts = [];
+    if (updatedLinks) parts.push($localizedText.app.linksUpdated(updatedLinks));
+    if (failedPaths.length) parts.push($localizedText.app.linksNotUpdated(failedPaths.length));
+    if (!parts.length) return;
+    linksNotice = parts.join(' · ');
     clearTimeout(linksNoticeTimer);
-    linksNoticeTimer = setTimeout(() => { linksNotice = ''; }, 3000);
+    linksNoticeTimer = setTimeout(() => { linksNotice = ''; }, 4000);
   }
 
   onMount(() => window.addEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
@@ -588,7 +592,9 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     let nextPath = note.path;
     if (renameTo && renameTo !== note.name) {
       try {
+        await flushOpenNote();
         const result = await renameItemRequest(note.path, renameTo);
+        announceNoteLinksUpdated(result);
         if (result?.path) {
           nextPath = result.path;
         } else {
