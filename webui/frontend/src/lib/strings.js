@@ -224,11 +224,14 @@ const enText = {
     today: 'Today',
     templates: 'Templates',
     templatesHint: 'Notes from proven patterns',
-    templateLibrary: 'Template Library',
+    templateLibrary: 'Templates',
     templateLibrarySubtitle: 'Pick a starting structure for your note — fields and sections come from the template.',
     templateSearch: 'Search templates',
     templateSearchPlaceholder: 'meeting, project, research...',
     templateFolder: 'Folder',
+    templateNewFolder(name) {
+      return `New folder "${name}" will be created with the note.`;
+    },
     templatePreview: 'Preview',
     templatePreviewEmpty: 'No template selected',
     templatePreviewEmptyHint: 'Choose a template on the left to see how your note will look.',
@@ -379,6 +382,7 @@ const enText = {
     searchPlaceholder: 'Search templates...',
     hide: 'Hide template',
     show: 'Show template',
+    createNote: 'Create note',
     edit: 'Edit template',
     delete: 'Delete template',
     deleteConfirm(name) {
@@ -961,11 +965,14 @@ const ruText = {
     today: 'Сегодня',
     templates: 'Шаблоны',
     templatesHint: 'Заметки из готовых структур',
-    templateLibrary: 'Библиотека шаблонов',
+    templateLibrary: 'Шаблоны',
     templateLibrarySubtitle: 'Выберите структуру для заметки — поля и секции подставятся из шаблона.',
     templateSearch: 'Поиск шаблонов',
     templateSearchPlaceholder: 'встреча, проект, исследование...',
     templateFolder: 'Папка',
+    templateNewFolder(name) {
+      return `Папка «${name}» будет создана вместе с заметкой.`;
+    },
     templatePreview: 'Предпросмотр',
     templatePreviewEmpty: 'Шаблон не выбран',
     templatePreviewEmptyHint: 'Выберите шаблон слева, чтобы увидеть, как будет выглядеть заметка.',
@@ -1134,6 +1141,7 @@ const ruText = {
     searchPlaceholder: 'Поиск шаблонов...',
     hide: 'Скрыть шаблон',
     show: 'Показать шаблон',
+    createNote: 'Создать заметку',
     edit: 'Редактировать шаблон',
     delete: 'Удалить шаблон',
     deleteConfirm(name) {

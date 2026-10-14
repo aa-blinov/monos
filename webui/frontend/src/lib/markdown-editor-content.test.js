@@ -187,6 +187,20 @@ test('при несовпадении числа блоков и огражде�
   assert.deepEqual(codeBlockLanguages(doc), [null, null]);
 });
 
+test('пустая задача «- [ ]» становится чекбоксом, а не текстом «[ ]»', () => {
+  const doc = markdownToEditorContent('- [ ]\n- [x]\n- [ ] Текст');
+  const list = doc.content.find((node) => node.type === 'taskList');
+  assert.ok(list, 'пустые задачи собираются в taskList');
+  const [empty, checked, filled] = list.content;
+  assert.equal(empty.type, 'taskItem');
+  assert.equal(empty.attrs.checked, false);
+  assert.equal(empty.content[0].type, 'paragraph', 'абзац внутри задачи нужен даже пустой');
+  assert.equal((empty.content[0].content || []).length, 0);
+  assert.equal(checked.attrs.checked, true);
+  assert.equal(filled.content[0].content[0].text, 'Текст');
+  assert.doesNotMatch(JSON.stringify(doc), /\[ \]/);
+});
+
 test('fencedBlockLanguages читает только info-строку', () => {
   assert.deepEqual(fencedBlockLanguages('```bash extra\nx\n```'), ['bash']);
   assert.deepEqual(fencedBlockLanguages('~~~\nno lang\n~~~'), ['']);

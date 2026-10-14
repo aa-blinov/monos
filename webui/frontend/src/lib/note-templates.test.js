@@ -41,6 +41,12 @@ test('getTemplateById для неизвестного возвращает пе�
   assert.ok(t.id);
 });
 
+test('название шаблона с датой пишется ISO, как даты внутри шаблона', () => {
+  const daily = noteTemplates.find((template) => template.id === 'daily-note');
+  const ctx = getTemplateContext('', new Date(2026, 0, 15, 9, 30));
+  assert.equal(daily.suggestedTitle(ctx), 'Daily 2026-01-15');
+});
+
 test('getTemplateContext возвращает isoDate и time', () => {
   const ctx = getTemplateContext('My Title', new Date(2026, 0, 15, 14, 30, 45));
   assert.equal(ctx.title, 'My Title');

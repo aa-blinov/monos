@@ -17,6 +17,7 @@
   import { locale, localizedText } from '../lib/strings.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
+  import { templateRequest } from '../stores.js';
 
   let pendingDelete = null;
 
@@ -179,12 +180,18 @@
                   </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-1.5">
-                  {#if template.category}
-                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">{template.category}</span>
-                  {/if}
                   {#each template.tags as tag}
                     <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                   {/each}
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    class="inline-flex h-8 items-center rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                    on:click={() => templateRequest.set(template.id)}
+                  >
+                    {$localizedText.templates.createNote}
+                  </button>
                 </div>
               </article>
             {/each}
@@ -212,26 +219,36 @@
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <h4 class="truncate font-serif text-lg tracking-tight">{template.title}</h4>
-                        <div class="mt-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{template.category}</div>
                       </div>
-                      <TooltipIconButton
-                        type="button"
-                        class="h-9 w-9 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-                        label={template.hidden ? $localizedText.templates.show : $localizedText.templates.hide}
-                        tooltip={template.hidden ? $localizedText.templates.show : $localizedText.templates.hide}
-                        on:click={() => toggleLibraryTemplate(template)}
-                      >
-                        {#if template.hidden}
-                          <EyeOff size="16" strokeWidth="1.7" aria-hidden="true" />
-                        {:else}
-                          <Eye size="16" strokeWidth="1.7" aria-hidden="true" />
-                        {/if}
-                      </TooltipIconButton>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each template.tags as tag}
                         <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
+                    </div>
+                    <div class="mt-4 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                        on:click={() => toggleLibraryTemplate(template)}
+                      >
+                        {#if template.hidden}
+                          <EyeOff size="14" strokeWidth="1.7" aria-hidden="true" />
+                          <span>{$localizedText.templates.show}</span>
+                        {:else}
+                          <Eye size="14" strokeWidth="1.7" aria-hidden="true" />
+                          <span>{$localizedText.templates.hide}</span>
+                        {/if}
+                      </button>
+                      {#if !template.hidden}
+                        <button
+                          type="button"
+                          class="inline-flex h-8 items-center rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                          on:click={() => templateRequest.set(template.id)}
+                        >
+                          {$localizedText.templates.createNote}
+                        </button>
+                      {/if}
                     </div>
                   </article>
                 {/each}
