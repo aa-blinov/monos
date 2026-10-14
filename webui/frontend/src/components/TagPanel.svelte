@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import ModalShell from './ModalShell.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { localizedText } from '../lib/strings.js';
   import { deleteTag, filterTagStats, loadTagStats, renameTag } from '../lib/tags.js';
@@ -17,6 +18,8 @@
   let editing = null;
   let editValue = '';
   let busy = false;
+  // A tag removal rewrites every note that carries it, so it waits for confirmation.
+  let pendingRemoval = null;
 
   $: visible = filterTagStats(stats, filter);
 
@@ -75,6 +78,16 @@
     } finally {
       busy = false;
     }
+  }
+
+  function askRemove(entry) {
+    pendingRemoval = entry;
+  }
+
+  async function confirmRemoval() {
+    const tag = pendingRemoval?.tag;
+    pendingRemoval = null;
+    if (tag) await remove(tag);
   }
 
   function openTag(tag) {
@@ -162,7 +175,7 @@
                   data-testid="tag-delete"
                   aria-label={$localizedText.tags.drop(entry.tag)}
                   class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--red)]"
-                  on:click={() => remove(entry.tag)}
+                  on:click={() => askRemove(entry)}
                 >
                   <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
                 </button>
@@ -172,5 +185,15 @@
         </ul>
       {/if}
     </div>
+    {#if pendingRemoval}
+      <ConfirmModal
+        danger={true}
+        title={$localizedText.tags.dropConfirmTitle}
+        message={$localizedText.tags.dropConfirm(pendingRemoval.tag, pendingRemoval.count)}
+        confirmLabel={$localizedText.tags.dropConfirmAction}
+        on:confirm={confirmRemoval}
+        on:cancel={() => { pendingRemoval = null; }}
+      />
+    {/if}
   </ModalShell>
 {/if}

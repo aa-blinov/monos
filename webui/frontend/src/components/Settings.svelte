@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
+  import { shortcutLabel } from '../lib/shortcut-label.js';
   import Checkbox from './Checkbox.svelte';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
@@ -15,9 +17,23 @@
   import appPackage from '../../../../package.json';
 
   const dispatch = createEventDispatcher();
+
+  // Signing out of GitHub removes the saved token, so it asks first, as other removals do.
+  let confirmingGitReset = false;
+
+  function resetGitAuth() {
+    confirmingGitReset = false;
+    isAuthenticated = false;
+    settings.git_token = '';
+    settings.git_owner = DEFAULT_GIT_OWNER;
+    settings.git_repo = '';
+    gitRepos = [];
+    gitBranches = [];
+  }
   const DEFAULT_GIT_OWNER = 'Monos';
   const appVersion = appPackage.version;
-  const themeModeOptions = [
+  // Reactive, so the labels follow the interface language without a reload.
+  $: themeModeOptions = [
     { value: 'system', label: () => $localizedText.settings.themeModeSystem },
     { value: 'light', label: () => $localizedText.settings.themeModeLight },
     { value: 'dark', label: () => $localizedText.settings.themeModeDark },
@@ -581,7 +597,7 @@
             class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
           >
             {#each fontOptions as f}
-              <option value={f.name}>{f.name} ({f.category})</option>
+              <option value={f.name}>{f.name} ({$localizedText.optionLabels.fontCategory?.[f.category] || f.category})</option>
             {/each}
           </select>
         </div>
@@ -641,7 +657,17 @@
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
           <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
           {#if isAuthenticated}
-            <button type="button" on:click={() => { isAuthenticated = false; settings.git_token = ''; settings.git_owner = DEFAULT_GIT_OWNER; settings.git_repo = ''; gitRepos = []; gitBranches = []; }} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+            <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+            {#if confirmingGitReset}
+              <ConfirmModal
+                danger={true}
+                title={$localizedText.settings.resetGitTitle}
+                message={$localizedText.settings.resetGitMessage}
+                confirmLabel={$localizedText.settings.resetGitAction}
+                on:confirm={resetGitAuth}
+                on:cancel={() => confirmingGitReset = false}
+              />
+            {/if}
           {:else}
             <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
               {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
@@ -858,7 +884,7 @@
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
         <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
           {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
-            <dt class="tabular-nums text-[var(--text-primary)]">{keys}</dt>
+            <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
             <dd class="text-[var(--text-secondary)]">{label}</dd>
           {/each}
         </dl>

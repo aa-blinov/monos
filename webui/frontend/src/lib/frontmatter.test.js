@@ -5,9 +5,37 @@ import {
   parseFrontmatter,
   upsertFrontmatter,
   setFrontmatterKey,
+  replaceFrontmatterBody,
   dueStatus,
   dueLabel,
 } from './frontmatter.js';
+
+test('replaceFrontmatterBody меняет только тело и сохраняет разделители ---', () => {
+  const note = '---\ntitle: "Заметка"\ntags: []\n---\n\nстарое тело\n';
+  assert.equal(
+    replaceFrontmatterBody(note, 'новое тело'),
+    '---\ntitle: "Заметка"\ntags: []\n---\n\nновое тело',
+  );
+});
+
+test('повторные правки тела не стирают шапку', () => {
+  let note = '---\ntitle: "Заметка"\ntags: ["a"]\n---\n\n';
+  for (const body of ['первая', 'первая правка', 'первая правка целиком']) {
+    note = replaceFrontmatterBody(note, body);
+  }
+  assert.equal(parseFrontmatter(note).title, 'Заметка');
+  assert.deepEqual(parseFrontmatter(note).tags, ['a']);
+  assert.equal(splitFrontmatter(note).body, 'первая правка целиком');
+});
+
+test('заметка без шапки становится просто телом', () => {
+  assert.equal(replaceFrontmatterBody('просто текст', 'новое'), 'новое');
+});
+
+test('переносы строк шапки (CRLF) сохраняются', () => {
+  const note = '---\r\ntitle: "X"\r\n---\r\n\r\nтело';
+  assert.equal(replaceFrontmatterBody(note, 'дальше'), '---\r\ntitle: "X"\r\n---\r\n\r\nдальше');
+});
 
 test('splitFrontmatter отделяет шапку от тела', () => {
   const note = '---\ntitle: "Заметка"\n---\n\nТело заметки\n';

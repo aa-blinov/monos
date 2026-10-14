@@ -548,7 +548,7 @@
       await loadTree();
       dispatch('navigate', { path: data.path, name: title, isDir: false });
     } catch (err) {
-      error = $localizedText.sidebar.errors.createNote(err.message);
+      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
     } finally {
       isCreating = false;
     }
@@ -572,7 +572,7 @@
       await loadDirectories();
       dispatch('navigate', { path: data.path, name: title, isDir: false });
     } catch (err) {
-      error = $localizedText.sidebar.errors.createNote(err.message);
+      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
     } finally {
       isCreating = false;
     }
@@ -593,7 +593,7 @@
       await loadDirectories();
       dispatch('navigate', { path: data.path, name: title, isDir: false });
     } catch (err) {
-      error = $localizedText.sidebar.errors.createNote(err.message);
+      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
     } finally {
       isCreating = false;
     }
@@ -676,7 +676,7 @@
       await loadDirectories();
       dispatch('quickNoteSaved', { path: data.path, name: title, isDir: false });
     } catch (err) {
-      error = $localizedText.sidebar.errors.createNote(err.message);
+      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
     } finally {
       isCreating = false;
     }
@@ -1001,7 +1001,6 @@
     </div>
   {/if}
 
-  {#if !mobile}
   <!-- Tree View Header -->
     <div class="mb-2 shrink-0 px-4 lg:mb-4">
       <div class="flex items-center justify-between gap-3 pb-1.5 lg:pb-2">
@@ -1070,10 +1069,9 @@
     {/if}
     </div>
   </div>
-  {/if}
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex h-16 shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-4 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 flex-col gap-2 border-t border-[var(--border-subtle)] px-3 py-2.5 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
@@ -1109,12 +1107,12 @@
       <span class="text-[var(--text-secondary)]">
         {selectedNoteCount > 0 ? $localizedText.sidebar.selectedNotes(selectedNoteCount) : $localizedText.sidebar.notes(tree ? totalNotes : 0)}
       </span>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-col gap-0.5">
         {#if gitConfigured}
           <TooltipIconButton
             on:click={handleSync}
             disabled={isSyncing || $editorState.saving || $editorState.dirty}
-            class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30 lg:h-10 lg:w-10"
+            class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30"
             label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
             tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}
             tooltipAlign="end"
@@ -1126,54 +1124,60 @@
             {:else}
               <Icon.RefreshCw class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {/if}
+            <span class="truncate">{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : (autoPullState?.conflicts ? $localizedText.sidebar.conflictsWaiting : $localizedText.sidebar.syncWithGit)}</span>
           </TooltipIconButton>
         {/if}
         <TooltipIconButton
           on:click={() => dispatch('openTemplatesManager')}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.templates}
           tooltip={$localizedText.sidebar.templates}
           tooltipAlign="end"
         >
-          <Icon.LayoutTemplate class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+          <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.sidebar.templates}</span>
         </TooltipIconButton>
         <TooltipIconButton
           data-testid="open-saved-searches"
           on:click={() => dispatch('openSavedSearches')}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.savedSearches.title}
           tooltip={$localizedText.savedSearches.title}
           tooltipAlign="end"
         >
-          <Icon.Bookmark class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+          <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.savedSearches.title}</span>
         </TooltipIconButton>
         <TooltipIconButton
           data-testid="open-tags"
           on:click={() => dispatch('openTags')}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.tags.title}
           tooltip={$localizedText.tags.title}
           tooltipAlign="end"
         >
-          <Icon.Hash class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+          <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.tags.title}</span>
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.trash}
           tooltip={$localizedText.sidebar.trash}
           tooltipAlign="end"
         >
-          <Icon.Trash2 class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+          <Icon.Trash2 class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.sidebar.trash}</span>
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}
-          class="h-11 w-11 justify-center text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] lg:h-10 lg:w-10"
+          class="flex h-8 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.settings}
           tooltip={$localizedText.sidebar.settings}
           tooltipAlign="end"
         >
-          <Icon.Settings class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
+          <Icon.Settings class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.sidebar.settings}</span>
         </TooltipIconButton>
       </div>
     {/if}
@@ -1437,6 +1441,7 @@
           <button on:click={() => showTemplatesModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
           <button
             on:click={createNoteFromTemplate}
+            style="white-space: nowrap;"
             disabled={isCreating || !templateTitle.trim()}
             class={getModalButtonClass('primary', { disabled: isCreating || !templateTitle.trim() })}
           >

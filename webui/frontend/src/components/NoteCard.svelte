@@ -23,6 +23,10 @@
       .replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
       .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
       .replace(/\[\[([^\]]+)\]\]/g, '$1')
+      // table separator rows, then the pipes of table rows, then checkboxes
+      .replace(/^[ \t]*\|?[ \t]*:?-+:?(?:[ \t]*\|[ \t]*:?-+:?)*[ \t]*\|?[ \t]*$/gm, ' ')
+      .replace(/\|/g, ' ')
+      .replace(/\[[ xX]\]/g, '')
       .replace(/[#*_`>~-]+/g, '')
       .replace(/\s+/g, ' ')
       .trim();

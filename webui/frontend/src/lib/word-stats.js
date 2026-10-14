@@ -13,7 +13,8 @@
 const WORDS_PER_MINUTE = 200;
 
 export function wordStats(text) {
-  const safe = String(text || '');
+  // The frontmatter block holds keys such as `title:`, not the text the reader wrote.
+  const safe = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');
   const words = safe.trim() ? safe.trim().split(/\s+/).length : 0;
   const chars = safe.length;
   const charsNoSpaces = safe.replace(/\s+/g, '').length;

@@ -188,12 +188,11 @@ function parseFrontmatterTags(rawValue) {
   if (value.startsWith('[') && value.endsWith(']')) {
     try {
       const parsed = JSON.parse(value.replace(/'/g, '"'));
-      return Array.isArray(parsed)
-        ? parsed.map(tag => stripWrappingQuotes(tag)).filter(Boolean)
-        : [];
+      if (Array.isArray(parsed)) return parsed.map(tag => stripWrappingQuotes(tag)).filter(Boolean);
     } catch {
-      return [];
+      // Not JSON: a flow list without quotes, such as [journal, work]. The frontend reads it the same way.
     }
+    return value.slice(1, -1).split(',').map(tag => stripWrappingQuotes(tag.trim())).filter(Boolean);
   }
 
   return value
@@ -268,10 +267,17 @@ function matchSearchTerms(fields, terms) {
  */
 function toPlainExcerptText(content) {
   return String(content || '')
+    // the frontmatter block: its keys are metadata, not the note's text
+    .replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
     // fenced code blocks, markers and contents: on a card a block of code is noise
     .replace(/(?:^|\n)[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n[ \t]*\1[ \t]*(?:\n|$)/g, '\n')
     // task markers: `- [x] text` → `text`
     .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\[[ xX]\][ \t]*/gm, '')
+    // table separator rows (`| --- | :-: |`), then the pipes of the table rows
+    .replace(/^[ \t]*\|?[ \t]*:?-+:?(?:[ \t]*\|[ \t]*:?-+:?)*[ \t]*\|?[ \t]*$/gm, '')
+    .replace(/\|/g, ' ')
+    // checkboxes left on their own line
+    .replace(/\[[ xX]\]/g, '')
     // images and links → their alt text
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')

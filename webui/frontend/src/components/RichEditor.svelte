@@ -10,6 +10,8 @@
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
   import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
+  import { isMarkdownBurst } from '../lib/markdown-burst.js';
+  import { shortcutLabel } from '../lib/shortcut-label.js';
   import { findHeadingPos } from '../lib/outline.js';
   import { scrollBehavior } from '../lib/motion.js';
   import { firstImageFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
@@ -133,6 +135,21 @@
         updateActive(ed);
       },
       onSelectionUpdate: ({ editor: ed }) => updateActive(ed),
+      editorProps: {
+        attributes: { 'aria-label': $localizedText.richEditor.bodyLabel },
+        // Dictation, an IME commit or a tool can insert a whole line in one text event,
+        // and input rules only see the keystroke that completes a marker. Such a burst
+        // is parsed like a paste, so `# Title` becomes a heading, not escaped text.
+        handleTextInput(_view, from, to, text) {
+          if (!isMarkdownBurst(text)) return false;
+          const documentContent = markdownToEditorContent(text).content || [];
+          if (!documentContent.length) return false;
+          // Replace the range the input event names, which is not always the selection
+          // (autocorrect and IME rewrite the word before the caret).
+          editor.chain().focus().setTextSelection({ from, to }).insertContent(documentContent).run();
+          return true;
+        },
+      },
     });
     editor.mount(editorEl);
     lastAppliedContent = content || '';
@@ -529,14 +546,14 @@
   <!-- Toolbar -->
   <div class="flex flex-wrap items-center gap-0.5 px-2 lg:flex-nowrap lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] overflow-x-auto toolbar-scroll" on:mousedown|preventDefault role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
     <!-- Undo/Redo -->
-    <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={$localizedText.richEditor.undo}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={$localizedText.richEditor.redo}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.redo)}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.bold}><Bold size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.italic}><Italic size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.bold)}><Bold size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.italic)}><Italic size="16" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleStrike')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.strike ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.strikethrough}><Strikethrough size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleCode')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.code ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.inlineCode}><Code size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleCode')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.code ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.inlineCode)}><Code size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 1 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 1 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading1}><Heading1 size="16" aria-hidden="true" /></TooltipIconButton>

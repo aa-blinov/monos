@@ -146,7 +146,7 @@
           </div>
           <button
             type="button"
-            class="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+            class="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
             on:click={openNewTemplate}
           >
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
@@ -284,7 +284,7 @@
       <button type="button" on:click={closeForm} class={getModalButtonClass('secondary')}>
         {$localizedText.sidebar.modals.cancel}
       </button>
-      <button type="button" on:click={submitTemplate} disabled={!form.title.trim()} class={getModalButtonClass('primary', { disabled: !form.title.trim() })}>
+      <button type="button" on:click={submitTemplate} disabled={!form.title.trim()} title={form.title.trim() ? undefined : $localizedText.templates.createTemplateHint} class={getModalButtonClass('primary', { disabled: !form.title.trim() })}>
         {form.id ? $localizedText.templates.saveChanges : $localizedText.templates.createTemplate}
       </button>
     </div>
@@ -296,6 +296,7 @@
     danger={true}
     title={$localizedText.templates.delete}
     message={$localizedText.templates.deleteConfirm(pendingDelete.title)}
+    confirmLabel={$localizedText.templates.delete}
     on:confirm={() => removeCustomTemplate(pendingDelete)}
     on:cancel={cancelRemoveCustomTemplate}
   />
