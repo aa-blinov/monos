@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractTemplateMetadata } from './template-preview.js';
+import { marked } from 'marked';
+import { extractTemplateMetadata, normalizeEmptyListItems } from './template-preview.js';
 
 test('extracts metadata from typical project-brief template', () => {
   const md = `# Project Brief
@@ -111,4 +112,24 @@ Status: Draft
   const { metadata, rest } = extractTemplateMetadata(md);
   assert.equal(metadata.length, 2);
   assert.match(rest, /## Section/);
+});
+
+test('empty numbered and bulleted items keep their marker', () => {
+  assert.equal(normalizeEmptyListItems('1. \n2. \n3. '), '1.\n2.\n3.');
+  assert.equal(normalizeEmptyListItems('- \n- '), '-\n-');
+  assert.equal(normalizeEmptyListItems('1. First step\n2. '), '1. First step\n2.');
+});
+
+test('lines that are not empty items stay as they are', () => {
+  assert.equal(normalizeEmptyListItems('- [ ] Task '), '- [ ] Task ');
+  assert.equal(normalizeEmptyListItems('Plain line  '), 'Plain line  ');
+  assert.equal(normalizeEmptyListItems('---'), '---');
+  assert.equal(normalizeEmptyListItems(null), '');
+});
+
+test('an empty numbered list renders as an ordered list, not a paragraph', () => {
+  const html = marked.parse(normalizeEmptyListItems('## Next Week Priorities\n1. \n2. \n3. '));
+  assert.match(html, /<ol>/);
+  assert.equal((html.match(/<li><\/li>/g) || []).length, 3);
+  assert.doesNotMatch(html, /<p>1\./);
 });

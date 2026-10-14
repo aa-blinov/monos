@@ -56,7 +56,7 @@
   import { editorState, activeTheme } from '../stores.js';
   import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
-  import { extractTemplateMetadata } from '../lib/template-preview.js';
+  import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
   import { formFieldClass } from '../lib/form-field.js';
   import { Icon } from '../lib/tree-icons.js';
 
@@ -235,7 +235,7 @@
     ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title)
     : '';
   $: templatePreviewParts = extractTemplateMetadata(templatePreview);
-  $: templatePreviewBodyHtml = sanitizePreviewHtml(marked.parse(templatePreviewParts.rest));
+  $: templatePreviewBodyHtml = sanitizePreviewHtml(marked.parse(normalizeEmptyListItems(templatePreviewParts.rest)));
   $: templatePreviewGridCols = templatePreviewParts.metadata.length >= 3 ? 3 : templatePreviewParts.metadata.length || 1;
   $: if (showTemplatesModal && templateLocale !== $locale) {
     templateLocale = $locale;
@@ -1561,8 +1561,10 @@
     line-height: 1.4;
   }
 
-  :global(.template-preview li:empty),
-  :global(.template-preview li > p:only-child:empty) {
+  /* Пустой пункт маркированного списка подписан «— empty». Пункт нумерованного
+     списка остаётся с номером, как в редакторе. */
+  :global(.template-preview ul > li:empty),
+  :global(.template-preview ul > li > p:only-child:empty) {
     list-style: none;
     margin-left: -1.1rem;
     color: var(--text-secondary);
@@ -1570,7 +1572,7 @@
     font-style: italic;
   }
 
-  :global(.template-preview li:empty::before) {
+  :global(.template-preview ul > li:empty::before) {
     content: '— empty';
     font-size: 0.7rem;
   }

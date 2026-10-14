@@ -52,3 +52,16 @@ export function extractTemplateMetadata(markdown) {
 
   return { metadata, rest: lines.slice(i).join('\n') };
 }
+
+/**
+ * An empty list item in a template is a marker with nothing after it: `1.`, `2.`,
+ * or `-`. A space after the marker makes marked read the lines as a paragraph, so
+ * the numbers ran together on one line in the preview. Dropping that trailing
+ * space keeps them list items, as the editor shows them.
+ *
+ * @param {string} markdown
+ * @returns {string}
+ */
+export function normalizeEmptyListItems(markdown) {
+  return String(markdown == null ? '' : markdown).replace(/^([ \t]*(?:[-*+]|\d+[.)]))[ \t]+$/gm, '$1');
+}
