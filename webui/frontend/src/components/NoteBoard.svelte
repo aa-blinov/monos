@@ -220,7 +220,7 @@
           on:click={() => $boardColumns = String(columnCount)}
         >
           {columnCount}
-          <span class="ml-1 text-[length:var(--text-whisper)] uppercase tracking-[0.12em]">{$localizedText.app.board.columnsShort}</span>
+          <span class="ml-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em]">{$localizedText.app.board.columnsShort}</span>
         </TooltipIconButton>
       {/each}
     {/if}

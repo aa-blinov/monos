@@ -539,7 +539,7 @@
           id="interface-language"
           bind:value={$locale}
           on:change={saveSettings}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
         >
           {#each localeOptions as option}
             <option value={option.value}>{option.label}</option>
@@ -594,7 +594,7 @@
             id="font-family"
             value={$fontFamily}
             on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
           >
             {#each fontOptions as f}
               <option value={f.name}>{f.name} ({$localizedText.optionLabels.fontCategory?.[f.category] || f.category})</option>
@@ -607,7 +607,7 @@
             id="font-size"
             value={$fontSize}
             on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
           >
             {#each localizedFontSizeOptions as s}
               <option value={s.value}>{s.label} ({s.base})</option>
@@ -626,7 +626,7 @@
           id="editor-font-size"
           value={$editorFontSize}
           on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
         >
           {#each localizedEditorFontSizeOptions as s}
             <option value={s.value}>{s.label} ({s.base})</option>
@@ -706,7 +706,7 @@
         </div>
         <div>
           <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
-          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })} disabled={!gitRepos.length}>
+          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
             <option value="">{$localizedText.settings.select}</option>
             {#each gitRepos as r}
               <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
@@ -718,7 +718,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
-          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}>
+          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
             {#if isLoadingBranches}
               <option>{$localizedText.settings.loading}</option>
             {:else if gitBranches.length}

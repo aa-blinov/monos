@@ -767,7 +767,7 @@
             tooltip={`${item.path} · ${relationLabel(item.type)}`}
           >
             <span class="max-w-40 truncate text-xs font-medium">{item.name}</span>
-            <span class="shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
+            <span class="shrink-0 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
           </TooltipIconButton>
         {/each}
       </div>
@@ -910,7 +910,7 @@
   {#if displayedFile && !displayedFile.isDir}
     <div class="h-16 shrink-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-3 sm:px-4 lg:px-8" data-testid="editor-footer" inert={isLoading}>
       <div class="flex h-full items-center gap-2">
-        <p role="status" aria-live="polite" class="order-last ml-auto whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}</p>
+        <p role="status" aria-live="polite" class="order-last ml-auto flex items-center gap-2 whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
         <TooltipIconButton
           type="button"
           data-testid="toggle-focus-mode"

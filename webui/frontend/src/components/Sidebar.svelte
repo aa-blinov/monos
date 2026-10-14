@@ -153,6 +153,23 @@
   let contextMenuPos = { x: 0, y: 0 };
   const CONTEXT_MENU_MARGIN = 4;
   $: if (contextMenu.show && contextMenuEl) adjustContextMenuPosition();
+  // Arrow keys move through the items, Escape closes the menu (the mouse path already worked).
+  function handleContextMenuKeys(event) {
+    const items = [...(contextMenuEl?.querySelectorAll('[role="menuitem"]') ?? [])];
+    if (!items.length) return;
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length].focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index - 1 + items.length) % items.length].focus();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      contextMenu.show = false;
+    }
+  }
+
   async function adjustContextMenuPosition() {
     await tick();
     if (!contextMenu.show || !contextMenuEl) return;
@@ -167,6 +184,8 @@
       margin: CONTEXT_MENU_MARGIN,
     });
     contextMenuPos = { x: next.x, y: next.y };
+    // Keyboard users open the menu with the Menu key or Shift+F10; land on its first item.
+    contextMenuEl.querySelector('[role="menuitem"]')?.focus();
   }
   let isDragOverRoot = false;
   let isSyncing = false;
@@ -599,10 +618,22 @@
     }
   }
 
+  // Two captures in the same second get the same timestamp title. The backend refuses a
+  // taken name with 409, so the capture takes the next free number instead of failing.
+  async function createQuickNoteRecord(baseTitle, payload) {
+    for (let n = 1; n <= 20; n += 1) {
+      const title = n === 1 ? baseTitle : `${baseTitle} ${n}`;
+      try {
+        return { title, data: await createNoteRequest({ ...payload, title }) };
+      } catch (err) {
+        if (err.status !== 409) throw err;
+      }
+    }
+    throw new Error(`no free note name for ${baseTitle}`);
+  }
+
   async function createQuickNoteFromImage(file) {
-    const title = formatTodayNoteTitle();
-    const data = await createNoteRequest({
-      title,
+    const { title, data } = await createQuickNoteRecord(formatTodayNoteTitle(), {
       category: QUICK_NOTES_CATEGORY,
       tags: [],
       content: '',
@@ -665,9 +696,7 @@
         return;
       }
 
-      const title = formatTodayNoteTitle();
-      const data = await createNoteRequest({
-        title,
+      const { title, data } = await createQuickNoteRecord(formatTodayNoteTitle(), {
         category: QUICK_NOTES_CATEGORY,
         tags: [],
         content: clipboardText,
@@ -1187,24 +1216,27 @@
   {#if contextMenu.show}
     <div
       bind:this={contextMenuEl}
+      role="menu"
+      tabindex="-1"
+      on:keydown={handleContextMenuKeys}
       class="fixed bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48"
       style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
-        <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.newNote}</button>
-        <button on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.newFolder}</button>
+        <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newNote}</button>
+        <button on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newFolder}</button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
       {#if !contextMenu.isDir}
         {#if isPinned(contextMenu.targetPath)}
-          <button on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.unpin}</button>
+          <button on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.unpin}</button>
         {:else}
-          <button on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.pin}</button>
+          <button on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.pin}</button>
         {/if}
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
-      <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.editIcon}</button>
-      <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition">{$localizedText.sidebar.context.rename}</button>
+      <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.editIcon}</button>
+      <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.rename}</button>
       {#if !contextMenu.isDir}
         <button
           type="button"

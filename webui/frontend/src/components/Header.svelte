@@ -158,7 +158,7 @@
     {/if}
     {#if showTagSuggestions}
       <div class="absolute top-full left-0 mt-2 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full rounded-xl">
-        <div class="px-3 pb-1 pt-2.5 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.tags.title}</div>
+        <div class="px-3 pb-1 pt-2.5 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.tags.title}</div>
         {#each filteredTags as tag}
           <button
             on:click={() => { clearTimeout(searchTimer); $searchQuery = `#${tag} `; doSearch(); }}
@@ -170,12 +170,13 @@
   </div>
   <TooltipIconButton
     on:click={createQuickNote}
-    class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+    class="inline-flex h-11 w-11 lg:h-10 lg:w-auto lg:gap-2 lg:px-3 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
     label={$localizedText.sidebar.quickNoteFromClipboard}
     tooltip={$localizedText.sidebar.quickNoteFromClipboard}
     tooltipAlign="end"
   >
     <Clipboard class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+    <span class="hidden text-xs uppercase tracking-widest lg:inline">{$localizedText.header.quickNote}</span>
   </TooltipIconButton>
   {:else if noteOpen}
     <div class="flex-1"></div>

@@ -15,6 +15,8 @@
   let newNoteCategory = category;
   let isCreating = false;
   let createError = '';
+  // Set only when the backend refused the name (409): the note that already has it.
+  let duplicatePath = '';
 
   $: if (open) {
     newNoteCategory = category;
@@ -23,6 +25,7 @@
     newNoteCategory = '';
     isCreating = false;
     createError = '';
+    duplicatePath = '';
   }
 
   // A taken name is refused by the backend (409). Today's note opens the one that
@@ -61,6 +64,40 @@
       const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
       onClose();
       onCreated(data, title);
+    } catch (err) {
+      createError = createFailureText(err);
+      duplicatePath = err.status === 409 && err.body?.path ? err.body.path : '';
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  // The name is taken: offer the note that has it, or the same name with a number after it.
+  function openExistingNote() {
+    const title = newNoteTitle.trim();
+    const path = duplicatePath;
+    onClose();
+    onCreated({ path, name: `${title}.md`, isDir: false }, title);
+  }
+
+  async function createNumberedCopy() {
+    if (isCreating) return;
+    const base = newNoteTitle.trim();
+    try {
+      isCreating = true;
+      createError = '';
+      for (let n = 2; n <= 20; n += 1) {
+        const title = `${base} ${n}`;
+        try {
+          const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
+          onClose();
+          onCreated(data, title);
+          return;
+        } catch (err) {
+          if (err.status !== 409) throw err;
+        }
+      }
+      createError = $localizedText.sidebar.errors.duplicateNote;
     } catch (err) {
       createError = createFailureText(err);
     } finally {
@@ -124,7 +161,7 @@
           id="create-note-title"
           type="text"
           bind:value={newNoteTitle}
-          on:input={() => { createError = ''; }}
+          on:input={() => { createError = ''; duplicatePath = ''; }}
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
           class={formFieldClass()}
           on:keydown={(e) => {
@@ -136,6 +173,12 @@
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
         {#if createError}
           <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{createError}</p>
+          {#if duplicatePath}
+            <div class="mt-3 flex flex-wrap gap-3">
+              <button type="button" class={getModalButtonClass('secondary')} on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</button>
+              <button type="button" class={getModalButtonClass('primary')} on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</button>
+            </div>
+          {/if}
         {/if}
       </div>
     </div>
