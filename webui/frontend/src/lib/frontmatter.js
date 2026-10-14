@@ -54,6 +54,23 @@ export function splitFrontmatter(content) {
 }
 
 /**
+ * Put a new body under a note's frontmatter. The `---` fences and the line endings
+ * stay exactly as they were, so editing a body never rewrites the metadata.
+ * A note without frontmatter becomes just its body.
+ * @param {string} content the note as it is now
+ * @param {string} body the body the editor produced
+ * @returns {string}
+ */
+export function replaceFrontmatterBody(content, body) {
+  const match = String(content || '').match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
+  const eol = match && match[0].includes('\r\n') ? '\r\n' : '\n';
+  const nextBody = String(body || '').replace(/^\s*\n/, '').replace(/\r?\n/g, eol);
+  if (!match) return nextBody;
+  const block = match[0].replace(/\r?\n$/, '');
+  return `${block}${eol}${eol}${nextBody}`;
+}
+
+/**
  * Read the keys the UI owns out of a note's frontmatter.
  * @param {string} content
  * @returns {{ title: string, category: string, tags: string[], due: string }}

@@ -17,7 +17,7 @@
       <div class="mb-6 flex items-baseline justify-between gap-4">
         <div>
           <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.22em] text-[var(--text-secondary)]">{$localizedText.searchResults.heading}</div>
-          <div class="mt-1 text-sm text-[var(--text-secondary)]">{$localizedText.searchResults.matches(results.length, query)}</div>
+          <div class="mt-1 text-sm text-[var(--text-secondary)]" role="status">{$localizedText.searchResults.matches(results.length, query)}</div>
         </div>
       </div>
       <NoteBoard
@@ -30,8 +30,14 @@
       />
     </div>
   {:else if !isSearching}
-    <div class="flex items-center justify-center h-32">
-      <span class="text-xs uppercase tracking-widest opacity-40">{$localizedText.searchResults.noResults}</span>
+    <div class="flex h-32 flex-col items-center justify-center gap-3 px-4 text-center" role="status">
+      <span class="text-xs uppercase tracking-widest opacity-70">{$localizedText.searchResults.noResults}</span>
+      <p class="max-w-md text-sm text-[var(--text-secondary)]">{$localizedText.searchResults.noResultsHint}</p>
+      <button
+        type="button"
+        class="min-h-9 rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        on:click={() => dispatch('clear')}
+      >{$localizedText.searchResults.clear}</button>
     </div>
   {/if}
 </div>

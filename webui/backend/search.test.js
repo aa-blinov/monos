@@ -22,6 +22,11 @@ status: published
   });
 });
 
+test('parseFrontmatterMetadata читает теги в списке без кавычек, как в FRONTMATTER.md', () => {
+  assert.deepEqual(parseFrontmatterMetadata('---\ntitle: Журнал\ntags: [journal]\n---\n\nтекст').tags, ['journal']);
+  assert.deepEqual(parseFrontmatterMetadata('---\ntags: [web, design, q4]\n---\n').tags, ['web', 'design', 'q4']);
+});
+
 test('searchEntries предпочитает точное совпадение в title совпадению только в content', () => {
   const entries = [
     {

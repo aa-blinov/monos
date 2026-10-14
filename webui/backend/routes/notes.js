@@ -22,6 +22,14 @@ export function registerNoteRoutes(app) {
       if (category) indexDirectoryTree(dirPath);
 
       const filePath = path.join(dirPath, fileName);
+      // The file is the only copy of its text, so a name that is taken is refused,
+      // never written over. The existing path lets the UI open that note instead.
+      if (fs.existsSync(filePath)) {
+        return res.status(409).json({
+          detail: `A note named "${fileName.replace(/\.md$/, '')}" already exists in this folder.`,
+          path: relPath(filePath),
+        });
+      }
       const noteContent = upsertFrontmatter(content || '', { title, category, tags: tags || [], pinned: false });
       fs.writeFileSync(filePath, noteContent, 'utf-8');
 
