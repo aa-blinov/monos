@@ -6,6 +6,8 @@ import { NOTES_DIR } from '../config.js';
 import { humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName } from '../utils.js';
 import { indexFile, indexAllFiles } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
+import { removeNoteFromFts } from '../fts.js';
+import { planLinkUpdate, refreshNotesAfterRename } from '../link-rename.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
 
 export function registerFileRoutes(app) {
@@ -85,10 +87,12 @@ export function registerFileRoutes(app) {
       if (newFullPath !== fullPath && fs.existsSync(newFullPath)) {
         return res.status(409).json({ detail: 'Target already exists' });
       }
+      const newRelativePath = relPath(newFullPath);
+      // Decided before the move: the index still knows the linking notes by the old name.
+      const linkPlan = fs.statSync(fullPath).isDirectory() ? null : planLinkUpdate(getDb(), filePath, newRelativePath);
       fs.renameSync(fullPath, newFullPath);
 
       const db = getDb();
-      const newRelativePath = relPath(newFullPath);
       const isDir = fs.statSync(newFullPath).isDirectory();
       db.prepare('UPDATE notes_index SET path = ?, name = ? WHERE path = ?').run(newRelativePath, newName, filePath);
 
@@ -108,7 +112,13 @@ export function registerFileRoutes(app) {
         indexAllFiles();
       }
 
-      res.json({ path: newRelativePath, name: newName });
+      let links = { updatedLinks: 0, updatedPaths: [] };
+      if (linkPlan) {
+        removeNoteFromFts(db, filePath);
+        db.prepare('DELETE FROM note_links WHERE source_path = ?').run(filePath);
+        links = refreshNotesAfterRename({ oldPath: filePath, newPath: newRelativePath, ...linkPlan });
+      }
+      res.json({ path: newRelativePath, name: newName, ...links });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }

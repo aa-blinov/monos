@@ -32,6 +32,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   import { loadShellSettings } from './lib/shell-settings.js';
   import { runSearch } from './lib/search-results.js';
   import { createNoteRequest, renameItemRequest } from './lib/sidebar-api.js';
+  import { NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
@@ -55,6 +56,18 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   let headerComponent;
   let sidebarComponent;
+  let linksNotice = '';
+  let linksNoticeTimer;
+
+  function showLinksNotice(event) {
+    if (!event.detail.updatedLinks) return;
+    linksNotice = $localizedText.app.linksUpdated(event.detail.updatedLinks);
+    clearTimeout(linksNoticeTimer);
+    linksNoticeTimer = setTimeout(() => { linksNotice = ''; }, 3000);
+  }
+
+  onMount(() => window.addEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
+  onDestroy(() => window.removeEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
   let systemThemeSignal = 0;
   let routePath = initialRoutePath;
   let lastKnownAppRoute = initialRoutePath;
@@ -923,4 +936,9 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     on:select={searchByTag}
     on:changed={() => { if (headerComponent?.loadTags) headerComponent.loadTags(); if (sidebarComponent?.loadTree) sidebarComponent.loadTree(); }}
   />
+  {#if linksNotice}
+    <div class="fixed bottom-6 left-6 z-[200] animate-toast-in" role="status">
+      <div class="border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">{linksNotice}</div>
+    </div>
+  {/if}
 </Router>
