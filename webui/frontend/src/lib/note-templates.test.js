@@ -77,3 +77,39 @@ test('buildTemplateContent для daily-note возвращает Markdown с д
   assert.match(md, /Started: 14:30/);
   assert.match(md, /## Focus/);
 });
+
+test('каждый шаблон переведён: название, описание, группа, категория и предложенное название', () => {
+  const en = getLocalizedTemplates('en');
+  const date = new Date(2026, 0, 15, 9, 30);
+  for (const ru of getLocalizedTemplates('ru')) {
+    const enTemplate = en.find((template) => template.id === ru.id);
+    assert.ok(enTemplate, `${ru.id}: нет английской версии`);
+    for (const field of ['title', 'description', 'category', 'group', 'approachTitle']) {
+      assert.notEqual(ru[field], enTemplate[field], `${ru.id}: ${field} не переведено`);
+    }
+    assert.notEqual(
+      ru.suggestedTitle(getTemplateContext('', date, 'ru')),
+      enTemplate.suggestedTitle(getTemplateContext('', date, 'en')),
+      `${ru.id}: предложенное название не переведено`,
+    );
+  }
+});
+
+test('в русских названиях, описаниях и тексте шаблонов нет английских слов, кроме названий методик', () => {
+  const methods = new Set(['moc', 'zettel', 'zettelkasten', 'gtd', 'url', 'rfc', 'adr', 'cornell', 'eisenhower']);
+  const date = new Date(2026, 0, 15, 9, 30);
+  for (const ru of getLocalizedTemplates('ru')) {
+    const texts = [
+      ru.title,
+      ru.description,
+      ru.category,
+      ru.approachDescription,
+      ru.suggestedTitle(getTemplateContext('', date, 'ru')),
+      buildTemplateContent(ru, ru.title, date, 'ru'),
+    ];
+    const english = texts
+      .flatMap((text) => text.match(/[A-Za-z][A-Za-z']{2,}/g) || [])
+      .filter((word) => !methods.has(word.toLowerCase()));
+    assert.deepEqual(english, [], `${ru.id}: английские слова в русском тексте`);
+  }
+});

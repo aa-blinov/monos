@@ -534,6 +534,139 @@ Severity:
 `,
   },
   {
+    id: 'status-update',
+    group: 'Work',
+    title: 'Status Update',
+    description: 'What got done, what is next, blockers, and the decision you need from others.',
+    category: 'Status',
+    tags: ['status', 'standup'],
+    suggestedTitle: (ctx) => titleWithDate('Status', ctx),
+    content: ({ title, localDate }) => `# ${title}
+
+Date: ${localDate}
+Period:
+Project:
+
+## Done
+-
+
+## Next
+- [ ]
+
+## Blockers
+-
+
+## Decisions Needed
+-
+`,
+  },
+  {
+    id: 'design-doc',
+    group: 'Work',
+    title: 'Design Doc (RFC)',
+    description: 'Problem, goals, non-goals, proposal, alternatives, risks, and rollout plan.',
+    category: 'Design',
+    tags: ['design', 'rfc'],
+    suggestedTitle: () => 'RFC -',
+    content: ({ title, localDate }) => `# ${title}
+
+Status: Draft
+Author:
+Reviewers:
+Date: ${localDate}
+
+## Problem
+What is broken or missing, and who feels it?
+
+## Goals
+-
+
+## Non-goals
+-
+
+## Proposal
+Describe the chosen approach in a few paragraphs.
+
+## Alternatives
+1.
+2.
+
+## Risks
+-
+
+## Rollout
+- [ ] Step - Owner - Due
+`,
+  },
+  {
+    id: 'bug-report',
+    group: 'Work',
+    title: 'Bug Report',
+    description: 'Steps to reproduce, expected and actual behavior, environment, and impact.',
+    category: 'Bugs',
+    tags: ['bug'],
+    suggestedTitle: () => 'Bug -',
+    content: ({ title, localDate }) => `# ${title}
+
+Date: ${localDate}
+Severity:
+Environment:
+Version:
+
+## Steps to Reproduce
+1.
+2.
+3.
+
+## Expected
+-
+
+## Actual
+-
+
+## Impact
+- Who is affected:
+- How often:
+
+## Workaround
+-
+
+## Notes
+-
+`,
+  },
+  {
+    id: 'client-call',
+    group: 'Work',
+    title: 'Client Call',
+    description: 'Client goals, pain points, what we heard, decisions, and next steps with owners.',
+    category: 'Clients',
+    tags: ['client', 'meeting'],
+    suggestedTitle: (ctx) => titleWithDate('Client Call', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
+
+Date: ${localDate}
+Time: ${time}
+Client:
+Participants:
+
+## Goals
+-
+
+## Pain Points
+-
+
+## What We Heard
+-
+
+## Decisions
+-
+
+## Next Steps
+- [ ] Task - Owner - Due
+`,
+  },
+  {
     id: 'eisenhower-matrix',
     group: 'Planning',
     title: 'Eisenhower Matrix',
@@ -990,7 +1123,7 @@ const ruApproachDefinitions = {
     description: 'Встречи, проекты, решения, постмортемы и фокусированные рабочие сессии.',
   },
   life: {
-    title: 'Life OS',
+    title: 'Личная жизнь',
     description: 'Личное планирование: здоровье, деньги, привычки, поездки и цели.',
   },
   household: {
@@ -1014,6 +1147,10 @@ const templateApproaches = {
   'work-session': 'work',
   'decision-record': 'work',
   postmortem: 'work',
+  'status-update': 'work',
+  'design-doc': 'work',
+  'bug-report': 'work',
+  'client-call': 'work',
   'research-note': 'knowledge',
   'topic-moc': 'knowledge',
   zettel: 'knowledge',
@@ -1294,7 +1431,7 @@ const ruTemplateTranslations = {
     title: 'Тема / MOC',
     description: 'Карта содержания по теме: точки входа, ключевые заметки и открытые вопросы.',
     category: 'Карты',
-    suggestedTitle: () => 'MOC -',
+    suggestedTitle: () => 'Тема -',
     content: ({ title }) => `# ${title}
 
 ## Обзор
@@ -1410,7 +1547,7 @@ URL:
   'person-note': {
     group: 'Люди',
     title: 'Человек',
-    description: 'Личная CRM-заметка: контекст, отношения, проекты, обещания и follow-up.',
+    description: 'Личная заметка о человеке: контекст, отношения, проекты, обещания и следующие шаги.',
     category: 'Люди',
     suggestedTitle: () => 'Человек -',
     content: ({ title }) => `# ${title}
@@ -1435,7 +1572,7 @@ URL:
 ## Журнал разговоров
 - 
 
-## Follow-up
+## Следующие шаги
 - [ ] 
 `,
   },
@@ -1505,6 +1642,131 @@ URL:
 - [ ] Ответственный - Действие - Срок
 `,
   },
+  'status-update': {
+    group: 'Работа',
+    title: 'Статус',
+    description: 'Что сделано, что дальше, блокеры и решение, которое нужно от других.',
+    category: 'Статус',
+    suggestedTitle: (ctx) => titleWithDate('Статус', ctx),
+    content: ({ title, localDate }) => `# ${title}
+
+Дата: ${localDate}
+Период:
+Проект:
+
+## Сделано
+-
+
+## Дальше
+- [ ]
+
+## Блокеры
+-
+
+## Нужны решения
+-
+`,
+  },
+  'design-doc': {
+    group: 'Работа',
+    title: 'Технический документ (RFC)',
+    description: 'Проблема, цели, не-цели, предложение, альтернативы, риски и план внедрения.',
+    category: 'Дизайн',
+    suggestedTitle: () => 'Технический документ -',
+    content: ({ title, localDate }) => `# ${title}
+
+Статус: Черновик
+Автор:
+Ревьюеры:
+Дата: ${localDate}
+
+## Проблема
+Что сломано или отсутствует и кто от этого страдает?
+
+## Цели
+-
+
+## Не-цели
+-
+
+## Предложение
+Опишите выбранный подход в нескольких абзацах.
+
+## Альтернативы
+1.
+2.
+
+## Риски
+-
+
+## Внедрение
+- [ ] Шаг - Владелец - Срок
+`,
+  },
+  'bug-report': {
+    group: 'Работа',
+    title: 'Баг-репорт',
+    description: 'Шаги воспроизведения, ожидаемое и фактическое поведение, окружение и влияние.',
+    category: 'Баги',
+    suggestedTitle: () => 'Баг -',
+    content: ({ title, localDate }) => `# ${title}
+
+Дата: ${localDate}
+Серьёзность:
+Окружение:
+Версия:
+
+## Шаги воспроизведения
+1.
+2.
+3.
+
+## Ожидалось
+-
+
+## Фактически
+-
+
+## Влияние
+- Кого затронуло:
+- Как часто:
+
+## Обходной путь
+-
+
+## Заметки
+-
+`,
+  },
+  'client-call': {
+    group: 'Работа',
+    title: 'Созвон с клиентом',
+    description: 'Цели клиента, болевые точки, что услышали, решения и следующие шаги с владельцами.',
+    category: 'Клиенты',
+    suggestedTitle: (ctx) => titleWithDate('Созвон с клиентом', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
+
+Дата: ${localDate}
+Время: ${time}
+Клиент:
+Участники:
+
+## Цели
+-
+
+## Болевые точки
+-
+
+## Что услышали
+-
+
+## Решения
+-
+
+## Следующие шаги
+- [ ] Задача - Владелец - Срок
+`,
+  },
   'eisenhower-matrix': {
     group: 'Планирование',
     title: 'Матрица Эйзенхауэра',
@@ -1539,8 +1801,8 @@ URL:
   'gtd-clarify': {
     group: 'Планирование',
     title: 'GTD-разбор входящих',
-    description: 'Превратить сырой inbox в следующие действия, проекты, ожидания, someday или справку.',
-    category: 'GTD',
+    description: 'Превратить сырые входящие в следующие действия, проекты, ожидания, «когда-нибудь» или справку.',
+    category: 'Входящие',
     suggestedTitle: (ctx) => titleWithDate('GTD-разбор', ctx),
     content: ({ localDate }) => `# GTD-разбор входящих
 
