@@ -96,7 +96,7 @@ test('каждый шаблон переведён: название, описа
 });
 
 test('в русских названиях, описаниях и тексте шаблонов нет английских слов, кроме названий методик', () => {
-  const methods = new Set(['moc', 'zettel', 'zettelkasten', 'gtd', 'url', 'rfc', 'adr', 'cornell', 'eisenhower']);
+  const methods = new Set(['moc', 'zettel', 'zettelkasten', 'gtd', 'url', 'rfc', 'adr', 'okr', 'cornell', 'eisenhower']);
   const date = new Date(2026, 0, 15, 9, 30);
   for (const ru of getLocalizedTemplates('ru')) {
     const texts = [
