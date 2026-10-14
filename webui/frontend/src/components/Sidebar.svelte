@@ -57,6 +57,7 @@
   import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
+  import { localeStamp } from '../lib/date-format.js';
   import { formFieldClass } from '../lib/form-field.js';
   import { Icon } from '../lib/tree-icons.js';
 
@@ -236,7 +237,7 @@
     ...directoryList,
   ].filter((dir) => dir !== undefined)));
   $: templatePreview = selectedTemplate
-    ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title)
+    ? buildRuntimeTemplateContent(selectedTemplate, templateTitle || selectedTemplate.title, new Date(), $locale)
     : '';
   $: templatePreviewParts = extractTemplateMetadata(templatePreview);
   $: templatePreviewBodyHtml = sanitizePreviewHtml(marked.parse(normalizeEmptyListItems(templatePreviewParts.rest)));
@@ -355,19 +356,9 @@
   $: totalNotes = tree ? countNotes(tree) : 0;
   $: selectedNoteCount = selectedPaths.size;
 
-  function padDatePart(value) {
-    return String(value).padStart(2, '0');
-  }
-
+  // Заметка «сегодня» и быстрая заметка называются датой по языку интерфейса.
   export function formatTodayNoteTitle(date = new Date()) {
-    return [
-      padDatePart(date.getDate()),
-      padDatePart(date.getMonth() + 1),
-      padDatePart(date.getFullYear() % 100),
-      padDatePart(date.getHours()),
-      padDatePart(date.getMinutes()),
-      padDatePart(date.getSeconds()),
-    ].join('-');
+    return localeStamp(date, $locale);
   }
 
   let pendingSelectedPath = null;
@@ -482,7 +473,7 @@
 
   function applyTemplateDefaults(template = selectedTemplate) {
     if (!template) return;
-    const ctx = getTemplateContext('', new Date());
+    const ctx = getTemplateContext('', new Date(), $locale);
     templateTitle = template.suggestedTitle?.(ctx) || template.title;
     templateCategory = template.category || '';
   }
@@ -597,7 +588,7 @@
         title,
         category: templateCategory,
         tags: selectedTemplate.tags || [],
-        content: buildRuntimeTemplateContent(selectedTemplate, title),
+        content: buildRuntimeTemplateContent(selectedTemplate, title, new Date(), $locale),
       });
       await finishTemplateCreate(data, title);
     } catch (err) {
@@ -642,7 +633,7 @@
             title,
             category: templateCategory,
             tags: selectedTemplate.tags || [],
-            content: buildRuntimeTemplateContent(selectedTemplate, title),
+            content: buildRuntimeTemplateContent(selectedTemplate, title, new Date(), $locale),
           });
           await finishTemplateCreate(data, title);
           return;

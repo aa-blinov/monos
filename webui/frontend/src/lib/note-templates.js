@@ -1,13 +1,7 @@
+import { localeDate, localeMonth } from './date-format.js';
+
 function padDatePart(value) {
   return String(value).padStart(2, '0');
-}
-
-function isoDate(date = new Date()) {
-  return [
-    date.getFullYear(),
-    padDatePart(date.getMonth() + 1),
-    padDatePart(date.getDate()),
-  ].join('-');
 }
 
 function shortDate(date = new Date()) {
@@ -22,16 +16,17 @@ function timeLabel(date = new Date()) {
   return `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`;
 }
 
-function titleWithDate(prefix, date = new Date()) {
-  // ISO, как даты внутри шаблона: в названии и тексте одна и та же запись даты.
-  return `${prefix} ${isoDate(date)}`;
+// Название с датой: «Daily 14.10.2026» по-русски, «Daily 2026-10-14» в остальных языках.
+function titleWithDate(prefix, ctx) {
+  return `${prefix} ${ctx.localDate}`;
 }
 
-function context(title, date = new Date()) {
+function context(title, date = new Date(), locale = 'en') {
   return {
     title: title || 'Untitled',
     date,
-    isoDate: isoDate(date),
+    localDate: localeDate(date, locale),
+    monthLabel: localeMonth(date, locale),
     shortDate: shortDate(date),
     time: timeLabel(date),
   };
@@ -45,10 +40,10 @@ export const noteTemplates = [
     description: 'Daily focus, quick log, tasks, gratitude, and links created today.',
     category: 'Daily',
     tags: ['daily', 'journal'],
-    suggestedTitle: ({ date }) => titleWithDate('Daily', date),
-    content: ({ isoDate, time }) => `# Daily Note
+    suggestedTitle: (ctx) => titleWithDate('Daily', ctx),
+    content: ({ localDate, time }) => `# Daily Note
 
-Date: ${isoDate}
+Date: ${localDate}
 Started: ${time}
 
 ## Focus
@@ -78,10 +73,10 @@ Started: ${time}
     description: 'Review outcomes, open loops, wins, lessons, and next week priorities.',
     category: 'Reviews',
     tags: ['weekly', 'review'],
-    suggestedTitle: ({ date }) => titleWithDate('Weekly Review', date),
-    content: ({ isoDate }) => `# Weekly Review
+    suggestedTitle: (ctx) => titleWithDate('Weekly Review', ctx),
+    content: ({ localDate }) => `# Weekly Review
 
-Week of ${isoDate}
+Week of ${localDate}
 
 ## Wins
 - 
@@ -111,10 +106,10 @@ Week of ${isoDate}
     description: 'Agenda, participants, decisions, notes, and action items with owners.',
     category: 'Meetings',
     tags: ['meeting'],
-    suggestedTitle: ({ date }) => titleWithDate('Meeting', date),
-    content: ({ title, isoDate, time }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Meeting', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
 
-Date: ${isoDate}
+Date: ${localDate}
 Time: ${time}
 Project:
 Participants:
@@ -142,10 +137,10 @@ Participants:
     description: 'A lightweight one-on-one template for context, agenda, feedback, and follow-ups.',
     category: 'People',
     tags: ['meeting', '1on1'],
-    suggestedTitle: ({ date }) => titleWithDate('1:1', date),
-    content: ({ isoDate }) => `# 1:1
+    suggestedTitle: (ctx) => titleWithDate('1:1', ctx),
+    content: ({ localDate }) => `# 1:1
 
-Date: ${isoDate}
+Date: ${localDate}
 Person:
 Context:
 
@@ -173,9 +168,9 @@ Context:
     category: 'Projects',
     tags: ['project'],
     suggestedTitle: () => 'Project Brief',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Created: ${isoDate}
+Created: ${localDate}
 Status: Draft
 Owner:
 
@@ -215,10 +210,10 @@ What should be true when this project is done?
     description: 'Focused work block with intention, constraints, log, outputs, and next step.',
     category: 'Work Sessions',
     tags: ['work-session'],
-    suggestedTitle: ({ date }) => titleWithDate('Work Session', date),
-    content: ({ isoDate, time }) => `# Work Session
+    suggestedTitle: (ctx) => titleWithDate('Work Session', ctx),
+    content: ({ localDate, time }) => `# Work Session
 
-Date: ${isoDate}
+Date: ${localDate}
 Started: ${time}
 Project:
 
@@ -246,9 +241,9 @@ Project:
     category: 'Decisions',
     tags: ['decision', 'adr'],
     suggestedTitle: () => 'Decision - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Date: ${isoDate}
+Date: ${localDate}
 Status: Proposed
 Owner:
 
@@ -283,9 +278,9 @@ Signal:
     category: 'Research',
     tags: ['research'],
     suggestedTitle: () => 'Research - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Date: ${isoDate}
+Date: ${localDate}
 Question:
 Confidence: Low / Medium / High
 
@@ -408,9 +403,9 @@ Finished:
     category: 'Reading',
     tags: ['article', 'paper'],
     suggestedTitle: () => 'Review - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Captured: ${isoDate}
+Captured: ${localDate}
 Source:
 Author:
 URL:
@@ -510,9 +505,9 @@ Target Level:
     category: 'Reviews',
     tags: ['postmortem', 'retro'],
     suggestedTitle: () => 'Postmortem - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Date: ${isoDate}
+Date: ${localDate}
 Status:
 Severity:
 
@@ -545,10 +540,10 @@ Severity:
     description: 'Prioritize tasks by urgency and importance: do, schedule, delegate, eliminate.',
     category: 'Planning',
     tags: ['planning', 'priority'],
-    suggestedTitle: ({ date }) => titleWithDate('Eisenhower', date),
-    content: ({ title, isoDate }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Eisenhower', ctx),
+    content: ({ title, localDate }) => `# ${title}
 
-Date: ${isoDate}
+Date: ${localDate}
 
 ## Do Now
 Urgent and important.
@@ -578,10 +573,10 @@ Neither urgent nor important.
     description: 'Turn raw inbox items into next actions, projects, waiting-for, someday, or reference.',
     category: 'GTD',
     tags: ['gtd', 'inbox'],
-    suggestedTitle: ({ date }) => titleWithDate('GTD Clarify', date),
-    content: ({ isoDate }) => `# GTD Clarify
+    suggestedTitle: (ctx) => titleWithDate('GTD Clarify', ctx),
+    content: ({ localDate }) => `# GTD Clarify
 
-Date: ${isoDate}
+Date: ${localDate}
 
 ## Inbox Items
 - 
@@ -609,10 +604,10 @@ Date: ${isoDate}
     description: 'Simple monthly money plan for income, expenses, savings, and subscriptions.',
     category: 'Finance',
     tags: ['budget', 'finance'],
-    suggestedTitle: ({ date }) => titleWithDate('Budget', date),
-    content: ({ title, isoDate }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Budget', ctx),
+    content: ({ title, monthLabel }) => `# ${title}
 
-Month: ${isoDate.slice(0, 7)}
+Month: ${monthLabel}
 
 ## Income
 | Source | Amount | Notes |
@@ -648,9 +643,9 @@ Month: ${isoDate.slice(0, 7)}
     category: 'Finance',
     tags: ['subscriptions', 'finance'],
     suggestedTitle: () => 'Subscriptions',
-    content: ({ isoDate }) => `# Subscriptions
+    content: ({ localDate }) => `# Subscriptions
 
-Updated: ${isoDate}
+Updated: ${localDate}
 
 | Service | Cost | Period | Renewal | Keep? | Notes |
 | --- | ---: | --- | --- | --- | --- |
@@ -669,10 +664,10 @@ Updated: ${isoDate}
     description: 'Plan meals, reuse ingredients, and build a shopping list for the week.',
     category: 'Food',
     tags: ['meal-plan', 'groceries'],
-    suggestedTitle: ({ date }) => titleWithDate('Meal Plan', date),
-    content: ({ isoDate }) => `# Meal Plan
+    suggestedTitle: (ctx) => titleWithDate('Meal Plan', ctx),
+    content: ({ localDate }) => `# Meal Plan
 
-Week of ${isoDate}
+Week of ${localDate}
 
 ## Meals
 | Day | Breakfast | Lunch | Dinner |
@@ -812,10 +807,10 @@ People:
     description: 'Track household maintenance, chores, repairs, warranties, and next dates.',
     category: 'Home',
     tags: ['home', 'maintenance'],
-    suggestedTitle: ({ date }) => titleWithDate('Home Maintenance', date),
-    content: ({ isoDate }) => `# Home Maintenance
+    suggestedTitle: (ctx) => titleWithDate('Home Maintenance', ctx),
+    content: ({ localDate }) => `# Home Maintenance
 
-Updated: ${isoDate}
+Updated: ${localDate}
 
 ## This Week
 - [ ] 
@@ -845,10 +840,10 @@ Updated: ${isoDate}
     description: 'Daily health snapshot for sleep, energy, symptoms, movement, and notes.',
     category: 'Health',
     tags: ['health', 'log'],
-    suggestedTitle: ({ date }) => titleWithDate('Health', date),
-    content: ({ isoDate }) => `# Health Log
+    suggestedTitle: (ctx) => titleWithDate('Health', ctx),
+    content: ({ localDate }) => `# Health Log
 
-Date: ${isoDate}
+Date: ${localDate}
 
 ## Snapshot
 - Sleep:
@@ -879,10 +874,10 @@ Date: ${isoDate}
     description: 'Simple weekly habit checklist with reflection and adjustment prompts.',
     category: 'Habits',
     tags: ['habits', 'weekly'],
-    suggestedTitle: ({ date }) => titleWithDate('Habits', date),
-    content: ({ isoDate }) => `# Habit Tracker
+    suggestedTitle: (ctx) => titleWithDate('Habits', ctx),
+    content: ({ localDate }) => `# Habit Tracker
 
-Week of ${isoDate}
+Week of ${localDate}
 
 | Habit | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -929,9 +924,9 @@ Week of ${isoDate}
     category: 'Home',
     tags: ['dashboard'],
     suggestedTitle: () => 'Home Dashboard',
-    content: ({ isoDate }) => `# Home Dashboard
+    content: ({ localDate }) => `# Home Dashboard
 
-Updated: ${isoDate}
+Updated: ${localDate}
 
 ## Now
 - 
@@ -1045,10 +1040,10 @@ const ruTemplateTranslations = {
     title: 'Дневная заметка',
     description: 'Фокус дня, быстрый журнал, задачи, благодарность и заметки, созданные сегодня.',
     category: 'Дневник',
-    suggestedTitle: ({ date }) => titleWithDate('День', date),
-    content: ({ isoDate, time }) => `# Дневная заметка
+    suggestedTitle: (ctx) => titleWithDate('День', ctx),
+    content: ({ localDate, time }) => `# Дневная заметка
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Начато: ${time}
 
 ## Фокус
@@ -1076,10 +1071,10 @@ const ruTemplateTranslations = {
     title: 'Еженедельный обзор',
     description: 'Итоги, открытые вопросы, победы, уроки и приоритеты следующей недели.',
     category: 'Обзоры',
-    suggestedTitle: ({ date }) => titleWithDate('Еженедельный обзор', date),
-    content: ({ isoDate }) => `# Еженедельный обзор
+    suggestedTitle: (ctx) => titleWithDate('Еженедельный обзор', ctx),
+    content: ({ localDate }) => `# Еженедельный обзор
 
-Неделя от ${isoDate}
+Неделя от ${localDate}
 
 ## Победы
 - 
@@ -1107,10 +1102,10 @@ const ruTemplateTranslations = {
     title: 'Заметка встречи',
     description: 'Повестка, участники, решения, заметки и задачи с ответственными.',
     category: 'Встречи',
-    suggestedTitle: ({ date }) => titleWithDate('Встреча', date),
-    content: ({ title, isoDate, time }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Встреча', ctx),
+    content: ({ title, localDate, time }) => `# ${title}
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Время: ${time}
 Проект:
 Участники:
@@ -1136,10 +1131,10 @@ const ruTemplateTranslations = {
     title: 'Встреча 1:1',
     description: 'Лёгкий шаблон для контекста, повестки, обратной связи и договорённостей.',
     category: 'Люди',
-    suggestedTitle: ({ date }) => titleWithDate('1:1', date),
-    content: ({ isoDate }) => `# 1:1
+    suggestedTitle: (ctx) => titleWithDate('1:1', ctx),
+    content: ({ localDate }) => `# 1:1
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Человек:
 Контекст:
 
@@ -1165,9 +1160,9 @@ const ruTemplateTranslations = {
     description: 'Результат, рамки, участники, этапы, риски и критерии успеха.',
     category: 'Проекты',
     suggestedTitle: () => 'Бриф проекта',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Создано: ${isoDate}
+Создано: ${localDate}
 Статус: Черновик
 Владелец:
 
@@ -1205,10 +1200,10 @@ const ruTemplateTranslations = {
     title: 'Рабочая сессия',
     description: 'Фокусированный рабочий блок с намерением, ограничениями, журналом и следующим шагом.',
     category: 'Рабочие сессии',
-    suggestedTitle: ({ date }) => titleWithDate('Рабочая сессия', date),
-    content: ({ isoDate, time }) => `# Рабочая сессия
+    suggestedTitle: (ctx) => titleWithDate('Рабочая сессия', ctx),
+    content: ({ localDate, time }) => `# Рабочая сессия
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Начато: ${time}
 Проект:
 
@@ -1234,9 +1229,9 @@ const ruTemplateTranslations = {
     description: 'Контекст, варианты, решение, компромиссы и дата пересмотра.',
     category: 'Решения',
     suggestedTitle: () => 'Решение - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Статус: Предложено
 Владелец:
 
@@ -1269,9 +1264,9 @@ const ruTemplateTranslations = {
     description: 'Вопрос исследования, источники, факты, выводы и уровень уверенности.',
     category: 'Исследования',
     suggestedTitle: () => 'Исследование - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Вопрос:
 Уверенность: Низкая / Средняя / Высокая
 
@@ -1386,9 +1381,9 @@ const ruTemplateTranslations = {
     description: 'Структура для статей, эссе, отчётов и ссылок из интернета.',
     category: 'Чтение',
     suggestedTitle: () => 'Обзор - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Сохранено: ${isoDate}
+Сохранено: ${localDate}
 Источник:
 Автор:
 URL:
@@ -1482,9 +1477,9 @@ URL:
     description: 'Разбор инцидента или проекта: влияние, таймлайн, причины, действия и профилактика.',
     category: 'Обзоры',
     suggestedTitle: () => 'Постмортем - ',
-    content: ({ title, isoDate }) => `# ${title}
+    content: ({ title, localDate }) => `# ${title}
 
-Дата: ${isoDate}
+Дата: ${localDate}
 Статус:
 Критичность:
 
@@ -1515,10 +1510,10 @@ URL:
     title: 'Матрица Эйзенхауэра',
     description: 'Приоритизация задач по срочности и важности: сделать, запланировать, делегировать, убрать.',
     category: 'Планирование',
-    suggestedTitle: ({ date }) => titleWithDate('Эйзенхауэр', date),
-    content: ({ title, isoDate }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Эйзенхауэр', ctx),
+    content: ({ title, localDate }) => `# ${title}
 
-Дата: ${isoDate}
+Дата: ${localDate}
 
 ## Сделать сейчас
 Срочно и важно.
@@ -1546,10 +1541,10 @@ URL:
     title: 'GTD-разбор входящих',
     description: 'Превратить сырой inbox в следующие действия, проекты, ожидания, someday или справку.',
     category: 'GTD',
-    suggestedTitle: ({ date }) => titleWithDate('GTD-разбор', date),
-    content: ({ isoDate }) => `# GTD-разбор входящих
+    suggestedTitle: (ctx) => titleWithDate('GTD-разбор', ctx),
+    content: ({ localDate }) => `# GTD-разбор входящих
 
-Дата: ${isoDate}
+Дата: ${localDate}
 
 ## Входящие
 - 
@@ -1575,10 +1570,10 @@ URL:
     title: 'Месячный бюджет',
     description: 'Простой финансовый план месяца: доходы, расходы, накопления и подписки.',
     category: 'Финансы',
-    suggestedTitle: ({ date }) => titleWithDate('Бюджет', date),
-    content: ({ title, isoDate }) => `# ${title}
+    suggestedTitle: (ctx) => titleWithDate('Бюджет', ctx),
+    content: ({ title, monthLabel }) => `# ${title}
 
-Месяц: ${isoDate.slice(0, 7)}
+Месяц: ${monthLabel}
 
 ## Доходы
 | Источник | Сумма | Заметки |
@@ -1612,9 +1607,9 @@ URL:
     description: 'Повторяющиеся платежи, даты продления, польза и решения об отмене.',
     category: 'Финансы',
     suggestedTitle: () => 'Подписки',
-    content: ({ isoDate }) => `# Подписки
+    content: ({ localDate }) => `# Подписки
 
-Обновлено: ${isoDate}
+Обновлено: ${localDate}
 
 | Сервис | Цена | Период | Продление | Оставить? | Заметки |
 | --- | ---: | --- | --- | --- | --- |
@@ -1631,10 +1626,10 @@ URL:
     title: 'План питания + покупки',
     description: 'План еды на неделю, повторное использование ингредиентов и список покупок.',
     category: 'Еда',
-    suggestedTitle: ({ date }) => titleWithDate('Питание', date),
-    content: ({ isoDate }) => `# План питания
+    suggestedTitle: (ctx) => titleWithDate('Питание', ctx),
+    content: ({ localDate }) => `# План питания
 
-Неделя от ${isoDate}
+Неделя от ${localDate}
 
 ## Еда
 | День | Завтрак | Обед | Ужин |
@@ -1766,10 +1761,10 @@ URL:
     title: 'Обслуживание дома',
     description: 'Домашние задачи, ремонт, гарантии, покупки и следующие даты.',
     category: 'Дом',
-    suggestedTitle: ({ date }) => titleWithDate('Дом', date),
-    content: ({ isoDate }) => `# Обслуживание дома
+    suggestedTitle: (ctx) => titleWithDate('Дом', ctx),
+    content: ({ localDate }) => `# Обслуживание дома
 
-Обновлено: ${isoDate}
+Обновлено: ${localDate}
 
 ## На этой неделе
 - [ ] 
@@ -1797,10 +1792,10 @@ URL:
     title: 'Журнал здоровья',
     description: 'Ежедневный снимок: сон, энергия, симптомы, движение и заметки.',
     category: 'Здоровье',
-    suggestedTitle: ({ date }) => titleWithDate('Здоровье', date),
-    content: ({ isoDate }) => `# Журнал здоровья
+    suggestedTitle: (ctx) => titleWithDate('Здоровье', ctx),
+    content: ({ localDate }) => `# Журнал здоровья
 
-Дата: ${isoDate}
+Дата: ${localDate}
 
 ## Снимок дня
 - Сон:
@@ -1829,10 +1824,10 @@ URL:
     title: 'Трекер привычек',
     description: 'Простой недельный чеклист привычек с рефлексией и корректировкой.',
     category: 'Привычки',
-    suggestedTitle: ({ date }) => titleWithDate('Привычки', date),
-    content: ({ isoDate }) => `# Трекер привычек
+    suggestedTitle: (ctx) => titleWithDate('Привычки', ctx),
+    content: ({ localDate }) => `# Трекер привычек
 
-Неделя от ${isoDate}
+Неделя от ${localDate}
 
 | Привычка | Пн | Вт | Ср | Чт | Пт | Сб | Вс |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1875,9 +1870,9 @@ URL:
     description: 'Лёгкий хаб для приоритетов, активных проектов, ожиданий и важных ссылок.',
     category: 'Главная',
     suggestedTitle: () => 'Личный дашборд',
-    content: ({ isoDate }) => `# Личный дашборд
+    content: ({ localDate }) => `# Личный дашборд
 
-Обновлено: ${isoDate}
+Обновлено: ${localDate}
 
 ## Сейчас
 - 
@@ -1925,11 +1920,11 @@ export function getTemplateById(id, currentLocale = 'en') {
   return templates.find((template) => template.id === id) || templates[0];
 }
 
-export function getTemplateContext(title, date = new Date()) {
-  return context(title, date);
+export function getTemplateContext(title, date = new Date(), locale = 'en') {
+  return context(title, date, locale);
 }
 
-export function buildTemplateContent(template, title, date = new Date()) {
-  const ctx = context(title, date);
+export function buildTemplateContent(template, title, date = new Date(), locale = 'en') {
+  const ctx = context(title, date, locale);
   return template.content(ctx).trimStart();
 }

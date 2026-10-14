@@ -62,6 +62,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `template-library.js` | Manages custom user templates, hidden-library flags, persistence to `localStorage` |
 | `template-preview.js` | `extractTemplateMetadata(markdown)` splits a template's "Label: value" header from its body so the preview can show fields in a grid |
 | `template-preview.test.js` | Typical templates, missing H1, no-blank-line variants, URL values, multi-word labels |
+| `date-format.js` | `localeDate(date, locale)` writes 14.10.2026 for ru and 2026-10-14 otherwise; `localeMonth` and `localeStamp` (the title of quick and daily notes) follow the same split |
+| `date-format.test.js` | Russian and ISO dates, months, the time stamp with dashes, no colons in file names |
 | `quick-note-rename.js` | `resolveQuickNoteRename(current, new, ext='.md')` decides if a quick note should be renamed before opening |
 | `quick-note-rename.test.js` | Case-insensitive equality, empty input, extension normalization |
 

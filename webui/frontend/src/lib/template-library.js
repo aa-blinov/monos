@@ -59,7 +59,7 @@ function normalizeCustomTemplate(template = {}) {
 function renderCustomTemplateContent(source, ctx) {
   return String(source || '')
     .replaceAll('{{title}}', ctx.title)
-    .replaceAll('{{date}}', ctx.isoDate)
+    .replaceAll('{{date}}', ctx.localDate)
     .replaceAll('{{shortDate}}', ctx.shortDate)
     .replaceAll('{{time}}', ctx.time);
 }
@@ -151,7 +151,7 @@ export function customTemplateToRuntime(template) {
     approach: 'custom',
     approachTitle: 'Custom',
     approachDescription: 'Templates you created.',
-    suggestedTitle: ({ date }) => normalized.title || `Note ${date.toISOString().slice(0, 10)}`,
+    suggestedTitle: (ctx) => normalized.title || `Note ${ctx.localDate}`,
     content: (ctx) => renderCustomTemplateContent(normalized.content || `# ${ctx.title}\n`, ctx),
   };
 }
@@ -211,9 +211,9 @@ export async function deleteCustomTemplate(templateId) {
   await saveTemplateSettings({ force: true });
 }
 
-export function buildRuntimeTemplateContent(template, title, date = new Date()) {
+export function buildRuntimeTemplateContent(template, title, date = new Date(), locale = 'en') {
   if (template?.source === 'custom') {
-    return template.content(getTemplateContext(title, date)).trimStart();
+    return template.content(getTemplateContext(title, date, locale)).trimStart();
   }
-  return buildLibraryTemplateContent(template, title, date);
+  return buildLibraryTemplateContent(template, title, date, locale);
 }
