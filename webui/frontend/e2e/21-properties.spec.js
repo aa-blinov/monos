@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { createBlankNote, prepareMonos, uniqueTitle } from './support/monos.js';
 
+test('свойства открываются из боковой панели на компьютере, как и на телефоне', async ({ page }) => {
+  await prepareMonos(page);
+  await page.goto('/');
+  await page.getByTestId('open-properties').click();
+  await expect(page.getByTestId('properties-view')).toBeVisible();
+});
+
 test('свойства заметки пишутся в шапку, видны в таблице и находятся фильтром prop:', async ({ page }) => {
   await prepareMonos(page);
   const title = uniqueTitle('Properties Note');
