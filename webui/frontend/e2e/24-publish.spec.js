@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { prepareMonos, uniqueTitle } from './support/monos.js';
+import { openAdvancedSettings, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test('публикация: сайт записывается в выбранную папку, сообщение называет её', async ({ page }) => {
   await prepareMonos(page);
@@ -13,6 +13,7 @@ test('публикация: сайт записывается в выбранн�
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-e2e-site-'));
 
   await page.goto('/settings');
+  await openAdvancedSettings(page);
   await page.getByTestId('publish-folder').fill(outside);
   await page.getByTestId('publish-button').click();
 

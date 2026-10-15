@@ -869,7 +869,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
                         {$localizedText.app.homeActions.importNotes}
                       </button>
                     </div>
-                    <ul class="mt-10 max-w-sm space-y-2 text-left text-xs leading-relaxed text-[var(--text-secondary)]" data-testid="first-run-tips">
+                    <ul class="mt-10 max-w-sm space-y-2 text-left text-sm leading-relaxed text-[var(--text-secondary)]" data-testid="first-run-tips">
                       <li><span class="text-[var(--text-primary)]">{shortcutLabel('Ctrl+K')}</span> · {$localizedText.app.tips.search}</li>
                       <li>{$localizedText.app.tips.links}</li>
                       <li>{$localizedText.app.tips.commands}</li>

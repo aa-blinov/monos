@@ -1261,7 +1261,7 @@
             >
               <SlidersHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
               <span class="hidden sm:inline">{$localizedText.properties.title}</span>
-              <span class="tabular-nums">{customProperties.length}</span>
+              {#if customProperties.length}<span class="tabular-nums">{customProperties.length}</span>{/if}
             </button>
             {#if propertyPanel === 'properties'}
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">

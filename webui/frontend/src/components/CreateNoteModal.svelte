@@ -19,6 +19,7 @@
   let createError = '';
   // Set only when the backend refused the name (409): the note that already has it.
   let duplicatePath = '';
+  let titleInput;
 
   $: if (open) {
     newNoteCategory = category;
@@ -153,10 +154,18 @@
         <div class="mb-3 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
           {$localizedText.sidebar.modals.createStart}
         </div>
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-3">
           <button
             type="button"
-            class="min-h-24 rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
+            class="min-h-24 flex flex-col justify-start rounded-md border border-[var(--text-primary)] bg-[var(--bg-secondary)]/45 p-4 text-left transition hover:border-[var(--text-primary)]"
+            on:click={() => titleInput?.focus()}
+          >
+            <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
+            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.blankNoteHint}</span>
+          </button>
+          <button
+            type="button"
+            class="min-h-24 flex flex-col justify-start rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
             on:click={createToday}
             disabled={isCreating}
           >
@@ -165,7 +174,7 @@
           </button>
           <button
             type="button"
-            class="min-h-24 rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
+            class="min-h-24 flex flex-col justify-start rounded-md border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
@@ -177,6 +186,7 @@
         <label for="create-note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
         <input
           id="create-note-title"
+          bind:this={titleInput}
           type="text"
           bind:value={newNoteTitle}
           on:input={() => { createError = ''; duplicatePath = ''; }}

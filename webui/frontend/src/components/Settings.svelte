@@ -836,401 +836,6 @@
       {/if}
     </section>
 
-    <section class="space-y-5" data-testid="publish-section">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.publishTitle}</h2>
-      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.publishHint}</p>
-      <form class="space-y-2" on:submit|preventDefault={publishNotes}>
-        <label class="block space-y-1">
-          <span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.publishFolder}</span>
-          <input
-            type="text"
-            bind:value={publishFolder}
-            placeholder="/Users/you/Sites"
-            aria-describedby="publish-folder-hint"
-            data-testid="publish-folder"
-            class={formFieldClass()}
-          />
-        </label>
-        <p id="publish-folder-hint" class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.publishFolderHint}</p>
-        <button
-          type="submit"
-          disabled={publishBusy || !publishFolder.trim()}
-          data-testid="publish-button"
-          class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-        >{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</button>
-      </form>
-      {#if publishStatus}
-        <p role="status" class="text-xs text-[var(--green)] break-all">{publishStatus}</p>
-      {/if}
-      {#if publishError}
-        <p role="alert" class="text-xs text-[var(--red)]">{publishError}</p>
-      {/if}
-    </section>
-
-    <section class="space-y-5" data-testid="lan-section">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
-      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
-      {#if lanStatus === 'remote'}
-        <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
-      {:else if lanStatus === 'error'}
-        <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
-      {:else if lanStatus === 'ready'}
-        <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
-          {$localizedText.settings.lanToggle}
-        </Checkbox>
-        {#if lan.enabled}
-          {#if lan.urls.length}
-            <div class="space-y-2" data-testid="lan-urls">
-              <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
-              {#each lan.urls as url (url)}
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    readonly
-                    value={url}
-                    aria-label={url}
-                    on:focus={(event) => event.currentTarget.select()}
-                    class={formFieldClass({ extraClass: 'font-mono text-xs' })}
-                  />
-                  <button
-                    type="button"
-                    on:click={() => copyLanUrl(url)}
-                    class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                  >{$localizedText.settings.lanCopy}</button>
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
-          {/if}
-          <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
-          <button
-            type="button"
-            disabled={lanBusy}
-            data-testid="lan-renew"
-            on:click={() => confirmingLanRenew = true}
-            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          >{$localizedText.settings.lanRenew}</button>
-        {/if}
-        {#if lan.restartRequired}
-          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
-        {/if}
-        {#if lanNotice}
-          <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
-        {/if}
-        {#if lanError}
-          <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
-        {/if}
-      {/if}
-      {#if confirmingLanRenew}
-        <ConfirmModal
-          danger={true}
-          title={$localizedText.settings.lanRenewTitle}
-          message={$localizedText.settings.lanRenewMessage}
-          confirmLabel={$localizedText.settings.lanRenewAction}
-          on:confirm={renewLanToken}
-          on:cancel={() => confirmingLanRenew = false}
-        />
-      {/if}
-    </section>
-
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
-      {#if orphanStatus === 'loading'}
-        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLoading}</div>
-      {:else if orphanStatus === 'error'}
-        <div class="text-xs text-[var(--red)]">{$localizedText.settings.attachmentsError}</div>
-      {:else if orphanLocked > 0}
-        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLocked}</div>
-      {:else if orphans.length === 0}
-        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsClean}</div>
-      {:else}
-        <div class="text-xs text-[var(--text-secondary)]">
-          {$localizedText.settings.attachmentsFound.replace('{count}', orphans.length).replace('{size}', humanSize(orphanTotalSize))}
-        </div>
-        <ul class="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
-          {#each orphans as orphan (orphan.path)}
-            <li class="flex items-center justify-between gap-3 px-3 py-2">
-              <span class="min-w-0">
-                <span class="block truncate text-xs text-[var(--text-primary)]">{orphan.name}</span>
-                <span class="block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{orphan.folder}</span>
-              </span>
-              <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{humanSize(orphan.size)}</span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </section>
-
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.connectionsTitle}</h2>
-      {#if connectionStatus === 'loading'}
-        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsLoading}</div>
-      {:else if connectionStatus === 'error'}
-        <div class="text-xs text-[var(--red)]">{$localizedText.settings.connectionsError}</div>
-      {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount + connectionReport.conflictCopyCount === 0}
-        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsClean}</div>
-      {:else}
-        {#if connectionReport.broken.length > 0}
-          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.brokenLinks}, {connectionReport.broken.length}</h3>
-          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="broken-links">
-            {#each connectionReport.broken as item (item.target)}
-              <li class="flex items-center justify-between gap-3 px-3 py-2">
-                <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
-                <button
-                  type="button"
-                  class="min-w-0 shrink truncate text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-                  on:click={() => openNote(item.sources[0])}
-                >{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-        {#if connectionReport.orphanCount > 0}
-          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.orphanNotes}, {connectionReport.orphanCount}</h3>
-          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
-            {#each connectionReport.orphans as item (item.path)}
-              <li>
-                <button type="button" class="block w-full truncate px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>{item.title}</button>
-              </li>
-            {/each}
-          </ul>
-          {#if connectionReport.orphanCount > connectionReport.orphans.length}
-            <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.orphanCount - connectionReport.orphans.length)}</div>
-          {/if}
-        {/if}
-        {#if connectionReport.staleCount > 0}
-          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.staleNotes.replace('{days}', connectionReport.staleDays)}, {connectionReport.staleCount}</h3>
-          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
-            {#each connectionReport.stale as item (item.path)}
-              <li>
-                <button type="button" class="flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>
-                  <span class="min-w-0 truncate text-[var(--text-primary)]">{item.title}</span>
-                  <span class="shrink-0 text-[var(--text-tertiary)]">{$localizedText.settings.staleSince.replace('{date}', localeDate(new Date(item.lastActivity), $locale))}</span>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-        {#if connectionReport.conflictCopyCount > 0}
-          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.conflictCopies}, {connectionReport.conflictCopyCount}</h3>
-          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
-            {#each connectionReport.conflictCopies as item (item.path)}
-              <li class="flex items-center justify-between gap-3 px-3 py-2">
-                <button type="button" class="min-w-0 truncate text-left text-xs text-[var(--text-primary)] hover:underline" on:click={() => openNote(item.path)}>{item.title}</button>
-                <span class="hidden min-w-0 truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:block">
-                  {item.kind === 'duplicate'
-                    ? $localizedText.settings.conflictSameText.replace('{original}', noteNameOf(item.original))
-                    : $localizedText.settings.conflictCopyOf.replace('{original}', noteNameOf(item.original))}
-                </span>
-                <button
-                  type="button"
-                  data-testid="conflict-copy-trash"
-                  class="shrink-0 text-xs text-[var(--text-secondary)] hover:text-[var(--red)]"
-                  on:click={() => copyToTrash = item}
-                >{$localizedText.settings.conflictTrash}</button>
-              </li>
-            {/each}
-          </ul>
-          {#if connectionReport.conflictCopyCount > connectionReport.conflictCopies.length}
-            <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.conflictCopyCount - connectionReport.conflictCopies.length)}</div>
-          {/if}
-          {#if copyError}
-            <p role="alert" class="text-xs text-[var(--red)]">{copyError}</p>
-          {/if}
-        {/if}
-      {/if}
-      {#if copyToTrash}
-        <ConfirmModal
-          danger={true}
-          title={$localizedText.settings.conflictTrashTitle}
-          message={$localizedText.settings.conflictTrashMessage.replace('{original}', noteNameOf(copyToTrash.original))}
-          confirmLabel={$localizedText.settings.conflictTrashAction}
-          on:confirm={trashConflictCopy}
-          on:cancel={() => copyToTrash = null}
-        />
-      {/if}
-    </section>
-
-
-    <!-- GitHub Connection -->
-    <section class="space-y-5 pt-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
-
-      <!-- Help -->
-      <details class="text-xs text-[var(--text-secondary)] group">
-        <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
-        <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
-          <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
-          {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
-            <p>{step}</p>
-          {/each}
-          <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
-        </div>
-      </details>
-
-      <form on:submit|preventDefault={authenticate} class="mt-8 space-y-1.5">
-        <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
-        <div class="flex gap-3">
-          <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
-          {#if isAuthenticated}
-            <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
-            {#if confirmingGitReset}
-              <ConfirmModal
-                danger={true}
-                title={$localizedText.settings.resetGitTitle}
-                message={$localizedText.settings.resetGitMessage}
-                confirmLabel={$localizedText.settings.resetGitAction}
-                on:confirm={resetGitAuth}
-                on:cancel={() => confirmingGitReset = false}
-              />
-            {/if}
-          {:else}
-            <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
-              {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
-            </button>
-          {/if}
-        </div>
-      </form>
-
-      {#if repoSafety && !repoSafety.safe}
-        <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
-          <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
-        </div>
-      {/if}
-
-      {#if scopeWarnings.length}
-        <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
-          <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
-          <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-            {#each scopeWarnings as warning}
-              <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
-            {/each}
-          </ul>
-          <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
-        </div>
-      {/if}
-
-      {#if gitError}
-        <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
-      {/if}
-
-      <div class="grid grid-cols-2 gap-6">
-        <div>
-          <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
-          <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
-        </div>
-        <div>
-          <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
-          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
-            <option value="">{$localizedText.settings.select}</option>
-            {#each gitRepos as r}
-              <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
-            {/each}
-          </select>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-6">
-        <div>
-          <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
-          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
-            {#if isLoadingBranches}
-              <option>{$localizedText.settings.loading}</option>
-            {:else if gitBranches.length}
-              {#each gitBranches as b}
-                <option value={b}>{b}</option>
-              {/each}
-            {:else}
-              <option value="main">main</option>
-            {/if}
-          </select>
-        </div>
-        <div>
-          <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button
-          type="button"
-          on:click={setupGitRepo}
-          disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
-          class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
-        >
-          {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
-        </button>
-      </div>
-    </section>
-
-    <!-- Sync Settings -->
-    <section class="space-y-5 border-t border-[var(--border-subtle)] pt-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
-
-      <div class="grid grid-cols-2 gap-6">
-        <div>
-          <label for="auto-sync-interval" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncInterval}</label>
-          <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
-          <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
-        </div>
-        <div>
-          <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
-          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
-        </div>
-      </div>
-
-      <div class="flex items-center">
-        <Checkbox
-          id="auto-format"
-          bind:checked={settings.auto_format_on_save}
-          on:change={saveSettings}
-        >
-          {$localizedText.settings.autoFormatOnSave}
-        </Checkbox>
-      </div>
-    </section>
-
-    <!-- Status & Sync -->
-    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
-
-      <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
-        {#if isCheckingStatus}
-          <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
-        {:else if gitStatus?.initialized}
-          <div class="flex items-center justify-between">
-            <div class="space-y-1.5 text-sm">
-              <div class="flex items-center gap-2.5">
-                <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
-                <span class="font-medium">{gitStatus.current_branch}</span>
-                <span class="text-[var(--text-secondary)]">({gitStatus.status})</span>
-              </div>
-              {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
-              {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
-            </div>
-            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
-              {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
-            </button>
-          </div>
-        {:else if gitStatus && !gitStatus.initialized}
-          <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.notInitialized}</div>
-        {:else}
-          <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.loadingStatus}</div>
-        {/if}
-      </div>
-
-      <div class="flex gap-4 text-xs">
-        <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
-        {#if gitConflicts.length > 0}
-          <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
-        {/if}
-      </div>
-    </section>
-
     <!-- Conflicts -->
     {#if gitConflicts.length > 0}
       <section class="space-y-4 pt-2">
@@ -1248,100 +853,503 @@
       </section>
     {/if}
 
-    <!-- Backup -->
+    <details class="group space-y-8 border-t border-[var(--border-subtle)] pt-6" data-testid="advanced-settings">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
+        <span class="block">
+          <span class="block text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.advanced}</span>
+          <span class="mt-2 block max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.advancedHint}</span>
+        </span>
+      </summary>
+      <section class="space-y-5" data-testid="publish-section">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.publishTitle}</h2>
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.publishHint}</p>
+        <form class="space-y-2" on:submit|preventDefault={publishNotes}>
+          <label class="block space-y-1">
+            <span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.publishFolder}</span>
+            <input
+              type="text"
+              bind:value={publishFolder}
+              placeholder="/Users/you/Sites"
+              aria-describedby="publish-folder-hint"
+              data-testid="publish-folder"
+              class={formFieldClass()}
+            />
+          </label>
+          <p id="publish-folder-hint" class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.publishFolderHint}</p>
+          <button
+            type="submit"
+            disabled={publishBusy || !publishFolder.trim()}
+            data-testid="publish-button"
+            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+          >{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</button>
+        </form>
+        {#if publishStatus}
+          <p role="status" class="text-xs text-[var(--green)] break-all">{publishStatus}</p>
+        {/if}
+        {#if publishError}
+          <p role="alert" class="text-xs text-[var(--red)]">{publishError}</p>
+        {/if}
+      </section>
+
+      <section class="space-y-5" data-testid="lan-section">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
+        {#if lanStatus === 'remote'}
+          <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
+        {:else if lanStatus === 'error'}
+          <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
+        {:else if lanStatus === 'ready'}
+          <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
+            {$localizedText.settings.lanToggle}
+          </Checkbox>
+          {#if lan.enabled}
+            {#if lan.urls.length}
+              <div class="space-y-2" data-testid="lan-urls">
+                <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
+                {#each lan.urls as url (url)}
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      readonly
+                      value={url}
+                      aria-label={url}
+                      on:focus={(event) => event.currentTarget.select()}
+                      class={formFieldClass({ extraClass: 'font-mono text-xs' })}
+                    />
+                    <button
+                      type="button"
+                      on:click={() => copyLanUrl(url)}
+                      class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                    >{$localizedText.settings.lanCopy}</button>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
+            {/if}
+            <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
+            <button
+              type="button"
+              disabled={lanBusy}
+              data-testid="lan-renew"
+              on:click={() => confirmingLanRenew = true}
+              class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            >{$localizedText.settings.lanRenew}</button>
+          {/if}
+          {#if lan.restartRequired}
+            <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
+          {/if}
+          {#if lanNotice}
+            <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
+          {/if}
+          {#if lanError}
+            <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
+          {/if}
+        {/if}
+        {#if confirmingLanRenew}
+          <ConfirmModal
+            danger={true}
+            title={$localizedText.settings.lanRenewTitle}
+            message={$localizedText.settings.lanRenewMessage}
+            confirmLabel={$localizedText.settings.lanRenewAction}
+            on:confirm={renewLanToken}
+            on:cancel={() => confirmingLanRenew = false}
+          />
+        {/if}
+      </section>
+
+      <section class="space-y-5">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
+        {#if orphanStatus === 'loading'}
+          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLoading}</div>
+        {:else if orphanStatus === 'error'}
+          <div class="text-xs text-[var(--red)]">{$localizedText.settings.attachmentsError}</div>
+        {:else if orphanLocked > 0}
+          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLocked}</div>
+        {:else if orphans.length === 0}
+          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsClean}</div>
+        {:else}
+          <div class="text-xs text-[var(--text-secondary)]">
+            {$localizedText.settings.attachmentsFound.replace('{count}', orphans.length).replace('{size}', humanSize(orphanTotalSize))}
+          </div>
+          <ul class="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
+            {#each orphans as orphan (orphan.path)}
+              <li class="flex items-center justify-between gap-3 px-3 py-2">
+                <span class="min-w-0">
+                  <span class="block truncate text-xs text-[var(--text-primary)]">{orphan.name}</span>
+                  <span class="block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{orphan.folder}</span>
+                </span>
+                <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{humanSize(orphan.size)}</span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+
+      <section class="space-y-5">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.connectionsTitle}</h2>
+        {#if connectionStatus === 'loading'}
+          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsLoading}</div>
+        {:else if connectionStatus === 'error'}
+          <div class="text-xs text-[var(--red)]">{$localizedText.settings.connectionsError}</div>
+        {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount + connectionReport.conflictCopyCount === 0}
+          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsClean}</div>
+        {:else}
+          {#if connectionReport.broken.length > 0}
+            <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.brokenLinks}, {connectionReport.broken.length}</h3>
+            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="broken-links">
+              {#each connectionReport.broken as item (item.target)}
+                <li class="flex items-center justify-between gap-3 px-3 py-2">
+                  <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
+                  <button
+                    type="button"
+                    class="min-w-0 shrink truncate text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+                    on:click={() => openNote(item.sources[0])}
+                  >{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if connectionReport.orphanCount > 0}
+            <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.orphanNotes}, {connectionReport.orphanCount}</h3>
+            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
+              {#each connectionReport.orphans as item (item.path)}
+                <li>
+                  <button type="button" class="block w-full truncate px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>{item.title}</button>
+                </li>
+              {/each}
+            </ul>
+            {#if connectionReport.orphanCount > connectionReport.orphans.length}
+              <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.orphanCount - connectionReport.orphans.length)}</div>
+            {/if}
+          {/if}
+          {#if connectionReport.staleCount > 0}
+            <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.staleNotes.replace('{days}', connectionReport.staleDays)}, {connectionReport.staleCount}</h3>
+            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
+              {#each connectionReport.stale as item (item.path)}
+                <li>
+                  <button type="button" class="flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>
+                    <span class="min-w-0 truncate text-[var(--text-primary)]">{item.title}</span>
+                    <span class="shrink-0 text-[var(--text-tertiary)]">{$localizedText.settings.staleSince.replace('{date}', localeDate(new Date(item.lastActivity), $locale))}</span>
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if connectionReport.conflictCopyCount > 0}
+            <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.conflictCopies}, {connectionReport.conflictCopyCount}</h3>
+            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
+              {#each connectionReport.conflictCopies as item (item.path)}
+                <li class="flex items-center justify-between gap-3 px-3 py-2">
+                  <button type="button" class="min-w-0 truncate text-left text-xs text-[var(--text-primary)] hover:underline" on:click={() => openNote(item.path)}>{item.title}</button>
+                  <span class="hidden min-w-0 truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:block">
+                    {item.kind === 'duplicate'
+                      ? $localizedText.settings.conflictSameText.replace('{original}', noteNameOf(item.original))
+                      : $localizedText.settings.conflictCopyOf.replace('{original}', noteNameOf(item.original))}
+                  </span>
+                  <button
+                    type="button"
+                    data-testid="conflict-copy-trash"
+                    class="shrink-0 text-xs text-[var(--text-secondary)] hover:text-[var(--red)]"
+                    on:click={() => copyToTrash = item}
+                  >{$localizedText.settings.conflictTrash}</button>
+                </li>
+              {/each}
+            </ul>
+            {#if connectionReport.conflictCopyCount > connectionReport.conflictCopies.length}
+              <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.conflictCopyCount - connectionReport.conflictCopies.length)}</div>
+            {/if}
+            {#if copyError}
+              <p role="alert" class="text-xs text-[var(--red)]">{copyError}</p>
+            {/if}
+          {/if}
+        {/if}
+        {#if copyToTrash}
+          <ConfirmModal
+            danger={true}
+            title={$localizedText.settings.conflictTrashTitle}
+            message={$localizedText.settings.conflictTrashMessage.replace('{original}', noteNameOf(copyToTrash.original))}
+            confirmLabel={$localizedText.settings.conflictTrashAction}
+            on:confirm={trashConflictCopy}
+            on:cancel={() => copyToTrash = null}
+          />
+        {/if}
+      </section>
 
 
-    <!-- Web clipper -->
-    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
-      <div>
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.clipper}</h2>
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.clipperHint}</p>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          on:click={revealClipperToken}
-          disabled={showClipperToken}
-          class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
-        >
-          {$localizedText.settings.clipperShowToken}
-        </button>
-        {#if showClipperToken}
-          <div class="min-w-0 flex-1 space-y-1">
-            <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>
-            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
-            <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperTokenLabel}</div>
-            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
+      <!-- GitHub Connection -->
+      <section class="space-y-5 pt-5">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
+
+        <!-- Help -->
+        <details class="text-xs text-[var(--text-secondary)] group">
+          <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
+          <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
+            <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
+            {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
+              <p>{step}</p>
+            {/each}
+            <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
+          </div>
+        </details>
+
+        <form on:submit|preventDefault={authenticate} class="mt-8 space-y-1.5">
+          <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
+          <div class="flex gap-3">
+            <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
+            <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
+            {#if isAuthenticated}
+              <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+              {#if confirmingGitReset}
+                <ConfirmModal
+                  danger={true}
+                  title={$localizedText.settings.resetGitTitle}
+                  message={$localizedText.settings.resetGitMessage}
+                  confirmLabel={$localizedText.settings.resetGitAction}
+                  on:confirm={resetGitAuth}
+                  on:cancel={() => confirmingGitReset = false}
+                />
+              {/if}
+            {:else}
+              <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
+                {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
+              </button>
+            {/if}
+          </div>
+        </form>
+
+        {#if repoSafety && !repoSafety.safe}
+          <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+            <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
+            <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
           </div>
         {/if}
-      </div>
-      {#if clipperError}
-        <div class="text-xs text-[var(--red)]">{clipperError}</div>
-      {/if}
-    </section>
 
-
-
-    <!-- Documentation -->
-    <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
-      <div>
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
-        <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
-        </ol>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
-        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
-            <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
-            <dd class="text-[var(--text-secondary)]">{label}</dd>
-          {/each}
-        </dl>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
-        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
-        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {#each [
-              [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
-              [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
-              [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
-              [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
-              [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
-              [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
-            ] as [op, hint]}
-            <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
-            <dd class="text-[var(--text-secondary)]">{hint}</dd>
-          {/each}
-        </dl>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
-        {#if notesDir}
-          <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+        {#if scopeWarnings.length}
+          <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+            <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
+            <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+              {#each scopeWarnings as warning}
+                <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
+              {/each}
+            </ul>
+            <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
+          </div>
         {/if}
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
-      </div>
 
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
-        <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
-          <li>{$localizedText.settings.docsFrontmatter}</li>
-          <li>{$localizedText.settings.docsWikiLinks}</li>
-        </ul>
-      </div>
-    </section>
+        {#if gitError}
+          <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
+        {/if}
+
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
+            <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
+          </div>
+          <div>
+            <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
+            <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
+              <option value="">{$localizedText.settings.select}</option>
+              {#each gitRepos as r}
+                <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
+            <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
+              {#if isLoadingBranches}
+                <option>{$localizedText.settings.loading}</option>
+              {:else if gitBranches.length}
+                {#each gitBranches as b}
+                  <option value={b}>{b}</option>
+                {/each}
+              {:else}
+                <option value="main">main</option>
+              {/if}
+            </select>
+          </div>
+          <div>
+            <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
+            <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button
+            type="button"
+            on:click={setupGitRepo}
+            disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
+            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          >
+            {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
+          </button>
+        </div>
+      </section>
+
+      <!-- Sync Settings -->
+      <section class="space-y-5 border-t border-[var(--border-subtle)] pt-5">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <label for="auto-sync-interval" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncInterval}</label>
+            <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
+            <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
+          </div>
+          <div>
+            <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
+            <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
+          </div>
+        </div>
+
+        <div class="flex items-center">
+          <Checkbox
+            id="auto-format"
+            bind:checked={settings.auto_format_on_save}
+            on:change={saveSettings}
+          >
+            {$localizedText.settings.autoFormatOnSave}
+          </Checkbox>
+        </div>
+      </section>
+
+      <!-- Status & Sync -->
+      <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
+
+        <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
+          {#if isCheckingStatus}
+            <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
+          {:else if gitStatus?.initialized}
+            <div class="flex items-center justify-between">
+              <div class="space-y-1.5 text-sm">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
+                  <span class="font-medium">{gitStatus.current_branch}</span>
+                  <span class="text-[var(--text-secondary)]">({gitStatus.status})</span>
+                </div>
+                {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
+                {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
+                {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
+              </div>
+              <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
+                {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
+              </button>
+            </div>
+          {:else if gitStatus && !gitStatus.initialized}
+            <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.notInitialized}</div>
+          {:else}
+            <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.loadingStatus}</div>
+          {/if}
+        </div>
+
+        <div class="flex gap-4 text-xs">
+          <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
+          {#if gitConflicts.length > 0}
+            <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
+          {/if}
+        </div>
+      </section>
+
+      <!-- Backup -->
+
+
+      <!-- Web clipper -->
+      <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
+        <div>
+          <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.clipper}</h2>
+          <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.clipperHint}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            on:click={revealClipperToken}
+            disabled={showClipperToken}
+            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          >
+            {$localizedText.settings.clipperShowToken}
+          </button>
+          {#if showClipperToken}
+            <div class="min-w-0 flex-1 space-y-1">
+              <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>
+              <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
+              <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperTokenLabel}</div>
+              <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
+            </div>
+          {/if}
+        </div>
+        {#if clipperError}
+          <div class="text-xs text-[var(--red)]">{clipperError}</div>
+        {/if}
+      </section>
+
+
+
+      <!-- Documentation -->
+      <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
+        <div>
+          <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
+          <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
+          <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
+            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
+            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
+          <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+            {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
+              <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
+              <dd class="text-[var(--text-secondary)]">{label}</dd>
+            {/each}
+          </dl>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
+          <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
+          <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+            {#each [
+                [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
+                [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
+                [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
+                [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
+                [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
+                [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
+              ] as [op, hint]}
+              <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
+              <dd class="text-[var(--text-secondary)]">{hint}</dd>
+            {/each}
+          </dl>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
+          {#if notesDir}
+            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+          {/if}
+          <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
+          <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
+            <li>{$localizedText.settings.docsFrontmatter}</li>
+            <li>{$localizedText.settings.docsWikiLinks}</li>
+          </ul>
+        </div>
+      </section>
+    </details>
 
 
     <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-secondary)]">

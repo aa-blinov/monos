@@ -55,9 +55,9 @@ test('inserts an image attachment, previews it, renames it, and updates markdown
 test('creates a quick note from an image in the clipboard', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByLabel('Create quick note from clipboard').click();
+  await page.getByLabel('Create note from clipboard').click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('Quick note saved');
+  await expect(dialog).toContainText('Note from clipboard saved');
   await dialog.getByRole('button', { name: 'Open' }).click();
 
   await expect(page).toHaveURL(/Quick%20Notes/);
