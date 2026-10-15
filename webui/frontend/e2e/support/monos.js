@@ -36,6 +36,11 @@ export async function prepareMonos(page, {
   });
 }
 
+// The advanced group in Settings starts closed; a test that needs its sections opens it first.
+export async function openAdvancedSettings(page) {
+  await page.getByTestId('advanced-settings').evaluate((el) => { el.open = true; });
+}
+
 export function uniqueTitle(prefix) {
   return `${prefix} ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }

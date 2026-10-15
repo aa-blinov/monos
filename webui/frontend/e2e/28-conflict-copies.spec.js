@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { prepareMonos, uniqueTitle } from './support/monos.js';
+import { openAdvancedSettings, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test('конфликтная копия из облака: видна в обслуживании, в корзину уходит после подтверждения', async ({ page }) => {
   await prepareMonos(page);
@@ -10,6 +10,7 @@ test('конфликтная копия из облака: видна в обс�
   }
 
   await page.goto('/settings');
+  await openAdvancedSettings(page);
   const row = page.getByTestId('conflict-copies').locator('li').filter({ hasText: copy });
   await expect(row).toContainText(`Conflict copy of ${original}`);
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openNote, prepareMonos, uniqueTitle } from './support/monos.js';
+import { openAdvancedSettings, openNote, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test('упоминание без ссылки связывается из панели «Связанные», а граф показывает связь', async ({ page }) => {
   await prepareMonos(page);
@@ -36,6 +36,7 @@ test('битые ссылки видны в «Настройках» и откр
   });
 
   await page.goto('/settings');
+  await openAdvancedSettings(page);
   const brokenList = page.getByTestId('broken-links');
   await expect(brokenList).toContainText(`[[${missing}]]`);
   await brokenList.getByRole('button', { name: `in ${broken}` }).click();

@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { prepareMonos } from './support/monos.js';
+import { openAdvancedSettings, prepareMonos } from './support/monos.js';
 
 test('телефон и другие устройства: доступ включается и выключается, новый токен берётся после подтверждения', async ({ page }) => {
   await prepareMonos(page);
   await page.goto('/settings');
+  await openAdvancedSettings(page);
 
   const section = page.getByTestId('lan-section');
   await expect(section.getByRole('heading', { name: 'Phone and other devices' })).toBeVisible();
