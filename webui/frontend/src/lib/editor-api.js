@@ -18,6 +18,9 @@ export const relockNoteRequest = (filePath) => post('/api/file/relock', null, { 
 export const unprotectNoteRequest = (filePath, passphrase) => post('/api/file/unprotect', { passphrase }, { query: { path: filePath } });
 // Writes the notes as a static site into `<target>/monos-site`. Nothing leaves the computer.
 export const publishSiteRequest = (target, folder = '') => post('/api/publish', { target, folder });
+export const loadLanAccessRequest = () => get('/api/lan');
+export const setLanAccessRequest = (enabled) => put('/api/lan', { enabled });
+export const regenerateLanTokenRequest = () => post('/api/lan/token', null);
 export const loadMaintenanceRequest = () => get('/api/notes/maintenance');
 // Sets one custom property of the note, or removes it with { key, remove: true }. Answers with the new list.
 export const setPropertyRequest = (filePath, body) => put('/api/file/property', body, { query: { path: filePath } });

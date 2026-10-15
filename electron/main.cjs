@@ -81,7 +81,8 @@ async function startBackend() {
   }
 
   backendModule = await import(pathToFileURL(appPath('webui', 'backend', 'index.js')).href);
-  const started = await backendModule.startServer({ port: 0, host: APP_HOST });
+  // The address follows the access setting (this computer only, unless other devices are allowed).
+  const started = await backendModule.startServer({ port: 0 });
   process.env.ALLOWED_ORIGINS = `http://127.0.0.1:${started.port}`;
   backendServer = started.server;
   return started.port;

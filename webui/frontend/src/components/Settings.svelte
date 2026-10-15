@@ -14,7 +14,14 @@
   import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
   import { fetchNotesDir } from '../lib/info.js';
-  import { loadBrokenLinksRequest, loadMaintenanceRequest, publishSiteRequest } from '../lib/editor-api.js';
+  import {
+    loadBrokenLinksRequest,
+    loadLanAccessRequest,
+    loadMaintenanceRequest,
+    publishSiteRequest,
+    regenerateLanTokenRequest,
+    setLanAccessRequest,
+  } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import appPackage from '../../../../package.json';
 
@@ -98,12 +105,66 @@
   let publishBusy = false;
   let publishStatus = '';
   let publishError = '';
+  // Access from other devices. A device that got in with a link sees 'remote' here: the server answers
+  // this computer's settings only to this computer.
+  let lan = { enabled: false, token: null, urls: [], restartRequired: false };
+  let lanStatus = 'loading';
+  let lanBusy = false;
+  let lanError = '';
+  let lanNotice = '';
+  let confirmingLanRenew = false;
 
   onMount(async () => {
     try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
     loadOrphanAttachments();
     loadConnectionReport();
+    loadLanAccess();
   });
+
+  async function loadLanAccess() {
+    try {
+      lan = await loadLanAccessRequest();
+      lanStatus = 'ready';
+    } catch (error) {
+      lanStatus = error?.status === 403 ? 'remote' : 'error';
+    }
+  }
+
+  // The switch and the token change at once; a new address takes effect after a restart.
+  async function changeLanAccess(change) {
+    lanBusy = true;
+    lanError = '';
+    lanNotice = '';
+    try {
+      lan = await change();
+    } catch (error) {
+      console.error('Failed to change access from other devices:', error);
+      lanError = $localizedText.settings.lanFailed;
+      lan = { ...lan };
+    } finally {
+      lanBusy = false;
+    }
+  }
+
+  async function copyLanUrl(url) {
+    lanError = '';
+    try {
+      await navigator.clipboard.writeText(url);
+      lanNotice = $localizedText.settings.lanCopied;
+    } catch {
+      lanNotice = '';
+      lanError = $localizedText.settings.lanCopyFailed;
+    }
+  }
+
+  function toggleLanAccess(enabled) {
+    return changeLanAccess(() => setLanAccessRequest(enabled));
+  }
+
+  function renewLanToken() {
+    confirmingLanRenew = false;
+    return changeLanAccess(() => regenerateLanTokenRequest());
+  }
 
   async function loadOrphanAttachments() {
     try {
@@ -581,6 +642,73 @@
       {/if}
       {#if publishError}
         <p role="alert" class="text-xs text-[var(--red)]">{publishError}</p>
+      {/if}
+    </section>
+
+    <section class="space-y-5" data-testid="lan-section">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
+      {#if lanStatus === 'remote'}
+        <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
+      {:else if lanStatus === 'error'}
+        <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
+      {:else if lanStatus === 'ready'}
+        <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
+          {$localizedText.settings.lanToggle}
+        </Checkbox>
+        {#if lan.enabled}
+          {#if lan.urls.length}
+            <div class="space-y-2" data-testid="lan-urls">
+              <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
+              {#each lan.urls as url (url)}
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    readonly
+                    value={url}
+                    aria-label={url}
+                    on:focus={(event) => event.currentTarget.select()}
+                    class={formFieldClass({ extraClass: 'font-mono text-xs' })}
+                  />
+                  <button
+                    type="button"
+                    on:click={() => copyLanUrl(url)}
+                    class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                  >{$localizedText.settings.lanCopy}</button>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
+          {/if}
+          <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
+          <button
+            type="button"
+            disabled={lanBusy}
+            data-testid="lan-renew"
+            on:click={() => confirmingLanRenew = true}
+            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+          >{$localizedText.settings.lanRenew}</button>
+        {/if}
+        {#if lan.restartRequired}
+          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
+        {/if}
+        {#if lanNotice}
+          <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
+        {/if}
+        {#if lanError}
+          <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
+        {/if}
+      {/if}
+      {#if confirmingLanRenew}
+        <ConfirmModal
+          danger={true}
+          title={$localizedText.settings.lanRenewTitle}
+          message={$localizedText.settings.lanRenewMessage}
+          confirmLabel={$localizedText.settings.lanRenewAction}
+          on:confirm={renewLanToken}
+          on:cancel={() => confirmingLanRenew = false}
+        />
       {/if}
     </section>
 
