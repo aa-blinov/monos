@@ -24,16 +24,35 @@ The token lives in `lan-access.json` in the notes root, readable only by the own
 
 ## What is not protected
 
-The connection is plain HTTP, so traffic on the network is not encrypted, and anyone who can read that network can read the token and the notes. Turn access on only in a network you trust. There is no HTTPS in Monos itself; putting a tunnel with HTTPS in front of it is up to you.
+The connection is plain HTTP, so traffic on the network is not encrypted, and anyone who can read that network can read the token and the notes. Turn access on only in a network you trust. Monos does not serve HTTPS itself, and a tunnel or reverse proxy in front of it is not safe (see Android below).
 
-## Installing the web app
+## Installing on a phone
 
-The app ships a web app manifest and icons (`webui/frontend/public`), so a browser can offer to add it to the home screen:
+The manifest, the icons and the offline page are tested in Chromium and WebKit emulation. Installation on a real iPhone or Android phone has not been tested yet.
 
-- iOS Safari: Share → Add to Home Screen opens Monos in its own window.
-- Android Chrome and desktop browsers install a web app only from a secure address (HTTPS or this computer). Over plain HTTP on the network they add a shortcut to the page instead.
+### iPhone (Safari)
+
+1. Turn access on, restart Monos and copy the link with the token from the settings.
+2. On the phone, on the same Wi-Fi, open the link in Safari. Monos opens.
+3. Tap Share → Add to Home Screen.
+4. Open Monos from the home screen.
+
+A home-screen app keeps its own cookies. Safari copies a site's cookies once, when the site is saved to the home screen, so open the link in Safari before saving. Cookies in a home-screen app can disappear after a period without use; this is reported in WebKit bug reports and is not checked here. If the app asks for the token again, open the link in Safari.
+
+### Android (Chrome)
+
+Chrome installs a web app only from a secure origin: HTTPS with a certificate the phone trusts, or this computer. Over plain HTTP on the network Chrome offers only a shortcut to the page.
+
+Monos does not serve HTTPS yet. Two routes are possible, and neither is built or tested:
+
+- **Tailscale.** `tailscale cert` issues a certificate that Chrome trusts for the machine's `*.ts.net` name, and Tailscale encrypts the traffic as well. Monos would need its own HTTPS listener with that certificate, and its host check would have to accept that name; today it accepts only IP addresses and `.local` names. The certificate's name appears in public certificate transparency logs.
+- **A private CA (mkcert).** The phone must trust the CA. Whether Chrome on Android accepts a user-installed CA for installation was not confirmed. Anyone who holds the CA's key can sign certificates for any name, so copy only the public `rootCA.pem` to the phone and keep the key private.
+
+Do not put a reverse proxy or tunnel in front of Monos, for example `tailscale serve`, cloudflared or ngrok. The server treats every request from 127.0.0.1 as coming from this computer, so a proxy on the same machine lets other devices skip the token and reach `/api/lan`.
 
 The service worker (`public/sw.js`) is registered only in a production build served over HTTPS. It keeps no copy of the notes: every request goes to the network, and only a page load that cannot reach this computer gets a short note instead of the browser's error page.
+
+References: [Tailscale: enabling HTTPS certificates](https://tailscale.com/docs/how-to/set-up-https-certificates), [MDN: making PWAs installable](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_Installable), [WebKit bug 181849: home-screen apps don't share storage with Safari](https://bugs.webkit.org/show_bug.cgi?id=181849).
 
 ## Where it lives
 
