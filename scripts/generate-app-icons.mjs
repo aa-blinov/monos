@@ -81,7 +81,8 @@ function roundedRectDistance(x, y, left, top, right, bottom, radius) {
   return outside + inside - radius;
 }
 
-function drawIcon(size) {
+// `fullBleed` fills the whole square with the background, for icons the system masks itself (iOS, maskable).
+function drawIcon(size, { fullBleed = false } = {}) {
   const data = Buffer.alloc(size * size * 4);
   const scale = size / 1024;
   const s = (value) => value * scale;
@@ -91,7 +92,7 @@ function drawIcon(size) {
       const ux = x / scale;
       const uy = y / scale;
       const distance = roundedRectDistance(ux, uy, 96, 96, 928, 928, 218);
-      const coverage = clamp(0.5 - distance * scale);
+      const coverage = fullBleed ? 1 : clamp(0.5 - distance * scale);
       if (coverage <= 0) continue;
 
       const gradient = mix(colors.bgTop, colors.bgBottom, clamp((uy - 96) / 832));
@@ -100,8 +101,10 @@ function drawIcon(size) {
       const color = mix(gradient, colors.border, glow);
       blendPixel(data, size, x, y, color, coverage);
 
-      const border = clamp((14 - Math.abs(distance)) * scale);
-      blendPixel(data, size, x, y, colors.border, border * 0.65);
+      if (!fullBleed) {
+        const border = clamp((14 - Math.abs(distance)) * scale);
+        blendPixel(data, size, x, y, colors.border, border * 0.65);
+      }
     }
   }
 
@@ -272,4 +275,12 @@ fs.writeFileSync(path.join(buildDir, 'icon.icns'), createIcns([
   { type: 'ic10', data: pngs.get(1024) },
 ]));
 
-console.log(`Generated app icons in ${path.relative(repoRoot, buildDir)}`);
+// The web app's install icons: rounded for the manifest, full-bleed where the system crops the shape itself.
+const publicDir = path.join(repoRoot, 'webui', 'frontend', 'public');
+fs.mkdirSync(publicDir, { recursive: true });
+fs.writeFileSync(path.join(publicDir, 'icon-192.png'), drawIcon(192));
+fs.writeFileSync(path.join(publicDir, 'icon-512.png'), pngs.get(512));
+fs.writeFileSync(path.join(publicDir, 'icon-maskable-512.png'), drawIcon(512, { fullBleed: true }));
+fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), drawIcon(180, { fullBleed: true }));
+
+console.log(`Generated app icons in ${path.relative(repoRoot, buildDir)} and ${path.relative(repoRoot, publicDir)}`);
