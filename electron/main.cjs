@@ -217,11 +217,21 @@ app.on('before-quit', (event) => {
 
 // The backend stops after the windows have closed and flushed. Stopping it on
 // before-quit cut off the saves the pages were still sending.
+// The last step exits directly. A quit that starts from a terminal signal (SIGTERM, SIGINT, Ctrl+C where the app was
+// started) does not end the process when this step calls app.quit() again: the window has closed and the backend
+// has stopped, so there is nothing left to wait for. app.exit ends the process at once.
 app.on('will-quit', (event) => {
   if (backendStopped || !backendModule?.stopServer) return;
   event.preventDefault();
   backendModule.stopServer().finally(() => {
     backendStopped = true;
-    app.quit();
+    app.exit(0);
   });
 });
+
+// A terminal signal (`kill`, Ctrl+C where the app was started) quits the app the way Cmd+Q does: the windows save
+// what they hold, then the backend stops. The backend's own signal handler only stops the server, which left the
+// window open with nothing behind it.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => app.quit());
+}
