@@ -2068,3 +2068,44 @@ apiTest('сохранение тегов не трогает алиасы и н�
   const resolved = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Метка' }));
   assert.equal(resolved.data.path, 'notes/Links/Tagged.md');
 });
+
+apiTest('свойства: запись в шапку, отказы, файл-инфо и таблица с prop:-фильтром и сортировкой', async () => {
+  const folder = path.join(notesDir, 'Props');
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, 'Plan A.md'), '---\ntitle: Plan A\nstatus: open\n---\n\nТекст.\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Plan B.md'), '---\ntitle: Plan B\nstatus: done\npriority: 5\n---\n\nТекст.\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Plan C.md'), '---\ntitle: Plan C\n---\n\nТекст.\n', 'utf-8');
+  indexAllFiles();
+
+  const setProperty = (notePath, body) => requestJson(buildUrl('/api/file/property', { path: notePath }), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const added = await setProperty('notes/Props/Plan A.md', { key: 'priority', type: 'number', value: 2 });
+  assert.equal(added.response.status, 200);
+  assert.deepEqual(added.data.properties.find((item) => item.key === 'priority'), { key: 'priority', type: 'number', value: 2 });
+  assert.match(fs.readFileSync(path.join(folder, 'Plan A.md'), 'utf-8'), /title: Plan A\nstatus: open\npriority: 2\n---/);
+
+  assert.equal((await setProperty('notes/Props/Plan A.md', { key: 'title', type: 'text', value: 'x' })).response.status, 400);
+  assert.equal((await setProperty('notes/Props/Plan A.md', { key: 'due', type: 'date', value: '2026-02-30' })).response.status, 400);
+  assert.equal((await setProperty('notes/Props/Nope.md', { key: 'x', type: 'text', value: 'y' })).response.status, 404);
+
+  const info = await requestJson(buildUrl('/api/file-info', { path: 'notes/Props/Plan B.md' }));
+  assert.deepEqual(info.data.properties.map((item) => item.key), ['status', 'priority']);
+
+  const removed = await setProperty('notes/Props/Plan B.md', { key: 'status', remove: true });
+  assert.equal(removed.response.status, 200);
+  assert.equal(fs.readFileSync(path.join(folder, 'Plan B.md'), 'utf-8').includes('status:'), false);
+
+  const filtered = await requestJson(buildUrl('/api/notes/table', { query: 'prop:priority>=2', sort: 'priority', dir: 'desc' }));
+  assert.deepEqual(filtered.data.rows.map((row) => row.title), ['Plan B', 'Plan A']);
+  assert.ok(filtered.data.keys.find((item) => item.key === 'priority').count >= 2);
+
+  const ascending = await requestJson(buildUrl('/api/notes/table', { query: 'prop:priority', sort: 'priority', dir: 'asc' }));
+  assert.deepEqual(ascending.data.rows.map((row) => row.title), ['Plan A', 'Plan B']);
+
+  const byStatus = await requestJson(buildUrl('/api/notes/table', { query: 'prop:status' }));
+  assert.deepEqual(byStatus.data.rows.map((row) => row.title), ['Plan A']);
+});

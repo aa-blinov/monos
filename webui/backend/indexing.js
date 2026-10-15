@@ -5,6 +5,7 @@ import { indexNoteForFts, removeNoteFromFts, ensureFtsSchema } from './fts.js';
 import { parseFrontmatterMetadata } from './search.js';
 import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
+import { readProperties } from './properties.js';
 import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath } from './utils.js';
 
 function parseCachedTags(rawTags) {
@@ -38,11 +39,12 @@ export function indexFile(filePath, content) {
   const isDir = stats.isDirectory();
   const modifiedAt = stats.mtime.toISOString();
   const metadata = !isDir ? parseFrontmatterMetadata(content) : { title: '', tags: [], category: '' };
+  const properties = !isDir ? readProperties(content || '') : [];
   const existing = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(relativePath);
 
   if (existing) {
     db.prepare(`
-      UPDATE notes_index SET name = ?, name_nfc = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?, pinned = ?
+      UPDATE notes_index SET name = ?, name_nfc = ?, is_dir = ?, parent_path = ?, title = ?, tags = ?, category = ?, content = ?, modified_at = ?, pinned = ?, props = ?
       WHERE path = ?
     `).run(
       name,
@@ -55,12 +57,13 @@ export function indexFile(filePath, content) {
       content || '',
       modifiedAt,
       metadata.pinned ? 1 : 0,
+      JSON.stringify(properties),
       relativePath
     );
   } else {
     db.prepare(`
-      INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened, pinned)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, title, content, tags, category, date_created, modified_at, last_opened, pinned, props)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       relativePath,
       name,
@@ -74,7 +77,8 @@ export function indexFile(filePath, content) {
       nowISO(),
       modifiedAt,
       nowISO(),
-      metadata.pinned ? 1 : 0
+      metadata.pinned ? 1 : 0,
+      JSON.stringify(properties)
     );
   }
 

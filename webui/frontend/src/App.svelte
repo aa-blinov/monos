@@ -134,6 +134,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
       || pathname === '/settings'
       || pathname === '/trash'
       || pathname === '/templates'
+      || pathname === '/properties'
       || pathname.startsWith('/notes/');
   }
 
@@ -483,6 +484,12 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     navigate('/templates');
   }
 
+  function openPropertiesView() {
+    setRoutePath('/properties');
+    clearSearch();
+    navigate('/properties');
+  }
+
   function openTagPanel() {
     tagPanelOpen = true;
   }
@@ -751,6 +758,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
           on:openSettings={openSettings}
           on:openTrash={openTrash}
           on:openTags={openTagPanel}
+          on:openProperties={openPropertiesView}
           on:openSavedSearches={openSavedSearchPanel}
           on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
@@ -805,6 +813,11 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
           <!-- Редкий экран: его код грузится, только когда пользователь туда пришёл. -->
           {#await import('./components/TemplateManager.svelte') then templateManager}
             <svelte:component this={templateManager.default} />
+          {/await}
+        </Route>
+        <Route path="/properties">
+          {#await import('./components/PropertiesView.svelte') then propertiesView}
+            <svelte:component this={propertiesView.default} on:navigate={handleNavigate} />
           {/await}
         </Route>
         <Route path="/">

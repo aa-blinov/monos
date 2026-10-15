@@ -7,9 +7,40 @@ import { NOTES_DIR } from '../config.js';
 import { assertFileName, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
+import { parseStoredProperties } from '../properties.js';
 import { isEncryptedSecret, protectSecret, revealSecret } from './secret-store.js';
 import { noteCardPayload, parseTags } from './helpers.js';
 import { requireBodyFields, requireStringField } from './validate.js';
+
+// The value a table column compares by, or null when the note does not have the property.
+function tableCell(row, sort) {
+  if (sort === 'title') return row.title;
+  if (sort === 'modified') return row.modified ? Date.parse(row.modified) : null;
+  const property = row.properties.find((item) => String(item.key).toLowerCase() === sort.toLowerCase());
+  if (!property) return null;
+  return Array.isArray(property.value) ? property.value.join(', ') : property.value;
+}
+
+// Numbers compare as numbers, booleans as booleans, everything else as text (ISO dates sort as text).
+function compareCells(left, right) {
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  if (typeof left === 'boolean' && typeof right === 'boolean') return Number(left) - Number(right);
+  return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// Rows without the column go last, whichever way the table is sorted.
+function sortTableRows(rows, sort, descending) {
+  const sign = descending ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const left = tableCell(a, sort);
+    const right = tableCell(b, sort);
+    if (left === null || right === null) {
+      if (left === right) return a.title.localeCompare(b.title);
+      return left === null ? 1 : -1;
+    }
+    return compareCells(left, right) * sign || a.title.localeCompare(b.title);
+  });
+}
 
 export function registerNoteRoutes(app) {
   app.post('/api/notes/create', (req, res) => {
@@ -336,6 +367,55 @@ export function registerNoteRoutes(app) {
       res.json(searchEntries(entries, { query, searchContent }));
     } catch (error) {
       res.status(500).json({ detail: error.message });
+    }
+  });
+
+  // The notes as rows of their properties. `query` takes the search syntax, so `prop:status=done` filters
+  // the rows; `sort` is `modified`, `title` or a property name, and `dir` is `asc` or `desc`. `keys` lists
+  // every property the notes use, most used first, so the table can offer them as columns.
+  app.get('/api/notes/table', (req, res) => {
+    try {
+      const query = String(req.query.query || '').trim();
+      const sort = String(req.query.sort || 'modified');
+      const descending = req.query.dir !== 'asc';
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 300, 1), 1000);
+      const entries = getDb().prepare(`
+        SELECT path, name, title, category, tags, modified_at, props
+        FROM notes_index
+        WHERE is_dir = 0 AND (trashed_at IS NULL OR trashed_at = '')
+      `).all();
+
+      const keyUse = new Map();
+      for (const entry of entries) {
+        for (const property of parseStoredProperties(entry.props)) {
+          const id = String(property.key).toLowerCase();
+          const use = keyUse.get(id) || { key: String(property.key), count: 0, type: property.type };
+          use.count += 1;
+          keyUse.set(id, use);
+        }
+      }
+
+      const matched = query
+        ? new Set(searchEntries(entries, { query, limit: entries.length }).map((item) => item.path))
+        : null;
+      const rows = entries
+        .filter((entry) => !matched || matched.has(entry.path))
+        .map((entry) => ({
+          path: entry.path,
+          title: entry.title?.trim() || entry.name.replace(/\.md$/i, ''),
+          category: entry.category || '',
+          tags: parseTags(entry.tags),
+          modified: entry.modified_at || null,
+          properties: parseStoredProperties(entry.props),
+        }));
+      const sorted = sortTableRows(rows, sort, descending);
+      res.json({
+        rows: sorted.slice(0, limit),
+        total: sorted.length,
+        keys: [...keyUse.values()].sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)).slice(0, 60),
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
     }
   });
 

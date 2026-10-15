@@ -1183,6 +1183,10 @@
         <Icon.Hash size="20" strokeWidth="1.7" />
         <span>{$localizedText.tags.title}</span>
       </button>
+      <button data-testid="open-properties" on:click={() => { dispatch('openProperties'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.SlidersHorizontal size="20" strokeWidth="1.7" />
+        <span>{$localizedText.properties.sidebar}</span>
+      </button>
       <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Trash2 size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.trash}</span>

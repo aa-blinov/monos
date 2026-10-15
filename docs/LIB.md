@@ -53,6 +53,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `note-refresh.test.js` | Flush waits for every listener's save; announce stays silent when no links changed |
 | `local-graph.js` | `layoutLocalGraph` places the note in the centre of a small canvas, its neighbours on a ring and the links between them; `truncateLabel` shortens titles to fit |
 | `local-graph.test.js` | Centre and ring positions, edges to notes outside the answer dropped, empty and partial graphs, label truncation by characters |
+| `properties.js` | `propertyName`, `propertyValueFrom` and `isCalendarDate` check a property name and a form value against its type, as the server does; `propertyInputText` and `propertyInputType` feed the inputs |
+| `properties.test.js` | Name rules (managed keys and YAML characters refused), calendar dates, values per type, list text in a field |
 | `richEditorExtensions.js` | TipTap extension set used by the rich editor |
 | `rich-editor-paste.js` | Paste handler for the rich editor: images, links, plain text fallbacks |
 | `markdown-burst.js` | `isMarkdownBurst(text)` tells an input event that carries Markdown (dictation, IME, a line inserted at once) from typing, so the rich editor parses it instead of keeping the syntax as escaped text |
