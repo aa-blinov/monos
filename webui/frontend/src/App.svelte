@@ -1,4 +1,5 @@
 <script>
+  import { shortcutLabel } from './lib/shortcut-label.js';
   import { onDestroy, onMount, tick } from 'svelte';
 import { get } from 'svelte/store';
   import { Router, Route, navigate } from 'svelte-routing';
@@ -868,6 +869,11 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
                         {$localizedText.app.homeActions.importNotes}
                       </button>
                     </div>
+                    <ul class="mt-10 max-w-sm space-y-2 text-left text-xs leading-relaxed text-[var(--text-secondary)]" data-testid="first-run-tips">
+                      <li><span class="text-[var(--text-primary)]">{shortcutLabel('Ctrl+K')}</span> · {$localizedText.app.tips.search}</li>
+                      <li>{$localizedText.app.tips.links}</li>
+                      <li>{$localizedText.app.tips.commands}</li>
+                    </ul>
                     {#if importStatus}
                       <p class="mt-6 text-xs text-[var(--text-tertiary)]">{importStatus}</p>
                     {/if}
