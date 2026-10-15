@@ -12,6 +12,11 @@ export const linkMentionRequest = (sourcePath, targetPath) =>
   post('/api/notes/link-mention', { target: targetPath }, { query: { path: sourcePath } });
 export const loadBrokenLinksRequest = () => get('/api/notes/broken-links');
 export const loadMaintenanceRequest = () => get('/api/notes/maintenance');
+// Sets one custom property of the note, or removes it with { key, remove: true }. Answers with the new list.
+export const setPropertyRequest = (filePath, body) => put('/api/file/property', body, { query: { path: filePath } });
+// The notes as property rows, filtered by the search syntax (`prop:status=done`) and sorted by a column.
+export const loadPropertyTableRequest = ({ query = '', sort = 'modified', dir = 'desc' } = {}) =>
+  get('/api/notes/table', { query, sort, dir });
 export const resolveWikiLink = (name) => get('/api/notes/resolve-link', { name });
 export const loadTrashNotesRequest = () => get('/api/notes/trash', { limit: 200 });
 

@@ -1,3 +1,5 @@
+import { formatPropertyValue } from './properties.js';
+
 const BOM = '\uFEFF';
 
 function quoteYamlString(value) {
@@ -79,4 +81,60 @@ export function upsertFrontmatter(content, metadata = {}) {
 
   // Тело сохраняем как есть: переводы строк внутри него уже те самые.
   return `${bom}---${eol}${lines.join(eol)}${eol}---${eol}${eol}${body.replace(/^\s*\r?\n/, '')}`;
+}
+
+// A top-level key of a frontmatter line, or null for an indented line, a comment or a line without a key.
+function topLevelKeyOf(line) {
+  const separator = line.indexOf(':');
+  if (separator <= 0 || /^\s/.test(line) || line.startsWith('#')) return null;
+  return line.slice(0, separator).trim();
+}
+
+/**
+ * Sets one custom property in the frontmatter, or removes it when `property` is null. Only that
+ * key's lines change: a block list under it goes with it, and everything else stays as it was,
+ * including the line endings, the byte order mark and the body. A note with no frontmatter gets one.
+ *
+ * @param {string} content  the whole note, as it is on disk
+ * @param {string} key      a name already checked by normalizePropertyKey
+ * @param {{ type: string, value: unknown } | null} property
+ * @returns {string} the note with the change, or the same text when nothing changed
+ */
+export function setFrontmatterProperty(content, key, property) {
+  const raw = String(content || '');
+  const line = property ? `${key}: ${formatPropertyValue(property.type, property.value)}` : null;
+  const match = /^﻿?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
+  const { eol } = fileConventions(raw);
+
+  if (!match) {
+    if (!line) return raw;
+    const bom = raw.startsWith(BOM) ? BOM : '';
+    return `${bom}---${eol}${line}${eol}---${eol}${eol}${raw.replace(/^﻿/, '')}`;
+  }
+
+  const wanted = key.toLowerCase();
+  const kept = [];
+  let placed = false;
+  let inKey = false;
+  for (const current of match[1].split(/\r?\n/)) {
+    // Items and blank lines under the key belong to it; the next top-level key ends it.
+    if (inKey && (/^\s/.test(current) || current.trim() === '')) continue;
+    inKey = false;
+    const name = topLevelKeyOf(current);
+    if (name !== null && name.toLowerCase() === wanted) {
+      inKey = true;
+      if (line && !placed) {
+        kept.push(line);
+        placed = true;
+      }
+      continue;
+    }
+    kept.push(current);
+  }
+  if (line && !placed) kept.push(line);
+
+  // The prefix keeps the byte order mark, if there is one; the suffix is the closing line.
+  const prefix = /^﻿?---\r?\n/.exec(match[0])[0];
+  const suffix = match[0].slice(prefix.length + match[1].length);
+  return `${prefix}${kept.join(eol)}${suffix}${raw.slice(match[0].length)}`;
 }

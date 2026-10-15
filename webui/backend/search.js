@@ -1,3 +1,5 @@
+import { parseStoredProperties } from './properties.js';
+
 function normalizeSearchText(value) {
   return String(value || '')
     .normalize('NFC')
@@ -63,7 +65,7 @@ function tokenizeQuery(input) {
 }
 
 /** `body:"exact phrase"` → `{ name: 'body', value: 'exact phrase' }`. */
-const FILTER_OPERATORS = new Set(['body', 'updated', 'path', 'tag']);
+const FILTER_OPERATORS = new Set(['body', 'updated', 'path', 'tag', 'prop']);
 
 function readOperatorToken(token) {
   const match = /^(-?)([A-Za-z]+):(.*)$/.exec(token);
@@ -106,6 +108,8 @@ export function parseSearchQuery(rawQuery) {
   // а тегов нет ни одного — искать по папке оказалось удобнее, чем по тегу.
   const path = { values: [], exclude: [] };
   const tag = { values: [], exclude: [] };
+  // `prop:` с условием: `status=done`, `priority>=3`, `due<2026-12-01`, или просто `status` (свойство есть).
+  const props = { values: [], exclude: [] };
 
   // Куда складывать следующее слово: null — свободный текст, 'body' — тело
   // заметки, либо сам массив корзины (значения или исключения).
@@ -126,7 +130,8 @@ export function parseSearchQuery(rawQuery) {
         // свободным текстом. Значение с пробелом берётся в кавычках.
         const bucket = operator.name === 'updated' ? updated
           : operator.name === 'path' ? path
-            : tag;
+            : operator.name === 'prop' ? props
+              : tag;
         if (operator.value) (operator.negated ? bucket.exclude : bucket.values).push(operator.value.toLowerCase());
         else collecting = operator.negated ? bucket.exclude : bucket.values;
       }
@@ -139,7 +144,7 @@ export function parseSearchQuery(rawQuery) {
     else if (token !== '-') text.push(token.toLowerCase());
   }
 
-  return { text, body, updated, path, tag };
+  return { text, body, updated, path, tag, props };
 }
 
 /** Условие по списку: все значения должны совпасть, ни одно исключение — не должно. */
@@ -172,6 +177,58 @@ function matchesUpdated(entry, filter) {
   if (include.length > 0 && !modified) return false;
   if (include.some(value => !modified.startsWith(value))) return false;
   return !exclude.some(value => modified.startsWith(value));
+}
+
+// `status=done`, `priority>=3`, `due<2026-12-01`, or `status` alone for "has the property".
+const PROPERTY_CONDITION = /^(.+?)(>=|<=|=|>|<)(.*)$/;
+const PROPERTY_NUMBER = /^-?\d+(\.\d+)?$/;
+const PROPERTY_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parsePropertyCondition(raw) {
+  const match = PROPERTY_CONDITION.exec(raw);
+  if (!match) return { key: raw.trim(), op: null, value: '' };
+  return { key: match[1].trim(), op: match[2], value: match[3].trim() };
+}
+
+function compareOrdered(actual, op, expected) {
+  if (op === '=') return actual === expected;
+  if (op === '>') return actual > expected;
+  if (op === '<') return actual < expected;
+  if (op === '>=') return actual >= expected;
+  if (op === '<=') return actual <= expected;
+  return false;
+}
+
+/** Whether one stored property meets one condition. A list matches by item, so only `=` applies to it. */
+function propertyMeets(property, condition) {
+  if (!condition.op) return true;
+  const expected = condition.value;
+  if (Array.isArray(property.value)) {
+    return condition.op === '=' && property.value.some(item => normalizeSearchText(item) === normalizeSearchText(expected));
+  }
+  if (typeof property.value === 'boolean') {
+    const wanted = /^(true|yes)$/.test(expected) ? true : /^(false|no)$/.test(expected) ? false : null;
+    return condition.op === '=' && wanted === property.value;
+  }
+  if (typeof property.value === 'number') {
+    return PROPERTY_NUMBER.test(expected) && compareOrdered(property.value, condition.op, Number(expected));
+  }
+  // Dates are ISO text, so they compare in calendar order.
+  if (property.type === 'date' && PROPERTY_DATE.test(expected)) {
+    return compareOrdered(property.value, condition.op, expected);
+  }
+  return condition.op === '=' && normalizeSearchText(property.value) === normalizeSearchText(expected);
+}
+
+/** Every include condition holds for the note's properties, and no exclude condition does. */
+function matchesProperties(entry, filter) {
+  const properties = parseStoredProperties(entry.props);
+  const holds = (raw) => {
+    const condition = parsePropertyCondition(raw);
+    const property = properties.find(item => String(item.key).toLowerCase() === condition.key.toLowerCase());
+    return Boolean(property) && propertyMeets(property, condition);
+  };
+  return (filter.values || []).every(holds) && !(filter.exclude || []).some(holds);
 }
 
 function stripWrappingQuotes(value) {
@@ -496,6 +553,7 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
     || countFilterValues(parsed.updated) > 0
     || countFilterValues(parsed.path) > 0
     || countFilterValues(parsed.tag) > 0
+    || countFilterValues(parsed.props) > 0
   ));
   // `body:` is an explicit request to look inside the note, so it searches the
   // content even when the caller did not ask for full-text search.
@@ -516,6 +574,7 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
         if (countFilterValues(parsed.updated) > 0 && !matchesUpdated(entry, parsed.updated)) return null;
         if (countFilterValues(parsed.path) > 0 && !matchesPath(entry, parsed.path)) return null;
         if (countFilterValues(parsed.tag) > 0 && !matchesTag(entry, parsed.tag)) return null;
+        if (countFilterValues(parsed.props) > 0 && !matchesProperties(entry, parsed.props)) return null;
       }
 
       const ranked = isTagSearch

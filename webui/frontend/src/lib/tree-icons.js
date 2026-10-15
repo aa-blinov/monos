@@ -5,12 +5,12 @@ import {
   AlertTriangle, Archive, BarChart, Beaker, BookOpen, Bookmark, Briefcase, Building,
   Calendar, ChevronRight, Clipboard, Code, FileText, Folder, FolderOpen, GraduationCap,
   Globe, Heart, Hash, Home, Inbox, LayoutTemplate, Lightbulb, Map, Puzzle, RefreshCw,
-  Rocket, Settings, Star, Tag, Trash2, X,
+  Rocket, Settings, SlidersHorizontal, Star, Tag, Trash2, X,
 } from 'lucide-svelte';
 
 export const Icon = {
   AlertTriangle, Archive, BarChart, Beaker, BookOpen, Bookmark, Briefcase, Building,
   Calendar, ChevronRight, Clipboard, Code, FileText, Folder, FolderOpen, GraduationCap,
   Globe, Heart, Hash, Home, Inbox, LayoutTemplate, Lightbulb, Map, Puzzle, RefreshCw,
-  Rocket, Settings, Star, Tag, Trash2, X,
+  Rocket, Settings, SlidersHorizontal, Star, Tag, Trash2, X,
 };

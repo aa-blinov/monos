@@ -51,6 +51,32 @@ const ruColorNames = {
 };
 
 const enText = {
+  properties: {
+    title: 'Properties',
+    empty: 'No properties yet. Add one below.',
+    name: 'Name',
+    type: 'Type',
+    value: 'Value',
+    add: 'Add property',
+    remove: 'Remove {name}',
+    invalidName: 'Use letters, digits, spaces, dashes or underscores. The names of the app’s own fields are reserved.',
+    invalidValue: 'This value does not fit the type {type}',
+    saveFailed: 'Could not save the property',
+    typeNames: { text: 'Text', number: 'Number', date: 'Date', checkbox: 'Checkbox', list: 'List' },
+    tableTitle: 'Properties',
+    tableSearch: 'Search, e.g. prop:status=done',
+    columns: 'Columns',
+    noteColumn: 'Note',
+    modified: 'Modified',
+    yes: 'Yes',
+    no: 'No',
+    emptyTable: 'No notes match this filter.',
+    noProperties: 'No note has a custom property yet.',
+    sidebar: 'Properties',
+    syntaxHint: 'prop:name (has it), prop:name=value, prop:priority>=3, prop:due<2026-12-01; exclude with -prop:name=value.',
+    loading: 'Loading properties…',
+    loadFailed: 'Could not load the properties',
+  },
   app: {
     closeSidebar: 'Close sidebar',
     linksUpdated(count) {
@@ -826,6 +852,32 @@ const enText = {
 };
 
 const ruText = {
+  properties: {
+    title: 'Свойства',
+    empty: 'Свойств пока нет. Добавьте свойство ниже.',
+    name: 'Имя',
+    type: 'Тип',
+    value: 'Значение',
+    add: 'Добавить свойство',
+    remove: 'Удалить {name}',
+    invalidName: 'Допустимы буквы, цифры, пробелы, дефис и подчёркивание. Имена собственных полей приложения занять нельзя.',
+    invalidValue: 'Значение не подходит к типу «{type}»',
+    saveFailed: 'Не удалось сохранить свойство',
+    typeNames: { text: 'Текст', number: 'Число', date: 'Дата', checkbox: 'Флажок', list: 'Список' },
+    tableTitle: 'Свойства',
+    tableSearch: 'Поиск, например prop:status=done',
+    columns: 'Колонки',
+    noteColumn: 'Заметка',
+    modified: 'Изменена',
+    yes: 'Да',
+    no: 'Нет',
+    emptyTable: 'Нет заметок по этому фильтру.',
+    noProperties: 'Ни у одной заметки пока нет своих свойств.',
+    sidebar: 'Свойства',
+    syntaxHint: 'prop:имя (есть), prop:имя=значение, prop:priority>=3, prop:due<2026-12-01; исключить: -prop:имя=значение.',
+    loading: 'Загружаю свойства…',
+    loadFailed: 'Не удалось загрузить свойства',
+  },
   app: {
     closeSidebar: 'Закрыть боковую панель',
     linksUpdated(count) {

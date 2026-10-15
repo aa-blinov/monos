@@ -3,11 +3,12 @@ import path from 'path';
 import { getDb } from '../database.js';
 import { parseFrontmatterMetadata } from '../search.js';
 import { NOTES_DIR } from '../config.js';
-import { humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName } from '../utils.js';
+import { httpError, humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName } from '../utils.js';
 import { indexFile, indexAllFiles } from '../indexing.js';
-import { upsertFrontmatter } from '../frontmatter.js';
+import { setFrontmatterProperty, upsertFrontmatter } from '../frontmatter.js';
 import { removeNoteFromFts } from '../fts.js';
-import { planLinkUpdate, refreshNotesAfterRename } from '../link-rename.js';
+import { planLinkUpdate, refreshNotesAfterRename, rewriteNoteFile } from '../link-rename.js';
+import { normalizePropertyKey, normalizePropertyType, normalizePropertyValue, parseStoredProperties, readProperties } from '../properties.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
 
 /**
@@ -175,7 +176,46 @@ export function registerFileRoutes(app) {
           category: meta.category || null,
           tags: JSON.parse(meta.tags || '[]'),
         } : null,
+        properties: meta ? parseStoredProperties(meta.props) : [],
       });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message });
+    }
+  });
+
+  // Sets one custom property in the note's frontmatter, or removes it with `remove: true`. The keys the
+  // app manages (title, tags, category, pinned, aliases) have their own controls and are refused here.
+  app.put('/api/file/property', (req, res) => {
+    try {
+      const filePath = requireQueryPath(req);
+      const fullPath = resolveNotesPath(filePath);
+      const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
+      if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
+
+      const key = normalizePropertyKey(req.body?.key);
+      if (!key) throw httpError(400, 'The property name is not allowed');
+      let property = null;
+      if (!req.body?.remove) {
+        const type = normalizePropertyType(req.body?.type);
+        const value = type ? normalizePropertyValue(type, req.body?.value) : null;
+        if (!type || value === null) throw httpError(400, 'The value does not match the property type');
+        property = { type, value };
+      }
+
+      // rewriteNoteFile keeps the encoding and the modification time, and refuses a file that is not UTF-8.
+      try {
+        rewriteNoteFile(fullPath, (text) => {
+          const content = setFrontmatterProperty(text, key, property);
+          return { content, count: content === text ? 0 : 1 };
+        });
+      } catch (error) {
+        if (error.message === 'not UTF-8') throw httpError(409, 'The note is not UTF-8 text, so it was left unchanged');
+        throw error;
+      }
+      const text = readTextFile(fullPath);
+      indexFile(fullPath, text);
+      res.json({ path: filePath, properties: readProperties(text) });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }

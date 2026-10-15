@@ -84,6 +84,10 @@ function initTables() {
   if (!noteColumns.includes('trashed_at')) {
     db.exec('ALTER TABLE notes_index ADD COLUMN trashed_at TEXT');
   }
+  // Custom properties of the note as a JSON array (see properties.js), read by the table view and by `prop:` search.
+  if (!noteColumns.includes('props')) {
+    db.exec("ALTER TABLE notes_index ADD COLUMN props TEXT NOT NULL DEFAULT '[]'");
+  }
   // Имя в нормализованной форме. macOS отдаёт имена файлов разложенными
   // (NFD), а человек набирает связки сложёнными (NFC) — строки расходятся
   // на один байт и не находятся. Сравнение байт в SQL такое не прощает,

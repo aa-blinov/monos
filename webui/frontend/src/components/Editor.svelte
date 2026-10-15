@@ -47,7 +47,8 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
-  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Palette, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import NoteProperties from './NoteProperties.svelte';
 
   let richEditor;
 
@@ -399,6 +400,7 @@
     ...unlinkedMentions.map((item) => item.path),
   ]).size;
   $: graphLayout = layoutLocalGraph(neighborhood);
+  $: customProperties = fileInfo?.properties || [];
 
   function relationLabel(type) {
     return type === 'mention' ? $localizedText.sourceEditor.mention : $localizedText.sourceEditor.backlink;
@@ -1212,6 +1214,30 @@
           {/if}
         </div>
 
+        {#if loadedFilePath && !currentFile?.isDir}
+          <div class="relative" data-panel-anchor="properties">
+            <button
+              type="button"
+              bind:this={propertyTriggers.properties}
+              data-testid="property-properties-button"
+              aria-haspopup="dialog"
+              aria-expanded={propertyPanel === 'properties'}
+              aria-label={`${$localizedText.properties.title}: ${customProperties.length}`}
+              class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              on:click={() => togglePropertyPanel('properties')}
+            >
+              <SlidersHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
+              <span class="hidden sm:inline">{$localizedText.properties.title}</span>
+              <span class="tabular-nums">{customProperties.length}</span>
+            </button>
+            {#if propertyPanel === 'properties'}
+              <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
+                <p class={panelLabelClass}>{$localizedText.properties.title}</p>
+                <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => loadFile()} />
+              </div>
+            {/if}
+          </div>
+        {/if}
         {#if relatedCount > 0}
           <div class="relative" data-panel-anchor="related">
             <button

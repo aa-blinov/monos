@@ -50,6 +50,18 @@ Other names that link to this note, as a list or a single value. `[[Espresso]]` 
 aliases: [Espresso, "Кофе"]
 ```
 
+### Custom properties
+
+Any other top-level key is a property of the note. Its type comes from how the value is written:
+
+- `priority: 3` is a number, `due: 2026-12-01` a date, `done: true` (or `yes` / `no`) a checkbox;
+- `owners: [Ann, Bo]` or a block list is a list;
+- anything else, and any value in quotes, is text.
+
+The Properties panel in the editor edits them, and each change is written to the frontmatter line by line: the other lines, their order and the body stay as they were. `title`, `tags`, `category`, `pinned` and `aliases` belong to the app and cannot be used as property names.
+
+Search filters by properties: `prop:status` (the property is there), `prop:status=done`, `prop:priority>=3`, `prop:due<2026-12-01`, and `-prop:status=done` leaves those notes out. The Properties entry in the sidebar opens the notes as a table: choose the columns, sort by any of them, and filter with the same syntax.
+
 ## Body
 
 The note body starts after the closing `---`.
