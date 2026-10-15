@@ -50,6 +50,6 @@ test('процент округляется к целому', () => {
 
 test('формат строки собирает долю и проценты', () => {
   const strings = { percent: (value) => `${value}%` };
-  assert.equal(formatTaskProgress(taskProgress('- [x] a\n- [ ] b'), strings), '1/2 · 50%');
-  assert.equal(formatTaskProgress(taskProgress('- [ ] a'), strings), '0/1 · 0%');
+  assert.equal(formatTaskProgress(taskProgress('- [x] a\n- [ ] b'), strings), '1/2, 50%');
+  assert.equal(formatTaskProgress(taskProgress('- [ ] a'), strings), '0/1, 0%');
 });

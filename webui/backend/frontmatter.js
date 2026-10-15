@@ -9,7 +9,8 @@ function formatTags(tags = []) {
 }
 
 function splitFrontmatter(content) {
-  const rawContent = String(content || '');
+  // The byte order mark is not part of the body: upsertFrontmatter writes it back in front (see fileConventions).
+  const rawContent = String(content || '').replace(/^﻿/, '');
   const match = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) return { frontmatter: '', body: rawContent };
 
@@ -42,17 +43,31 @@ function fileConventions(content) {
 
 const RESERVED_KEYS = ['title', 'category', 'tags', 'pinned'];
 
+// The frontmatter lines this module does not rebuild. A reserved key written as a block list
+// (`tags:` followed by `  - item` lines) takes its items with it: left behind, they would pile up
+// under the rebuilt `tags:` line on every save.
+function keptFrontmatterLines(frontmatter, reservedKeys) {
+  const kept = [];
+  let inReservedBlock = false;
+  for (const line of frontmatter.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    if (inReservedBlock && /^\s/.test(line)) continue;
+    inReservedBlock = false;
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex !== -1 && reservedKeys.has(line.slice(0, separatorIndex).trim().toLowerCase())) {
+      inReservedBlock = true;
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept;
+}
+
 export function upsertFrontmatter(content, metadata = {}) {
   const { frontmatter, body } = splitFrontmatter(content);
   const { bom, eol } = fileConventions(content);
   const reservedKeys = new Set(RESERVED_KEYS);
-  const preservedLines = frontmatter
-    .split(/\r?\n/)
-    .filter((line) => {
-      const separatorIndex = line.indexOf(':');
-      if (separatorIndex === -1) return line.trim();
-      return !reservedKeys.has(line.slice(0, separatorIndex).trim().toLowerCase());
-    });
+  const preservedLines = keptFrontmatterLines(frontmatter, reservedKeys);
 
   const lines = [];
   if (metadata.title) lines.push(`title: ${quoteYamlString(metadata.title)}`);

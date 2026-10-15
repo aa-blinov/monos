@@ -9,6 +9,7 @@ import { indexAllFiles } from './indexing.js';
 import { registerFileRoutes } from './routes/files.js';
 import { registerTreeRoutes } from './routes/tree.js';
 import { registerNoteRoutes } from './routes/notes.js';
+import { registerConnectionRoutes } from './routes/connections.js';
 import { registerDirectoryRoutes } from './routes/directories.js';
 import { registerAttachmentRoutes, registerOrphanRoutes } from './routes/attachments.js';
 import { registerGitRoutes } from './routes/git.js';
@@ -92,6 +93,7 @@ app.get('/health', (req, res) => {
 registerFileRoutes(app);
 registerTreeRoutes(app);
 registerNoteRoutes(app);
+registerConnectionRoutes(app);
 registerDirectoryRoutes(app);
 registerAttachmentRoutes(app);
 registerOrphanRoutes(app);

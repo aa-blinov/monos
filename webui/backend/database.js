@@ -49,6 +49,15 @@ function initTables() {
       FOREIGN KEY (source_path) REFERENCES notes_index(path) ON DELETE CASCADE
     );
 
+    -- Aliases come from the frontmatter (aliases: [...]) and are rebuilt on every index of the note.
+    CREATE TABLE IF NOT EXISTS note_aliases (
+      path TEXT NOT NULL,
+      alias TEXT NOT NULL,
+      alias_nfc TEXT NOT NULL,
+      PRIMARY KEY (path, alias_nfc),
+      FOREIGN KEY (path) REFERENCES notes_index(path) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS folder_config (
       path TEXT PRIMARY KEY,
       icon TEXT,
@@ -59,6 +68,7 @@ function initTables() {
     CREATE INDEX IF NOT EXISTS idx_notes_name ON notes_index(name);
     CREATE INDEX IF NOT EXISTS idx_notes_is_dir ON notes_index(is_dir);
     CREATE INDEX IF NOT EXISTS idx_links_source ON note_links(source_path);
+    CREATE INDEX IF NOT EXISTS idx_aliases_nfc ON note_aliases(alias_nfc);
   `);
 
   const noteColumns = db.prepare('PRAGMA table_info(notes_index)').all().map((column) => column.name);

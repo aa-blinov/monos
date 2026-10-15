@@ -114,7 +114,7 @@
             >
               <span class="block text-xs font-bold text-[var(--text-primary)]">{revision.message || $localizedText.history.noMessage}</span>
               <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                {revision.author} · {formatDate(revision.date)} · {revision.short}
+                {revision.author}, {formatDate(revision.date)}, {revision.short}
               </span>
             </button>
           </li>

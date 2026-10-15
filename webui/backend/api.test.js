@@ -1958,3 +1958,113 @@ apiTest('сохранение в несуществующий путь без cr
   assert.equal(response.response.status, 404);
   assert.equal(fs.existsSync(path.join(notesDir, 'Gone Note.md')), false);
 });
+
+const postJson = (url, body) => requestJson(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+apiTest('алиас и ссылка на заголовок ведут на заметку: поиск по имени, обратные и битые ссылки', async () => {
+  const folder = path.join(notesDir, 'Links');
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, 'Espresso Guide.md'), '---\ntitle: Espresso Guide\naliases:\n  - Эспрессо\n---\n\n# Эспрессо\n\n## Ингредиенты\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Reader.md'), 'Читать [[Эспрессо]], [[Espresso Guide#Ингредиенты]] и [[Нет такой]].\n', 'utf-8');
+  indexAllFiles();
+
+  const guide = 'notes/Links/Espresso Guide.md';
+  const byAlias = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Эспрессо' }));
+  assert.equal(byAlias.data.path, guide);
+  const byHeading = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Espresso Guide#Ингредиенты' }));
+  assert.equal(byHeading.data.path, guide);
+
+  const backlinks = await requestJson(buildUrl('/api/notes/backlinks', { path: guide }));
+  assert.deepEqual(backlinks.data.map((item) => item.path), ['notes/Links/Reader.md']);
+
+  // Other tests leave their own broken links behind, so only this note's entries are checked.
+  const broken = await requestJson(buildUrl('/api/notes/broken-links'));
+  assert.deepEqual(broken.data.find((item) => item.target === 'Нет такой'), {
+    target: 'Нет такой',
+    sources: ['notes/Links/Reader.md'],
+  });
+  assert.equal(broken.data.some((item) => item.target === 'Эспрессо' || item.target.startsWith('Espresso Guide')), false);
+});
+
+apiTest('непривязанное упоминание связывается одним действием, граф показывает соседа', async () => {
+  const folder = path.join(notesDir, 'Links');
+  fs.writeFileSync(path.join(folder, 'Rowing.md'), 'Гребля.\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Diary.md'), '# Дневник\n\nСегодня катался на rowing machine.\n', 'utf-8');
+  indexAllFiles();
+
+  const rowing = 'notes/Links/Rowing.md';
+  const diary = 'notes/Links/Diary.md';
+  const mentions = await requestJson(buildUrl('/api/notes/unlinked-mentions', { path: rowing }));
+  assert.equal(mentions.data.find((item) => item.path === diary)?.phrase, 'Rowing');
+
+  const linked = await postJson(buildUrl('/api/notes/link-mention', { path: diary }), { target: rowing });
+  assert.equal(linked.response.status, 200);
+  assert.deepEqual(linked.data.updatedPaths, [diary]);
+  assert.deepEqual(linked.data.failedPaths, []);
+  assert.match(fs.readFileSync(path.join(folder, 'Diary.md'), 'utf-8'), /катался на \[\[Rowing\|rowing\]\] machine/);
+
+  const after = await requestJson(buildUrl('/api/notes/unlinked-mentions', { path: rowing }));
+  assert.equal(after.data.some((item) => item.path === diary), false);
+
+  const neighbors = await requestJson(buildUrl('/api/notes/neighbors', { path: diary }));
+  assert.equal(neighbors.data.nodes.find((node) => node.center).path, diary);
+  assert.ok(neighbors.data.nodes.some((node) => node.path === rowing));
+  assert.ok(neighbors.data.edges.some((edge) => edge.from === diary && edge.to === rowing));
+
+  const self = await postJson(buildUrl('/api/notes/link-mention', { path: diary }), { target: diary });
+  assert.equal(self.response.status, 400);
+});
+
+apiTest('обслуживание: сироты и давно не трогавшиеся заметки', async () => {
+  const lonely = 'notes/Links/Lonely.md';
+  fs.writeFileSync(path.join(notesDir, 'Links', 'Lonely.md'), 'Одна.\n', 'utf-8');
+  indexAllFiles();
+  getDb().prepare('UPDATE notes_index SET last_opened = ?, modified_at = ? WHERE path = ?')
+    .run('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z', lonely);
+
+  const report = await requestJson(buildUrl('/api/notes/maintenance'));
+  assert.equal(report.data.staleDays, 180);
+  assert.ok(report.data.orphans.some((item) => item.path === lonely));
+  assert.ok(report.data.stale.some((item) => item.path === lonely));
+  // The notes that link to each other are connected, so they are not orphans.
+  assert.equal(report.data.orphans.some((item) => item.path === 'notes/Links/Reader.md'), false);
+});
+
+apiTest('переименование заметки сохраняет заголовок в [[Name#Heading]] и подпись', async () => {
+  const folder = path.join(notesDir, 'Links');
+  fs.writeFileSync(path.join(folder, 'Heading Target.md'), '# Цель\n\n## Раздел\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Heading Caller.md'), 'См. [[Heading Target#Раздел]] и [[Heading Target#Раздел|здесь]].\n', 'utf-8');
+  indexAllFiles();
+
+  const renamed = await postJson(buildUrl('/api/file/rename', { path: 'notes/Links/Heading Target.md' }), {
+    new_name: 'Heading Target 2.md',
+  });
+  assert.equal(renamed.response.status, 200);
+  assert.equal(renamed.data.updatedLinks, 2);
+  assert.equal(
+    fs.readFileSync(path.join(folder, 'Heading Caller.md'), 'utf-8'),
+    'См. [[Heading Target 2#Раздел]] и [[Heading Target 2#Раздел|здесь]].\n',
+  );
+});
+
+apiTest('сохранение тегов не трогает алиасы и не копит строки блочного списка', async () => {
+  const file = path.join(notesDir, 'Links', 'Tagged.md');
+  fs.writeFileSync(file, '---\ntitle: Tagged\ntags:\n  - one\n  - two\naliases:\n  - Метка\n---\n\nТекст.\n', 'utf-8');
+  indexAllFiles();
+
+  const saved = await requestJson(buildUrl('/api/file/metadata', { path: 'notes/Links/Tagged.md' }), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags: ['three'] }),
+  });
+  assert.equal(saved.response.status, 200);
+  const text = fs.readFileSync(file, 'utf-8');
+  assert.equal(text.includes('  - one'), false);
+  assert.match(text, /aliases:\n {2}- Метка/);
+  const resolved = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Метка' }));
+  assert.equal(resolved.data.path, 'notes/Links/Tagged.md');
+});

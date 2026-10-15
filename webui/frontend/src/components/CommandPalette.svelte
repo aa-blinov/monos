@@ -107,7 +107,7 @@
       type: 'template',
       section: 'templates',
       label: template.title,
-      detail: `${template.approachTitle || template.group} · ${template.description}`,
+      detail: `${template.approachTitle || template.group}, ${template.description}`,
       templateId: template.id,
     }));
   }

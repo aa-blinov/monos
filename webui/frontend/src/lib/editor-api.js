@@ -5,6 +5,13 @@ export const loadFileInfo = (filePath) => get('/api/file-info', { path: filePath
 
 export const loadCategoriesRequest = () => get('/api/categories');
 export const loadBacklinksRequest = (filePath) => get('/api/notes/backlinks', { path: filePath });
+export const loadUnlinkedMentionsRequest = (filePath) => get('/api/notes/unlinked-mentions', { path: filePath });
+export const loadNeighborsRequest = (filePath) => get('/api/notes/neighbors', { path: filePath });
+// Turns the first plain mention of `targetPath` inside `sourcePath` into a link to it.
+export const linkMentionRequest = (sourcePath, targetPath) =>
+  post('/api/notes/link-mention', { target: targetPath }, { query: { path: sourcePath } });
+export const loadBrokenLinksRequest = () => get('/api/notes/broken-links');
+export const loadMaintenanceRequest = () => get('/api/notes/maintenance');
 export const resolveWikiLink = (name) => get('/api/notes/resolve-link', { name });
 export const loadTrashNotesRequest = () => get('/api/notes/trash', { limit: 200 });
 

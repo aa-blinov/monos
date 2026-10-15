@@ -18,6 +18,8 @@ import { requireQueryPath, requireBodyFields, requireStringField } from './valid
 function relocateIndexRows(db, oldPath, newPath, newName, newParent) {
   const moved = db.prepare("SELECT path FROM notes_index WHERE path = ? OR path LIKE ? || '/%'").all(oldPath, oldPath);
   db.prepare("DELETE FROM note_links WHERE source_path = ? OR source_path LIKE ? || '/%'").run(oldPath, oldPath);
+  // The rows are rebuilt by the reindex that follows the move; keeping them would block the path update.
+  db.prepare("DELETE FROM note_aliases WHERE path = ? OR path LIKE ? || '/%'").run(oldPath, oldPath);
   for (const row of moved) removeNoteFromFts(db, row.path);
   db.prepare('UPDATE notes_index SET path = ?, name = ?, parent_path = ? WHERE path = ?').run(newPath, newName, newParent, oldPath);
   for (const row of moved) {

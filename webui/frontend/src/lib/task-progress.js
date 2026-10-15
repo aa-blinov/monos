@@ -35,5 +35,5 @@ export function taskProgress(markdown) {
 
 export function formatTaskProgress(progress, strings) {
   if (!progress || progress.total === 0) return '';
-  return `${progress.done}/${progress.total} · ${strings.percent(progress.percent)}`;
+  return `${progress.done}/${progress.total}, ${strings.percent(progress.percent)}`;
 }

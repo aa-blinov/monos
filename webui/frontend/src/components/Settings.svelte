@@ -14,6 +14,8 @@
   import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
   import { fetchNotesDir } from '../lib/info.js';
+  import { loadBrokenLinksRequest, loadMaintenanceRequest } from '../lib/editor-api.js';
+  import { localeDate } from '../lib/date-format.js';
   import appPackage from '../../../../package.json';
 
   const dispatch = createEventDispatcher();
@@ -90,10 +92,13 @@
   let repoSafety = null;
   let scopeWarnings = [];
   let notesDir = '';
+  let connectionStatus = 'loading';
+  let connectionReport = { broken: [], orphans: [], orphanCount: 0, stale: [], staleCount: 0, staleDays: 180 };
 
   onMount(async () => {
     try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
     loadOrphanAttachments();
+    loadConnectionReport();
   });
 
   async function loadOrphanAttachments() {
@@ -105,6 +110,27 @@
     } catch {
       orphanStatus = 'error';
     }
+  }
+
+  // Broken links, notes no link reaches and notes gone quiet. Read-only: a row opens its note.
+  async function loadConnectionReport() {
+    connectionStatus = 'loading';
+    try {
+      const [broken, maintenance] = await Promise.all([loadBrokenLinksRequest(), loadMaintenanceRequest()]);
+      connectionReport = { ...connectionReport, ...maintenance, broken: Array.isArray(broken) ? broken : [] };
+      connectionStatus = 'ready';
+    } catch {
+      connectionStatus = 'error';
+    }
+  }
+
+  function noteNameOf(notePath) {
+    return String(notePath || '').split('/').pop().replace(/\.md$/i, '');
+  }
+
+  function openNote(notePath) {
+    if (!notePath) return;
+    dispatch('navigate', { path: notePath, name: noteNameOf(notePath), isDir: false });
   }
 
   async function printAllNotes() {
@@ -528,6 +554,59 @@
             </li>
           {/each}
         </ul>
+      {/if}
+    </section>
+
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.connectionsTitle}</h2>
+      {#if connectionStatus === 'loading'}
+        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsLoading}</div>
+      {:else if connectionStatus === 'error'}
+        <div class="text-xs text-[var(--red)]">{$localizedText.settings.connectionsError}</div>
+      {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount === 0}
+        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsClean}</div>
+      {:else}
+        {#if connectionReport.broken.length > 0}
+          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.brokenLinks}, {connectionReport.broken.length}</h3>
+          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="broken-links">
+            {#each connectionReport.broken as item (item.target)}
+              <li class="flex items-center justify-between gap-3 px-3 py-2">
+                <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
+                <button
+                  type="button"
+                  class="min-w-0 shrink truncate text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+                  on:click={() => openNote(item.sources[0])}
+                >{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if connectionReport.orphanCount > 0}
+          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.orphanNotes}, {connectionReport.orphanCount}</h3>
+          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
+            {#each connectionReport.orphans as item (item.path)}
+              <li>
+                <button type="button" class="block w-full truncate px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>{item.title}</button>
+              </li>
+            {/each}
+          </ul>
+          {#if connectionReport.orphanCount > connectionReport.orphans.length}
+            <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.orphanCount - connectionReport.orphans.length)}</div>
+          {/if}
+        {/if}
+        {#if connectionReport.staleCount > 0}
+          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.staleNotes.replace('{days}', connectionReport.staleDays)}, {connectionReport.staleCount}</h3>
+          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
+            {#each connectionReport.stale as item (item.path)}
+              <li>
+                <button type="button" class="flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>
+                  <span class="min-w-0 truncate text-[var(--text-primary)]">{item.title}</span>
+                  <span class="shrink-0 text-[var(--text-tertiary)]">{$localizedText.settings.staleSince.replace('{date}', localeDate(new Date(item.lastActivity), $locale))}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {/if}
     </section>
 

@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries, parseSearchQuery } from '../search.js';
 import { searchFts } from '../fts.js';
 import { NOTES_DIR } from '../config.js';
-import { assertFileName, httpError, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertFileName, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { isEncryptedSecret, protectSecret, revealSecret } from './secret-store.js';
@@ -346,13 +346,18 @@ export function registerNoteRoutes(app) {
       const note = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
       if (!note || note.trashed_at) return res.json([]);
 
-      const targetName = path.basename(filePath, '.md');
+      // A link reaches the note by its file name, its title or an alias, optionally followed by a
+      // heading: [[Name#Heading]]. A note's own links to itself are not backlinks.
+      const aliases = db.prepare('SELECT alias_nfc FROM note_aliases WHERE path = ?').all(filePath).map((row) => row.alias_nfc);
+      const names = noteLinkNames(note, aliases);
+      const matches = names.map(() => '(nl.target_name = ? OR nl.target_name LIKE ? ESCAPE \'\\\')').join(' OR ');
       const backlinks = db.prepare(`
-        SELECT ni.* FROM notes_index ni
+        SELECT DISTINCT ni.* FROM notes_index ni
         JOIN note_links nl ON nl.source_path = ni.path
-        WHERE (nl.target_name = ? OR nl.target_name = ?)
+        WHERE (${matches})
+          AND ni.path != ?
           AND (ni.trashed_at IS NULL OR ni.trashed_at = '')
-      `).all(targetName, note.title || targetName);
+      `).all(...names.flatMap((name) => [name, headingLinkPattern(name)]), filePath);
 
       const linked = new Map();
       for (const entry of backlinks) {
@@ -442,16 +447,23 @@ export function registerNoteRoutes(app) {
       // Имя ищется по нормализованному ключу: на диске имена разложены (NFD),
       // а связи набирают сложёнными (NFC) — «Запрос новой функциональности» не
       // находился, хотя файл рядом.
+      // An alias (aliases: in the frontmatter) answers like a title, and `Name#Heading` resolves to
+      // `Name`: the whole name is tried first, so a note whose own name has `#` still resolves.
       const wanted = String(name || '').normalize('NFC');
-      const bare = wanted.replace(/\.md$/i, '');
-      const rows = getDb().prepare(
-        `SELECT path, name, title FROM notes_index
-         WHERE is_dir = 0
-           AND (trashed_at IS NULL OR trashed_at = '')
-           AND (title = ? OR name_nfc = ? OR name_nfc = ?)
-         ORDER BY path COLLATE NOCASE ASC
-         LIMIT 10`
-      ).all(bare, bare, `${bare}.md`);
+      let rows = [];
+      for (const candidate of linkNameCandidates(wanted)) {
+        const bare = candidate.replace(/\.md$/i, '');
+        rows = getDb().prepare(
+          `SELECT path, name, title FROM notes_index
+           WHERE is_dir = 0
+             AND (trashed_at IS NULL OR trashed_at = '')
+             AND (title = ? OR name_nfc = ? OR name_nfc = ?
+                  OR path IN (SELECT path FROM note_aliases WHERE alias_nfc = ?))
+           ORDER BY path COLLATE NOCASE ASC
+           LIMIT 10`
+        ).all(bare, bare, `${bare}.md`, bare);
+        if (rows.length) break;
+      }
 
       if (!rows.length) {
         res.json({});
