@@ -2154,3 +2154,45 @@ apiTest('PDF прикрепляется как есть и отдаётся ка
   });
   assert.equal(rejected.response.status, 400);
 });
+
+const SITE_FOLDER = 'monos-site';
+
+apiTest('публикация: сайт пишется в свою папку, чужую не трогает, внутри заметок ничего не создаёт', async () => {
+  const folder = path.join(notesDir, 'Publish');
+  fs.mkdirSync(path.join(folder, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(folder, 'Target.md'), 'Цель.\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Guide.md'), 'См. [[Target]] и [[Нет такой]].\n\n<script>bad()</script>\n\n![[Spec.pdf]]\n\n> [!tip] Совет\n> текст\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, '_attachments', 'Spec.pdf'), Buffer.from('%PDF-1.4\n%%EOF\n'));
+  indexAllFiles();
+
+  const siteRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-site-'));
+  const published = await postJson(buildUrl('/api/publish'), { target: siteRoot, folder: 'Publish' });
+  assert.equal(published.response.status, 200);
+  assert.equal(published.data.pages, 2);
+  assert.equal(published.data.assets, 1);
+
+  const site = path.join(siteRoot, 'monos-site');
+  assert.ok(fs.existsSync(path.join(site, 'index.html')));
+  const guide = fs.readFileSync(path.join(site, 'pages', 'Publish', 'Guide.html'), 'utf-8');
+  assert.ok(guide.includes('<a href="Target.html">Target</a>'));
+  assert.ok(guide.includes('&lt;script&gt;'));
+  assert.equal(guide.includes('<script>bad()'), false);
+  assert.ok(guide.includes('../../assets/Publish/_attachments/Spec.pdf'));
+  assert.ok(guide.includes('callout-tip'));
+  assert.ok(fs.existsSync(path.join(site, 'assets', 'Publish', '_attachments', 'Spec.pdf')));
+  assert.equal(fs.existsSync(path.join(notesDir, SITE_FOLDER)), false);
+
+  // Refused: a folder inside the notes, and a `monos-site` folder the app did not make.
+  const inside = await postJson(buildUrl('/api/publish'), { target: folder, folder: '' });
+  assert.equal(inside.response.status, 403);
+  const foreign = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-foreign-'));
+  fs.mkdirSync(path.join(foreign, SITE_FOLDER));
+  fs.writeFileSync(path.join(foreign, SITE_FOLDER, 'keep.txt'), 'keep', 'utf-8');
+  const refused = await postJson(buildUrl('/api/publish'), { target: foreign, folder: '' });
+  assert.equal(refused.response.status, 409);
+  assert.equal(fs.readFileSync(path.join(foreign, SITE_FOLDER, 'keep.txt'), 'utf-8'), 'keep');
+
+  // Publishing again replaces the site the app made.
+  const again = await postJson(buildUrl('/api/publish'), { target: siteRoot, folder: 'Publish' });
+  assert.equal(again.response.status, 200);
+});

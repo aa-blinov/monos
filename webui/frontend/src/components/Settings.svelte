@@ -14,7 +14,7 @@
   import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
   import { fetchNotesDir } from '../lib/info.js';
-  import { loadBrokenLinksRequest, loadMaintenanceRequest } from '../lib/editor-api.js';
+  import { loadBrokenLinksRequest, loadMaintenanceRequest, publishSiteRequest } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import appPackage from '../../../../package.json';
 
@@ -94,6 +94,10 @@
   let notesDir = '';
   let connectionStatus = 'loading';
   let connectionReport = { broken: [], orphans: [], orphanCount: 0, stale: [], staleCount: 0, staleDays: 180 };
+  let publishFolder = '';
+  let publishBusy = false;
+  let publishStatus = '';
+  let publishError = '';
 
   onMount(async () => {
     try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
@@ -121,6 +125,24 @@
       connectionStatus = 'ready';
     } catch {
       connectionStatus = 'error';
+    }
+  }
+
+  // Writes the notes as a static site into `<folder>/monos-site`. The folder is typed by the person.
+  async function publishNotes() {
+    publishBusy = true;
+    publishStatus = '';
+    publishError = '';
+    try {
+      const result = await publishSiteRequest(publishFolder.trim());
+      publishStatus = $localizedText.settings.publishedTo
+        .replace('{pages}', String(result.pages))
+        .replace('{path}', result.outputDir);
+    } catch (error) {
+      console.error('Failed to publish the site:', error);
+      publishError = error?.message || $localizedText.settings.publishFailed;
+    } finally {
+      publishBusy = false;
     }
   }
 
@@ -528,6 +550,37 @@
       {/if}
       {#if backupError}
         <div class="text-xs text-[var(--red)]">{backupError}</div>
+      {/if}
+    </section>
+
+    <section class="space-y-5" data-testid="publish-section">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.publishTitle}</h2>
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.publishHint}</p>
+      <form class="space-y-2" on:submit|preventDefault={publishNotes}>
+        <label class="block space-y-1">
+          <span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.publishFolder}</span>
+          <input
+            type="text"
+            bind:value={publishFolder}
+            placeholder="/Users/you/Sites"
+            aria-describedby="publish-folder-hint"
+            data-testid="publish-folder"
+            class={formFieldClass()}
+          />
+        </label>
+        <p id="publish-folder-hint" class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.publishFolderHint}</p>
+        <button
+          type="submit"
+          disabled={publishBusy || !publishFolder.trim()}
+          data-testid="publish-button"
+          class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+        >{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</button>
+      </form>
+      {#if publishStatus}
+        <p role="status" class="text-xs text-[var(--green)] break-all">{publishStatus}</p>
+      {/if}
+      {#if publishError}
+        <p role="alert" class="text-xs text-[var(--red)]">{publishError}</p>
       {/if}
     </section>
 
