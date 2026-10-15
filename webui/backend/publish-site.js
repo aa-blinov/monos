@@ -4,7 +4,8 @@ import { Marked } from 'marked';
 import { getDb } from './database.js';
 import { NOTES_DIR } from './config.js';
 import { stripFrontmatter } from './routes/helpers.js';
-import { httpError, linkNameCandidates, noteLinkNames, notesRelativePath, replaceOutsideCode, wikiLinkTarget } from './utils.js';
+import { httpError, linkNameCandidates, noteLinkNames, notesRelativePath, readTextFile, replaceOutsideCode, resolveNotesPath, wikiLinkTarget } from './utils.js';
+import { isLockedNote } from './note-lock.js';
 
 // A static copy of the notes in a folder on this computer. Nothing is uploaded: the output is plain
 // HTML and files, and the folder it goes into is named by the person who asks for it. The site lives in
@@ -227,7 +228,10 @@ export function publishSite({ target, folder = '' } = {}) {
     fs.rmSync(siteDir, { recursive: true, force: true });
   }
 
-  const notes = liveNotes(folder.trim().replace(/^\/+|\/+$/g, ''));
+  const found = liveNotes(folder.trim().replace(/^\/+|\/+$/g, ''));
+  // A locked note is sealed on disk: the site leaves it out rather than publish a page nobody can read.
+  const notes = found.filter((note) => !isLockedNote(readTextFile(resolveNotesPath(note.path))));
+  const lockedSkipped = found.length - notes.length;
   const aliases = aliasesByPath();
   const byName = new Map();
   for (const note of notes) {
@@ -311,5 +315,6 @@ export function publishSite({ target, folder = '' } = {}) {
     pages: pages.length,
     assets: copied,
     missingAssets: missing,
+    lockedSkipped,
   };
 }

@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { NOTES_DIR } from '../config.js';
 import { httpError, readTextFile, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
 
 const TEXT_EXTENSIONS = new Set(['.md', '.markdown']);
 const SKIPPED_SEGMENTS = new Set(['.git', '.monos', '__MACOSX']);
@@ -212,7 +213,12 @@ export function buildNoteDocument(requestPath) {
     throw httpError(400, 'Only Markdown notes can be printed');
   }
   const title = path.basename(filePath, path.extname(filePath));
-  const body = renderMarkdownToHtml(readTextFile(filePath), path.dirname(filePath));
+  const stored = readTextFile(filePath);
+  const session = sessionFor(requestPath);
+  const text = isLockedNote(stored) ? (session ? readWithSession(stored, session) : null) : stored;
+  // A locked note prints only while it is unlocked in this session; a sealed note is never printed.
+  if (text === null) throw httpError(423, 'Unlock the note to print it');
+  const body = renderMarkdownToHtml(text, path.dirname(filePath));
   return { html: wrapDocument(title, '', body), title, fileName: `${title}.pdf` };
 }
 

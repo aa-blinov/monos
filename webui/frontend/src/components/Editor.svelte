@@ -49,6 +49,8 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import { CalendarDays, ChevronLeft, Download, Folder, Link2, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
+  import NoteLock from './NoteLock.svelte';
+  import LockedNote from './LockedNote.svelte';
 
   let richEditor;
 
@@ -144,6 +146,8 @@
   let unlinkedMentions = [];
   let neighborhood = { nodes: [], edges: [] };
   let linkMentionFailed = false;
+  // The note that is locked and waiting for its passphrase; its text is not loaded.
+  let lockedFilePath = null;
   let editableTags = [];
   let editableCategory = '';
   // Подсказки для поля категории: категории, уже встречающиеся в хранилище.
@@ -549,10 +553,18 @@
       neighborhood = nextConnections.graph;
       linkMentionFailed = false;
       loadedFilePath = filePath;
+      lockedFilePath = null;
       displayedFile = { ...currentFile };
       dispatch('fileOpened', filePath);
     } catch (error) {
       if (!isCurrentLoad(requestId, filePath)) return;
+      if (error?.status === 423) {
+        // A locked note shows its passphrase form instead of its text. Nothing is loaded, so nothing is saved.
+        lockedFilePath = filePath;
+        loadedFilePath = null;
+        failedLoadPath = filePath;
+        return;
+      }
       console.error('Failed to load file:', error);
       failedLoadPath = filePath;
       if (!displayedFile) {
@@ -982,6 +994,11 @@
   style={noteSurfaceStyle}
   data-testid="editor-shell"
 >
+  {#if lockedFilePath}
+    <div class="absolute inset-0 z-40 flex items-center justify-center bg-[var(--note-page-bg)] p-6" data-testid="locked-overlay">
+      <LockedNote filePath={lockedFilePath} on:unlocked={() => loadFile()} />
+    </div>
+  {/if}
   <EditorHeader
     bind:editedTitle
     currentFile={visibleFile}
@@ -1250,6 +1267,7 @@
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.properties.title}</p>
                 <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => loadFile()} />
+                <NoteLock filePath={loadedFilePath} locked={Boolean(fileInfo?.locked)} unlocked={Boolean(fileInfo?.unlocked)} on:changed={() => loadFile()} />
               </div>
             {/if}
           </div>

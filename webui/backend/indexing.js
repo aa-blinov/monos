@@ -6,6 +6,7 @@ import { parseFrontmatterMetadata } from './search.js';
 import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
 import { readProperties } from './properties.js';
+import { isLockedNote } from './note-lock.js';
 import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath } from './utils.js';
 
 function parseCachedTags(rawTags) {
@@ -27,7 +28,9 @@ function metadataEqual(left, right) {
     && JSON.stringify(left.tags) === JSON.stringify(right.tags);
 }
 
-export function indexFile(filePath, content) {
+export function indexFile(filePath, storedContent) {
+  // A locked note's text is sealed on disk: the index keeps none of it, so search cannot read it.
+  const content = isLockedNote(storedContent) ? '' : storedContent;
   const db = getDb();
   const relativePath = relPath(filePath);
   const name = path.basename(filePath);
