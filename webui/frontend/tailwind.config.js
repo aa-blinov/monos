@@ -6,6 +6,8 @@ export default {
   ],
   theme: {
     extend: {
+      // One corner for every rectangle (DESIGN.md → Corner Radius). Change --radius in app.css to change them all.
+      borderRadius: { ui: 'var(--radius)' },
       colors: {
         gruvbox: {
           light: {

@@ -223,7 +223,7 @@
   {#if tooltipVisible}
     <div
       role="tooltip"
-      class="fixed z-[90] pointer-events-none max-w-xs rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-left shadow-lg shadow-black/10"
+      class="fixed z-[90] pointer-events-none max-w-xs rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-left shadow-lg shadow-black/10"
       style="left: {tooltipX}px; top: {tooltipY}px; transform: translateY(-50%);"
     >
       <span class="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 border-b border-l border-[var(--border-subtle)] bg-[var(--bg-primary)]"></span>

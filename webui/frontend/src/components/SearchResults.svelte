@@ -35,7 +35,7 @@
       <p class="max-w-md text-sm text-[var(--text-secondary)]">{$localizedText.searchResults.noResultsHint}</p>
       <button
         type="button"
-        class="min-h-9 rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        class="min-h-9 rounded-ui border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
         on:click={() => dispatch('clear')}
       >{$localizedText.searchResults.clear}</button>
     </div>

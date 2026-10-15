@@ -170,8 +170,8 @@
   .prose-plain :global(ul),
   .prose-plain :global(ol) { margin: 0 0 0.7rem; padding-left: 1.4em; }
   .prose-plain :global(li) { margin-bottom: 0.2rem; line-height: 1.6; }
-  .prose-plain :global(code) { background: var(--bg-secondary); padding: 0.05em 0.3em; border-radius: 2px; font-size: 0.9em; }
-  .prose-plain :global(pre) { background: var(--bg-secondary); padding: 0.8rem; border-radius: 6px; overflow-x: auto; margin: 0 0 0.7rem; }
+  .prose-plain :global(code) { background: var(--bg-secondary); padding: 0.05em 0.3em; border-radius: var(--radius); font-size: 0.9em; }
+  .prose-plain :global(pre) { background: var(--bg-secondary); padding: 0.8rem; border-radius: var(--radius); overflow-x: auto; margin: 0 0 0.7rem; }
   .prose-plain :global(blockquote) { border-left: 2px solid var(--border-subtle); margin: 0 0 0.7rem; padding-left: 0.9rem; color: var(--text-secondary); }
   .prose-plain :global(a) { color: var(--blue); }
 </style>

@@ -96,7 +96,7 @@
       <input
         data-testid="saved-search-name"
         type="text"
-        class="h-9 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
+        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
         placeholder={$localizedText.savedSearches.namePlaceholder}
         bind:value={name}
         on:keydown={(e) => { if (e.key === 'Enter') save(); }}
@@ -149,7 +149,7 @@
                 <input
                   data-testid="saved-search-rename-input"
                   type="text"
-                  class="h-9 min-w-0 flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none focus:border-[var(--text-primary)]"
+                  class="h-9 min-w-0 flex-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none focus:border-[var(--text-primary)]"
                   bind:value={editValue}
                   on:keydown={(e) => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') editing = null; }}
                 />
@@ -164,7 +164,7 @@
                 <button
                   type="button"
                   data-testid="saved-search-run"
-                  class="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left transition hover:bg-[var(--bg-secondary)]/60"
+                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[var(--bg-secondary)]/60"
                   on:click={() => { dispatch('run', entry); open = false; }}
                 >
                   <Bookmark size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
@@ -177,7 +177,7 @@
                   type="button"
                   data-testid="saved-search-rename"
                   aria-label={$localizedText.savedSearches.rename(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--text-primary)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--text-primary)]"
                   on:click={() => startRename(entry)}
                 >
                   <Pencil size="12" strokeWidth="1.7" aria-hidden="true" />
@@ -186,7 +186,7 @@
                   type="button"
                   data-testid="saved-search-delete"
                   aria-label={$localizedText.savedSearches.remove(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--red)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--red)]"
                   on:click={() => remove(entry)}
                 >
                   <Trash2 size="12" strokeWidth="1.7" aria-hidden="true" />

@@ -191,7 +191,7 @@
       <button
         type="submit"
         disabled={busy || !newName.trim()}
-        class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+        class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
       >{$localizedText.properties.add}</button>
     </div>
   </form>

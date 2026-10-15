@@ -1055,7 +1055,7 @@
       <div class="flex min-h-11 items-center justify-between gap-3">
         <TooltipIconButton
           on:click={() => dispatch('toggleSidebar')}
-          class="h-11 w-11 shrink-0 justify-center rounded-md border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          class="h-11 w-11 shrink-0 justify-center rounded-ui border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.close}
           tooltip={$localizedText.sidebar.close}
           tooltipAlign="start"
@@ -1070,14 +1070,14 @@
     <div class="mb-4 shrink-0 px-4">
       <div class="mb-3 flex min-h-10 items-center justify-between text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)]">
         <span>{$localizedText.sidebar.pinned}</span>
-        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] tabular-nums">{$pinnedNotes.length}</span>
+        <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] tabular-nums">{$pinnedNotes.length}</span>
       </div>
       <div class="space-y-2">
         {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
-            class="w-full min-h-10 rounded-lg border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/50 transition"
+            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/50 transition"
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
             {#if pathLabel}
@@ -1095,7 +1095,7 @@
         <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
           on:click={() => dispatch('openCreateNote')}
-          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-lg lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
+          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-ui lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
         >
           <span class="text-sm leading-none">+</span>
           <span class="whitespace-nowrap">{$localizedText.sidebar.new.replace(/^\+\s*/, '')}</span>
@@ -1123,7 +1123,7 @@
       <div class="space-y-0.5 lg:space-y-1">
         {#if isDragOverRoot}
           <div
-            class="mx-2 rounded-lg border-2 border-dashed border-[var(--text-secondary)]/30 py-3 text-center"
+            class="mx-2 rounded-ui border-2 border-dashed border-[var(--text-secondary)]/30 py-3 text-center"
             role="presentation"
             on:dragover|preventDefault
             on:drop={handleRootDrop}
@@ -1354,7 +1354,7 @@
       <input
         data-testid="bulk-tag-input"
         type="text"
-        class="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm outline-none placeholder-[var(--text-secondary)]"
+        class="w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm outline-none placeholder-[var(--text-secondary)]"
         placeholder={$localizedText.sidebar.modals.tagPlaceholder}
         bind:value={bulkTagValue}
         on:keydown={(e) => { if (e.key === 'Enter') applyBulkTag(); }}
@@ -1467,7 +1467,7 @@
                   <button
                     type="button"
                     on:click={() => selectTemplate(template)}
-                    class="w-full rounded-lg border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/50'}"
+                    class="w-full rounded-ui border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/50'}"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
@@ -1477,7 +1477,7 @@
                                           </div>
                     <div class="mt-2 flex flex-wrap gap-1">
                       {#each template.tags as tag}
-                        <span class="rounded-full bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                        <span class="rounded-ui bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
                   </button>
@@ -1524,7 +1524,7 @@
           <h3 class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreview}</h3>
           <div
             style:--template-empty-label={`"${$localizedText.templates.emptyItem}"`}
-            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
+            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
             data-testid="template-preview-scroll"
           >
             {#if selectedTemplate}

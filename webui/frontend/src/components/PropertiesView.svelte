@@ -91,7 +91,7 @@
         placeholder={$localizedText.properties.tableSearch}
         aria-label={$localizedText.properties.tableSearch}
         data-testid="properties-query"
-        class="w-full rounded-md border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm text-[var(--text-primary)]"
+        class="w-full rounded-ui border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm text-[var(--text-primary)]"
       />
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.syntaxHint}</p>
     </header>
@@ -104,7 +104,7 @@
             type="button"
             aria-pressed={columns?.includes(item.key)}
             on:click={() => toggleColumn(item.key)}
-            class="rounded-md border px-2 py-1 text-xs {columns?.includes(item.key) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+            class="rounded-ui border px-2 py-1 text-xs {columns?.includes(item.key) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
           >{item.key} ({item.count})</button>
         {/each}
       </div>

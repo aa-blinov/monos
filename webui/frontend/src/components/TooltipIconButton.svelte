@@ -91,7 +91,7 @@
     <span
       bind:this={tooltipEl}
       role="tooltip"
-      class="pointer-events-none fixed z-[120] max-w-xs whitespace-nowrap rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] shadow-lg shadow-black/10"
+      class="pointer-events-none fixed z-[120] max-w-xs whitespace-nowrap rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] shadow-lg shadow-black/10"
       style={tooltipStyle}
     >
       {tooltip}

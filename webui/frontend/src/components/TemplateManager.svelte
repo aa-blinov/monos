@@ -135,7 +135,7 @@
         type="text"
         bind:value={query}
         placeholder={$localizedText.templates.searchPlaceholder}
-        class="h-9 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 text-sm outline-none"
+        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 text-sm outline-none"
       />
     </div>
 
@@ -147,7 +147,7 @@
           </div>
           <button
             type="button"
-            class="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+            class="inline-flex h-9 items-center gap-2 rounded-ui border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
             on:click={openNewTemplate}
           >
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
@@ -156,13 +156,13 @@
         </div>
 
         {#if filteredCustomTemplates.length === 0}
-          <div class="rounded-xl border border-dashed border-[var(--border-subtle)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
+          <div class="rounded-ui border border-dashed border-[var(--border-subtle)] px-6 py-10 text-center text-sm text-[var(--text-secondary)]">
             {$localizedText.templates.noCustomTemplates}
           </div>
         {:else}
           <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {#each filteredCustomTemplates as template (template.id)}
-              <article class="rounded-xl border border-[var(--border-subtle)] p-4">
+              <article class="rounded-ui border border-[var(--border-subtle)] p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <h3 class="break-words font-serif text-lg tracking-tight">{template.title}</h3>
@@ -171,23 +171,23 @@
                     {/if}
                   </div>
                   <div class="flex shrink-0 items-center gap-1">
-                    <TooltipIconButton type="button" class="h-9 w-9 rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" label={$localizedText.templates.edit} tooltip={$localizedText.templates.edit} on:click={() => editTemplate(template)}>
+                    <TooltipIconButton type="button" class="h-9 w-9 rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" label={$localizedText.templates.edit} tooltip={$localizedText.templates.edit} on:click={() => editTemplate(template)}>
                       <Pencil size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
-                    <TooltipIconButton type="button" class="h-9 w-9 rounded-md text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => requestRemoveCustomTemplate(template)}>
+                    <TooltipIconButton type="button" class="h-9 w-9 rounded-ui text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => requestRemoveCustomTemplate(template)}>
                       <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
                   </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-1.5">
                   {#each template.tags as tag}
-                    <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                    <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                   {/each}
                 </div>
                 <div class="mt-4 flex justify-end">
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                    class="inline-flex h-8 items-center whitespace-nowrap rounded-ui border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
                     on:click={() => templateRequest.set(template.id)}
                   >
                     {$localizedText.templates.createNote}
@@ -215,7 +215,7 @@
               </div>
               <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {#each group.templates as template (template.id)}
-                  <article class="rounded-xl border border-[var(--border-subtle)] p-4 opacity-100 {template.hidden ? 'opacity-55' : ''}">
+                  <article class="rounded-ui border border-[var(--border-subtle)] p-4 opacity-100 {template.hidden ? 'opacity-55' : ''}">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <h4 class="break-words font-serif text-lg tracking-tight">{template.title}</h4>
@@ -223,13 +223,13 @@
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each template.tags as tag}
-                        <span class="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                        <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
                     <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
                       <button
                         type="button"
-                        class="inline-flex h-8 mr-auto shrink-0 items-center gap-1.5 rounded-md px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                        class="inline-flex h-8 mr-auto shrink-0 items-center gap-1.5 rounded-ui px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                         on:click={() => toggleLibraryTemplate(template)}
                       >
                         {#if template.hidden}
@@ -243,7 +243,7 @@
                       {#if !template.hidden}
                         <button
                           type="button"
-                          class="inline-flex h-8 items-center whitespace-nowrap rounded-md border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                          class="inline-flex h-8 items-center whitespace-nowrap rounded-ui border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
                           on:click={() => templateRequest.set(template.id)}
                         >
                           {$localizedText.templates.createNote}
@@ -289,7 +289,7 @@
           id="template-manager-content"
           bind:value={form.content}
           rows="12"
-          class="w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-3 font-mono text-xs leading-relaxed outline-none"
+          class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-3 font-mono text-xs leading-relaxed outline-none"
         ></textarea>
         <p class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.templates.placeholders}</p>
       </div>

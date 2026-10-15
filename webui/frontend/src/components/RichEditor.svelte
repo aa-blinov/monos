@@ -631,33 +631,33 @@
   <div class="relative flex items-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
     <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
     <!-- Undo/Redo -->
-    <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.redo)}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.redo)}><Redo2 size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.bold)}><Bold size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.italic)}><Italic size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.bold)}><Bold size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.italic)}><Italic size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('toggleHeading', { level: 1 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 1 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading1}><Heading1 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleHeading', { level: 2 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 2 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading2}><Heading2 size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleHeading', { level: 3 })} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.heading === 3 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading3}><Heading3 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleHeading', { level: 1 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 1 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading1}><Heading1 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleHeading', { level: 2 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 2 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading2}><Heading2 size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleHeading', { level: 3 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 3 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading3}><Heading3 size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('toggleBulletList')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.bullet ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.bulletList}><List size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleOrderedList')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.ordered ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.numberedList}><ListOrdered size="16" aria-hidden="true" /></TooltipIconButton>
-    <TooltipIconButton on:click={cmd('toggleTaskList')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.task ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.checklist}><CheckSquare size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleBulletList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.bullet ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.bulletList}><List size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleOrderedList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.ordered ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.numberedList}><ListOrdered size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleTaskList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.task ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.checklist}><CheckSquare size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('toggleBlockquote')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.blockquote}><Quote size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleBlockquote')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.blockquote}><Quote size="16" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
-    <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" aria-hidden="true" /></TooltipIconButton>
     </div>
 
     <button
       type="button"
-      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
       aria-label={$localizedText.richEditor.more}
       aria-haspopup="menu"
       aria-expanded={moreOpen}
@@ -692,7 +692,7 @@
               bind:value={$contentWidth}
               options={localizedContentWidthOptions}
               label={$localizedText.richEditor.contentWidth}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
             >
               <Maximize2 size="16" aria-hidden="true" />
             </TooltipIconSelect>
@@ -703,7 +703,7 @@
               bind:value={$lineHeight}
               options={localizedLineHeightOptions}
               label={$localizedText.richEditor.lineHeight}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
             >
               <WrapText size="16" aria-hidden="true" />
             </TooltipIconSelect>
@@ -714,7 +714,7 @@
               bind:value={$editorFontSize}
               options={localizedEditorFontSizeOptions}
               label={$localizedText.richEditor.fontSize}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-md p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
+              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
             >
               <Type size="16" aria-hidden="true" />
             </TooltipIconSelect>
@@ -780,8 +780,8 @@
       [&_.ProseMirror_ul[data-type='taskList']]:list-none [&_.ProseMirror_ul[data-type='taskList']]:ml-0
       [&_label]:flex [&_label]:mt-0.5
       [&_.ProseMirror_blockquote]:border-l-2 [&_.ProseMirror_blockquote]:border-[var(--text-primary)] [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote]:my-4
-      [&_.ProseMirror_code]:bg-[var(--bg-secondary)] [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded-sm [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono
-      [&_.ProseMirror_pre]:bg-[var(--bg-secondary)] [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded-lg [&_.ProseMirror_pre]:my-4 [&_.ProseMirror_pre]:overflow-x-auto [&_.ProseMirror_pre]:font-mono
+      [&_.ProseMirror_code]:bg-[var(--bg-secondary)] [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded-ui [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono
+      [&_.ProseMirror_pre]:bg-[var(--bg-secondary)] [&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:rounded-ui [&_.ProseMirror_pre]:my-4 [&_.ProseMirror_pre]:overflow-x-auto [&_.ProseMirror_pre]:font-mono
       [&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:p-0 [&_.ProseMirror_pre_code]:rounded-none [&_.ProseMirror_pre_code]:text-[length:var(--editor-font-size,16px)]
       [&_.ProseMirror_pre_code[class^='language-']]:text-left
       [&_.ProseMirror_hr]:border-[var(--border-subtle)] [&_.ProseMirror_hr]:my-6
@@ -792,7 +792,7 @@
   ></div>
   {#if wikiSuggestionsOpen}
     <div
-      class="absolute left-4 right-4 top-14 z-20 max-h-56 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-2xl shadow-black/15 sm:right-auto sm:w-[min(32rem,calc(100%-2rem))] lg:left-12 lg:top-20 lg:w-[min(34rem,calc(100%-6rem))]"
+      class="absolute left-4 right-4 top-14 z-20 max-h-56 overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-2xl shadow-black/15 sm:right-auto sm:w-[min(32rem,calc(100%-2rem))] lg:left-12 lg:top-20 lg:w-[min(34rem,calc(100%-6rem))]"
       role="listbox"
       aria-label={$localizedText.sourceEditor.wikiSuggestions}
       tabindex="-1"
@@ -806,7 +806,7 @@
           type="button"
           role="option"
           aria-selected={activeWikiSuggestionIndex === index}
-          class="flex !min-h-0 w-full flex-col !items-start !justify-start gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition hover:bg-[var(--bg-secondary)] {activeWikiSuggestionIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
+          class="flex !min-h-0 w-full flex-col !items-start !justify-start gap-0.5 rounded-ui px-2.5 py-1.5 text-left transition hover:bg-[var(--bg-secondary)] {activeWikiSuggestionIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
           on:mouseenter={() => activeWikiSuggestionIndex = index}
           on:click={() => selectWikiSuggestion(suggestion)}
         >
@@ -851,7 +851,7 @@
     height: 1rem;
     margin: 0.18rem 0 0;
     border: 1px solid color-mix(in srgb, var(--text-secondary) 45%, var(--border-subtle));
-    border-radius: 0.125rem;
+    border-radius: var(--radius);
     background: var(--note-page-panel, var(--bg-primary));
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -898,7 +898,7 @@
     margin: 1rem 0;
     padding: 0.75rem;
     border: 1px solid var(--border-subtle);
-    border-radius: 0.5rem;
+    border-radius: var(--radius);
     background: var(--note-page-panel, var(--bg-primary));
     overflow-x: auto;
   }
@@ -911,12 +911,12 @@
     white-space: pre;
   }
   :global(.ProseMirror .editor-image-frame) { display: inline-flex; max-width: 100%; flex-direction: column; align-items: center; gap: 0.4rem; margin: 1.25rem 0; vertical-align: top; }
-  :global(.ProseMirror img.editor-image) { max-width: 100%; height: auto; border-radius: 0.75rem; border: 1px solid var(--border-subtle); }
+  :global(.ProseMirror img.editor-image) { max-width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--border-subtle); }
   :global(.ProseMirror .editor-image-caption) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.72em; line-height: 1.35; opacity: 0.72; }
   button { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; }
   @media (min-width: 640px) { button { min-width: 28px; min-height: 28px; } }
 
   .toolbar-scroll::-webkit-scrollbar { height: 3px; }
-  .toolbar-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
+  .toolbar-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: var(--radius); }
   .toolbar-scroll { scrollbar-width: thin; scrollbar-color: var(--border-subtle) transparent; }
 </style>

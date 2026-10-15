@@ -90,7 +90,7 @@
           {$localizedText.trash.hint}
         </p>
       </div>
-      <div class="shrink-0 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+      <div class="shrink-0 rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
         {notes.length}
       </div>
     </div>
@@ -104,7 +104,7 @@
         {error}
       </div>
     {:else if notes.length === 0}
-      <div class="rounded-xl border border-dashed border-[var(--border-subtle)] px-6 py-20 text-center">
+      <div class="rounded-ui border border-dashed border-[var(--border-subtle)] px-6 py-20 text-center">
         <div class="font-serif text-xl tracking-tight">{$localizedText.trash.emptyTitle}</div>
         <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
           {$localizedText.trash.emptyHint}
@@ -113,7 +113,7 @@
     {:else}
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {#each notes as note (note.path)}
-          <article class="group flex min-h-48 flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 shadow-sm shadow-black/[0.03]">
+          <article class="group flex min-h-48 flex-col overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 shadow-sm shadow-black/[0.03]">
             <div class="min-w-0">
               <h2 class="truncate font-serif text-lg font-medium tracking-tight">{note.name}</h2>
               <div class="mt-1 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
@@ -132,7 +132,7 @@
               <div class="flex items-center gap-1">
                 <TooltipIconButton
                   type="button"
-                  class="h-9 w-9 rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
+                  class="h-9 w-9 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
                   label={$localizedText.trash.restore}
                   tooltip={$localizedText.trash.restore}
                   disabled={busyPath === note.path}
@@ -142,7 +142,7 @@
                 </TooltipIconButton>
                 <TooltipIconButton
                   type="button"
-                  class="h-9 w-9 rounded-md text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] disabled:opacity-30"
+                  class="h-9 w-9 rounded-ui text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] disabled:opacity-30"
                   label={$localizedText.trash.deleteForever}
                   tooltip={$localizedText.trash.deleteForever}
                   tooltipAlign="end"

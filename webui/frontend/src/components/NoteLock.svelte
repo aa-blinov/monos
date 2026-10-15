@@ -89,7 +89,7 @@
       type="button"
       disabled={busy}
       on:click={lock}
-      class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
     >{$localizedText.lock.lockButton}</button>
   {:else if unlocked}
     <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.lock.openForSession}</p>
@@ -97,7 +97,7 @@
       type="button"
       disabled={busy}
       on:click={relock}
-      class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
     >{$localizedText.lock.relock}</button>
     <input
       type="password"
@@ -113,7 +113,7 @@
       type="button"
       disabled={busy}
       on:click={removeLock}
-      class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
     >{$localizedText.lock.removeLock}</button>
   {/if}
   {#if error}

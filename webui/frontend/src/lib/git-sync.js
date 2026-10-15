@@ -50,11 +50,13 @@ export async function runSyncRound() {
 
   inFlight = true;
   try {
-    const response = await fetch(policy.upload ? '/api/git/sync' : '/api/git/pull', { method: 'POST' });
+    // `auto=1`: while Git is not connected the server answers "skipped" instead of 400.
+    const response = await fetch(`${policy.upload ? '/api/git/sync' : '/api/git/pull'}?auto=1`, { method: 'POST' });
     // 400 means "no git repo configured" — an ordinary state, not a failure.
     if (response.status === 400) return null;
     const data = await response.json().catch(() => ({}));
     if (!response.ok) return { ok: false, detail: data.detail };
+    if (data.skipped) return null;
     // The pull route counts the commits that arrived as `received`, the sync route as `pulled`.
     const result = { ok: true, ...data, received: data.received ?? data.pulled ?? 0 };
     onRoundResult?.(result);

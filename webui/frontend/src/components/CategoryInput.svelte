@@ -114,14 +114,14 @@
     on:blur={handleBlur}
     on:input={handleInput}
     on:keydown={handleKeydown}
-    class="h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
+    class="h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
   />
   {#if showList}
     <ul
       id={listId}
       role="listbox"
       aria-label={listLabel}
-      class="absolute left-0 top-full z-30 mt-1 max-h-56 w-max min-w-full overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+      class="absolute left-0 top-full z-30 mt-1 max-h-56 w-max min-w-full overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
     >
       {#each options as item, index (item.name)}
         <li

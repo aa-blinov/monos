@@ -46,13 +46,13 @@ const SPACING_SCALE = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40, 48, 64
 // достался по наследству: например `code` внутри `pre` получает форму
 // инлайн-чипа от селектора для `code`, и без явного обнуления блок кода
 // остаётся со скруглённым внутренним углом.
-const RADIUS_SCALE = ['none', 'sm', 'md', 'lg', 'xl', 'full'];
+const RADIUS_SCALE = ['none', 'ui', 'full'];
 /** The radius a card, a modal and a panel must share. */
-const CONTAINER_RADIUS = 'xl';
+const CONTAINER_RADIUS = 'ui';
 /** The same scale in px, for radii written directly in CSS. */
-const CSS_RADIUS_PX = [2, 6, 8, 12];
+const CSS_RADIUS_PX = [0];
 /** What each documented token must claim, in px. */
-const CSS_RADIUS_PX_BY_TOKEN = { sm: 2, md: 6, lg: 8, xl: 12 };
+const CSS_RADIUS_PX_BY_TOKEN = { ui: 6 };
 
 const TW_SPACING = {
   0: 0, 0.5: 2, 1: 4, 1.5: 6, 2: 8, 2.5: 10, 3: 12, 3.5: 14, 4: 16,
@@ -160,14 +160,15 @@ test('круглая форма — только там, где она знач�
       const width = /(?:^|\s)w-(\d+)(?=\s|$)/.exec(classes);
       const height = /(?:^|\s)h-(\d+)(?=\s|$)/.exec(classes);
       const size = width && height && width[1] === height[1] ? parseInt(width[1], 10) : 0;
-      const dot = /\b[hw]-[0-3]\b/.test(classes);
       // Ореолы и прочая декорация не элементы интерфейса: их форму не видит
       // пользователь как кнопку, и требовать от них квадрат незачем.
-      const decoration = /\bblur-/.test(classes) || /pointer-events-none/.test(classes);
-      if (size >= 7 && !dot && !decoration) offenders.push(`${path.basename(file)} ${classes.slice(0, 70)}`);
+      const decoration = /(?:^|\s)blur-/.test(classes) || /pointer-events-none/.test(classes);
+      // Круг — только у круглого: равные ширина и высота. Тег, поле поиска и
+      // переключатель — прямоугольники и берут единый радиус.
+      if (!size && !decoration) offenders.push(`${path.basename(file)} ${classes.slice(0, 70)}`);
     }
   }
-  assert.deepEqual(offenders, [], `круг вместо скруглённого квадрата: ${offenders.join(' | ')}`);
+  assert.deepEqual(offenders, [], `круг у некруглого элемента: ${offenders.join(' | ')}`);
 });
 
 test('радиусы, заданные в CSS, тоже лежат на шкале', () => {
@@ -175,6 +176,7 @@ test('радиусы, заданные в CSS, тоже лежат на шкал
   // и тогда проверка по шкале молча его пропускает.
   const offenders = [];
   for (const file of files) {
+    // Единственный допустимый радиус в CSS — var(--radius); число допускается только 0.
     for (const m of read(file).matchAll(/border-radius:\s*([\d.]+)(px|rem)/g)) {
       const value = parseFloat(m[1]) * (m[2] === 'rem' ? 16 : 1);
       if (CSS_RADIUS_PX.includes(Math.round(value * 100) / 100)) continue;
