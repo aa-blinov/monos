@@ -30,7 +30,7 @@ test('без отправки раунд только получает: POST н�
   };
   try {
     const result = await runSyncRound();
-    assert.deepEqual(seen, [['/api/git/pull', 'POST']]);
+    assert.deepEqual(seen, [['/api/git/pull?auto=1', 'POST']]);
     assert.equal(result.ok, true);
     assert.equal(result.received, 2);
   } finally {
@@ -47,7 +47,7 @@ test('с отправкой раунд коммитит, получает и о�
   };
   try {
     const result = await runSyncRound();
-    assert.deepEqual(seen, ['/api/git/sync']);
+    assert.deepEqual(seen, ['/api/git/sync?auto=1']);
     assert.equal(result.received, 3);
     assert.deepEqual(result.pushed, ['Alpha.md']);
   } finally {
@@ -57,6 +57,15 @@ test('с отправкой раунд коммитит, получает и о�
 
 test('git не подключён (400) — раунд пропускается без ошибки', async () => {
   globalThis.fetch = async () => answer(400, { detail: 'Git not initialized' });
+  try {
+    assert.equal(await runSyncRound(), null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('git не подключён — сервер отвечает skipped, раунд пропускается без ошибки', async () => {
+  globalThis.fetch = async () => answer(200, { skipped: 'not-connected' });
   try {
     assert.equal(await runSyncRound(), null);
   } finally {

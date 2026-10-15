@@ -659,7 +659,7 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
+        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
           {#each themeModeOptions as option}
             <button
               type="button"
@@ -829,7 +829,7 @@
             disabled={storageBusy}
             data-testid="storage-choose"
             on:click={chooseStorage}
-            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
           >{$localizedText.settings.storageChoose}</button>
           {#if storage.target !== storage.defaultFolder}
             <button
@@ -837,7 +837,7 @@
               disabled={storageBusy}
               data-testid="storage-reset"
               on:click={useDefaultStorage}
-              class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+              class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
             >{$localizedText.settings.storageReset}</button>
           {/if}
         </div>
@@ -854,7 +854,7 @@
       <!-- Help -->
       <details open class="text-xs text-[var(--text-secondary)] group">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
-        <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
+        <div class="mt-3 space-y-2 rounded-ui border border-[var(--border-subtle)] p-3 leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
             <p>{step}</p>
@@ -908,7 +908,7 @@
       {/if}
 
       {#if gitError}
-        <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
+        <div class="text-xs rounded-ui bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
       {/if}
 
       <div class="grid grid-cols-2 gap-6">
@@ -1002,7 +1002,7 @@
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
 
-      <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
+      <div class="border rounded-ui border border-[var(--border-subtle)] p-5">
         {#if isCheckingStatus}
           <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
         {:else if gitStatus?.initialized}
@@ -1064,7 +1064,7 @@
                   <button
                     type="button"
                     on:click={() => copyLanUrl(url)}
-                    class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                    class="shrink-0 rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                   >{$localizedText.settings.lanCopy}</button>
                 </div>
               {/each}
@@ -1078,7 +1078,7 @@
             disabled={lanBusy}
             data-testid="lan-renew"
             on:click={() => confirmingLanRenew = true}
-            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
           >{$localizedText.settings.lanRenew}</button>
         {/if}
         {#if lan.restartRequired}
@@ -1107,14 +1107,14 @@
     {#if gitConflicts.length > 0}
       <section class="space-y-4 pt-2">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.conflicts(gitConflicts.length)}</h2>
-        <div class="border rounded-lg border border-[var(--border-subtle)] p-4 space-y-2 max-h-48 overflow-y-auto">
+        <div class="border rounded-ui border border-[var(--border-subtle)] p-4 space-y-2 max-h-48 overflow-y-auto">
           {#each gitConflicts as conflict}
             <div class="flex items-center justify-between py-1 text-sm border-b border-[var(--border-subtle)] last:border-0">
               <span class="truncate font-mono text-xs">{getConflictLabel(conflict)}</span>
             </div>
           {/each}
         </div>
-        <button on:click={openConflictResolver} class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-secondary)] transition">
+        <button on:click={openConflictResolver} class="px-4 py-2 rounded-ui text-xs font-bold uppercase tracking-widest bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-secondary)] transition">
           {$localizedText.settings.resolveConflicts}
         </button>
       </section>
@@ -1147,7 +1147,7 @@
             type="submit"
             disabled={publishBusy || !publishFolder.trim()}
             data-testid="publish-button"
-            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
           >{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</button>
         </form>
         {#if publishStatus}

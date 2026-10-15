@@ -132,14 +132,14 @@
       on:input={handleSearchInput}
       on:keydown={(e) => { if (e.key === 'Escape') clearSearch(); }}
       on:focus={loadTags}
-      class="h-11 lg:h-10 w-full rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-16 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
+      class="h-11 lg:h-10 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 pr-16 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
     />
     {#if $searchQuery}
       <button
         type="button"
         data-testid="save-current-search"
         on:click={() => dispatch('saveSearch', $searchQuery)}
-        class="absolute right-11 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        class="absolute right-11 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
         aria-label={$localizedText.savedSearches.save}
         title={$localizedText.savedSearches.save}
       >
@@ -150,14 +150,14 @@
       <button
         type="button"
         on:click={clearSearch}
-        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
         aria-label={$localizedText.header.closeSearch}
       >
         <X class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     {/if}
     {#if showTagSuggestions}
-      <div class="absolute top-full left-0 mt-2 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full rounded-xl">
+      <div class="absolute top-full left-0 mt-2 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full rounded-ui">
         <div class="px-3 pb-1 pt-2.5 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.tags.title}</div>
         {#each filteredTags as tag}
           <button
@@ -182,7 +182,7 @@
     <div class="flex-1"></div>
     <TooltipIconButton
       on:click={() => editorAction.set('delete')}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-lg text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
       label={$localizedText.editor.moveToTrash}
       tooltip={$localizedText.editor.moveToTrash}
       tooltipAlign="end"

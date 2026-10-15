@@ -82,14 +82,14 @@
                 : $localizedText.editorHeader.taskProgress.percent(taskProgress.percent)}
             >
               <span
-                class="h-1 w-14 overflow-hidden rounded-full bg-[var(--bg-secondary)]"
+                class="h-1 w-14 overflow-hidden rounded-ui bg-[var(--bg-secondary)]"
                 role="progressbar"
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow={taskProgress.percent}
               >
                 <span
-                  class="block h-full rounded-full transition-[width] duration-300"
+                  class="block h-full rounded-ui transition-[width] duration-300"
                   class:bg-[var(--green)]={taskProgress.isComplete}
                   class:bg-[var(--text-tertiary)]={!taskProgress.isComplete}
                   style={`width: ${taskProgress.percent}%`}

@@ -54,12 +54,8 @@ typography:
     letterSpacing: "0.12em"
 rounded:
   none: "0px"
-  micro: "2px"
-  field: "4px"
-  panel: "8px"
-  card: "16px"
-  card-lg: "24px"
-  pill: "9999px"
+  ui: "6px"
+  full: "9999px"
 spacing:
   hair: "2px"
   tight: "4px"
@@ -92,7 +88,7 @@ components:
   card-note:
     backgroundColor: "{colors.paper-warm}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.card-lg}"
+    rounded: "{rounded.ui}"
     padding: "16px"
   field-underline:
     backgroundColor: "transparent"
@@ -102,17 +98,17 @@ components:
   chip-tag:
     backgroundColor: "{colors.paper-warm}"
     textColor: "{colors.ink-soft}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.ui}"
     padding: "2px 8px"
   icon-button:
     backgroundColor: "transparent"
     textColor: "{colors.ink-soft}"
-    rounded: "{rounded.pill}"
+    rounded: "{rounded.ui}"
     size: "36px"
   modal-panel:
     backgroundColor: "{colors.paper-warm}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.ui}"
     padding: "32px"
     width: "384px"
 ---
@@ -243,34 +239,15 @@ unambiguous. What matters is that the number is on this list.
 
 | Token | px | Role |
 |---|---|---|
-| `none` | 0px | cancelling an inherited radius — e.g. `code` inside `pre`, which otherwise picks up the inline-chip shape from the `code` rule |
-| `sm` | 2px | task checkboxes, inline code, scrollbar thumbs |
-| `md` | 6px | icon buttons (28px and 36px), note-type cards inside a modal |
-| `lg` | 8px | tooltips, context menus, small panels, fields |
-| `xl` | 12px | **the container radius**: note cards, modals, panels |
-| `full` | pill | tags, chips, colour dots, spinners, segmented controls, search fields |
+| `none` | 0px | cancelling an inherited radius — e.g. `code` inside `pre` — and field underlines, which are a single border line |
+| `ui` | 6px | **the one radius**: every rectangle — cards, modals, panels, menus, tooltips, fields, buttons, tags, chips, checkboxes, inline code |
+| `full` | circle | only shapes that are round by nature: colour dots, spinners, theme swatches, the note glow |
 
-**One container radius.** A card, a modal and a panel are the same kind of thing
-to the eye — a surface floating above the page — so they share one radius, 12px:
-enough to read as a rounded square, far from a pill. Density changes the card's
-size and padding, never its shape: the compact and desktop variants of a note
-card are the same square, and a modal is that same square scaled up.
+**One radius.** Every rectangle in Monos has the same corner, 6px, set once as `--radius` in `app.css` and exposed to Tailwind as `rounded-ui`. A card, a modal, a tag and a checkbox are drawn by the same hand, so a modal over the board, a menu over a card or a chip inside a card never look pasted in from another app. 6px is small on purpose: it reads as a soft corner on a 400px card and still as a square on a 16px checkbox, so one value works at every size.
 
-The trap this replaces is real. Rounding the cards `12/16/24` by density while
-leaving modals square meant the same object looked like a different object
-depending on which view it was in, and a modal landing on a rounded board looked
-like a screenshot pasted on top. `2xl` and `3xl` are no longer used anywhere.
+Changing the corner means changing `--radius`, nothing else.
 
-`rounded-full` is not a default. A pill is a **shape with meaning** — a tag, a
-chip, a colour dot, a segmented control, a search field. A square control drawn
-as a circle is a square control drawn wrong: a round close button sitting on a
-12px card reads as a different design system, because the eye matches corner
-curvature before it reads anything else.
-
-The rule behind the whole scale: **radius follows size.** A 16px checkbox takes
-2px, a 28px or 36px button takes 6px, a card takes 12px. One radius everywhere looks
-uniform in the stylesheet and restless on screen, because the same curve that
-reads as calm on a 400px card reads as a blob on a 28px button.
+`rounded-full` is not a corner. It is kept for things that are circles — equal width and height — and for decoration such as the note glow. A tag, a search field or a segmented control is a rectangle and takes `rounded-ui` like everything else.
 
 ### Enforced, not just documented
 
@@ -279,16 +256,11 @@ height, icon size, spacing step, radius or stroke width lands off its scale, and
 when this section drifts away from the numbers enforced there. The design system
 is a contract, not a page someone reads once.
 
-Radius is checked four ways, because each of the earlier attempts only caught
-what it already knew how to look for: the `rounded-*` classes, a bare `rounded`
-(4px, a step off the scale that the class-based check cannot see), `border-radius`
-written directly in CSS, and `rounded-full` sitting on a square of 28px or more.
-A separate test requires cards, modals and panels to share one radius, and
+Radius is checked four ways: the `rounded-*` classes (only `none`, `ui` and
+`full` pass), a bare `rounded`, `border-radius` written directly in CSS (only
+`var(--radius)` or `0`), and `rounded-full` on anything that is not a circle.
+A separate test requires cards, modals and panels to use `rounded-ui`, and
 another checks that this document's radius table matches the enforced scale.
-
-The remaining gap is stated rather than hidden: the source-level tests cannot
-know an element's rendered size, so "radius follows size" is verified by
-measuring computed radii in the browser, not by the build.
 
 ### Named Rules
 
@@ -357,14 +329,14 @@ Overlays dim with `bg-black/20` plus `backdrop-blur-sm` in light mode, and a `--
 
 ## Shapes
 
-The form language is one rule applied consistently: **radius follows size.**
+The form language is one rule applied consistently: **one radius.**
 
-A surface is a rounded square. A card, a modal and a panel are the same kind of
-thing to the eye — a plane floating above the page — so they share one radius,
-12px, and the density of a card changes its size and padding, never its shape. A
-pill is a form with meaning: a tag, a chip, a colour dot, a spinner, a segmented
-control, a search field. A square control drawn as a circle is a square control
-drawn wrong, because the eye matches corner curvature before it reads anything.
+Every rectangle is the same rounded square: a card, a modal, a panel, a field, a
+tag and a checkbox share `--radius` (6px), and the density of a card changes its
+size and padding, never its shape. A circle is kept only for things that are round
+by nature — colour dots, spinners, swatches. A square control drawn as a circle is
+a square control drawn wrong, because the eye matches corner curvature before it
+reads anything.
 
 Field underlines have zero radius by definition; they are a single border line.
 
@@ -372,21 +344,21 @@ Field underlines have zero radius by definition; they are a single border line.
 
 ### Buttons
 
-**Shape:** text is the whole button, so a filled or outlined button contradicts the type. Corners still follow size: 6px (`rounded-md`) on a 28px or 36px control.
+**Shape:** text is the whole button, so a filled or outlined button contradicts the type. Corners take the one radius, `rounded-ui` (6px).
 
 - **Primary** (`getModalButtonClass('primary')`): `--text-primary`, `font-bold`, `text-sm`, `uppercase`, `tracking-widest`, `flex-1`, `py-2`. Hover is `opacity-70`; disabled is `opacity-30` with `cursor-not-allowed`.
 - **Secondary:** identical geometry with `--text-secondary` and `font-normal`; hover shifts the color to `--text-primary`.
 - **Minimal** (`.btn-minimal`): inline, `px-4 py-2 text-sm font-medium`, same opacity treatment.
-- **Icon buttons** (`TooltipIconButton`): `rounded-md` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. At 28px the radius drops to `rounded-sm` (2px). Always paired with a tooltip except below `640px`.
+- **Icon buttons** (`TooltipIconButton`): `rounded-ui` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. The radius is the same at 28px. Always paired with a tooltip except below `640px`.
 
 ### Chips
 
-- **Style:** `rounded-full`, 1px `--border-subtle` border, `--bg-primary` at 45% opacity, `--text-secondary`, `px-2 py-0.5 text-[10px]`.
+- **Style:** `rounded-ui`, 1px `--border-subtle` border, `--bg-primary` at 45% opacity, `--text-secondary`, `px-2 py-0.5 text-[10px]`.
 - **State:** tags are inert labels, not filters. Overflow collapses into a `+N` chip in the same style rather than into an ellipsis. On search highlight, matching text inside a tag is wrapped rather than restyled.
 
 ### Cards / Containers
 
-- **Corner Style:** `rounded-xl` (12px) at every density.
+- **Corner Style:** `rounded-ui` (6px) at every density.
 - **Background:** `--bg-primary`, with a `--note-tint` overlay (accent at 13%) that rises to full opacity on hover.
 - **Glow:** a 128px `--note-glow` blob (accent at 18%, `blur-2xl`) anchored off the top-right corner, clipped by `overflow-hidden`.
 - **Shadow Strategy:** see Elevation — rest at `3%`, lift to `10%` with a 0.5px rise.
@@ -409,7 +381,7 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 
 ### Modals
 
-`rounded-xl` (12px), `--bg-primary`, 1px `--border-subtle`, `p-8`, `shadow-2xl`, default `w-96`. The close control is a 36px `rounded-md` icon button pinned top-right — the same rounded square as the panel holding it. Footer buttons are the uppercase text-only pair described above, each `flex-1` so they split the row evenly.
+`rounded-ui` (6px), `--bg-primary`, 1px `--border-subtle`, `p-8`, `shadow-2xl`, default `w-96`. The close control is a 36px `rounded-ui` icon button pinned top-right — the same rounded square as the panel holding it. Footer buttons are the uppercase text-only pair described above, each `flex-1` so they split the row evenly.
 
 ### Note content
 
@@ -428,7 +400,7 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 - **Do** keep surfaces flat at rest and let hover supply the lift — a 0.5px rise with `shadow-xl` is the system's only standard "this is alive" signal.
 - **Do** set metadata uppercase at `9–10px` with `0.1–0.16em` tracking, at or below `--text-secondary` opacity.
 - **Do** express a note's color as a 13% tint plus an 18% blurred glow.
-- **Do** let radius follow size: 2px on a 16px checkbox, 6px on a 28–36px control, 8px on a tooltip or field, 12px on any card, modal or panel. One radius everywhere reads uniform in the stylesheet and restless on screen.
+- **Do** use the one radius, `rounded-ui` (6px), for every rectangle. To change the corners, change `--radius` in `app.css`.
 - **Do** extend the system by adding a token to `lib/themes.js` and confirming it across all six palettes.
 
 ### Don't:

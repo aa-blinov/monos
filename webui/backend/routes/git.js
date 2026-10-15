@@ -709,7 +709,8 @@ export function registerGitRoutes(app) {
 
   app.post('/api/git/pull', (req, res) => runGitTask(async () => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      // An automatic round while Git is not connected is ordinary: a 400 here filled the console every round.
+      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized' });
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
 
       const authToken = await readStoredGitToken();
@@ -755,7 +756,8 @@ export function registerGitRoutes(app) {
 
   async function syncRoute(req, res) {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      // An automatic round while Git is not connected is ordinary: a 400 here filled the console every round.
+      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized' });
       // Idempotent: an existing repo adopts the hygiene files on its next sync.
       writeRepoHygieneFiles();
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });

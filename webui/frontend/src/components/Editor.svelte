@@ -301,7 +301,7 @@
   }
 
   // Окошко над нижней панелью. На телефоне это широкая шторка над той же панелью.
-  const panelClass = 'absolute bottom-full left-0 z-30 mb-2 w-72 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 shadow-2xl max-sm:fixed max-sm:inset-x-3 max-sm:bottom-14 max-sm:w-auto';
+  const panelClass = 'absolute bottom-full left-0 z-30 mb-2 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 shadow-2xl max-sm:fixed max-sm:inset-x-3 max-sm:bottom-14 max-sm:w-auto';
   const panelLabelClass = 'mb-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]';
 
   function richEditorBody(noteContent) {
@@ -1111,7 +1111,7 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
             aria-label={editableCategory ? `${$localizedText.editor.propertyCategory}: ${editableCategory}` : $localizedText.editor.propertyCategoryEmpty}
-            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1142,7 +1142,7 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'tags'}
             aria-label={editableTags.length ? `${$localizedText.editor.propertyTags}: ${editableTags.map((tag) => `#${tag}`).join(' ')}` : $localizedText.editor.propertyTags}
-            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('tags')}
           >
             <Tag size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1154,11 +1154,11 @@
               <p class={panelLabelClass}>{$localizedText.editor.propertyTags}</p>
               <div class="flex flex-wrap gap-1.5">
                 {#each editableTags as tag (tag)}
-                  <span class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-0.5 pl-2.5 pr-1 text-xs text-[var(--text-primary)]">
+                  <span class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-0.5 pl-2.5 pr-1 text-xs text-[var(--text-primary)]">
                     #{tag}
                     <button
                       type="button"
-                      class="inline-flex h-6 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      class="inline-flex h-6 w-5 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       aria-label={$localizedText.editor.tagRemove(tag)}
                       on:click={() => removeTag(tag)}
                     >
@@ -1175,7 +1175,7 @@
                 on:keydown={onTagDraftKeydown}
                 on:blur={addTagsFromDraft}
                 placeholder={editableTags.length ? '' : $localizedText.editor.propertyTagsEmpty}
-                class="mt-2 h-8 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
+                class="mt-2 h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
               />
             </div>
           {/if}
@@ -1189,7 +1189,7 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'due'}
             aria-label={dueDate ? `${$localizedText.editor.propertyDue}: ${dueLabelOf}` : $localizedText.editor.propertyDue}
-            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('due')}
           >
             <CalendarDays size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1212,14 +1212,14 @@
                     on:blur={() => { dueFocused = false; commitDueText(); }}
                     on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitDueText(); } }}
                     on:input={() => dueInvalid = false}
-                    class="h-8 w-36 rounded-md border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
+                    class="h-8 w-36 rounded-ui border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
                   />
                   {#if dueText}
                     <button
                       type="button"
                       data-testid="clear-due"
                       aria-label={$localizedText.editor.dueClear}
-                      class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       on:click={clearDue}
                     >
                       <X size="12" aria-hidden="true" />
@@ -1230,7 +1230,7 @@
                   <span
                     data-testid="due-label"
                     data-status={dueStatusOf}
-                    class="rounded-full px-2.5 py-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] {dueStatusOf === 'overdue'
+                    class="rounded-ui px-2.5 py-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] {dueStatusOf === 'overdue'
                       ? 'bg-[color-mix(in_srgb,var(--red)_14%,transparent)] text-[var(--red)]'
                       : dueStatusOf === 'today'
                         ? 'bg-[color-mix(in_srgb,var(--yellow)_18%,transparent)] text-[var(--yellow)]'
@@ -1257,7 +1257,7 @@
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'properties'}
               aria-label={`${$localizedText.properties.title}: ${customProperties.length}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
               on:click={() => togglePropertyPanel('properties')}
             >
               <SlidersHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1282,7 +1282,7 @@
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'related'}
               aria-label={`${$localizedText.editor.localNavigation}: ${relatedCount}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
               on:click={() => togglePropertyPanel('related')}
             >
               <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1299,7 +1299,7 @@
                         type="button"
                         aria-label={relatedNoteLabel(item)}
                         title={item.path}
-                        class="flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-[var(--bg-secondary)]"
+                        class="flex w-full min-w-0 items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs hover:bg-[var(--bg-secondary)]"
                         on:click={() => { closePropertyPanel(); openLinkedNote(item); }}
                       >
                         <span class="min-w-0 truncate font-medium text-[var(--text-primary)]">{item.name}</span>
@@ -1325,7 +1325,7 @@
                   <p class="{panelLabelClass} mt-3">{$localizedText.editor.unlinkedMentions}</p>
                   <ul class="-mx-1 max-h-48 overflow-y-auto">
                     {#each unlinkedMentions as item (item.path)}
-                      <li class="flex min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5 text-xs">
+                      <li class="flex min-w-0 items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-xs">
                         <span class="min-w-0">
                           <span class="block truncate font-medium text-[var(--text-primary)]">{item.title}</span>
                           <span class="block truncate text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.editor.mentionOf.replace('{phrase}', item.phrase)}</span>
@@ -1333,7 +1333,7 @@
                         <button
                           type="button"
                           data-testid="link-mention-button"
-                          class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                          class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                           on:click={() => linkMention(item)}
                         >{$localizedText.editor.linkMention}</button>
                       </li>
@@ -1353,7 +1353,7 @@
           data-testid="property-pin"
           aria-pressed={pinnedNow}
           aria-label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-          class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
           on:click={togglePinned}
         >
           <Pin size="14" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />
@@ -1369,7 +1369,7 @@
               <div class="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  class="flex h-8 shrink-0 items-center rounded-md border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+                  class="flex h-8 shrink-0 items-center rounded-ui border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
                   disabled={isColorSaving}
                   on:click={() => setNoteColor('')}
                 >
@@ -1378,7 +1378,7 @@
                 {#each colorOptions as color}
                   <button
                     type="button"
-                    class="h-8 w-8 shrink-0 rounded-sm border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
+                    class="h-8 w-8 shrink-0 rounded-ui border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
                     style="background: {color};"
                     disabled={isColorSaving}
                     aria-label={$localizedText.app.board.applyColor(color)}
@@ -1400,7 +1400,7 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'export'}
             aria-label={$localizedText.editor.exportLabel}
-            class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('export')}
           >
             <Download size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1416,7 +1416,7 @@
                       type="button"
                       data-testid="export-{format.id}"
                       disabled={exporting}
-                      class="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] disabled:opacity-40"
+                      class="flex w-full items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] disabled:opacity-40"
                       on:click={() => exportNote(format.id)}
                     >
                       <span class="text-[var(--text-primary)]">{format.label}</span>
@@ -1435,7 +1435,7 @@
           <TooltipIconButton
             type="button"
             data-testid="editor-more"
-            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
             label={$localizedText.editor.moreActions}
             tooltip={$localizedText.editor.moreActions}
             tooltipPosition="top"
@@ -1445,7 +1445,7 @@
             <MoreHorizontal class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
           </TooltipIconButton>
           {#if footerMoreOpen}
-            <div class="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
+            <div class="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
               <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>

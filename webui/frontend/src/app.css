@@ -9,6 +9,8 @@
    are the 16px-base defaults. Use text-[var(--text-whisper)], never a literal
    px size — a literal does not scale with the interface size setting. */
 :root {
+  /* The one corner radius: cards, modals, fields, buttons, tags, checkboxes. */
+  --radius: 6px;
   --text-whisper: 11px;
   --text-whisper-lg: 12px;
 }
@@ -80,7 +82,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-[var(--bg-tertiary)] rounded-full;
+  @apply bg-[var(--bg-tertiary)] rounded-ui;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -132,11 +134,11 @@
 }
 
 .prose-typography code {
-  @apply font-mono text-sm bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded-sm;
+  @apply font-mono text-sm bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded-ui;
 }
 
 .prose-typography pre {
-  @apply bg-[var(--bg-secondary)] p-6 rounded-lg overflow-x-auto my-8 border border-[var(--border-subtle)];
+  @apply bg-[var(--bg-secondary)] p-6 rounded-ui overflow-x-auto my-8 border border-[var(--border-subtle)];
 }
 
 .prose-typography a {
@@ -190,7 +192,7 @@ input[type="number"]::-webkit-outer-spin-button {
 .note-embed {
   margin: 1rem 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--bg-secondary) 45%, transparent);
   overflow: hidden;
 }
@@ -208,7 +210,7 @@ input[type="number"]::-webkit-outer-spin-button {
 .pdf-embed {
   margin: 1rem 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg-secondary);
   overflow: hidden;
 }
@@ -233,7 +235,7 @@ input[type="number"]::-webkit-outer-spin-button {
   --callout-tone: var(--text-secondary);
   border: 1px solid color-mix(in srgb, var(--callout-tone) 35%, transparent);
   background: color-mix(in srgb, var(--callout-tone) 8%, transparent);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 0.5rem 0.75rem;
 }
 .ProseMirror blockquote.callout-green { --callout-tone: var(--green); }
@@ -259,7 +261,7 @@ input[type="number"]::-webkit-outer-spin-button {
 .note-embed-body .embed-code {
   margin: 0.25rem 0;
   padding: 0.375rem 0.5rem;
-  border-radius: 2px;
+  border-radius: var(--radius);
   background: var(--bg-secondary);
   font-size: 0.75rem;
   white-space: pre-wrap;

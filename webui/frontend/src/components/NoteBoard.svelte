@@ -197,9 +197,9 @@
 
 {#if !query.trim()}
 <div class="mb-4 flex justify-end">
-  <div class="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)]/65 p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
+  <div class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)]/65 p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
     <TooltipIconButton
-      class="h-7 min-w-8 rounded-full px-2 transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+      class="h-7 min-w-8 rounded-ui px-2 transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
       label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltip={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltipAlign="end"
@@ -213,7 +213,7 @@
       </span>
       {#each availableColumnCounts as columnCount}
         <TooltipIconButton
-          class="h-7 min-w-8 rounded-full px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+          class="h-7 min-w-8 rounded-ui px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
           label={$localizedText.app.board.columns(columnCount)}
           tooltip={$localizedText.app.board.columns(columnCount)}
           tooltipAlign="end"
@@ -246,7 +246,7 @@
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
           <button
             type="button"
-            class="{mobile ? 'h-36 rounded-xl px-3 py-3' : 'h-48 rounded-xl px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
+            class="{mobile ? 'h-36 rounded-ui px-3 py-3' : 'h-48 rounded-ui px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
             on:click={createNote}
           >
             <span class="block font-serif text-sm font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)] sm:text-base">
@@ -273,7 +273,7 @@
 {#if contextMenu.show}
   <div
     bind:this={contextMenuEl}
-    class="fixed z-[130] w-48 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+    class="fixed z-[130] w-48 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
     style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     role="menu"
     tabindex="-1"
