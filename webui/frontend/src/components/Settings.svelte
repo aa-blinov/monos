@@ -71,7 +71,7 @@
     git_token: '',
     git_owner: DEFAULT_GIT_OWNER,
     git_repo: '',
-    git_branch: 'main',
+    git_branch: 'master',
     device_name: '',
     locale: 'en',
   };
@@ -937,7 +937,7 @@
                 <option value={b}>{b}</option>
               {/each}
             {:else}
-              <option value="main">main</option>
+              <option value="master">master</option>
             {/if}
           </select>
         </div>

@@ -4,6 +4,7 @@ import { prepareMonos } from './support/monos.js';
 test('автосинхронизация: по умолчанию каждые 15 минут с отправкой; выбор сохраняется и возвращается', async ({ page }) => {
   await prepareMonos(page);
   await page.goto('/settings');
+  await expect(page.locator('#git-branch')).toHaveValue('master');
   await expect(page.locator('#auto-sync-minutes')).toHaveValue('15');
   await expect(page.locator('#git-auto-upload')).toBeChecked();
   await expect(page.locator('#git-auto-upload-quit')).not.toBeChecked();
