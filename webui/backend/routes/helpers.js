@@ -1,3 +1,15 @@
+import { isLoopbackAddress } from '../lan-access.js';
+
+// Settings that change this computer's own setup (access from other devices, where the notes live)
+// are answered to this computer only, whatever token a device has.
+export function requireThisComputer(req, res, next) {
+  if (!isLoopbackAddress(req.socket.remoteAddress)) {
+    res.status(403).json({ detail: 'Only this computer can change this setting' });
+    return;
+  }
+  next();
+}
+
 export function sendError(res, error) {
   res.status(error.statusCode || 500).json({ detail: error.message });
 }

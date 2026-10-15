@@ -20,9 +20,19 @@ import { registerPrintRoutes } from './routes/print.js';
 import { registerClipRoutes } from './routes/clip.js';
 import { registerPublishRoutes } from './routes/publish.js';
 import { registerLockRoutes } from './routes/locks.js';
+import { registerLanRoutes } from './routes/lan.js';
+import {
+  ACCESS_COOKIE,
+  accessCookie,
+  bindHostFor,
+  hostAllowed,
+  isLoopbackAddress,
+  readCookie,
+  readLanConfig,
+  requestAuthorized,
+} from './lan-access.js';
 
 const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
-const DEFAULT_HOST = '127.0.0.1';
 // Notes are plain text, but one long note is still one JSON body. The default
 // 100 kB limit answered 413 to saves of longer notes, so they never reached disk.
 const JSON_BODY_LIMIT = '20mb';
@@ -39,13 +49,12 @@ function isAllowedOrigin(origin) {
   return !origin || getAllowedOrigins().has(origin);
 }
 
-const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
-
-// Binding to 127.0.0.1 keeps other machines out. Checking the Host header also
-// rejects DNS-rebinding pages: they reach this server under their own host name,
-// and a same-origin request from them carries no Origin header to refuse.
+// The server listens on this computer only, unless the person turned access from other
+// devices on (lan-access.js). Checking the Host header also rejects DNS-rebinding pages:
+// they reach this server under their own host name, and a same-origin request from them
+// carries no Origin header to refuse.
 function rejectForeignHosts(req, res, next) {
-  if (!LOOPBACK_HOSTNAMES.has(String(req.hostname || '').toLowerCase())) {
+  if (!hostAllowed(req.hostname, readLanConfig().enabled)) {
     return res.status(403).json({ detail: 'Host not allowed' });
   }
   next();
@@ -78,9 +87,51 @@ function rejectCrossOriginRequests(req, res, next) {
   next();
 }
 
+const ACCESS_PAGE = `<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Monos</title></head>
+<body style="font: 16px/1.5 system-ui, sans-serif; margin: 16px;">
+<p>Откройте ссылку с токеном, которую показывает Monos на вашем компьютере: Настройки → Телефон и другие устройства.</p>
+<p>Open the link with the access token that Monos shows on your computer: Settings → Phone and other devices.</p>
+</body></html>`;
+
+// Another device gets in with the access token. Its first page load carries the token in
+// the link; the server answers with a cookie and sends the page back without the token in
+// the address. This computer never needs it. The clipper checks its own token (routes/clip.js).
+function requireAccessToken(req, res, next) {
+  if (EXEMPT_PREFIXES.some((prefix) => req.path.startsWith(prefix))) {
+    next();
+    return;
+  }
+  const authorization = String(req.get('Authorization') || '');
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+  const authorized = requestAuthorized({
+    remoteAddress: req.socket.remoteAddress,
+    config: readLanConfig(),
+    cookieToken: readCookie(req.get('Cookie'), ACCESS_COOKIE),
+    bearerToken: authorization.startsWith('Bearer ') ? authorization.slice('Bearer '.length) : null,
+    queryToken,
+    pathname: req.path,
+  });
+  if (!authorized) {
+    if (req.path.startsWith('/api/')) {
+      res.status(401).json({ detail: 'Access token required' });
+    } else {
+      res.status(401).type('html').send(ACCESS_PAGE);
+    }
+    return;
+  }
+  if (queryToken && req.method === 'GET' && req.path === '/' && !isLoopbackAddress(req.socket.remoteAddress)) {
+    res.setHeader('Set-Cookie', accessCookie(queryToken));
+    res.redirect(302, '/');
+    return;
+  }
+  next();
+}
+
 const app = express();
 app.use(rejectForeignHosts);
 app.use(rejectCrossOriginRequests);
+app.use(requireAccessToken);
 app.use(cors({
   origin(origin, callback) {
     callback(null, origin && isAllowedOrigin(origin) ? origin : false);
@@ -109,8 +160,17 @@ registerPublishRoutes(app);
 registerLockRoutes(app);
 
 let server = null;
+let boundHost = null;
 let signalHandlersRegistered = false;
 let frontendStaticRegistered = false;
+
+/** The address and port the server listens on now, or null when it does not listen. */
+export function currentListening() {
+  if (!server) return null;
+  return { port: server.address().port, host: boundHost };
+}
+
+registerLanRoutes(app, { listening: currentListening });
 
 function registerFrontendStatic() {
   if (frontendStaticRegistered) return;
@@ -145,7 +205,7 @@ function registerSignalHandlers() {
   process.on('SIGTERM', shutdown);
 }
 
-export function startServer({ port = 8000, host = DEFAULT_HOST } = {}) {
+export function startServer({ port = 8000, host } = {}) {
   if (server) {
     return Promise.resolve({ app, server, port: server.address().port });
   }
@@ -154,9 +214,11 @@ export function startServer({ port = 8000, host = DEFAULT_HOST } = {}) {
   registerFrontendStatic();
   registerSignalHandlers();
 
+  const bindHost = host || bindHostFor();
   return new Promise((resolve, reject) => {
-    const nextServer = app.listen(port, host, () => {
+    const nextServer = app.listen(port, bindHost, () => {
       server = nextServer;
+      boundHost = bindHost;
       resolve({ app, server, port: server.address().port });
     });
 
@@ -177,6 +239,7 @@ export function stopServer() {
 
     const activeServer = server;
     server = null;
+    boundHost = null;
     const grace = setTimeout(() => activeServer.closeAllConnections?.(), SHUTDOWN_GRACE_MS);
     activeServer.close(() => {
       clearTimeout(grace);

@@ -112,6 +112,7 @@ npm run build:frontend
 - `docs/FRONTMATTER.md` documents note metadata.
 - `docs/CONTRIBUTING.md` covers development workflow and conventions.
 - `docs/PUBLISHING.md` documents the release process.
+- `docs/ACCESS.md` explains opening Monos from a phone or another computer, and installing it.
 - `webui/README.md` describes the web application internals.
 
 ## License
