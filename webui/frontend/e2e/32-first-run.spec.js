@@ -22,7 +22,8 @@ test('Outline показывает заголовок, который тольк
   await page.locator('.ProseMirror').first().click();
   await page.keyboard.type('# Заголовок для оглавления');
 
-  await expect(page.getByText('No headings yet')).toHaveCount(0, { timeout: 5000 });
+  // The outline follows the text as it is typed; the save comes 1.25 s later and is not waited for.
+  await expect(page.getByText('No headings yet')).toHaveCount(0, { timeout: 1000 });
 });
 
 test('в настройках первым идёт язык, а не резервные копии', async ({ page }) => {

@@ -1074,7 +1074,7 @@
       {#if !focusMode}
         <OutlinePanel
           bind:this={outlinePanel}
-          content={content}
+          content={editedContent}
           open={outlineOpen}
           collapsed={outlineCollapsed}
           on:navigate={handleOutlineNavigate}

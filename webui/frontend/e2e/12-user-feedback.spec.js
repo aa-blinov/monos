@@ -59,7 +59,7 @@ test('занятое название не перезаписывает суще
 
   await page.goto('/');
   await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
-  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
 
   await expect(page.getByRole('alert')).toContainText(/already exists/i);
@@ -203,7 +203,7 @@ test('занятое название предлагает создать коп
 
   await page.goto('/');
   await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
-  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
   await expect(page.getByRole('alert')).toContainText(/already exists/i);
 
@@ -221,7 +221,7 @@ test('занятое название предлагает открыть сущ
 
   await page.goto('/');
   await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
-  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
   await expect(page.getByRole('alert')).toContainText(/already exists/i);
 
