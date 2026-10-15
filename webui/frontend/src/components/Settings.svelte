@@ -626,6 +626,110 @@
 
     <div class="space-y-8">
 
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.language}</h2>
+      <div>
+        <label for="interface-language" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.interfaceLanguage}</label>
+        <select
+          id="interface-language"
+          bind:value={$locale}
+          on:change={saveSettings}
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+        >
+          {#each localeOptions as option}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+      </div>
+    </section>
+
+    <!-- Theme -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
+      <div>
+        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
+        <div class="grid grid-cols-3 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
+          {#each themeModeOptions as option}
+            <button
+              type="button"
+              on:click={() => { $themeMode = option.value; saveSettings(); }}
+              class="min-h-9 px-3 text-xs uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+            >
+              {option.label()}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <div>
+        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {#each Object.entries(themes) as [key, t]}
+          <button
+            on:click={() => { $activeTheme = key; saveSettings(); }}
+            class="p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
+          >
+            <div class="flex gap-1.5 mb-2">
+              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
+              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.dark['--bg-primary']}"></span>
+            </div>
+            <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
+          </button>
+        {/each}
+      </div>
+      </div>
+    </section>
+
+    <!-- Font -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.typography}</h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+        <div class="min-w-0">
+          <label for="font-family" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.font}</label>
+          <select
+            id="font-family"
+            value={$fontFamily}
+            on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+          >
+            {#each fontOptions as f}
+              <option value={f.name}>{f.name} ({$localizedText.optionLabels.fontCategory?.[f.category] || f.category})</option>
+            {/each}
+          </select>
+        </div>
+        <div class="min-w-0">
+          <label for="font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.size}</label>
+          <select
+            id="font-size"
+            value={$fontSize}
+            on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+          >
+            {#each localizedFontSizeOptions as s}
+              <option value={s.value}>{s.label} ({s.base})</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Editor Preferences -->
+    <section class="space-y-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.editor}</h2>
+      <div class="min-w-0">
+        <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
+        <select
+          id="editor-font-size"
+          value={$editorFontSize}
+          on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+        >
+          {#each localizedEditorFontSizeOptions as s}
+            <option value={s.value}>{s.label} ({s.base})</option>
+          {/each}
+        </select>
+      </div>
+    </section>
+
     <!-- Language -->
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
       <div>
@@ -948,109 +1052,6 @@
       {/if}
     </section>
 
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.language}</h2>
-      <div>
-        <label for="interface-language" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.interfaceLanguage}</label>
-        <select
-          id="interface-language"
-          bind:value={$locale}
-          on:change={saveSettings}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-        >
-          {#each localeOptions as option}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      </div>
-    </section>
-
-    <!-- Theme -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
-      <div>
-        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
-          {#each themeModeOptions as option}
-            <button
-              type="button"
-              on:click={() => { $themeMode = option.value; saveSettings(); }}
-              class="min-h-9 px-3 text-xs uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
-            >
-              {option.label()}
-            </button>
-          {/each}
-        </div>
-      </div>
-      <div>
-        <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {#each Object.entries(themes) as [key, t]}
-          <button
-            on:click={() => { $activeTheme = key; saveSettings(); }}
-            class="p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
-          >
-            <div class="flex gap-1.5 mb-2">
-              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
-              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.dark['--bg-primary']}"></span>
-            </div>
-            <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
-          </button>
-        {/each}
-      </div>
-      </div>
-    </section>
-
-    <!-- Font -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.typography}</h2>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-        <div class="min-w-0">
-          <label for="font-family" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.font}</label>
-          <select
-            id="font-family"
-            value={$fontFamily}
-            on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each fontOptions as f}
-              <option value={f.name}>{f.name} ({$localizedText.optionLabels.fontCategory?.[f.category] || f.category})</option>
-            {/each}
-          </select>
-        </div>
-        <div class="min-w-0">
-          <label for="font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.size}</label>
-          <select
-            id="font-size"
-            value={$fontSize}
-            on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each localizedFontSizeOptions as s}
-              <option value={s.value}>{s.label} ({s.base})</option>
-            {/each}
-          </select>
-        </div>
-      </div>
-    </section>
-
-    <!-- Editor Preferences -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.editor}</h2>
-      <div class="min-w-0">
-        <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
-        <select
-          id="editor-font-size"
-          value={$editorFontSize}
-          on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-        >
-          {#each localizedEditorFontSizeOptions as s}
-            <option value={s.value}>{s.label} ({s.base})</option>
-          {/each}
-        </select>
-      </div>
-    </section>
 
     <!-- GitHub Connection -->
     <section class="space-y-5 pt-5">

@@ -57,18 +57,37 @@
     }
   }
 
+  // A note without a name is called "Untitled", then "Untitled 2", and so on, until a free name is found.
+  async function createUntitledNote(base, category) {
+    for (let n = 1; n <= 20; n += 1) {
+      const title = n === 1 ? base : `${base} ${n}`;
+      try {
+        return { data: await createNoteRequest({ title, category, tags: [], content: '' }), title };
+      } catch (err) {
+        if (err.status !== 409) throw err;
+      }
+    }
+    throw Object.assign(new Error('No free name'), { status: 409 });
+  }
+
   async function submitCreateNote() {
-    if (!newNoteTitle.trim() || isCreating) return;
-    const title = newNoteTitle.trim();
+    if (isCreating || blockedName) return;
+    const typed = newNoteTitle.trim();
     try {
       isCreating = true;
       createError = '';
-      const data = await createNoteRequest({ title, category: newNoteCategory, tags: [], content: '' });
+      if (typed) {
+        const data = await createNoteRequest({ title: typed, category: newNoteCategory, tags: [], content: '' });
+        onClose();
+        onCreated(data, typed);
+        return;
+      }
+      const { data, title } = await createUntitledNote($localizedText.sidebar.untitledNote, newNoteCategory);
       onClose();
       onCreated(data, title);
     } catch (err) {
       createError = createFailureText(err);
-      duplicatePath = err.status === 409 && err.body?.path ? err.body.path : '';
+      duplicatePath = typed && err.status === 409 && err.body?.path ? err.body.path : '';
     } finally {
       isCreating = false;
     }
@@ -114,6 +133,8 @@
 
   // Название станет именем файла: то, что ОС не создаст, называем до отправки.
   $: titleProblem = fileNameProblem(newNoteTitle);
+  // An empty name is fine (the note becomes "Untitled"); only an unusable name blocks Create.
+  $: blockedName = Boolean(titleProblem) && titleProblem !== 'empty';
 
   function formatTodayNoteTitle(date = new Date()) {
     return localeStamp(date, $locale);
@@ -162,7 +183,7 @@
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
           class={formFieldClass()}
           on:keydown={(e) => {
-            if (e.key === 'Enter' && newNoteTitle.trim() && !titleProblem) submitCreateNote();
+            if (e.key === 'Enter' && !blockedName) submitCreateNote();
             if (e.key === 'Escape') onClose();
           }}
           autofocus
@@ -186,8 +207,8 @@
       <button on:click={onClose} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
       <button
         on:click={submitCreateNote}
-        disabled={isCreating || !newNoteTitle.trim() || Boolean(titleProblem)}
-        class={getModalButtonClass('primary', { disabled: isCreating || !newNoteTitle.trim() || Boolean(titleProblem) })}
+        disabled={isCreating || blockedName}
+        class={getModalButtonClass('primary', { disabled: isCreating || blockedName })}
       >
         {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
       </button>

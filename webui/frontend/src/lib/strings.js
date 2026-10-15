@@ -11,9 +11,20 @@ export function isSupportedLocale(value) {
   return localeOptions.some(option => option.value === value);
 }
 
+/**
+ * The language a person starts with, before they choose one: the first Russian language the system
+ * reports, otherwise English. A choice saved in Settings always comes first (see getInitialLocale).
+ */
+export function localeFromLanguages(languages = []) {
+  const reportsRussian = languages.some((language) => /^ru(-|_|$)/i.test(String(language)));
+  return reportsRussian ? 'ru' : defaultLocale;
+}
+
 function getInitialLocale() {
   const saved = globalThis.localStorage?.getItem('locale');
-  return isSupportedLocale(saved) ? saved : defaultLocale;
+  if (isSupportedLocale(saved)) return saved;
+  const navigatorLanguages = globalThis.navigator?.languages || [globalThis.navigator?.language].filter(Boolean);
+  return localeFromLanguages(navigatorLanguages);
 }
 
 export const locale = writable(getInitialLocale());
@@ -108,6 +119,11 @@ const enText = {
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are plain Markdown files on your own disk — not rows in someone\'s database. Monos is just a comfortable way to read, write and find them.',
     emptyMobile: 'Your notes are plain Markdown files on your own disk. Open the menu to pick one or start writing.',
+    tips: {
+      search: 'Find any note or command',
+      links: 'Link notes by typing [[ and a note name',
+      commands: 'Type / in a note for headings, lists and inserts',
+    },
     openMenu: 'Open menu',
     homeActions: {
       newNote: '+ New note',
@@ -265,12 +281,13 @@ const enText = {
     },
   },
   sidebar: {
+    untitledNote: 'Untitled',
     close: 'Close sidebar',
     delete: 'Delete',
     mobileNavigation: 'Navigation',
     pinned: 'Pinned',
     recentThoughts: 'Recently Opened',
-    knowledgeTree: 'Tree',
+    knowledgeTree: 'Notes',
     new: '+ New',
     today: 'Today',
     templates: 'Templates',
@@ -363,8 +380,8 @@ const enText = {
       fromTemplate: 'Note from template',
       fromTemplateHint: 'Create a note from a selected template',
       title: 'Title',
-      titleHint: 'By default this creates a clean empty note. Add a title and start writing.',
-      noteTitlePlaceholder: 'Give this note a name...',
+      titleHint: 'Optional. Without a name the note is called Untitled, and you can rename it later.',
+      noteTitlePlaceholder: 'Name (optional)...',
       quickNoteSaved: 'Quick note saved',
       quickNoteSavedHint: 'The clipboard content was saved to Quick Notes. Adjust the name and open it, or stay here.',
       openNote: 'Open',
@@ -726,7 +743,7 @@ const enText = {
     exportPdf: 'PDF',
     propertyTags: 'Tags',
     propertyTagsEmpty: 'project, idea',
-    propertyDue: 'Due',
+    propertyDue: 'Due date',
     gatheringThoughts: 'Gathering Thoughts',
     beginWriting: 'Begin writing...',
     archiveTitle: 'Move this note to trash?',
@@ -974,6 +991,11 @@ const ruText = {
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Ваши заметки — обычные файлы Markdown на вашем диске, а не строки в чужой базе. Monos просто удобный способ их читать, писать и находить.',
     emptyMobile: 'Ваши заметки — обычные файлы Markdown на вашем диске. Откройте меню, чтобы выбрать или начать писать.',
+    tips: {
+      search: 'Найти любую заметку или команду',
+      links: 'Связать заметки: введите [[ и название заметки',
+      commands: 'Введите / в заметке, чтобы вставить заголовок, список или блок',
+    },
     openMenu: 'Открыть меню',
     homeActions: {
       newNote: '+ Новая заметка',
@@ -1132,12 +1154,13 @@ const ruText = {
     },
   },
   sidebar: {
+    untitledNote: 'Без названия',
     close: 'Закрыть боковую панель',
     delete: 'Удалить',
     mobileNavigation: 'Навигация',
     pinned: 'Закреплённые',
     recentThoughts: 'Недавно открытые',
-    knowledgeTree: 'Дерево',
+    knowledgeTree: 'Заметки',
     new: '+ Создать',
     today: 'Сегодня',
     templates: 'Шаблоны',
@@ -1241,8 +1264,8 @@ const ruText = {
       fromTemplate: 'Заметка из шаблона',
       fromTemplateHint: 'Создать заметку по выбранному шаблону',
       title: 'Заголовок',
-      titleHint: 'По умолчанию создаётся чистая заметка. Дайте ей имя и начинайте писать.',
-      noteTitlePlaceholder: 'Дайте заметке имя...',
+      titleHint: 'Необязательно. Без названия заметка получит имя «Без названия», его можно изменить потом.',
+      noteTitlePlaceholder: 'Название (необязательно)...',
       quickNoteSaved: 'Быстрая заметка сохранена',
       quickNoteSavedHint: 'Содержимое буфера обмена сохранено в Quick Notes. Измените имя и откройте или оставайтесь здесь.',
       openNote: 'Открыть',
