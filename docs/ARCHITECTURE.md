@@ -323,17 +323,18 @@ decide.
 - The same note on both → whole-file conflict, surfaced through the existing
   `ConflictResolver`, which shows both versions in full.
 
-### Automatic pull
+### Automatic sync
 
-`POST /api/git/pull` fetches and merges without committing a user's intent.
-The frontend starts it on launch and every five minutes (`lib/git-sync.js`),
-but only after `/api/git/status` reports a configured remote — otherwise every
-launch would fire a request that can only answer 400. One pull runs at a time,
-and none start while a note is dirty or saving.
+Every interval the app runs one round (`lib/git-sync.js`). The interval is set in Settings → Sync Settings and is 15 minutes by default. A round downloads what the other devices sent. When the person chose it, a round also uploads this device's changes first: a commit, then pull, then push, the same as the Sync button (`POST /api/git/sync`). A round that only downloads is `POST /api/git/pull`. Rounds start at launch and run while the app is open.
 
-The asymmetry is deliberate and matches every observed notes app that syncs
-this way: **upload stays manual, download does not.** Committing is a decision;
-noticing that a device went stale is maintenance.
+Two choices in Settings are independent of each other:
+
+- **Upload during the automatic sync** is on by default. Each round commits and pushes what changed on this device.
+- **Upload when the app closes** is off by default. Before the backend stops, the desktop app calls `POST /api/git/sync-on-quit`. It runs the same sync only when this option is on, and the app stops waiting after 20 seconds, so a slow network cannot hold the quit. What did not go up is uploaded at the next sync.
+
+A round is skipped while a note is unsaved or saving, and it is answered 400 and skipped while no remote is configured. Git tasks run one at a time (`runGitTask` in `routes/git.js`), so an automatic round and the Sync button never hold the index together.
+
+Download never needs the person: a device that went stale catches up by itself. Upload is either automatic (the choices above) or manual with the Sync button. Conflicts are shown the same way in both cases.
 
 ### Before anything is pushed: what GitHub will actually allow
 

@@ -26,7 +26,7 @@ import { get } from 'svelte/store';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
-import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
+import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
@@ -87,7 +87,6 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
   let lastSeenNoteSaveAt = 0;
   let continueWorkOpen = false;
   let autoPullState = { conflicts: false, received: 0 };
-  let cancelAutoPull = () => {};
   let importStatus = '';
   let importError = '';
 
@@ -205,22 +204,24 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
    * refreshes the board and raises a badge. Conflicts are surfaced where the
    * user already goes to resolve them, not as a modal out of nowhere.
    */
-  onDestroy(() => cancelAutoPull());
+  onDestroy(() => stopAutoSync());
 
   /**
-   * Start the background pull only when a remote is actually connected. Without
-   * one, every launch would fire a request that can only answer 400. The local
-   * `gitConfigured` flag is never assigned here (the sidebar keeps its own), so
-   * ask the backend once.
+   * The automatic sync runs from launch with the choices the person made in Settings. A round while Git is not
+   * connected is answered 400 and skipped, so nothing has to be checked first.
    */
-  async function startAutoPullIfConfigured() {
+  async function startAutoSyncWithSavedChoices() {
     try {
-      const response = await fetch('/api/git/status');
-      const status = response.ok ? await response.json() : null;
-      if (status?.initialized) cancelAutoPull = startAutoPull({ onResult: handleAutoPullResult });
+      const response = await fetch('/api/settings');
+      const saved = response.ok ? await response.json() : {};
+      setAutoSyncPolicy({
+        minutes: normalizeSyncMinutes(saved.git_auto_sync_minutes ?? DEFAULT_SYNC_MINUTES),
+        upload: saved.git_auto_upload !== false,
+      });
     } catch {
-      // offline or not configured — nothing to pull
+      // offline: the defaults apply
     }
+    startAutoSync({ onResult: handleAutoPullResult });
   }
 
   function handleAutoPullResult(result) {
@@ -254,7 +255,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
       const state = get(editorState);
       return Boolean(state?.saving || state?.dirty);
     });
-    void startAutoPullIfConfigured();
+    void startAutoSyncWithSavedChoices();
     restoreSearchFromUrl();
     searchUrlReady.set(true);
     const handlePopState = () => {

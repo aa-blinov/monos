@@ -1527,6 +1527,66 @@ apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работа�
   assert.deepEqual(afterResolve.data, []);
 });
 
+apiTest('POST /api/git/sync-on-quit: без выбора человека ничего не отправляет, с выбором — отправляет', async () => {
+  const remoteDir = path.join(tempRoot, 'quit-remote.git');
+  execSync(`git init --bare "${remoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  try {
+    execSync(`git remote add origin "${remoteDir}"`, { cwd: notesDir, stdio: 'pipe' });
+  } catch {
+    execSync(`git remote set-url origin "${remoteDir}"`, { cwd: notesDir, stdio: 'pipe' });
+  }
+  const branch = execSync('git branch --show-current', { cwd: notesDir, stdio: 'pipe', encoding: 'utf-8' }).trim();
+  execSync(`git push -u origin ${branch}`, { cwd: notesDir, stdio: 'pipe' });
+  const remoteFiles = () => execSync(`git --git-dir "${remoteDir}" ls-tree -r --name-only ${branch}`, {
+    cwd: tempRoot,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  });
+  const saveQuitChoice = (value) => requestJson(buildUrl('/api/settings'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ git_auto_upload_quit: value }),
+  });
+
+  fs.writeFileSync(path.join(notesDir, 'Quit-off.md'), 'written, not uploaded\n', 'utf-8');
+  const skipped = await requestJson(buildUrl('/api/git/sync-on-quit'), { method: 'POST' });
+  assert.equal(skipped.response.status, 200);
+  assert.equal(skipped.data.skipped, 'off');
+  assert.equal(remoteFiles().includes('Quit-off.md'), false);
+
+  await saveQuitChoice(true);
+  fs.writeFileSync(path.join(notesDir, 'Quit-on.md'), 'uploaded when the app closes\n', 'utf-8');
+  const sent = await requestJson(buildUrl('/api/git/sync-on-quit'), { method: 'POST' });
+  assert.equal(sent.response.status, 200);
+  assert.equal(sent.data.conflicts, false);
+  assert.equal(remoteFiles().includes('Quit-on.md'), true);
+  await saveQuitChoice(false);
+});
+
+apiTest('POST /api/git/pull считает коммиты, которые пришли с другого устройства', async () => {
+  const remoteDir = path.join(tempRoot, 'arrived-remote.git');
+  execSync(`git init --bare "${remoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  try {
+    execSync(`git remote add origin "${remoteDir}"`, { cwd: notesDir, stdio: 'pipe' });
+  } catch {
+    execSync(`git remote set-url origin "${remoteDir}"`, { cwd: notesDir, stdio: 'pipe' });
+  }
+  const branch = execSync('git branch --show-current', { cwd: notesDir, stdio: 'pipe', encoding: 'utf-8' }).trim();
+  execSync(`git push -u origin ${branch}`, { cwd: notesDir, stdio: 'pipe' });
+
+  const peerDir = path.join(tempRoot, 'arrived-peer');
+  execSync(`git clone -b ${branch} "${remoteDir}" "${peerDir}"`, { cwd: tempRoot, stdio: 'pipe' });
+  execSync('git config user.email peer@example.test && git config user.name Peer', { cwd: peerDir, stdio: 'pipe' });
+  fs.writeFileSync(path.join(peerDir, 'Arrived.md'), 'from another device\n', 'utf-8');
+  execSync('git add -A && git commit -m "Auto-sync from Peer"', { cwd: peerDir, stdio: 'pipe' });
+  execSync(`git push origin ${branch}`, { cwd: peerDir, stdio: 'pipe' });
+
+  const pulled = await requestJson(buildUrl('/api/git/pull'), { method: 'POST' });
+  assert.equal(pulled.response.status, 200);
+  assert.equal(pulled.data.received, 1);
+  assert.equal(fs.readFileSync(path.join(notesDir, 'Arrived.md'), 'utf-8'), 'from another device\n');
+});
+
 apiTest('POST /api/git/setup мержит remote с локальными заметками и показывает конфликт пересечения', async () => {
   const branch = execSync('git branch --show-current', {
     cwd: notesDir,

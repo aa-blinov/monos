@@ -370,6 +370,40 @@ function hasStagedChanges() {
   }
 }
 
+// Git work on the notes folder runs one task at a time: the automatic sync and a manual one must not hold the
+// index together. A task that arrives while another one runs waits for it.
+let gitQueue = Promise.resolve();
+function runGitTask(task) {
+  const run = gitQueue.then(task);
+  gitQueue = run.catch(() => {});
+  return run;
+}
+
+// The commit this device stands on, or '' before the first commit.
+function currentHead() {
+  try { return gitExec(['rev-parse', 'HEAD']).trim(); } catch { return ''; }
+}
+
+// Commits from the other devices that this device did not have before its pull: the number the person acts on.
+// Counted against the remote branch after the pull, so the download is seen even when git fetched it itself.
+function arrivedCommits(headBefore, branch) {
+  try {
+    // Without a configured branch, the one that is checked out is the one git pull works on.
+    const name = branch || gitExec(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+    const range = headBefore ? headBefore + '..origin/' + name : 'origin/' + name;
+    return Number(gitExec(['rev-list', '--count', range]).trim()) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// A setting from Settings, parsed from the JSON it is stored as. Undefined when it was never saved.
+function readSetting(key) {
+  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  if (!row) return undefined;
+  try { return JSON.parse(row.value); } catch { return row.value; }
+}
+
 function readGitSettings() {
   const settingsPath = path.join(ROOT_DIR, '.data', 'git_settings.json');
   try {
@@ -673,7 +707,7 @@ export function registerGitRoutes(app) {
     }
   });
 
-  app.post('/api/git/pull', async (req, res) => {
+  app.post('/api/git/pull', (req, res) => runGitTask(async () => {
     try {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
@@ -690,6 +724,7 @@ export function registerGitRoutes(app) {
         commitStagedChanges('Auto-sync from Monos (pending pull)');
       }
 
+      const headBefore = currentHead();
       let message = 'Already up to date.';
       try {
         message = gitExec(['pull', '--no-rebase', '--no-edit'], { token: authToken });
@@ -709,16 +744,16 @@ export function registerGitRoutes(app) {
         message,
         conflicts: false,
         // How many remote commits arrived — the number a user can act on.
-        received: Math.max(0, before.behind - after.behind),
+        received: arrivedCommits(headBefore, branch),
         dirtied,
         inSync: after.ahead === 0 && after.behind === 0,
       });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
-  });
+  }));
 
-  app.post('/api/git/sync', async (req, res) => {
+  async function syncRoute(req, res) {
     try {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
       // Idempotent: an existing repo adopts the hygiene files on its next sync.
@@ -727,7 +762,6 @@ export function registerGitRoutes(app) {
 
       const authToken = await readStoredGitToken();
       const { device_name: deviceName, branch } = readGitSettings();
-      const before = divergenceSummary(branch);
 
       gitExec(['add', '-A']);
       // Naming the device in the message is what makes a shared history
@@ -737,6 +771,7 @@ export function registerGitRoutes(app) {
       if (committed) commitStagedChanges(`Auto-sync from ${deviceName || 'Monos'}`);
       const pushedFiles = committed ? changedFilesSinceHead() : [];
 
+      const headBeforePull = currentHead();
       let result = 'Synced';
       try {
         result = gitExec(['pull', '--no-rebase', '--no-edit'], { token: authToken });
@@ -767,14 +802,23 @@ export function registerGitRoutes(app) {
         // What this device added. With two devices the other one's commits show
         // up as `pulled`, which is the number people actually look for.
         pushed: pushedFiles,
-        pulled: Math.max(0, after.behind - before.behind),
+        pulled: arrivedCommits(headBeforePull, branch),
         inSync: after.ahead === 0 && after.behind === 0,
         device: deviceName || null,
       });
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
     }
-  });
+  }
+
+  app.post('/api/git/sync', (req, res) => runGitTask(() => syncRoute(req, res)));
+
+  // Called by the desktop app just before it quits. Nothing is sent unless the person chose it in Settings.
+  app.post('/api/git/sync-on-quit', (req, res) => runGitTask(async () => {
+    if (readSetting('git_auto_upload_quit') !== true) return res.json({ skipped: 'off' });
+    if (!isGitRepo()) return res.json({ skipped: 'not-connected' });
+    return syncRoute(req, res);
+  }));
 
   app.get('/api/git/log', async (req, res) => {
     try {
