@@ -277,11 +277,20 @@ async function main() {
     await page.goto(frontendUrl);
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
-    // Only the board itself: the cards are the subject, the empty margins are not.
+    // The board is the subject: close the sidebar so the grid takes the full width, and crop
+    // only the empty margins around it.
+    await page.getByRole('button', { name: 'Close sidebar' }).first().click();
+    // Park the pointer in the empty left margin: off the toggle (no tooltip) and off every card (no hover).
+    await page.mouse.move(4, 480);
+    await page.waitForTimeout(400);
     await page.screenshot({
       path: path.join(outputDir, 'monos-dashboard.png'),
-      clip: { x: 120, y: 56, width: 1200, height: 904 },
+      clip: { x: 24, y: 56, width: 1392, height: 904 },
     });
+    // Reload so the sidebar is back to its default for the screenshots that follow.
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
 
     await page.getByPlaceholder('Search').fill('sync');
     await page.getByText('Search Results').waitFor();
@@ -294,7 +303,9 @@ async function main() {
     await page.keyboard.press('Meta+O');
     await page.locator('text=/quick switcher|command palette/i').first().waitFor();
     await page.keyboard.type('launch');
-    await page.getByText('Launch Plan').first().waitFor();
+    // "Launch Plan" is already on the board behind the switcher, so wait for the loading line to clear.
+    await page.getByText('Loading notes', { exact: true }).waitFor({ state: 'detached', timeout: 15000 });
+    await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(outputDir, 'monos-quick-switcher.png'), fullPage: false });
     await page.keyboard.press('Escape');
 
