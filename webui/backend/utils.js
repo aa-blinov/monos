@@ -2,8 +2,23 @@ import fs from 'fs';
 import path from 'path';
 import { NOTES_DIR, ROOT_DIR } from './config.js';
 
+// The app names every note from the root with a leading "notes/", whatever folder the notes are in:
+// the default folder sits there, and a folder the person chose stands in for it.
+const NOTES_PREFIX = 'notes';
+
 export function relPath(absolutePath) {
+  if (isPathInside(NOTES_DIR, absolutePath)) {
+    const inside = path.relative(NOTES_DIR, absolutePath).replace(/\\/g, '/');
+    return inside ? `${NOTES_PREFIX}/${inside}` : NOTES_PREFIX;
+  }
   return path.relative(ROOT_DIR, absolutePath).replace(/\\/g, '/');
+}
+
+// The file a root-relative app path names. "notes/…" is inside the notes folder, wherever it is.
+function fromRootPath(requestPath) {
+  if (requestPath === NOTES_PREFIX) return NOTES_DIR;
+  if (requestPath.startsWith(`${NOTES_PREFIX}/`)) return path.resolve(NOTES_DIR, requestPath.slice(NOTES_PREFIX.length + 1));
+  return path.resolve(ROOT_DIR, requestPath);
 }
 
 export function httpError(statusCode, message) {
@@ -12,9 +27,10 @@ export function httpError(statusCode, message) {
   return error;
 }
 
-function isPathInside(parentPath, candidatePath) {
+// A name that merely starts with two dots ("..notes.md") is inside; only a step up ("../") is outside.
+export function isPathInside(parentPath, candidatePath) {
   const relative = path.relative(parentPath, candidatePath);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
 export function resolveNotesPath(requestPath, { allowRoot = false } = {}) {
@@ -26,7 +42,7 @@ export function resolveNotesPath(requestPath, { allowRoot = false } = {}) {
     throw httpError(403, 'Path must be inside notes');
   }
 
-  const fullPath = path.resolve(ROOT_DIR, requestPath);
+  const fullPath = fromRootPath(requestPath);
   const notesRoot = path.resolve(NOTES_DIR);
 
   if (!isPathInside(notesRoot, fullPath) || (!allowRoot && fullPath === notesRoot)) {

@@ -4,6 +4,7 @@ import multer from 'multer';
 import { NOTES_DIR } from '../config.js';
 import { relPath, resolveNotesPath, safePathName, httpError, readTextFile } from '../utils.js';
 import { rewriteAttachmentReferences } from '../attachment-refs.js';
+import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
 
 const ATTACHMENTS_DIR = '_attachments';
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -216,6 +217,41 @@ function resolveReferencedPaths(noteFullPath, markdown) {
   return found;
 }
 
+// Obsidian and the editor name a file rather than a path: `![[pic.png]]` and `[[report.pdf|the report]]`
+// mean a file of that name wherever it sits in the notes, and an HTML <img src> may carry a path. A file
+// whose name is written anywhere counts as in use.
+function namedReferences(markdown) {
+  const names = new Set();
+  const text = String(markdown || '');
+  for (const match of text.matchAll(/\[\[([^\]|#\n]+)/g)) names.add(fileNameOf(match[1]));
+  for (const match of text.matchAll(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi)) names.add(fileNameOf(match[1]));
+  return names;
+}
+
+function fileNameOf(target) {
+  let name = String(target).trim();
+  try {
+    name = decodeURI(name);
+  } catch {
+    // A malformed escape is still a name we can try as written.
+  }
+  return name.split('/').pop();
+}
+
+// The text a note is read from for its references. A locked note is unreadable until it is unlocked in
+// this session: null tells the caller that the pictures it uses are unknown.
+function referenceTextOf(notePath) {
+  const text = readTextFile(notePath);
+  if (!isLockedNote(text)) return text;
+  const session = sessionFor(relPath(notePath));
+  if (!session) return null;
+  try {
+    return readWithSession(text, session);
+  } catch {
+    return null;
+  }
+}
+
 export function registerOrphanRoutes(app) {
   app.get('/api/attachments/orphans', (_req, res) => {
     try {
@@ -223,12 +259,27 @@ export function registerOrphanRoutes(app) {
       const notes = allFiles.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
 
       const referenced = new Set();
+      const named = new Set();
+      let lockedNotes = 0;
       for (const note of notes) {
-        for (const target of resolveReferencedPaths(note, readTextFile(note))) referenced.add(target);
+        const text = referenceTextOf(note);
+        if (text === null) {
+          lockedNotes += 1;
+          continue;
+        }
+        for (const target of resolveReferencedPaths(note, text)) referenced.add(target);
+        for (const name of namedReferences(text)) named.add(name);
+      }
+
+      // A closed locked note may show any picture and its text cannot be read, so until it is unlocked
+      // nothing is listed as unused: a picture it still uses must not be reported as unused.
+      if (lockedNotes > 0) {
+        res.json({ orphans: [], totalSize: 0, lockedNotes });
+        return;
       }
 
       const orphans = allFiles
-        .filter((file) => !referenced.has(path.resolve(file)))
+        .filter((file) => !referenced.has(path.resolve(file)) && !named.has(path.basename(file)))
         .filter((file) => /\.(png|jpe?g|gif|webp|svg)$/i.test(file))
         .map((file) => {
           const stats = fs.statSync(file);
@@ -242,7 +293,7 @@ export function registerOrphanRoutes(app) {
         })
         .sort((a, b) => b.size - a.size);
 
-      res.json({ orphans, totalSize: orphans.reduce((sum, item) => sum + item.size, 0) });
+      res.json({ orphans, totalSize: orphans.reduce((sum, item) => sum + item.size, 0), lockedNotes: 0 });
     } catch (error) {
       res.status(500).json({ detail: error.message });
     }

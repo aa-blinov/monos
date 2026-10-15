@@ -15,9 +15,13 @@
   import { fetchClipperToken } from '../lib/clipper.js';
   import { fetchNotesDir } from '../lib/info.js';
   import {
+    chooseNotesFolderRequest,
+    deleteFileRequest,
+    forgetNotesFolderRequest,
     loadBrokenLinksRequest,
     loadLanAccessRequest,
     loadMaintenanceRequest,
+    loadStorageRequest,
     publishSiteRequest,
     regenerateLanTokenRequest,
     setLanAccessRequest,
@@ -88,6 +92,8 @@
   let orphans = [];
   let orphanStatus = 'loading';
   let orphanTotalSize = 0;
+  // Closed locked notes whose pictures cannot be checked; while there are any, nothing is listed as unused.
+  let orphanLocked = 0;
   let backupStatus = '';
   let backupError = '';
   let selectedArchiveName = '';
@@ -100,7 +106,19 @@
   let scopeWarnings = [];
   let notesDir = '';
   let connectionStatus = 'loading';
-  let connectionReport = { broken: [], orphans: [], orphanCount: 0, stale: [], staleCount: 0, staleDays: 180 };
+  let connectionReport = {
+    broken: [],
+    orphans: [],
+    orphanCount: 0,
+    stale: [],
+    staleCount: 0,
+    staleDays: 180,
+    conflictCopies: [],
+    conflictCopyCount: 0,
+  };
+  // A sync conflict copy waiting for the person's decision. Moving it to the trash waits for a confirmation.
+  let copyToTrash = null;
+  let copyError = '';
   let publishFolder = '';
   let publishBusy = false;
   let publishStatus = '';
@@ -119,7 +137,57 @@
     loadOrphanAttachments();
     loadConnectionReport();
     loadLanAccess();
+    loadStorage();
   });
+
+  // Where the notes live. A chosen folder opens on the next start; the section says so until then.
+  let storage = null;
+  let storageStatus = 'loading';
+  let storageBusy = false;
+  let storageError = '';
+
+  async function loadStorage() {
+    try {
+      storage = await loadStorageRequest();
+      storageStatus = 'ready';
+    } catch (error) {
+      storageStatus = error?.status === 403 ? 'remote' : 'error';
+    }
+  }
+
+  // A canceled folder dialog changes nothing; the notes themselves are never moved.
+  async function chooseStorage() {
+    storageBusy = true;
+    storageError = '';
+    try {
+      const result = await chooseNotesFolderRequest();
+      if (!result.canceled) storage = result;
+    } catch (error) {
+      console.error('Failed to choose the notes folder:', error);
+      storageError = storageErrorText(error);
+    } finally {
+      storageBusy = false;
+    }
+  }
+
+  async function useDefaultStorage() {
+    storageBusy = true;
+    storageError = '';
+    try {
+      storage = await forgetNotesFolderRequest();
+    } catch (error) {
+      console.error('Failed to go back to the default notes folder:', error);
+      storageError = $localizedText.settings.storageFailed;
+    } finally {
+      storageBusy = false;
+    }
+  }
+
+  function storageErrorText(error) {
+    if (error?.status === 409) return $localizedText.settings.storageInAppOnly;
+    if (error?.status === 400) return $localizedText.settings.storageInvalid;
+    return $localizedText.settings.storageFailed;
+  }
 
   async function loadLanAccess() {
     try {
@@ -171,6 +239,7 @@
       const data = await fetchOrphanAttachments();
       orphans = data.orphans || [];
       orphanTotalSize = data.totalSize || 0;
+      orphanLocked = data.lockedNotes || 0;
       orphanStatus = 'ready';
     } catch {
       orphanStatus = 'error';
@@ -186,6 +255,19 @@
       connectionStatus = 'ready';
     } catch {
       connectionStatus = 'error';
+    }
+  }
+
+  async function trashConflictCopy() {
+    const copy = copyToTrash;
+    copyToTrash = null;
+    copyError = '';
+    try {
+      await deleteFileRequest(copy.path);
+      await loadConnectionReport();
+    } catch (error) {
+      console.error('Failed to move the conflict copy to the trash:', error);
+      copyError = $localizedText.settings.conflictTrashFailed;
     }
   }
 
@@ -614,6 +696,42 @@
       {/if}
     </section>
 
+    <section class="space-y-5" data-testid="storage-section">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
+      {#if storageStatus === 'remote'}
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageRemoteOnly}</p>
+      {:else if storage}
+        <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
+        {#if storage.unavailable}
+          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
+        {:else if storage.restartRequired}
+          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.storageRestart.replace('{folder}', storage.target)}</p>
+        {/if}
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={storageBusy}
+            data-testid="storage-choose"
+            on:click={chooseStorage}
+            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+          >{$localizedText.settings.storageChoose}</button>
+          {#if storage.target !== storage.defaultFolder}
+            <button
+              type="button"
+              disabled={storageBusy}
+              data-testid="storage-reset"
+              on:click={useDefaultStorage}
+              class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            >{$localizedText.settings.storageReset}</button>
+          {/if}
+        </div>
+      {/if}
+      {#if storageError}
+        <p role="alert" class="text-xs text-[var(--red)]">{storageError}</p>
+      {/if}
+    </section>
+
     <section class="space-y-5" data-testid="publish-section">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.publishTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.publishHint}</p>
@@ -718,6 +836,8 @@
         <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLoading}</div>
       {:else if orphanStatus === 'error'}
         <div class="text-xs text-[var(--red)]">{$localizedText.settings.attachmentsError}</div>
+      {:else if orphanLocked > 0}
+        <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLocked}</div>
       {:else if orphans.length === 0}
         <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsClean}</div>
       {:else}
@@ -744,7 +864,7 @@
         <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsLoading}</div>
       {:else if connectionStatus === 'error'}
         <div class="text-xs text-[var(--red)]">{$localizedText.settings.connectionsError}</div>
-      {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount === 0}
+      {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount + connectionReport.conflictCopyCount === 0}
         <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsClean}</div>
       {:else}
         {#if connectionReport.broken.length > 0}
@@ -788,6 +908,43 @@
             {/each}
           </ul>
         {/if}
+        {#if connectionReport.conflictCopyCount > 0}
+          <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.conflictCopies}, {connectionReport.conflictCopyCount}</h3>
+          <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
+            {#each connectionReport.conflictCopies as item (item.path)}
+              <li class="flex items-center justify-between gap-3 px-3 py-2">
+                <button type="button" class="min-w-0 truncate text-left text-xs text-[var(--text-primary)] hover:underline" on:click={() => openNote(item.path)}>{item.title}</button>
+                <span class="hidden min-w-0 truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:block">
+                  {item.kind === 'duplicate'
+                    ? $localizedText.settings.conflictSameText.replace('{original}', noteNameOf(item.original))
+                    : $localizedText.settings.conflictCopyOf.replace('{original}', noteNameOf(item.original))}
+                </span>
+                <button
+                  type="button"
+                  data-testid="conflict-copy-trash"
+                  class="shrink-0 text-xs text-[var(--text-secondary)] hover:text-[var(--red)]"
+                  on:click={() => copyToTrash = item}
+                >{$localizedText.settings.conflictTrash}</button>
+              </li>
+            {/each}
+          </ul>
+          {#if connectionReport.conflictCopyCount > connectionReport.conflictCopies.length}
+            <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.conflictCopyCount - connectionReport.conflictCopies.length)}</div>
+          {/if}
+          {#if copyError}
+            <p role="alert" class="text-xs text-[var(--red)]">{copyError}</p>
+          {/if}
+        {/if}
+      {/if}
+      {#if copyToTrash}
+        <ConfirmModal
+          danger={true}
+          title={$localizedText.settings.conflictTrashTitle}
+          message={$localizedText.settings.conflictTrashMessage.replace('{original}', noteNameOf(copyToTrash.original))}
+          confirmLabel={$localizedText.settings.conflictTrashAction}
+          on:confirm={trashConflictCopy}
+          on:cancel={() => copyToTrash = null}
+        />
       {/if}
     </section>
 

@@ -77,7 +77,11 @@ notes/
 
 .data/
   notes.db
+  storage.json
+  clipper-token
 ```
+
+The notes folder is `notes/` unless the person chose another one (Settings → Notes folder). The choice is kept in `.data/storage.json` and opens on the next start; a folder outside `MonosData` can be an Obsidian vault or a folder a cloud service syncs. Monos never moves notes between folders. Each folder has its own index (`.data/notes.db` for the default folder, `.data/notes-<hash>.db` for a chosen one). Whatever folder is open, the app names a note as `notes/…` from the data root, so links, the API and the database keep one form. `config.js` reads the choice once at start; `notes-folder.js` writes it.
 
 ## Backend Boundaries
 

@@ -21,6 +21,7 @@ import { registerClipRoutes } from './routes/clip.js';
 import { registerPublishRoutes } from './routes/publish.js';
 import { registerLockRoutes } from './routes/locks.js';
 import { registerLanRoutes } from './routes/lan.js';
+import { registerStorageRoutes } from './routes/storage.js';
 import {
   ACCESS_COOKIE,
   accessCookie,
@@ -171,6 +172,7 @@ export function currentListening() {
 }
 
 registerLanRoutes(app, { listening: currentListening });
+registerStorageRoutes(app);
 
 function registerFrontendStatic() {
   if (frontendStaticRegistered) return;
