@@ -44,7 +44,8 @@
     gitRepos = [];
     gitBranches = [];
   }
-  const DEFAULT_GIT_OWNER = 'Monos';
+  // Filled from the token's GitHub login after Authorize; an invented owner would point at someone else's account.
+  const DEFAULT_GIT_OWNER = '';
   const appVersion = appPackage.version;
   // Reactive, so the labels follow the interface language without a reload.
   $: themeModeOptions = [
@@ -851,10 +852,10 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
-      <details class="text-xs text-[var(--text-secondary)] group">
+      <details open class="text-xs text-[var(--text-secondary)] group">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
-          <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
+          <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
             <p>{step}</p>
           {/each}
@@ -913,7 +914,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
-          <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
+          <input type="text" id="git-owner" bind:value={settings.git_owner} placeholder={$localizedText.settings.ownerPlaceholder} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
         </div>
         <div>
           <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
@@ -957,6 +958,9 @@
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
         </button>
       </div>
+      <p class="text-xs leading-relaxed text-[var(--text-tertiary)]" data-testid="upload-notice">
+        {settings.git_auto_upload ? $localizedText.settings.autoUploadNotice(settings.git_auto_sync_minutes) : $localizedText.settings.manualUploadNotice}
+      </p>
     </section>
 
     <!-- Sync Settings -->
@@ -1032,6 +1036,73 @@
       </div>
     </section>
 
+    <section class="space-y-5" data-testid="lan-section">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
+      {#if lanStatus === 'remote'}
+        <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
+      {:else if lanStatus === 'error'}
+        <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
+      {:else if lanStatus === 'ready'}
+        <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
+          {$localizedText.settings.lanToggle}
+        </Checkbox>
+        {#if lan.enabled}
+          {#if lan.urls.length}
+            <div class="space-y-2" data-testid="lan-urls">
+              <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
+              {#each lan.urls as url (url)}
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    readonly
+                    value={url}
+                    aria-label={url}
+                    on:focus={(event) => event.currentTarget.select()}
+                    class={formFieldClass({ extraClass: 'font-mono text-xs' })}
+                  />
+                  <button
+                    type="button"
+                    on:click={() => copyLanUrl(url)}
+                    class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                  >{$localizedText.settings.lanCopy}</button>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
+          {/if}
+          <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
+          <button
+            type="button"
+            disabled={lanBusy}
+            data-testid="lan-renew"
+            on:click={() => confirmingLanRenew = true}
+            class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+          >{$localizedText.settings.lanRenew}</button>
+        {/if}
+        {#if lan.restartRequired}
+          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
+        {/if}
+        {#if lanNotice}
+          <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
+        {/if}
+        {#if lanError}
+          <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
+        {/if}
+      {/if}
+      {#if confirmingLanRenew}
+        <ConfirmModal
+          danger={true}
+          title={$localizedText.settings.lanRenewTitle}
+          message={$localizedText.settings.lanRenewMessage}
+          confirmLabel={$localizedText.settings.lanRenewAction}
+          on:confirm={renewLanToken}
+          on:cancel={() => confirmingLanRenew = false}
+        />
+      {/if}
+    </section>
+
     <!-- Conflicts -->
     {#if gitConflicts.length > 0}
       <section class="space-y-4 pt-2">
@@ -1087,72 +1158,6 @@
         {/if}
       </section>
 
-      <section class="space-y-5" data-testid="lan-section">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
-        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
-        {#if lanStatus === 'remote'}
-          <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
-        {:else if lanStatus === 'error'}
-          <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
-        {:else if lanStatus === 'ready'}
-          <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
-            {$localizedText.settings.lanToggle}
-          </Checkbox>
-          {#if lan.enabled}
-            {#if lan.urls.length}
-              <div class="space-y-2" data-testid="lan-urls">
-                <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
-                {#each lan.urls as url (url)}
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      readonly
-                      value={url}
-                      aria-label={url}
-                      on:focus={(event) => event.currentTarget.select()}
-                      class={formFieldClass({ extraClass: 'font-mono text-xs' })}
-                    />
-                    <button
-                      type="button"
-                      on:click={() => copyLanUrl(url)}
-                      class="shrink-0 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                    >{$localizedText.settings.lanCopy}</button>
-                  </div>
-                {/each}
-              </div>
-            {:else}
-              <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
-            {/if}
-            <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
-            <button
-              type="button"
-              disabled={lanBusy}
-              data-testid="lan-renew"
-              on:click={() => confirmingLanRenew = true}
-              class="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-            >{$localizedText.settings.lanRenew}</button>
-          {/if}
-          {#if lan.restartRequired}
-            <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
-          {/if}
-          {#if lanNotice}
-            <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
-          {/if}
-          {#if lanError}
-            <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
-          {/if}
-        {/if}
-        {#if confirmingLanRenew}
-          <ConfirmModal
-            danger={true}
-            title={$localizedText.settings.lanRenewTitle}
-            message={$localizedText.settings.lanRenewMessage}
-            confirmLabel={$localizedText.settings.lanRenewAction}
-            on:confirm={renewLanToken}
-            on:cancel={() => confirmingLanRenew = false}
-          />
-        {/if}
-      </section>
 
       <section class="space-y-5">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>

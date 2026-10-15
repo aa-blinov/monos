@@ -111,14 +111,14 @@ test('Settings загружает настройки и принимает ма�
   expect(fetchMock).toHaveBeenCalledWith('/api/git/branches?token=ghp_test&repo=alice%2Fnotes');
 });
 
-test('Settings показывает Monos как owner по умолчанию', async () => {
+test('Settings не подставляет чужого владельца: поле пустое до авторизации', async () => {
   const fetchMock = createFetchMock({ settings: {} });
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
   render(Settings);
 
-  await waitFor(() => expect(screen.getByLabelText(uiText.settings.owner).value).toBe('Monos'));
+  await waitFor(() => expect(screen.getByLabelText(uiText.settings.owner).value).toBe(''));
 });
 
 test('Settings показывает версию приложения в футере', async () => {

@@ -100,6 +100,11 @@ jobs:
         with:
           name: Monos ${{ github.ref_name }}
           generate_release_notes: true
+          body: |
+            **macOS:** the app is not notarized yet. On first launch macOS says it cannot check the developer: open System Settings → Privacy & Security and click **Open Anyway** next to the message about Monos. Later launches open normally.
+            **Windows:** if SmartScreen stops the installer, click **More info** → **Run anyway**.
+
+            Notes are kept when you install over an older version.
           files: |
             release-artifacts/*.exe
             release-artifacts/*.dmg
