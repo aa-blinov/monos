@@ -89,13 +89,15 @@ Monos indexes wiki links and displays backlinks in the editor. Renaming a note r
 
 A link can point at a heading, `[[Name#Heading]]`, and it counts as a link to `Name`: it shows in the backlinks, and renaming `Name` keeps the heading. A name with `#` in it, such as `Issue #42`, still resolves by its full name.
 
-The Related panel of a note shows the notes that link to it, the notes that name it in plain prose without linking (their **Link** button turns the first such mention into a link), and a small local graph of its neighbours. Settings → Links and notes lists the broken links, the notes that no link reaches, and the notes nobody has opened or edited for 180 days; each row opens its note.
+The Related panel of a note shows the notes that link to it, the notes that name it in plain prose without linking (their **Link** button turns the first such mention into a link), and a small local graph of its neighbours. Settings → Links and notes lists the broken links, the notes that no link reaches, the notes nobody has opened or edited for 180 days, and the conflict copies that sync services leave beside a note (`Plan (conflicted copy …).md`, `Plan.sync-conflict-….md`, `Plan-DESKTOP-….md`, and an iCloud `Plan 2.md` with the same text). A copy is listed only with its original next to it. Each row opens its note; moving a copy to the trash asks first and keeps it in the trash.
 
 A link can also name a note through its folder, as Obsidian writes it: `[[Projects/Plan]]` finds the note `Plan`, and renaming `Plan` keeps the folder in the link.
 
 ### Embeds and callouts
 
 `![[picture.png]]` shows a picture from the note's `_attachments` folder, and `![[Other note]]` embeds another note. `![[document.pdf]]` shows a PDF attachment as a frame of its pages with a link to open it whole. Drop a PDF onto the editor to attach it and embed it where it was dropped; the file goes into `_attachments` next to the note, unconverted.
+
+Settings → Attachments lists the pictures that no note shows. A picture counts as shown when a note refers to it as `![](…)`, `![[name.png]]`, `[[name.png]]` or an HTML `<img>`. While a locked note is closed its text cannot be read, so the list stays empty until the note is unlocked.
 
 A quote whose first line is a callout marker, `> [!warning] Title`, is drawn as a callout. The file keeps the quote and its marker as Obsidian writes them. Importing a vault archive skips its hidden folders such as `.obsidian` and `.trash`.
 

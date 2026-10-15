@@ -21,6 +21,9 @@ export const publishSiteRequest = (target, folder = '') => post('/api/publish', 
 export const loadLanAccessRequest = () => get('/api/lan');
 export const setLanAccessRequest = (enabled) => put('/api/lan', { enabled });
 export const regenerateLanTokenRequest = () => post('/api/lan/token', null);
+export const loadStorageRequest = () => get('/api/storage');
+export const chooseNotesFolderRequest = () => post('/api/storage/folder', {});
+export const forgetNotesFolderRequest = () => del('/api/storage/folder');
 export const loadMaintenanceRequest = () => get('/api/notes/maintenance');
 // Sets one custom property of the note, or removes it with { key, remove: true }. Answers with the new list.
 export const setPropertyRequest = (filePath, body) => put('/api/file/property', body, { query: { path: filePath } });

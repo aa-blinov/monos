@@ -1,9 +1,14 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { ROOT_DIR } from './config.js';
+import { createHash } from 'crypto';
+import { DEFAULT_NOTES_DIR, NOTES_DIR, ROOT_DIR } from './config.js';
 
-const DB_PATH = path.join(ROOT_DIR, '.data', 'notes.db');
+// Each notes folder has its own index, so switching folders does not mix the two. The default folder keeps
+// the file it always had.
+const DB_PATH = path.join(ROOT_DIR, '.data', NOTES_DIR === DEFAULT_NOTES_DIR
+  ? 'notes.db'
+  : `notes-${createHash('sha1').update(NOTES_DIR).digest('hex').slice(0, 12)}.db`);
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 // better-sqlite3 is a native addon, and each runtime needs its own build: this

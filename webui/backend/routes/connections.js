@@ -3,6 +3,7 @@ import { linkFirstMention, linkNameCandidates, noteLinkNames, phraseRegExp, plai
 import { updateNotes } from '../link-rename.js';
 import { sendError } from './helpers.js';
 import { requireQueryPath } from './validate.js';
+import { findConflictCopies } from '../conflict-copies.js';
 
 // Connections between notes: which links resolve, which notes name a note in plain prose without
 // linking to it, which notes have no links at all, and which have gone quiet. Every route reads the
@@ -192,6 +193,8 @@ export function registerConnectionRoutes(app) {
       }
       orphans.sort((a, b) => a.title.localeCompare(b.title));
       stale.sort((a, b) => a.lastActivity.localeCompare(b.lastActivity));
+      const titles = new Map(notes.map((note) => [note.path, displayTitle(note)]));
+      const copies = findConflictCopies(notes).map((copy) => ({ ...copy, title: titles.get(copy.path) }));
 
       res.json({
         orphans: orphans.slice(0, LIST_LIMIT),
@@ -199,6 +202,8 @@ export function registerConnectionRoutes(app) {
         stale: stale.slice(0, LIST_LIMIT),
         staleCount: stale.length,
         staleDays: STALE_DAYS,
+        conflictCopies: copies.slice(0, LIST_LIMIT),
+        conflictCopyCount: copies.length,
       });
     } catch (error) {
       sendError(res, error);

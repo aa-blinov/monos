@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { NOTES_DIR } from '../config.js';
+import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { httpError, nowISO, safePathName } from '../utils.js';
 
 const TOKEN_BYTES = 32;
@@ -15,7 +15,7 @@ const MAX_SELECTED = 30;
 const EXTENSION_ORIGIN = /^(chrome-extension|moz-extension):\/\/[a-z0-9-]+$/i;
 
 function tokenPath() {
-  return path.resolve(NOTES_DIR, '..', '.data', 'clipper-token');
+  return path.join(ROOT_DIR, '.data', 'clipper-token');
 }
 
 function ensureToken() {
