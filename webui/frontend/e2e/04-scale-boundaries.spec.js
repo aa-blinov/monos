@@ -40,7 +40,7 @@ test.describe('application scale boundaries', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+      await expect(page.locator('main').getByRole('heading', { name: 'Notes' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: /New note/i })).toBeVisible();
       await expectNoHorizontalOverflow(page);
 

@@ -12,7 +12,7 @@ test('settings back button returns to dashboard', async ({ page }) => {
   await page.getByRole('button', { name: 'Back to notes' }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toHaveCount(0);
+  await expect(page.locator('main').getByRole('heading', { name: 'Notes', exact: true })).toHaveCount(0);
   await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
 });
 

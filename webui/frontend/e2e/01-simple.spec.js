@@ -15,7 +15,8 @@ test('opens seeded notes and navigates through the shell', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Back to notes' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+  // The sidebar tree has its own "Notes" heading, so only the board inside <main> is checked here.
+  await expect(page.locator('main').getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
 });
 
@@ -60,7 +61,7 @@ test('board mode is a full-width direct-open workspace', async ({ page }) => {
   await page.getByRole('button', { name: 'Back to notes' }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Notes' })).toHaveCount(0);
+  await expect(page.locator('main').getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
 
   await page.getByRole('button', { name: '4 columns' }).click();
