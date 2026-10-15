@@ -8,7 +8,7 @@ import { defaultMarkdownSerializer } from 'prosemirror-markdown';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { InlineMath, MathBlock, MermaidBlock, NoteEmbed } from './richEditorExtras.js';
+import { Callouts, InlineMath, MathBlock, MermaidBlock, NoteEmbed, PdfEmbed } from './richEditorExtras.js';
 import { Markdown } from 'tiptap-markdown';
 
 // 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
@@ -94,6 +94,8 @@ export function createRichEditorExtensions(placeholder, {
     MathBlock,
     MermaidBlock,
     NoteEmbed,
+    PdfEmbed.configure({ resolveSrc: resolveImageSrc }),
+    Callouts,
     Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
   ];
 }

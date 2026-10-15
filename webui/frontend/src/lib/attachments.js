@@ -21,6 +21,17 @@ export function defaultImageName(date = new Date()) {
   return `image-${attachmentTimestamp(date)}.webp`;
 }
 
+const PDF_MIME = 'application/pdf';
+
+export function isPdfFile(file) {
+  return file?.type === PDF_MIME;
+}
+
+/** The first PDF in a drop, or null. A PDF is attached as it is, not converted like a picture. */
+export function firstPdfFileFromDataTransfer(dataTransfer) {
+  return [...(dataTransfer?.files || [])].find(isPdfFile) || null;
+}
+
 export function isImageFile(file) {
   return Boolean(file?.type?.startsWith(IMAGE_MIME_PREFIX));
 }

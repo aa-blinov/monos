@@ -450,6 +450,21 @@
     attachmentNewName = event.detail.path.split('/').pop() || '';
   }
 
+  // A PDF is attached as it is (no picture conversion), next to the note.
+  async function handleDocumentFile(file) {
+    const filePath = visibleFile?.path || currentFile?.path;
+    if (!filePath) return null;
+    try {
+      return await uploadAttachment(filePath, file, file.name);
+    } catch (error) {
+      console.error('Attachment upload failed:', error);
+      formatToast = $localizedText.editor.attachmentUploadFailed;
+      if (formatToastTimer) clearTimeout(formatToastTimer);
+      formatToastTimer = setTimeout(() => formatToast = '', 3000);
+      return null;
+    }
+  }
+
   async function saveImageRename() {
     const filePath = visibleFile?.path || loadedFilePath || currentFile?.path;
     if (!filePath || !imageRename?.path || !attachmentNewName.trim() || attachmentProblem) return;
@@ -1031,6 +1046,7 @@
           placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
           notePath={visibleFile?.path}
           onImageFile={handleImageFile}
+          onDocumentFile={handleDocumentFile}
           resolveImageSrc={resolveEditorImageSrc}
           resolveImagePath={resolveEditorImagePath}
           onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceFrontmatterBody(editedContent, md); ignoreRichUpdate = false; }}

@@ -212,14 +212,24 @@ export function wikiLinkTarget(inner) {
 
 /**
  * The names a link target can point at, most exact first: the whole target, then the part before
- * `#`, so `[[Note#Heading]]` finds `Note`. A note whose own name has `#` (`Issue #42`) still
- * resolves by its full name.
+ * `#`, so `[[Note#Heading]]` finds `Note`, then the last part of a folder path, so Obsidian's
+ * `[[Projects/Plan]]` finds `Plan`. A note whose own name has `#` (`Issue #42`) still resolves by
+ * its full name.
  */
 export function linkNameCandidates(target) {
   const hash = target.indexOf('#');
-  if (hash <= 0) return [target];
-  const note = target.slice(0, hash);
-  return [target, note];
+  const note = hash > 0 ? target.slice(0, hash) : target;
+  const names = [target];
+  if (hash > 0) names.push(note);
+  const slash = note.lastIndexOf('/');
+  if (slash > 0 && slash < note.length - 1) names.push(note.slice(slash + 1));
+  return [...new Set(names)];
+}
+
+/** LIKE patterns (with `ESCAPE '\'`) for links that name the note through its folder: `Folder/name`, `Folder/name#…`. */
+export function folderLinkPatterns(name) {
+  const escaped = name.replace(/[\\%_]/g, '\\$&');
+  return [`%/${escaped}`, `%/${escaped}#%`];
 }
 
 export function extractWikiLinks(content) {
@@ -274,12 +284,18 @@ export function rewriteWikiTargets(content, oldName, newName) {
     const trimmed = rawTarget.trim();
     const hash = trimmed.indexOf('#');
     const namePart = hash === -1 ? trimmed : trimmed.slice(0, hash);
-    if (namePart.normalize('NFC') !== wanted) continue;
+    // `[[Projects/Old]]` names `Old` through its folder: only the last part changes, the folder stays.
+    const slash = namePart.lastIndexOf('/');
+    const wholeName = namePart.normalize('NFC') === wanted;
+    const folderedName = !wholeName && slash > 0 && slash < namePart.length - 1
+      && namePart.slice(slash + 1).normalize('NFC') === wanted;
+    if (!wholeName && !folderedName) continue;
+    const folder = folderedName ? namePart.slice(0, slash + 1) : '';
     const leading = rawTarget.match(/^\s*/)[0];
     const trailing = rawTarget.slice(leading.length + trimmed.length);
     const heading = hash === -1 ? '' : trimmed.slice(hash);
     const rest = pipe === -1 ? '' : inner.slice(pipe);
-    out += `${text.slice(last, match.index)}[[${leading}${replacement}${heading}${trailing}${rest}]]`;
+    out += `${text.slice(last, match.index)}[[${leading}${folder}${replacement}${heading}${trailing}${rest}]]`;
     last = match.index + match[0].length;
     count += 1;
   }

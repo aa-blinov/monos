@@ -9,12 +9,13 @@
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
+  import { unescapeCalloutMarkers } from '../lib/callouts.js';
   import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
   import { isMarkdownBurst } from '../lib/markdown-burst.js';
   import { shortcutLabel } from '../lib/shortcut-label.js';
   import { findHeadingPos } from '../lib/outline.js';
   import { scrollBehavior } from '../lib/motion.js';
-  import { firstImageFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
+  import { firstImageFileFromDataTransfer, firstPdfFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { localizedText } from '../lib/strings.js';
   import {
@@ -41,6 +42,8 @@
   export let onUpdate = (md) => {};
   export let placeholder = null;
   export let onImageFile = null;
+  // Uploads a PDF next to the note and answers with its name and note-relative path.
+  export let onDocumentFile = null;
   export let resolveImageSrc = (src) => src;
   export let resolveImagePath = () => '';
   export let notePath = '';
@@ -110,7 +113,7 @@
   }
 
   function editorMarkdown(ed = editor) {
-    return normalizeWikiLinkMarkdown(ed?.storage.markdown?.getMarkdown?.() || '');
+    return unescapeCalloutMarkers(normalizeWikiLinkMarkdown(ed?.storage.markdown?.getMarkdown?.() || ''));
   }
 
   /**
@@ -263,13 +266,36 @@
     return true;
   }
 
+  // Puts a node where the file was dropped, or at the caret when the drop position is unknown.
+  function insertNodeAtDropPosition(event, node) {
+    if (!editor) return false;
+    const dropPosition = Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY)
+      ? editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
+      : null;
+    const chain = editor.chain().focus();
+    if (Number.isFinite(dropPosition)) chain.setTextSelection(dropPosition);
+    chain.insertContent(node).run();
+    return true;
+  }
+
+  // The PDF is attached to the note first; the embed is written where it was dropped.
+  async function insertPdfFile(file, event) {
+    if (!file || !onDocumentFile || !editor) return false;
+    const uploaded = await onDocumentFile(file);
+    if (!uploaded?.name || !uploaded.relativePath) return false;
+    return insertNodeAtDropPosition(event, {
+      type: 'pdfEmbed',
+      attrs: { name: uploaded.name, src: uploaded.relativePath },
+    });
+  }
+
   export function insertNoteLink(note, event = {}) {
     return insertTextAtDropPosition(event, wikiLinkForNote(note));
   }
 
   function handleDragOver(event) {
     const hasNoteLink = Boolean(wikiLinkForNote(draggedNotePayload(event.dataTransfer)));
-    if (!hasNoteLink && !firstImageFileFromDataTransfer(event.dataTransfer)) return;
+    if (!hasNoteLink && !firstImageFileFromDataTransfer(event.dataTransfer) && !firstPdfFileFromDataTransfer(event.dataTransfer)) return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = hasNoteLink ? 'copy' : 'copy';
     isImageDragging = !hasNoteLink;
@@ -286,7 +312,13 @@
     }
 
     const file = firstImageFileFromDataTransfer(event.dataTransfer);
+    const pdf = file ? null : firstPdfFileFromDataTransfer(event.dataTransfer);
     isImageDragging = false;
+    if (pdf) {
+      event.preventDefault();
+      await insertPdfFile(pdf, event);
+      return;
+    }
     if (!file) return;
     event.preventDefault();
     await insertImageFile(file);

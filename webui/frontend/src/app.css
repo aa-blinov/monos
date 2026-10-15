@@ -203,6 +203,42 @@ input[type="number"]::-webkit-outer-spin-button {
   color: var(--text-tertiary);
 }
 .note-embed-body { padding: 0.5rem 0.75rem; }
+
+/* Вложенный PDF: рамка и шапка как у встраивания заметки, страницы — во всю ширину. */
+.pdf-embed {
+  margin: 1rem 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+.pdf-embed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-whisper);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+}
+.pdf-embed-head span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-embed-head a { flex: none; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px; }
+.pdf-embed-frame { display: block; width: 100%; height: 70vh; min-height: 320px; border: 0; background: var(--bg-primary); }
+
+/* Выноска Obsidian (`> [!тип] Заголовок`): мягкий фон и тонкая рамка по тону типа, без акцентной полосы сбоку. */
+.ProseMirror blockquote.callout {
+  --callout-tone: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--callout-tone) 35%, transparent);
+  background: color-mix(in srgb, var(--callout-tone) 8%, transparent);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+.ProseMirror blockquote.callout-green { --callout-tone: var(--green); }
+.ProseMirror blockquote.callout-yellow { --callout-tone: var(--yellow); }
+.ProseMirror blockquote.callout-red { --callout-tone: var(--red); }
 .note-embed-body > :first-child { margin-top: 0; }
 .note-embed-body > :last-child { margin-bottom: 0; }
 .note-embed-body h3, .note-embed-body h4,

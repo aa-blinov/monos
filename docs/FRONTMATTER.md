@@ -91,6 +91,14 @@ A link can point at a heading, `[[Name#Heading]]`, and it counts as a link to `N
 
 The Related panel of a note shows the notes that link to it, the notes that name it in plain prose without linking (their **Link** button turns the first such mention into a link), and a small local graph of its neighbours. Settings → Links and notes lists the broken links, the notes that no link reaches, and the notes nobody has opened or edited for 180 days; each row opens its note.
 
+A link can also name a note through its folder, as Obsidian writes it: `[[Projects/Plan]]` finds the note `Plan`, and renaming `Plan` keeps the folder in the link.
+
+### Embeds and callouts
+
+`![[picture.png]]` shows a picture from the note's `_attachments` folder, and `![[Other note]]` embeds another note. `![[document.pdf]]` shows a PDF attachment as a frame of its pages with a link to open it whole. Drop a PDF onto the editor to attach it and embed it where it was dropped; the file goes into `_attachments` next to the note, unconverted.
+
+A quote whose first line is a callout marker, `> [!warning] Title`, is drawn as a callout. The file keeps the quote and its marker as Obsidian writes them. Importing a vault archive skips its hidden folders such as `.obsidian` and `.trash`.
+
 ## Storage
 
 Frontmatter is part of the Markdown file and remains portable. The SQLite database only caches parsed metadata and can be rebuilt from the files.

@@ -15,15 +15,18 @@ const imageMimes = new Map([
   ['image/webp', '.webp'],
 ]);
 
+// A PDF is kept as it is (no picture conversion) and shown by the `![[name.pdf]]` embed.
+const PDF_MIME = 'application/pdf';
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_IMAGE_SIZE, files: 1 },
   fileFilter(req, file, cb) {
-    if (imageMimes.has(file.mimetype)) {
+    if (imageMimes.has(file.mimetype) || file.mimetype === PDF_MIME) {
       cb(null, true);
       return;
     }
-    cb(httpError(400, 'Only image files are allowed'));
+    cb(httpError(400, 'Only image and PDF files are allowed'));
   },
 });
 
@@ -106,7 +109,7 @@ export function registerAttachmentRoutes(app) {
       const dir = attachmentDirForNote(notePath);
       fs.mkdirSync(dir, { recursive: true });
 
-      const fallbackExt = imageMimes.get(req.file.mimetype) || '.webp';
+      const fallbackExt = imageMimes.get(req.file.mimetype) || (req.file.mimetype === PDF_MIME ? '.pdf' : '.webp');
       const fileName = cleanAttachmentName(req.body?.name || req.file.originalname, fallbackExt);
       const fullPath = uniquePath(dir, fileName);
       fs.writeFileSync(fullPath, req.file.buffer);
@@ -131,7 +134,8 @@ export function registerAttachmentRoutes(app) {
       }
 
       const ext = path.extname(fullPath).toLowerCase();
-      const mime = [...imageMimes.entries()].find(([, value]) => value === ext)?.[0] || 'application/octet-stream';
+      const mime = [...imageMimes.entries()].find(([, value]) => value === ext)?.[0]
+        || (ext === '.pdf' ? PDF_MIME : 'application/octet-stream');
       res.type(mime);
       res.sendFile(fullPath);
     } catch (error) {

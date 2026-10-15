@@ -716,6 +716,7 @@ const enText = {
     hideOutline: 'Hide outline',
     showOutline: 'Show outline',
     imageUploadFailed: 'Image upload failed',
+    attachmentUploadFailed: 'Could not attach the file',
     imageRenameFailed: 'Image rename failed',
     renameImageTitle: 'Rename image',
     renameImageHint: 'The file will be renamed on disk and the Markdown link in this note will be updated.',
@@ -818,6 +819,7 @@ const enText = {
     imagePrompt: 'Image URL:',
     slashMenuLabel: 'Slash commands',
     slashHint: 'Type / for commands',
+    pdfOpen: 'Open PDF',
     slashCommands: {
       heading1: 'Heading 1',
       heading2: 'Heading 2',
@@ -1543,6 +1545,7 @@ const ruText = {
     hideOutline: 'Скрыть структуру',
     showOutline: 'Показать структуру',
     imageUploadFailed: 'Не удалось загрузить изображение',
+    attachmentUploadFailed: 'Не удалось прикрепить файл',
     imageRenameFailed: 'Не удалось переименовать изображение',
     renameImageTitle: 'Переименовать изображение',
     renameImageHint: 'Файл будет переименован на диске, а Markdown-ссылка в этой заметке обновится.',
@@ -1661,6 +1664,7 @@ const ruText = {
     imagePrompt: 'URL изображения:',
     slashMenuLabel: 'Slash-команды',
     slashHint: 'Введите / для команд',
+    pdfOpen: 'Открыть PDF',
     slashCommands: {
       heading1: 'Заголовок 1',
       heading2: 'Заголовок 2',

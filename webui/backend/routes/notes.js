@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries, parseSearchQuery } from '../search.js';
 import { searchFts } from '../fts.js';
 import { NOTES_DIR } from '../config.js';
-import { assertFileName, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertFileName, folderLinkPatterns, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { parseStoredProperties } from '../properties.js';
@@ -430,14 +430,15 @@ export function registerNoteRoutes(app) {
       // heading: [[Name#Heading]]. A note's own links to itself are not backlinks.
       const aliases = db.prepare('SELECT alias_nfc FROM note_aliases WHERE path = ?').all(filePath).map((row) => row.alias_nfc);
       const names = noteLinkNames(note, aliases);
-      const matches = names.map(() => '(nl.target_name = ? OR nl.target_name LIKE ? ESCAPE \'\\\')').join(' OR ');
+      // A link reaches a name as `Name`, `Name#Heading`, `Folder/Name` or `Folder/Name#Heading`.
+      const linkMatch = "(nl.target_name = ? OR nl.target_name LIKE ? ESCAPE '\\' OR nl.target_name LIKE ? ESCAPE '\\' OR nl.target_name LIKE ? ESCAPE '\\')";
       const backlinks = db.prepare(`
         SELECT DISTINCT ni.* FROM notes_index ni
         JOIN note_links nl ON nl.source_path = ni.path
-        WHERE (${matches})
+        WHERE (${names.map(() => linkMatch).join(' OR ')})
           AND ni.path != ?
           AND (ni.trashed_at IS NULL OR ni.trashed_at = '')
-      `).all(...names.flatMap((name) => [name, headingLinkPattern(name)]), filePath);
+      `).all(...names.flatMap((name) => [name, headingLinkPattern(name), ...folderLinkPatterns(name)]), filePath);
 
       const linked = new Map();
       for (const entry of backlinks) {
