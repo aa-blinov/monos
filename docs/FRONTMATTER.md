@@ -99,6 +99,12 @@ A link can also name a note through its folder, as Obsidian writes it: `[[Projec
 
 A quote whose first line is a callout marker, `> [!warning] Title`, is drawn as a callout. The file keeps the quote and its marker as Obsidian writes them. Importing a vault archive skips its hidden folders such as `.obsidian` and `.trash`.
 
+### Locked notes
+
+A note can be locked with a passphrase, and only when its owner asks for it. A locked note is still a note file: its frontmatter says `monos-locked: true`, and the rest of the file is one sealed block (AES-256-GCM, the key derived from the passphrase with scrypt) holding the original text. Nothing of the text is written in plain form until the lock is removed, which is the only way back to plain text. Opening a locked note asks for the passphrase; the note then stays open for the session, and a restart asks again.
+
+While a note is locked its text is not indexed, so search does not find it, and it is left out of publishing. Printing needs the note to be open in the session. Links to a locked note from other notes still resolve by name, but a locked note's own links and its attachment references are not rewritten on rename. A lost passphrase cannot be recovered.
+
 ## Storage
 
 Frontmatter is part of the Markdown file and remains portable. The SQLite database only caches parsed metadata and can be rebuilt from the files.

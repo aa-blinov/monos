@@ -19,6 +19,7 @@ import { registerBackupRoutes } from './routes/backup.js';
 import { registerPrintRoutes } from './routes/print.js';
 import { registerClipRoutes } from './routes/clip.js';
 import { registerPublishRoutes } from './routes/publish.js';
+import { registerLockRoutes } from './routes/locks.js';
 
 const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 const DEFAULT_HOST = '127.0.0.1';
@@ -105,6 +106,7 @@ registerBackupRoutes(app);
 registerPrintRoutes(app);
 registerClipRoutes(app, { appOrigins: () => [...getAllowedOrigins()] });
 registerPublishRoutes(app);
+registerLockRoutes(app);
 
 let server = null;
 let signalHandlersRegistered = false;

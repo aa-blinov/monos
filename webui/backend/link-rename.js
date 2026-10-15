@@ -3,6 +3,7 @@ import path from 'path';
 import { indexFile } from './indexing.js';
 import { NOTES_DIR } from './config.js';
 import { readTextFile, relPath, resolveNotesPath, rewriteWikiTargets } from './utils.js';
+import { isLockedNote } from './note-lock.js';
 
 // A wiki-link names its note by file name without `.md` (or by the note's title),
 // so the links break only when the file name changes. Moving a note to another
@@ -65,6 +66,8 @@ export function rewriteNoteFile(fullPath, transform) {
   const raw = fs.readFileSync(fullPath);
   const text = raw.toString('utf-8');
   if (!Buffer.from(text, 'utf-8').equals(raw)) throw new Error('not UTF-8');
+  // A locked note is sealed: there is no text here to rewrite, and writing into it would break the envelope.
+  if (isLockedNote(text)) return 0;
   const result = transform(text);
   if (result.count === 0) return 0;
   const { atime, mtime } = fs.statSync(fullPath);

@@ -11,6 +11,11 @@ export const loadNeighborsRequest = (filePath) => get('/api/notes/neighbors', { 
 export const linkMentionRequest = (sourcePath, targetPath) =>
   post('/api/notes/link-mention', { target: targetPath }, { query: { path: sourcePath } });
 export const loadBrokenLinksRequest = () => get('/api/notes/broken-links');
+// Locking (opt-in): a note is sealed with a passphrase and opened for the session with the same one.
+export const lockNoteRequest = (filePath, passphrase) => post('/api/file/lock', { passphrase }, { query: { path: filePath } });
+export const unlockNoteRequest = (filePath, passphrase) => post('/api/file/unlock', { passphrase }, { query: { path: filePath } });
+export const relockNoteRequest = (filePath) => post('/api/file/relock', null, { query: { path: filePath } });
+export const unprotectNoteRequest = (filePath, passphrase) => post('/api/file/unprotect', { passphrase }, { query: { path: filePath } });
 // Writes the notes as a static site into `<target>/monos-site`. Nothing leaves the computer.
 export const publishSiteRequest = (target, folder = '') => post('/api/publish', { target, folder });
 export const loadMaintenanceRequest = () => get('/api/notes/maintenance');

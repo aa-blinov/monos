@@ -51,6 +51,25 @@ const ruColorNames = {
 };
 
 const enText = {
+  lock: {
+    title: 'Lock',
+    lockedTitle: 'This note is locked',
+    lockedHint: 'Enter the passphrase to open it for this session. Until then nothing of the note is shown.',
+    passphrase: 'Passphrase',
+    repeatPassphrase: 'Repeat the passphrase',
+    unlock: 'Unlock',
+    wrongPassphrase: 'The passphrase is wrong',
+    unlockFailed: 'Could not unlock the note',
+    lockHint: 'Seals the note with a passphrase. Without the passphrase the note cannot be opened again.',
+    lockButton: 'Lock note',
+    passphraseRequired: 'Enter a passphrase',
+    passphraseMismatch: 'The passphrases do not match',
+    openForSession: 'Open for this session. A restart asks for the passphrase again.',
+    relock: 'Lock now',
+    removeLock: 'Remove the lock',
+    removeLockHint: 'The note is written back as plain text.',
+    actionFailed: 'The change did not go through',
+  },
   properties: {
     title: 'Properties',
     empty: 'No properties yet. Add one below.',
@@ -862,6 +881,25 @@ const enText = {
 };
 
 const ruText = {
+  lock: {
+    title: 'Блокировка',
+    lockedTitle: 'Заметка заблокирована',
+    lockedHint: 'Введите парольную фразу, чтобы открыть заметку на этот сеанс. До этого текст заметки не показывается.',
+    passphrase: 'Парольная фраза',
+    repeatPassphrase: 'Повторите парольную фразу',
+    unlock: 'Открыть',
+    wrongPassphrase: 'Парольная фраза неверна',
+    unlockFailed: 'Не удалось открыть заметку',
+    lockHint: 'Запечатывает заметку парольной фразой. Без неё заметку больше не открыть.',
+    lockButton: 'Заблокировать заметку',
+    passphraseRequired: 'Введите парольную фразу',
+    passphraseMismatch: 'Парольные фразы не совпадают',
+    openForSession: 'Открыта на этот сеанс. После перезапуска приложение снова спросит парольную фразу.',
+    relock: 'Закрыть сейчас',
+    removeLock: 'Снять блокировку',
+    removeLockHint: 'Заметка вернётся в обычный текст.',
+    actionFailed: 'Изменение не сохранилось',
+  },
   properties: {
     title: 'Свойства',
     empty: 'Свойств пока нет. Добавьте свойство ниже.',

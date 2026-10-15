@@ -2196,3 +2196,47 @@ apiTest('публикация: сайт пишется в свою папку, �
   const again = await postJson(buildUrl('/api/publish'), { target: siteRoot, folder: 'Publish' });
   assert.equal(again.response.status, 200);
 });
+
+apiTest('шифрование: без парольной фразы заметка не читается, поиск её не видит, сохранение шифруется заново', async () => {
+  const folder = path.join(notesDir, 'Locked');
+  fs.mkdirSync(folder, { recursive: true });
+  const file = path.join(folder, 'Diary.md');
+  fs.writeFileSync(file, '---\ntitle: Дневник\n---\n\nСекретная запись про Ариадну.\n', 'utf-8');
+  indexAllFiles();
+  const rel = 'notes/Locked/Diary.md';
+  const at = (route) => buildUrl(route, { path: rel });
+
+  const sealed = await postJson(at('/api/file/lock'), { passphrase: 'фраза-один' });
+  assert.equal(sealed.response.status, 200);
+  assert.equal(fs.readFileSync(file, 'utf-8').includes('Ариадну'), false);
+  assert.equal(fs.readFileSync(file, 'utf-8').includes('monos-locked: true'), true);
+
+  const info = await requestJson(at('/api/file-info'));
+  assert.equal(info.data.locked, true);
+  assert.equal(info.data.unlocked, true);
+
+  const search = await postJson(buildUrl('/api/search'), { query: 'Ариадну', search_content: true });
+  assert.equal(search.data.some((hit) => hit.path === rel), false);
+
+  // Open for this session until it is closed again.
+  assert.equal((await postJson(at('/api/file/relock'), {})).response.status, 200);
+  assert.equal((await requestJson(at('/api/file'))).response.status, 423);
+
+  assert.equal((await postJson(at('/api/file/unlock'), { passphrase: 'не та' })).response.status, 403);
+  assert.equal((await postJson(at('/api/file/unlock'), { passphrase: 'фраза-один' })).response.status, 200);
+  assert.match((await requestJson(at('/api/file'))).data.content, /Ариадну/);
+
+  // A save while unlocked is sealed again, never written in plain text.
+  const saved = await requestJson(at('/api/file'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: '---\ntitle: Дневник\n---\n\nНовая запись.\n' }),
+  });
+  assert.equal(saved.response.status, 200);
+  assert.equal(fs.readFileSync(file, 'utf-8').includes('Новая запись'), false);
+
+  // Removing the lock writes the text back as plain text.
+  assert.equal((await postJson(at('/api/file/unprotect'), { passphrase: 'фраза-один' })).response.status, 200);
+  assert.match(fs.readFileSync(file, 'utf-8'), /Новая запись/);
+  assert.equal((await requestJson(at('/api/file-info'))).data.locked, false);
+});

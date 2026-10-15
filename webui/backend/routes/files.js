@@ -9,6 +9,7 @@ import { setFrontmatterProperty, upsertFrontmatter } from '../frontmatter.js';
 import { removeNoteFromFts } from '../fts.js';
 import { planLinkUpdate, refreshNotesAfterRename, rewriteNoteFile } from '../link-rename.js';
 import { normalizePropertyKey, normalizePropertyType, normalizePropertyValue, parseStoredProperties, readProperties } from '../properties.js';
+import { isLockedNote, moveSession, readWithSession, sealWithSession, sessionFor } from '../note-lock.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
 
 /**
@@ -32,6 +33,23 @@ function relocateIndexRows(db, oldPath, newPath, newName, newParent) {
   db.prepare("UPDATE folder_config SET path = ? || SUBSTR(path, ?) WHERE path LIKE ? || '/%'").run(newPath, oldPath.length + 1, oldPath);
 }
 
+// The text a note is edited as. A locked note is edited through its session key, and only while it is
+// unlocked: without the key the edit is refused, never written in plain text over the sealed file.
+function noteTextForEdit(fullPath, filePath) {
+  const stored = readTextFile(fullPath);
+  if (!isLockedNote(stored)) return { text: stored, session: null };
+  const session = sessionFor(filePath);
+  if (!session) throw httpError(423, 'This note is locked');
+  return { text: readWithSession(stored, session), session };
+}
+
+// Writes an edited note back: sealed again when it is locked, plain otherwise. Returns what the file holds.
+function storeNoteText(fullPath, text, session) {
+  const stored = session ? sealWithSession(text, session) : text;
+  fs.writeFileSync(fullPath, stored, 'utf-8');
+  return stored;
+}
+
 export function registerFileRoutes(app) {
   app.get('/api/file', (req, res) => {
     try {
@@ -42,7 +60,13 @@ export function registerFileRoutes(app) {
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
 
-      const content = readTextFile(fullPath);
+      const stored = readTextFile(fullPath);
+      let content = stored;
+      if (isLockedNote(stored)) {
+        const session = sessionFor(filePath);
+        if (!session) return res.status(423).json({ detail: 'This note is locked', locked: true });
+        content = readWithSession(stored, session);
+      }
       getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?').run(nowISO(), filePath);
       res.json({ content });
     } catch (error) {
@@ -62,8 +86,10 @@ export function registerFileRoutes(app) {
       if (!fs.existsSync(fullPath) && req.query.create !== '1') {
         return res.status(404).json({ detail: 'File not found' });
       }
-      fs.writeFileSync(fullPath, content, 'utf-8');
-      indexFile(fullPath, content);
+      const locked = fs.existsSync(fullPath) && isLockedNote(readTextFile(fullPath));
+      const session = locked ? sessionFor(filePath) : null;
+      if (locked && !session) return res.status(423).json({ detail: 'This note is locked', locked: true });
+      indexFile(fullPath, storeNoteText(fullPath, content, session));
       const updated = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath);
       res.json({ message: 'Saved', modified: updated?.modified_at || fs.statSync(fullPath).mtime.toISOString() });
     } catch (error) {
@@ -119,6 +145,7 @@ export function registerFileRoutes(app) {
       const linkPlan = isDir ? null : planLinkUpdate(getDb(), filePath, newRelativePath);
       fs.renameSync(fullPath, newFullPath);
       relocateIndexRows(getDb(), filePath, newRelativePath, newName, path.dirname(newRelativePath).replace(/\\/g, '/'));
+      moveSession(filePath, newRelativePath);
 
       let links = { updatedLinks: 0, updatedPaths: [], failedPaths: [] };
       if (isDir) indexAllFiles();
@@ -142,6 +169,7 @@ export function registerFileRoutes(app) {
       const newRelativePath = relPath(destination);
       fs.renameSync(sourceFull, destination);
       relocateIndexRows(getDb(), source, newRelativePath, path.basename(destination), path.dirname(newRelativePath).replace(/\\/g, '/'));
+      moveSession(source, newRelativePath);
       indexAllFiles();
       res.json({ message: 'Moved' });
     } catch (error) {
@@ -177,6 +205,8 @@ export function registerFileRoutes(app) {
           tags: JSON.parse(meta.tags || '[]'),
         } : null,
         properties: meta ? parseStoredProperties(meta.props) : [],
+        locked: !stats.isDirectory() && isLockedNote(readTextFile(fullPath)),
+        unlocked: Boolean(sessionFor(filePath)),
       });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
@@ -203,6 +233,14 @@ export function registerFileRoutes(app) {
         property = { type, value };
       }
 
+      const editable = noteTextForEdit(fullPath, filePath);
+      if (editable.session) {
+        // A locked note keeps its properties inside the sealed text: change them there, and seal it again.
+        const next = setFrontmatterProperty(editable.text, key, property);
+        indexFile(fullPath, storeNoteText(fullPath, next, editable.session));
+        res.json({ path: filePath, properties: readProperties(next) });
+        return;
+      }
       // rewriteNoteFile keeps the encoding and the modification time, and refuses a file that is not UTF-8.
       try {
         rewriteNoteFile(fullPath, (text) => {
@@ -228,9 +266,10 @@ export function registerFileRoutes(app) {
       const { title, tags, category, content, pinned } = req.body;
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
+      const editable = noteTextForEdit(fullPath, filePath);
       const originalContent = typeof content === 'string'
         ? content
-        : readTextFile(fullPath);
+        : editable.text;
       const currentMetadata = parseFrontmatterMetadata(originalContent);
       const nextMetadata = {
         title: title ?? currentMetadata.title,
@@ -239,8 +278,7 @@ export function registerFileRoutes(app) {
         pinned: typeof pinned === 'boolean' ? pinned : currentMetadata.pinned,
       };
       const nextContent = upsertFrontmatter(originalContent, nextMetadata);
-      fs.writeFileSync(fullPath, nextContent, 'utf-8');
-      indexFile(fullPath, nextContent);
+      indexFile(fullPath, storeNoteText(fullPath, nextContent, editable.session));
 
       const db = getDb();
       const updated = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
