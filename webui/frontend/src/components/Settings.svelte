@@ -4,6 +4,7 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import { shortcutLabel } from '../lib/shortcut-label.js';
   import Checkbox from './Checkbox.svelte';
+  import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
@@ -62,7 +63,9 @@
   }));
 
   let settings = {
-    auto_sync_interval: 0,
+    git_auto_sync_minutes: DEFAULT_SYNC_MINUTES,
+    git_auto_upload: true,
+    git_auto_upload_quit: false,
     auto_format_on_save: false,
     git_commit_message: uiText.settings.defaultCommitMessage,
     git_token: '',
@@ -380,6 +383,13 @@
         await loadBranches();
       }
     }
+  }
+
+  // The automatic sync takes the new choices at once: its timer restarts with the new interval.
+  async function saveAutoSync() {
+    settings.git_auto_sync_minutes = normalizeSyncMinutes(settings.git_auto_sync_minutes);
+    await saveSettings();
+    setAutoSyncPolicy({ minutes: settings.git_auto_sync_minutes, upload: settings.git_auto_upload });
   }
 
   async function saveSettings() {
@@ -836,6 +846,192 @@
       {/if}
     </section>
 
+    <!-- GitHub Connection -->
+    <section class="space-y-5 pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
+
+      <!-- Help -->
+      <details class="text-xs text-[var(--text-secondary)] group">
+        <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
+        <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
+          <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
+          {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
+            <p>{step}</p>
+          {/each}
+          <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
+        </div>
+      </details>
+
+      <form on:submit|preventDefault={authenticate} class="mt-8 space-y-1.5">
+        <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
+        <div class="flex gap-3">
+          <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
+          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
+          {#if isAuthenticated}
+            <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+            {#if confirmingGitReset}
+              <ConfirmModal
+                danger={true}
+                title={$localizedText.settings.resetGitTitle}
+                message={$localizedText.settings.resetGitMessage}
+                confirmLabel={$localizedText.settings.resetGitAction}
+                on:confirm={resetGitAuth}
+                on:cancel={() => confirmingGitReset = false}
+              />
+            {/if}
+          {:else}
+            <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
+              {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
+            </button>
+          {/if}
+        </div>
+      </form>
+
+      {#if repoSafety && !repoSafety.safe}
+        <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
+          <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
+        </div>
+      {/if}
+
+      {#if scopeWarnings.length}
+        <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+          <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
+          <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+            {#each scopeWarnings as warning}
+              <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
+            {/each}
+          </ul>
+          <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
+        </div>
+      {/if}
+
+      {#if gitError}
+        <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
+      {/if}
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
+          <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
+        </div>
+        <div>
+          <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
+          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
+            <option value="">{$localizedText.settings.select}</option>
+            {#each gitRepos as r}
+              <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
+          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
+            {#if isLoadingBranches}
+              <option>{$localizedText.settings.loading}</option>
+            {:else if gitBranches.length}
+              {#each gitBranches as b}
+                <option value={b}>{b}</option>
+              {/each}
+            {:else}
+              <option value="main">main</option>
+            {/if}
+          </select>
+        </div>
+        <div>
+          <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
+          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          on:click={setupGitRepo}
+          disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
+          class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+        >
+          {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
+        </button>
+      </div>
+    </section>
+
+    <!-- Sync Settings -->
+    <section class="space-y-5 border-t border-[var(--border-subtle)] pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label for="auto-sync-minutes" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncEvery}</label>
+          <div class="flex items-center gap-3"><input id="auto-sync-minutes" type="number" min="1" max="1440" bind:value={settings.git_auto_sync_minutes} on:change={saveAutoSync} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} /><span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.minutesUnit}</span></div>
+          <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
+        </div>
+        <div>
+          <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
+          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <Checkbox id="git-auto-upload" bind:checked={settings.git_auto_upload} on:change={saveAutoSync}>
+          {$localizedText.settings.autoUpload}
+        </Checkbox>
+        <Checkbox id="git-auto-upload-quit" bind:checked={settings.git_auto_upload_quit} on:change={saveAutoSync}>
+          {$localizedText.settings.autoUploadOnQuit}
+        </Checkbox>
+      </div>
+      <div class="flex items-center">
+        <Checkbox
+          id="auto-format"
+          bind:checked={settings.auto_format_on_save}
+          on:change={saveSettings}
+        >
+          {$localizedText.settings.autoFormatOnSave}
+        </Checkbox>
+      </div>
+    </section>
+
+    <!-- Status & Sync -->
+    <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
+
+      <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
+        {#if isCheckingStatus}
+          <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
+        {:else if gitStatus?.initialized}
+          <div class="flex items-center justify-between">
+            <div class="space-y-1.5 text-sm">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
+                <span class="font-medium">{gitStatus.current_branch}</span>
+                <span class="text-[var(--text-secondary)]">({gitStatus.status})</span>
+              </div>
+              {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
+              {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
+              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
+            </div>
+            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
+              {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
+            </button>
+          </div>
+        {:else if gitStatus && !gitStatus.initialized}
+          <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.notInitialized}</div>
+        {:else}
+          <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.loadingStatus}</div>
+        {/if}
+      </div>
+
+      <div class="flex gap-4 text-xs">
+        <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
+        {#if gitConflicts.length > 0}
+          <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
+        {/if}
+      </div>
+    </section>
+
     <!-- Conflicts -->
     {#if gitConflicts.length > 0}
       <section class="space-y-4 pt-2">
@@ -1076,184 +1272,6 @@
         {/if}
       </section>
 
-
-      <!-- GitHub Connection -->
-      <section class="space-y-5 pt-5">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
-
-        <!-- Help -->
-        <details class="text-xs text-[var(--text-secondary)] group">
-          <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
-          <div class="mt-3 space-y-2 rounded-xl border border-[var(--border-subtle)] p-3 leading-relaxed">
-            <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/tokens" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
-            {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
-              <p>{step}</p>
-            {/each}
-            <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
-          </div>
-        </details>
-
-        <form on:submit|preventDefault={authenticate} class="mt-8 space-y-1.5">
-          <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
-          <div class="flex gap-3">
-            <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-            <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
-            {#if isAuthenticated}
-              <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
-              {#if confirmingGitReset}
-                <ConfirmModal
-                  danger={true}
-                  title={$localizedText.settings.resetGitTitle}
-                  message={$localizedText.settings.resetGitMessage}
-                  confirmLabel={$localizedText.settings.resetGitAction}
-                  on:confirm={resetGitAuth}
-                  on:cancel={() => confirmingGitReset = false}
-                />
-              {/if}
-            {:else}
-              <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
-                {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
-              </button>
-            {/if}
-          </div>
-        </form>
-
-        {#if repoSafety && !repoSafety.safe}
-          <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-            <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
-            <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
-          </div>
-        {/if}
-
-        {#if scopeWarnings.length}
-          <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
-            <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
-            <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-              {#each scopeWarnings as warning}
-                <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
-              {/each}
-            </ul>
-            <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
-          </div>
-        {/if}
-
-        {#if gitError}
-          <div class="text-xs rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
-        {/if}
-
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
-            <input type="text" id="git-owner" bind:value={settings.git_owner} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
-          </div>
-          <div>
-            <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
-            <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
-              <option value="">{$localizedText.settings.select}</option>
-              {#each gitRepos as r}
-                <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
-              {/each}
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
-            <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
-              {#if isLoadingBranches}
-                <option>{$localizedText.settings.loading}</option>
-              {:else if gitBranches.length}
-                {#each gitBranches as b}
-                  <option value={b}>{b}</option>
-                {/each}
-              {:else}
-                <option value="main">main</option>
-              {/if}
-            </select>
-          </div>
-          <div>
-            <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-            <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
-          </div>
-        </div>
-
-        <div class="flex justify-end">
-          <button
-            type="button"
-            on:click={setupGitRepo}
-            disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
-            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
-          >
-            {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
-          </button>
-        </div>
-      </section>
-
-      <!-- Sync Settings -->
-      <section class="space-y-5 border-t border-[var(--border-subtle)] pt-5">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.syncSettings}</h2>
-
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <label for="auto-sync-interval" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncInterval}</label>
-            <input id="auto-sync-interval" type="number" bind:value={settings.auto_sync_interval} on:change={saveSettings} min="0" class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} />
-            <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
-          </div>
-          <div>
-            <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
-            <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
-          </div>
-        </div>
-
-        <div class="flex items-center">
-          <Checkbox
-            id="auto-format"
-            bind:checked={settings.auto_format_on_save}
-            on:change={saveSettings}
-          >
-            {$localizedText.settings.autoFormatOnSave}
-          </Checkbox>
-        </div>
-      </section>
-
-      <!-- Status & Sync -->
-      <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
-
-        <div class="border rounded-lg border border-[var(--border-subtle)] p-5">
-          {#if isCheckingStatus}
-            <div class="text-xs motion-safe:animate-pulse text-[var(--text-secondary)]">{$localizedText.settings.checking}</div>
-          {:else if gitStatus?.initialized}
-            <div class="flex items-center justify-between">
-              <div class="space-y-1.5 text-sm">
-                <div class="flex items-center gap-2.5">
-                  <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
-                  <span class="font-medium">{gitStatus.current_branch}</span>
-                  <span class="text-[var(--text-secondary)]">({gitStatus.status})</span>
-                </div>
-                {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
-                {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-                {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
-              </div>
-              <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
-                {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
-              </button>
-            </div>
-          {:else if gitStatus && !gitStatus.initialized}
-            <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.notInitialized}</div>
-          {:else}
-            <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.loadingStatus}</div>
-          {/if}
-        </div>
-
-        <div class="flex gap-4 text-xs">
-          <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
-          {#if gitConflicts.length > 0}
-            <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
-          {/if}
-        </div>
-      </section>
 
       <!-- Backup -->
 

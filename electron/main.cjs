@@ -203,13 +203,30 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// The notes this device changed go to GitHub before the backend stops, when the person chose it in Settings.
+// Bounded: a slow network must not hold the quit. What did not go up is uploaded at the next sync.
+const QUIT_SYNC_TIMEOUT_MS = 20_000;
+
+async function syncOnQuit() {
+  const address = backendServer?.address?.();
+  if (!address) return;
+  try {
+    await fetch(`http://127.0.0.1:${address.port}/api/git/sync-on-quit`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(QUIT_SYNC_TIMEOUT_MS),
+    });
+  } catch {
+    // Offline, or the upload ran out of time: the quit goes on.
+  }
+}
+
 // Every page saves what it still holds before any window closes. The quit is held
 // until then and started again afterwards: a close cancelled during a quit would
 // cancel the whole quit, and on macOS the app would stay open.
 app.on('before-quit', (event) => {
   if (quitFlushed) return;
   event.preventDefault();
-  Promise.all(BrowserWindow.getAllWindows().map(flushPendingEdits)).finally(() => {
+  Promise.all(BrowserWindow.getAllWindows().map(flushPendingEdits)).then(syncOnQuit).finally(() => {
     quitFlushed = true;
     app.quit();
   });
