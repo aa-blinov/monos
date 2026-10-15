@@ -42,6 +42,22 @@ test('доступ: свой компьютер пускается без ток
   assert.equal(lan.requestAuthorized({ ...base, queryToken: TOKEN, pathname: '/' }), true);
 });
 
+test('свой компьютер: адрес петли без заголовков пересылки; прокси или туннель добавляет заголовок и становится другим устройством', () => {
+  assert.equal(lan.isThisComputerRequest({ remoteAddress: '127.0.0.1', headers: { host: '127.0.0.1:8000' } }), true);
+  assert.equal(lan.isThisComputerRequest({ remoteAddress: '::1', headers: {} }), true);
+  assert.equal(lan.isThisComputerRequest({ remoteAddress: '192.168.1.20', headers: {} }), false);
+  for (const header of ['forwarded', 'via', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip', 'cf-connecting-ip', 'true-client-ip']) {
+    assert.equal(lan.isThisComputerRequest({ remoteAddress: '127.0.0.1', headers: { [header]: 'value' } }), false, header);
+  }
+});
+
+test('прокси на этом компьютере: переданный им запрос нужен токен, даже с адреса 127.0.0.1', () => {
+  const passedOn = { remoteAddress: '127.0.0.1', headers: { 'x-forwarded-for': '203.0.113.7' }, config: on, cookieToken: null, bearerToken: null, queryToken: null, pathname: '/api/lan' };
+  assert.equal(lan.requestAuthorized(passedOn), false);
+  assert.equal(lan.requestAuthorized({ ...passedOn, bearerToken: TOKEN }), true);
+  assert.equal(lan.requestAuthorized({ ...passedOn, headers: {} }), true);
+});
+
 test('адрес привязки: на сеть только при включённом доступе', () => {
   assert.equal(lan.bindHostFor(off), '127.0.0.1');
   assert.equal(lan.bindHostFor(on), '0.0.0.0');

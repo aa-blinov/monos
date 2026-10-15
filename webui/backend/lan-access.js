@@ -5,8 +5,9 @@ import path from 'path';
 import { ROOT_DIR } from './config.js';
 
 // Access from other devices (opt-in). Off by default: the server listens on this computer only. When the
-// person turns it on, the server listens on the network, and every request that does not come from this
-// computer must carry the access token. The token is shown only to this computer, never to another device.
+// person turns it on, the server listens on the network, and every request that does not come straight from
+// this computer must carry the access token. A request that a proxy or tunnel passed on is not "straight".
+// The token is shown only to this computer, never to another device.
 
 export const ACCESS_COOKIE = 'monos_token';
 const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -71,6 +72,18 @@ export function isLoopbackAddress(address) {
   return value === '::1' || value === '::ffff:127.0.0.1' || value.startsWith('127.');
 }
 
+// Headers that a proxy or a tunnel adds on its way to this computer. A proxy on this computer connects from
+// 127.0.0.1 like the app itself, so the address alone cannot tell them apart: the header can.
+const FORWARDING_HEADERS = [
+  'forwarded', 'via', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-real-ip', 'cf-connecting-ip', 'true-client-ip',
+];
+
+/** Whether a request came straight from this computer: a loopback address and no forwarding header. */
+export function isThisComputerRequest({ remoteAddress, headers = {} }) {
+  if (!isLoopbackAddress(remoteAddress)) return false;
+  return !FORWARDING_HEADERS.some((name) => headers[name] !== undefined);
+}
+
 /**
  * Whether a Host header may reach the server. Loopback names always may. A network address (an IP
  * literal or a `.local` name) may only when network access is on. A DNS name never may: a DNS-rebinding
@@ -94,8 +107,8 @@ function tokenMatches(given, expected) {
  * Whether a request may go on. This computer always may. Another device must give the token: in the
  * cookie it got earlier, in a bearer header, or — only for the first page load — in the `token` query.
  */
-export function requestAuthorized({ remoteAddress, config, cookieToken, bearerToken, queryToken, pathname }) {
-  if (isLoopbackAddress(remoteAddress)) return true;
+export function requestAuthorized({ remoteAddress, headers, config, cookieToken, bearerToken, queryToken, pathname }) {
+  if (isThisComputerRequest({ remoteAddress, headers })) return true;
   if (!config.enabled) return false;
   if (tokenMatches(cookieToken, config.token)) return true;
   if (tokenMatches(bearerToken, config.token)) return true;

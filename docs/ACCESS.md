@@ -14,7 +14,7 @@ Only the first page load accepts the token in the address. Every other request n
 ## What is protected
 
 - **Host header.** The server answers only to the names it knows: `localhost` and `127.0.0.1` always, and the network addresses or a `.local` name while access is on. A DNS name is refused even with a token, which blocks pages that try to reach the server under a name of their own (DNS rebinding).
-- **This computer is trusted.** Requests from it never need a token.
+- **This computer is trusted.** A request that comes straight from this computer never needs a token. A request that a proxy or tunnel passed on, which shows as a forwarding header such as `X-Forwarded-For`, `Forwarded` or `Via`, counts as another device and needs the token.
 - **Settings are changed only here.** `/api/lan` answers only to this computer, so a device that got in cannot read the token or switch access on.
 - **A new token** (Settings → Phone and other devices → New token) ends the access of every device that has the old one.
 - **Turning access off** refuses other devices at once, even before the restart.
@@ -48,7 +48,7 @@ Monos does not serve HTTPS yet. Two routes are possible, and neither is built or
 - **Tailscale.** `tailscale cert` issues a certificate that Chrome trusts for the machine's `*.ts.net` name, and Tailscale encrypts the traffic as well. Monos would need its own HTTPS listener with that certificate, and its host check would have to accept that name; today it accepts only IP addresses and `.local` names. The certificate's name appears in public certificate transparency logs.
 - **A private CA (mkcert).** The phone must trust the CA. Whether Chrome on Android accepts a user-installed CA for installation was not confirmed. Anyone who holds the CA's key can sign certificates for any name, so copy only the public `rootCA.pem` to the phone and keep the key private.
 
-Do not put a reverse proxy or tunnel in front of Monos, for example `tailscale serve`, cloudflared or ngrok. The server treats every request from 127.0.0.1 as coming from this computer, so a proxy on the same machine lets other devices skip the token and reach `/api/lan`.
+Do not put a reverse proxy or tunnel in front of Monos, for example `tailscale serve`, cloudflared or ngrok. Monos recognises the usual forwarding headers and then asks for the token. A proxy that adds none of them and rewrites the `Host` header to `localhost` looks exactly like this computer, and the server cannot tell it apart, so such a proxy lets other devices skip the token and reach `/api/lan`.
 
 The service worker (`public/sw.js`) is registered only in a production build served over HTTPS. It keeps no copy of the notes: every request goes to the network, and only a page load that cannot reach this computer gets a short note instead of the browser's error page.
 

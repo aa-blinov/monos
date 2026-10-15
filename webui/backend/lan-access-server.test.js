@@ -89,6 +89,15 @@ lanTest('имя хоста из чужой сети отказывается, д
   assert.equal(settingsFromNetwork.status, 403);
 });
 
+test('запрос, который переслал прокси на этом компьютере, нужен токен; настройки и папка заметок ему закрыты', async () => {
+  const passedOn = { 'x-forwarded-for': '203.0.113.7' };
+  assert.equal((await send({ path: '/api/notes/recent', headers: passedOn })).status, 401);
+  assert.equal((await send({ path: '/api/notes/recent', headers: { ...passedOn, ...bearer } })).status, 200);
+  assert.equal((await send({ path: '/api/lan', headers: passedOn })).status, 401);
+  assert.equal((await send({ path: '/api/lan', headers: { ...passedOn, ...bearer } })).status, 403);
+  assert.equal((await send({ path: '/api/storage', headers: { ...passedOn, ...bearer } })).status, 403);
+});
+
 test('на этом компьютере настройка показывает токен и адреса сети, а перезапуск не нужен', async () => {
   const state = JSON.parse((await send({ path: '/api/lan' })).text);
   assert.equal(state.enabled, true);

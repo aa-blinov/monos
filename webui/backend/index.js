@@ -27,7 +27,7 @@ import {
   accessCookie,
   bindHostFor,
   hostAllowed,
-  isLoopbackAddress,
+  isThisComputerRequest,
   readCookie,
   readLanConfig,
   requestAuthorized,
@@ -107,6 +107,7 @@ function requireAccessToken(req, res, next) {
   const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
   const authorized = requestAuthorized({
     remoteAddress: req.socket.remoteAddress,
+    headers: req.headers,
     config: readLanConfig(),
     cookieToken: readCookie(req.get('Cookie'), ACCESS_COOKIE),
     bearerToken: authorization.startsWith('Bearer ') ? authorization.slice('Bearer '.length) : null,
@@ -121,7 +122,7 @@ function requireAccessToken(req, res, next) {
     }
     return;
   }
-  if (queryToken && req.method === 'GET' && req.path === '/' && !isLoopbackAddress(req.socket.remoteAddress)) {
+  if (queryToken && req.method === 'GET' && req.path === '/' && !isThisComputerRequest({ remoteAddress: req.socket.remoteAddress, headers: req.headers })) {
     res.setHeader('Set-Cookie', accessCookie(queryToken));
     res.redirect(302, '/');
     return;
