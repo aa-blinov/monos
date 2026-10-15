@@ -1,4 +1,5 @@
-import { defaultMarkdownParser } from 'prosemirror-markdown';
+import { MarkdownParser, defaultMarkdownParser, schema as markdownSchema } from 'prosemirror-markdown';
+import { Schema } from '@tiptap/pm/model';
 import { convertMarkdownExtras } from './markdown-extras.js';
 
 const NODE_TYPE_MAP = {
@@ -9,6 +10,19 @@ const NODE_TYPE_MAP = {
   hard_break: 'hardBreak',
   horizontal_rule: 'horizontalRule',
 };
+
+// prosemirror-markdown turns a newline inside a paragraph into a space. The editor keeps it as a soft break node
+// (see soft-break.js), so saving writes the newline back. Same parser, one more node.
+const softBreakSchema = new Schema({
+  nodes: markdownSchema.spec.nodes.append({
+    softBreak: { inline: true, group: 'inline', leaf: true, selectable: false },
+  }),
+  marks: markdownSchema.spec.marks,
+});
+const softBreakParser = new MarkdownParser(softBreakSchema, defaultMarkdownParser.tokenizer, {
+  ...defaultMarkdownParser.tokens,
+  softbreak: { node: 'softBreak' },
+});
 
 const MARK_TYPE_MAP = {
   em: 'italic',
@@ -101,7 +115,7 @@ export function withCodeLanguages(content, markdown) {
 }
 
 function parsedMarkdownContent(markdown) {
-  const parsed = defaultMarkdownParser.parse(markdown);
+  const parsed = softBreakParser.parse(markdown);
   const content = convertMarkdownExtras(convertTaskLists(normalizeForTipTapSchema(parsed.toJSON()).content || []));
   return withCodeLanguages(content, markdown);
 }
@@ -479,7 +493,7 @@ export function markdownToEditorContent(markdown) {
       return normalizeMarkdownImageText(tableDocument);
     }
 
-    const parsed = defaultMarkdownParser.parse(source);
+    const parsed = softBreakParser.parse(source);
     if (!parsed.textContent.trim() && source.trim()) {
       return normalizeMarkdownImageText(plainTextDocument(source));
     }
