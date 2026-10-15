@@ -12,8 +12,13 @@
  * stay out of the initial bundle — hence the dynamic import.
  */
 
-import { Node, mergeAttributes } from '@tiptap/core';
+import { Extension, Node, mergeAttributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import katex from 'katex';
+import { get } from 'svelte/store';
+import { localizedText } from './strings.js';
+import { calloutMarker, calloutTone } from './callouts.js';
 
 let mermaidPromise = null;
 
@@ -467,6 +472,121 @@ export const NoteEmbed = Node.create({
           return true;
         },
         destroy() { token += 1; },
+      };
+    };
+  },
+
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state, node) {
+          state.write(`![[${node.attrs.name}]]`);
+          state.closeBlock(node);
+        },
+      },
+    };
+  },
+});
+
+// Obsidian callouts: a quote whose first line is `[!type] Title` is drawn as a callout. The document keeps
+// the quote as it was, so this is a decoration (a class and a data attribute), not a new node.
+export const Callouts = Extension.create({
+  name: 'callouts',
+
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: new PluginKey('callouts'),
+      props: {
+        decorations(state) {
+          const decorations = [];
+          state.doc.descendants((node, pos) => {
+            if (node.type.name !== 'blockquote') return true;
+            const first = node.firstChild;
+            const marker = first?.type.name === 'paragraph' ? calloutMarker(first.textContent) : null;
+            if (marker) {
+              decorations.push(Decoration.node(pos, pos + node.nodeSize, {
+                class: `callout callout-${calloutTone(marker.type)}`,
+                'data-callout': marker.type,
+              }));
+            }
+            return true;
+          });
+          return decorations.length ? DecorationSet.create(state.doc, decorations) : null;
+        },
+      },
+    })];
+  },
+});
+
+// A PDF from the note's attachments, shown as a frame of its pages with a link to open it whole. The
+// node writes `![[name.pdf]]` back, so the note reads the same in git as the embed it came from.
+export const PdfEmbed = Node.create({
+  name: 'pdfEmbed',
+  group: 'block',
+  atom: true,
+  selectable: true,
+
+  addOptions() {
+    // The app turns the note-relative path into an address the window can load (RichEditor's resolveImageSrc).
+    return { resolveSrc: (src) => src };
+  },
+
+  addAttributes() {
+    return {
+      name: { default: '' },
+      src: { default: '' },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'div[data-type="pdf-embed"]' }];
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, {
+      'data-type': 'pdf-embed',
+      'data-name': node.attrs.name,
+      'data-src': node.attrs.src,
+    })];
+  },
+
+  addNodeView() {
+    const options = this.options;
+    return ({ node }) => {
+      const dom = document.createElement('div');
+      dom.dataset.type = 'pdf-embed';
+      dom.className = 'pdf-embed';
+
+      const head = document.createElement('div');
+      head.className = 'pdf-embed-head';
+      const title = document.createElement('span');
+      const open = document.createElement('a');
+      open.target = '_blank';
+      open.rel = 'noopener noreferrer';
+      open.textContent = get(localizedText).richEditor.pdfOpen;
+      head.append(title, open);
+
+      const frame = document.createElement('iframe');
+      frame.className = 'pdf-embed-frame';
+
+      dom.append(head, frame);
+
+      const paint = (attrs) => {
+        const url = options.resolveSrc(attrs.src);
+        title.textContent = attrs.name;
+        frame.title = attrs.name;
+        frame.src = url;
+        open.href = url;
+      };
+      paint(node.attrs);
+
+      return {
+        dom,
+        update(updated) {
+          if (updated.type.name !== 'pdfEmbed') return false;
+          paint(updated.attrs);
+          return true;
+        },
       };
     };
   },

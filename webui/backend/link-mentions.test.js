@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   extractWikiLinks,
+  folderLinkPatterns,
   headingLinkPattern,
   linkFirstMention,
   linkNameCandidates,
@@ -9,6 +10,14 @@ import {
   phraseRegExp,
   plainTextForMentions,
 } from './utils.js';
+
+test('ссылка с папкой [[Projects/Plan]] указывает на заметку Plan, а не на папку', () => {
+  assert.deepEqual(linkNameCandidates('Projects/Plan'), ['Projects/Plan', 'Plan']);
+  assert.deepEqual(linkNameCandidates('Projects/Plan#Раздел'), ['Projects/Plan#Раздел', 'Projects/Plan', 'Plan']);
+  // Нет имени после последнего «/» — и искать нечего.
+  assert.deepEqual(linkNameCandidates('Plan/'), ['Plan/']);
+  assert.deepEqual(folderLinkPatterns('a_b'), ['%/a\\_b', '%/a\\_b#%']);
+});
 
 test('цель ссылки без подписи и заголовка: [[Name#Heading|подпись]] даёт Name#Heading, [[#H]] не даёт ничего', () => {
   assert.deepEqual(extractWikiLinks('[[Beta]] [[ Gamma |подпись]] [[Delta#Раздел|x]] [[#Здесь]]'), [

@@ -346,7 +346,7 @@ const IMAGE_MARKDOWN_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
 // конце необязательное, поэтому обе разбираются за один проход — иначе в тексте
 // «![[a.png]] и ![[Заметка]]» находилась только первая половина, а вторая
 // оставалась литералом.
-const EMBED_ANYWHERE_RE = /!\[\[([^\]|#\n]+?)(?:\.(png|jpe?g|gif|webp|svg))?\]\]/gi;
+const EMBED_ANYWHERE_RE = /!\[\[([^\]|#\n]+?)(?:\.(png|jpe?g|gif|webp|svg|pdf))?\]\]/gi;
 
 function embedImageNode(target) {
   const name = String(target).split('/').pop() || target;
@@ -386,9 +386,9 @@ export function normalizeObsidianEmbeds(text) {
       content.push({ type: 'text', text: source.slice(lastIndex, match.index) });
     }
     const name = match[1].trim();
-    content.push(match[2]
-      ? embedImageNode(`${name}.${match[2].toLowerCase()}`)
-      : noteEmbedNode(name));
+    const extension = match[2] ? match[2].toLowerCase() : '';
+    if (extension === 'pdf') content.push(pdfEmbedNode(`${name}.pdf`));
+    else content.push(extension ? embedImageNode(`${name}.${extension}`) : noteEmbedNode(name));
     lastIndex = match.index + match[0].length;
   }
   if (!content.length) return null;
@@ -402,6 +402,12 @@ function noteEmbedNode(name) {
   return { type: 'noteEmbed', attrs: { name } };
 }
 
+// A PDF sits in the note's `_attachments` folder like a picture; the node shows its pages.
+function pdfEmbedNode(target) {
+  const name = String(target).split('/').pop() || target;
+  return { type: 'pdfEmbed', attrs: { name, src: `_attachments/${target}` } };
+}
+
 function normalizeMarkdownImageText(node) {
   if (!node || typeof node !== 'object') return node;
   if (node.type === 'text' && typeof node.text === 'string') {
@@ -413,10 +419,37 @@ function normalizeMarkdownImageText(node) {
   }
   if (!Array.isArray(node.content)) return node;
 
-  return {
-    ...node,
-    content: node.content.flatMap((child) => normalizeMarkdownImageText(child)),
+  const content = node.content.flatMap((child) => normalizeMarkdownImageText(child));
+  // A block embed cannot sit inside a paragraph, so the paragraph is cut around it.
+  if (node.type === 'paragraph' && content.some((child) => BLOCK_EMBED_TYPES.has(child?.type))) {
+    return splitParagraphAroundBlocks({ ...node, content });
+  }
+  return { ...node, content };
+}
+
+const BLOCK_EMBED_TYPES = new Set(['noteEmbed', 'pdfEmbed']);
+
+// Paragraph, block, paragraph: the text on each side of a block embed keeps its own paragraph.
+// A run of whitespace alone is dropped, so `![[a.pdf]] ` does not leave an empty paragraph.
+function splitParagraphAroundBlocks(paragraph) {
+  const pieces = [];
+  let run = [];
+  const flush = () => {
+    if (run.some((child) => child.type !== 'text' || child.text?.trim())) {
+      pieces.push({ ...paragraph, content: run });
+    }
+    run = [];
   };
+  for (const child of paragraph.content) {
+    if (BLOCK_EMBED_TYPES.has(child.type)) {
+      flush();
+      pieces.push(child);
+    } else {
+      run.push(child);
+    }
+  }
+  flush();
+  return pieces;
 }
 
 export function plainTextDocument(text) {

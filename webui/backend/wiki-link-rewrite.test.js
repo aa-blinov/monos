@@ -19,6 +19,14 @@ test('другие заметки с похожим именем не трога
   assert.deepEqual(rewriteWikiTargets(text, 'Old', 'New'), { content: text, count: 0 });
 });
 
+test('ссылка через папку переписывается, папка остаётся; похожая папка с тем же хвостом не трогается', () => {
+  assert.deepEqual(rewriteWikiTargets('[[Projects/Old]] и [[Projects/Old|подпись]] и [[Other/Old Notes]]', 'Old', 'New'), {
+    content: '[[Projects/New]] и [[Projects/New|подпись]] и [[Other/Old Notes]]',
+    count: 2,
+  });
+  assert.equal(rewriteWikiTargets('[[Projects/Old#раздел]]', 'Old', 'New').content, '[[Projects/New#раздел]]');
+});
+
 test('ссылка на заголовок переписывается, заголовок и подпись остаются как были', () => {
   assert.deepEqual(rewriteWikiTargets('[[Old#раздел]] и [[Old#раздел|подпись]]', 'Old', 'New'), {
     content: '[[New#раздел]] и [[New#раздел|подпись]]',

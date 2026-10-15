@@ -2109,3 +2109,48 @@ apiTest('свойства: запись в шапку, отказы, файл-и
   const byStatus = await requestJson(buildUrl('/api/notes/table', { query: 'prop:status' }));
   assert.deepEqual(byStatus.data.rows.map((row) => row.title), ['Plan A']);
 });
+
+apiTest('ссылка с папкой (как в Obsidian) и ссылка на заголовок ведут на ту же заметку', async () => {
+  const vault = path.join(notesDir, 'Vault', 'Projects');
+  fs.mkdirSync(vault, { recursive: true });
+  fs.writeFileSync(path.join(vault, 'Plan.md'), '# План\n\n## Раздел\n', 'utf-8');
+  fs.writeFileSync(path.join(notesDir, 'Vault', 'Reader.md'), 'См. [[Vault/Projects/Plan]] и [[Plan#Раздел]].\n', 'utf-8');
+  indexAllFiles();
+
+  const plan = 'notes/Vault/Projects/Plan.md';
+  const byFolder = await requestJson(buildUrl('/api/notes/resolve-link', { name: 'Vault/Projects/Plan' }));
+  assert.equal(byFolder.data.path, plan);
+
+  const backlinks = await requestJson(buildUrl('/api/notes/backlinks', { path: plan }));
+  assert.deepEqual(backlinks.data.map((item) => item.path), ['notes/Vault/Reader.md']);
+
+  const broken = await requestJson(buildUrl('/api/notes/broken-links'));
+  assert.equal(broken.data.some((item) => item.target.startsWith('Vault/Projects/Plan')), false);
+});
+
+apiTest('PDF прикрепляется как есть и отдаётся как application/pdf; текст по-прежнему не принимается', async () => {
+  const pdfBytes = Buffer.from('%PDF-1.4\n%монос\n%%EOF\n');
+  const form = new FormData();
+  form.append('file', new Blob([pdfBytes], { type: 'application/pdf' }), 'Spec.pdf');
+  const upload = await requestJson(buildUrl('/api/attachments', { notePath: 'notes/Topic/Alpha.md' }), {
+    method: 'POST',
+    body: form,
+  });
+  assert.equal(upload.response.status, 200);
+  assert.equal(upload.data.name, 'Spec.pdf');
+  assert.equal(upload.data.relativePath, '_attachments/Spec.pdf');
+  assert.equal(fs.readFileSync(path.join(notesDir, 'Topic', '_attachments', 'Spec.pdf')).equals(pdfBytes), true);
+
+  const raw = await realFetch(buildUrl('/api/attachments/raw', { path: upload.data.path }));
+  assert.equal(raw.status, 200);
+  assert.equal(raw.headers.get('content-type'), 'application/pdf');
+  assert.equal(Buffer.from(await raw.arrayBuffer()).equals(pdfBytes), true);
+
+  const textForm = new FormData();
+  textForm.append('file', new Blob(['plain'], { type: 'text/plain' }), 'note.txt');
+  const rejected = await requestJson(buildUrl('/api/attachments', { notePath: 'notes/Topic/Alpha.md' }), {
+    method: 'POST',
+    body: textForm,
+  });
+  assert.equal(rejected.response.status, 400);
+});
