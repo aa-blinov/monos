@@ -19,6 +19,22 @@ It combines Markdown files, wiki-style links, a clean dashboard inspired by Goog
 - **Search that understands content**: search titles, tags, and note bodies.
 - **Git sync**: optional repository-backed backup and synchronization.
 
+## Install the Desktop App
+
+Download the installer for your system from [Releases](https://github.com/aa-blinov/monos/releases/latest).
+
+**macOS.** Open the `.dmg` and drag Monos to Applications. The app is not notarized by Apple yet, so on first launch macOS says it cannot check the developer. To open it once:
+
+1. Try to open Monos, then close the warning.
+2. Open System Settings → Privacy & Security, scroll down and click **Open Anyway** next to the message about Monos.
+3. Confirm with your password. Later launches open normally.
+
+Alternatively, in Terminal: `xattr -dr com.apple.quarantine /Applications/Monos.app`.
+
+**Windows.** SmartScreen may show "Windows protected your PC". Click **More info**, then **Run anyway**.
+
+Your notes stay in the app's data folder (see below) and are kept when you install a new version over the old one.
+
 ## Desktop Data Location
 
 Monos stores user data in the operating system's standard application data directory:

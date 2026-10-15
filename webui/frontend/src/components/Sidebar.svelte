@@ -1256,7 +1256,7 @@
           on:click={() => dispatch('openProperties')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.properties.sidebar}
-          tooltip={$localizedText.properties.sidebar}
+          tooltip={$localizedText.properties.hint}
           tooltipAlign="end"
         >
           <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />

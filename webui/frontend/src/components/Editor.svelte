@@ -1253,6 +1253,7 @@
               type="button"
               bind:this={propertyTriggers.properties}
               data-testid="property-properties-button"
+              title={$localizedText.properties.hint}
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'properties'}
               aria-label={`${$localizedText.properties.title}: ${customProperties.length}`}
