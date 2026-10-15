@@ -56,6 +56,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `properties.js` | `propertyName`, `propertyValueFrom` and `isCalendarDate` check a property name and a form value against its type, as the server does; `propertyInputText` and `propertyInputType` feed the inputs |
 | `properties.test.js` | Name rules (managed keys and YAML characters refused), calendar dates, values per type, list text in a field |
 | `callouts.js` | `calloutMarker` reads an Obsidian callout marker (`[!warning] Title`) from a quote's first line, `calloutTone` picks its colour family, `unescapeCalloutMarkers` keeps the marker bare when the note is saved |
+| `service-worker.js` | `shouldRegisterServiceWorker` says whether the app registers its install worker (`public/sw.js`): a production build, HTTPS and a browser that supports it |
 | `callouts.test.js` | Marker type and title, plain quotes and link-like brackets not taken for callouts, tone by type, escaped markers restored on save |
 | `richEditorExtensions.js` | TipTap extension set used by the rich editor |
 | `rich-editor-paste.js` | Paste handler for the rich editor: images, links, plain text fallbacks |
