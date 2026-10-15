@@ -56,6 +56,9 @@
   let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false };
   let slashMenuOpen = false;
   let activeSlashIndex = 0;
+  let slashMenuEl;
+  let surfaceEl;
+  let slashMenuPosition = { left: 0, top: 0 };
   let isImageDragging = false;
   let wikiSuggestions = [];
   let wikiSuggestionRange = null;
@@ -392,6 +395,43 @@
     }
   }
 
+  // The menu opens under the caret, where the slash was typed: its left edge is the slash's, and it
+  // opens above the line when the editor has no room below it. It never leaves the editor surface.
+  async function openSlashMenu() {
+    slashMenuOpen = true;
+    activeSlashIndex = 0;
+    await tick();
+    placeSlashMenu();
+  }
+
+  function placeSlashMenu() {
+    if (!editor || !surfaceEl) return;
+    const surface = surfaceEl.getBoundingClientRect();
+    const edge = 8;
+    const gap = 6;
+    const menuWidth = slashMenuEl?.offsetWidth || 256;
+    const menuHeight = slashMenuEl?.offsetHeight || 0;
+    let slash;
+    let caret;
+    try {
+      const { from } = editor.state.selection;
+      slash = editor.view.coordsAtPos(Math.max(0, from - 1));
+      caret = editor.view.coordsAtPos(from);
+    } catch {
+      // No layout to measure (a detached or hidden editor): the menu keeps its last place.
+      return;
+    }
+    const left = slash.left - surface.left;
+    const below = caret.bottom - surface.top + gap;
+    const above = caret.top - surface.top - menuHeight - gap;
+    const fitsBelow = below + menuHeight <= surface.height - edge;
+    const top = fitsBelow || above < edge ? below : above;
+    slashMenuPosition = {
+      left: Math.min(Math.max(edge, left), Math.max(edge, surface.width - menuWidth - edge)),
+      top: Math.min(Math.max(edge, top), Math.max(edge, surface.height - menuHeight - edge)),
+    };
+  }
+
   function executeSlashCommand(command) {
     if (!command) return;
     slashMenuOpen = false;
@@ -441,7 +481,7 @@
         activeSlashIndex = (activeSlashIndex - 1 + slashCommands.length) % slashCommands.length;
         return;
       }
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault();
         executeSlashCommand(slashCommands[activeSlashIndex]);
         return;
@@ -449,10 +489,8 @@
     }
 
     if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-      window.setTimeout(() => {
-        slashMenuOpen = true;
-        activeSlashIndex = 0;
-      });
+      // The slash is inserted after this keydown, so the menu is placed on the next tick, under the caret.
+      window.setTimeout(openSlashMenu);
     }
   }
 
@@ -555,7 +593,7 @@
   />
 {/if}
 
-<svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} />
+<svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} on:resize={() => { if (slashMenuOpen) placeSlashMenu(); }} />
 <div class="flex flex-col flex-1 min-h-0">
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
   <div class="relative flex items-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
@@ -657,12 +695,15 @@
 
   <!-- Editor -->
   <div
+    bind:this={surfaceEl}
     class="relative flex flex-col flex-1 min-h-0 overflow-hidden"
     data-testid="rich-editor-surface"
   >
   {#if slashMenuOpen}
     <div
-      class="absolute left-4 lg:left-12 top-3 lg:top-6 z-20 w-64 border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl p-1"
+      bind:this={slashMenuEl}
+      class="absolute z-20 w-64 border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl p-1"
+      style="left: {slashMenuPosition.left}px; top: {slashMenuPosition.top}px"
       role="listbox"
       aria-label={$localizedText.richEditor.slashMenuLabel}
     >
@@ -672,7 +713,7 @@
           type="button"
           role="option"
           aria-selected={activeSlashIndex === index}
-          class="w-full justify-start px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] {activeSlashIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
+          class="!flex w-full !min-h-0 !justify-start px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] {activeSlashIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
           on:mouseenter={() => activeSlashIndex = index}
           on:click={() => executeSlashCommand(slashCommand)}
         >
@@ -686,6 +727,7 @@
     aria-multiline="true"
     tabindex="-1"
     data-testid="rich-editor-input"
+    on:scroll={() => { if (slashMenuOpen) placeSlashMenu(); }}
     on:keydown|capture={handleEditorKeydown}
     on:keyup|capture={(event) => { handleEditorKeyup(event); if (shouldRefreshWikiSuggestions(event)) refreshWikiSuggestionsAfterDomUpdate(); }}
     on:input|capture={refreshWikiSuggestionsAfterDomUpdate}
