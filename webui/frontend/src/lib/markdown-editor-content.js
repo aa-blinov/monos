@@ -1,6 +1,7 @@
 import { MarkdownParser, defaultMarkdownParser, schema as markdownSchema } from 'prosemirror-markdown';
 import { Schema } from '@tiptap/pm/model';
 import { convertMarkdownExtras } from './markdown-extras.js';
+import { isBlankLineNode } from './blank-line.js';
 
 const NODE_TYPE_MAP = {
   bullet_list: 'bulletList',
@@ -37,6 +38,8 @@ function normalizeForTipTapSchema(node) {
   if (!node || typeof node !== 'object') return node;
   const next = { ...node };
   if (next.type) next.type = mapType(next.type, NODE_TYPE_MAP);
+  // A `&nbsp;` line is an empty paragraph again (see blank-line.js).
+  if (next.type === 'paragraph' && isBlankLineNode(next)) delete next.content;
   if (Array.isArray(next.marks)) {
     next.marks = next.marks.map((mark) => ({
       ...mark,
