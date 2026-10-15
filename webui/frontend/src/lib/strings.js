@@ -7,6 +7,16 @@ export const localeOptions = [
 
 export const defaultLocale = 'en';
 
+/**
+ * Monos makes the Daily and Quick Notes folders itself. On disk they keep one name, so notes do not split
+ * between folders when the language changes; on screen they read in the interface language.
+ */
+export function displayFolderName(name, text) {
+  if (name === 'Daily') return text.sidebar.dailyFolder;
+  if (name === 'Quick Notes') return text.sidebar.quickNotesFolder;
+  return name;
+}
+
 export function isSupportedLocale(value) {
   return localeOptions.some(option => option.value === value);
 }
@@ -119,7 +129,7 @@ const enText = {
     closeMenu: 'Close menu',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are ordinary files on your computer. Monos helps you read, write and find them.',
-    emptyMobile: 'Your notes are ordinary files on your computer. Open the menu to pick a note or start writing.',
+    emptyMobile: 'Your notes are ordinary files on your computer. Tap New note to start.',
     tips: {
       search: 'Find any note or command',
       links: 'Link notes by typing [[ and a note name',
@@ -283,6 +293,8 @@ const enText = {
   },
   sidebar: {
     untitledNote: 'Untitled',
+    dailyFolder: 'Daily notes',
+    quickNotesFolder: 'Quick notes',
     close: 'Close sidebar',
     delete: 'Delete',
     mobileNavigation: 'Navigation',
@@ -384,7 +396,7 @@ const enText = {
       titleHint: 'Optional. Without a name the note is called Untitled, and you can rename it later.',
       noteTitlePlaceholder: 'For example: Shopping list',
       quickNoteSaved: 'Note from clipboard saved',
-      quickNoteSavedHint: 'The text from the clipboard was saved to the Quick Notes folder. Change the name and open it, or stay here.',
+      quickNoteSavedHint: 'The text from the clipboard was saved to Quick notes. Change the name and open it, or stay here.',
       openNote: 'Open',
       stayHere: 'Stay here',
       quickNoteWillRenameTo: (target) => `Will rename to ${target}`,
@@ -542,7 +554,7 @@ const enText = {
     attachmentsClean: 'Every attachment is referenced by a note',
     attachmentsLocked: 'Some notes are locked, so the pictures they show cannot be checked. Unlock them to see the unused pictures.',
     advanced: 'Advanced',
-    advancedHint: 'Publishing, phone access, GitHub, sync, web clipper and more',
+    advancedHint: 'Publishing as a website, attachments, links between notes and the web clipper',
     publishTitle: 'Publish as a website',
     publishHint: 'Writes the notes to a folder on this computer as plain web pages. Nothing is uploaded.',
     publishFolder: 'Folder on this computer',
@@ -1000,7 +1012,7 @@ const ruText = {
     closeMenu: 'Закрыть меню',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Заметки — обычные файлы на вашем компьютере. Monos помогает читать, писать и находить их.',
-    emptyMobile: 'Заметки — обычные файлы на вашем компьютере. Откройте меню, чтобы выбрать заметку или начать писать.',
+    emptyMobile: 'Заметки — обычные файлы на вашем компьютере. Нажмите «Новая заметка», чтобы начать.',
     tips: {
       search: 'Найти любую заметку или команду',
       links: 'Связать заметки: введите [[ и название заметки',
@@ -1165,6 +1177,8 @@ const ruText = {
   },
   sidebar: {
     untitledNote: 'Без названия',
+    dailyFolder: 'Ежедневник',
+    quickNotesFolder: 'Быстрые заметки',
     close: 'Закрыть боковую панель',
     delete: 'Удалить',
     mobileNavigation: 'Навигация',
@@ -1277,7 +1291,7 @@ const ruText = {
       titleHint: 'Необязательно. Без названия заметка получит имя «Без названия», его можно изменить потом.',
       noteTitlePlaceholder: 'Например: Список покупок',
       quickNoteSaved: 'Заметка из буфера сохранена',
-      quickNoteSavedHint: 'Текст из буфера сохранён в папку Quick Notes. Измените название и откройте заметку или оставайтесь здесь.',
+      quickNoteSavedHint: 'Текст из буфера сохранён в «Быстрые заметки». Измените название и откройте заметку или оставайтесь здесь.',
       openNote: 'Открыть',
       stayHere: 'Остаться здесь',
       quickNoteWillRenameTo: (target) => `Будет переименовано в ${target}`,
@@ -1442,7 +1456,7 @@ const ruText = {
     attachmentsClean: 'Каждое вложение используется хотя бы одной заметкой',
     attachmentsLocked: 'Часть заметок заперта, и картинки в них не проверить. Разблокируйте заметки, чтобы увидеть неиспользуемые картинки.',
     advanced: 'Дополнительно',
-    advancedHint: 'Публикация, телефон, GitHub, синхронизация, веб-клиппер и другое',
+    advancedHint: 'Публикация сайтом, вложения, связи между заметками и веб-клиппер',
     publishTitle: 'Публикация сайтом',
     publishHint: 'Записывает заметки в папку на этом компьютере как обычные веб-страницы. Ничего не загружается.',
     publishFolder: 'Папка на этом компьютере',

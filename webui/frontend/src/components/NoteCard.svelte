@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
-  import { locale, localizedText } from '../lib/strings.js';
+  import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
   export let note;
   export let query = '';
@@ -84,7 +84,7 @@
   $: hiddenTagCount = Math.max(0, tags.length - visibleTags.length);
   $: excerpt = excerptText(note?.excerpt);
   $: visibleExcerpt = highlight && query ? searchSnippet(excerpt, query, compact ? 56 : 180) : excerpt;
-  $: pathLabel = visiblePath(note?.path);
+  $: pathLabel = (visiblePath(note?.path) || '').replace(/^[^/]+/, (top) => displayFolderName(top, $localizedText));
   $: visibleName = String(note?.name || '');
   $: cardDateValue = note?.modified || note?.lastOpened;
   $: cardDatePrefix = note?.modified ? $localizedText.app.board.modified : $localizedText.app.board.opened;

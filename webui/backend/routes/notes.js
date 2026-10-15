@@ -59,6 +59,10 @@ export function registerNoteRoutes(app) {
       // The file is the only copy of its text, so a name that is taken is refused,
       // never written over. The existing path lets the UI open that note instead.
       if (fs.existsSync(filePath)) {
+        // "Open or create" (today's note): the note that already has this name is the answer, not an error.
+        if (req.body.openIfExists === true) {
+          return res.json({ path: relPath(filePath), name: fileName, isDir: false, existing: true });
+        }
         return res.status(409).json({
           detail: `A note named "${fileName.replace(/\.md$/, '')}" already exists in this folder.`,
           path: relPath(filePath),

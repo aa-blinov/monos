@@ -1,5 +1,5 @@
 <script>
-  import { locale, localizedText } from '../lib/strings.js';
+  import { displayFolderName, locale, localizedText } from '../lib/strings.js';
   import { openPrintView } from '../lib/print.js';
   import { History } from 'lucide-svelte';
 
@@ -37,7 +37,7 @@
       .split('/')
       .slice(0, -1)
       .map((name, index, parts) => ({
-        name,
+        name: index === 0 ? displayFolderName(name, $localizedText) : name,
         path: `notes/${parts.slice(0, index + 1).join('/')}`,
       }))
     : [];

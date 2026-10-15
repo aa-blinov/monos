@@ -617,6 +617,11 @@
     showConflictResolver = true;
   }
 
+  /** Reload the Git status. The page calls it on open; tests call it because onMount does not run under vitest. */
+  export function refreshGitStatus() {
+    return checkGitStatus();
+  }
+
   function initSettingsPage() {
     loadSettings();
     checkGitStatus();
@@ -998,6 +1003,7 @@
       </div>
     </section>
 
+    {#if gitStatus?.initialized}
     <!-- Status & Sync -->
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.statusAndSync}</h2>
@@ -1036,9 +1042,13 @@
       </div>
     </section>
 
+    {/if}
+
     <section class="space-y-5" data-testid="lan-section">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
+      <!-- Said before the switch, at reading size: the risk is part of the decision, not a footnote after it. -->
+      <p class="max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.lanSecurity}</p>
       {#if lanStatus === 'remote'}
         <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
       {:else if lanStatus === 'error'}
@@ -1072,7 +1082,6 @@
           {:else}
             <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
           {/if}
-          <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lanSecurity}</p>
           <button
             type="button"
             disabled={lanBusy}
@@ -1119,6 +1128,67 @@
         </button>
       </section>
     {/if}
+
+    <!-- Documentation -->
+    <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
+      <div>
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
+        <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
+        </ol>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
+        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
+            <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
+            <dd class="text-[var(--text-secondary)]">{label}</dd>
+          {/each}
+        </dl>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
+        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
+        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+          {#each [
+              [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
+              [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
+              [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
+              [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
+              [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
+              [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
+            ] as [op, hint]}
+            <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
+            <dd class="text-[var(--text-secondary)]">{hint}</dd>
+          {/each}
+        </dl>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
+        {#if notesDir}
+          <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+        {/if}
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
+      </div>
+
+      <div>
+        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
+        <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
+          <li>{$localizedText.settings.docsFrontmatter}</li>
+          <li>{$localizedText.settings.docsWikiLinks}</li>
+        </ul>
+      </div>
+    </section>
 
     <details class="group space-y-8 border-t border-[var(--border-subtle)] pt-6" data-testid="advanced-settings">
       <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
@@ -1312,71 +1382,11 @@
 
 
 
-      <!-- Documentation -->
-      <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
-        <div>
-          <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
-          <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
-          <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
-            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
-            <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
-          </ol>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
-          <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-            {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
-              <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
-              <dd class="text-[var(--text-secondary)]">{label}</dd>
-            {/each}
-          </dl>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
-          <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
-          <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-            {#each [
-                [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
-                [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
-                [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
-                [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
-                [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
-                [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
-              ] as [op, hint]}
-              <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
-              <dd class="text-[var(--text-secondary)]">{hint}</dd>
-            {/each}
-          </dl>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
-          {#if notesDir}
-            <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
-          {/if}
-          <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
-        </div>
-
-        <div>
-          <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
-          <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
-            <li>{$localizedText.settings.docsFrontmatter}</li>
-            <li>{$localizedText.settings.docsWikiLinks}</li>
-          </ul>
-        </div>
-      </section>
     </details>
 
 
     <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-secondary)]">
-      <span class="opacity-40">{$localizedText.settings.version} {appVersion}</span>
+      <span class="text-[var(--text-tertiary)]">{$localizedText.settings.version} {appVersion}</span>
     </footer>
 
     </div>
