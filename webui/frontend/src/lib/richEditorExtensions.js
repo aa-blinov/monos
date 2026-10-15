@@ -10,6 +10,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { Callouts, InlineMath, MathBlock, MermaidBlock, NoteEmbed, PdfEmbed } from './richEditorExtras.js';
 import { SoftBreak } from './soft-break.js';
+import { EditableParagraph } from './blank-line.js';
 import { Markdown } from 'tiptap-markdown';
 
 // 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
@@ -74,7 +75,10 @@ export function createRichEditorExtensions(placeholder, {
       link: { openOnClick: false },
       // Штатный CodeBlock не умеет подсветку — его заменяет CodeBlockLowlight.
       codeBlock: false,
+      // Абзац заменён на EditableParagraph: тот же узел, но пустая строка пишется в markdown как &nbsp;.
+      paragraph: false,
     }),
+    EditableParagraph,
     CodeBlockLowlight.configure({ lowlight }),
     Placeholder.configure({ placeholder }),
     AttachmentImage.configure({
