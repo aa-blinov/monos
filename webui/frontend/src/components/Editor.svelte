@@ -11,7 +11,8 @@
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
-  import { FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT } from '../lib/note-refresh.js';
+  import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT } from '../lib/note-refresh.js';
+  import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
   import { fileNameProblem } from '../lib/file-name.js';
@@ -21,10 +22,13 @@
   import { printNoteToPdf } from '../lib/print.js';
   import {
     deleteFileRequest,
+    linkMentionRequest,
     loadBacklinksRequest,
     loadCategoriesRequest,
     loadFileContent,
     loadFileInfo,
+    loadNeighborsRequest,
+    loadUnlinkedMentionsRequest,
     renameAttachment,
     saveFileContent,
     saveFileMetadata,
@@ -135,6 +139,10 @@
   // удлинила бы окно, за которым правка ещё не записана на диск.
   const AUTOSAVE_DELAY = 1250;
   let backlinks = [];
+  // Plain-prose mentions of this note that do not link to it yet, and its neighbours for the local graph.
+  let unlinkedMentions = [];
+  let neighborhood = { nodes: [], edges: [] };
+  let linkMentionFailed = false;
   let editableTags = [];
   let editableCategory = '';
   // Подсказки для поля категории: категории, уже встречающиеся в хранилище.
@@ -342,12 +350,62 @@
     dispatch('navigate', { path: item.path, name: item.name, isDir: false });
   }
 
+  // Mentions and the local graph are read next to the backlinks. A failed read leaves them empty.
+  async function fetchConnections(filePath = currentFile?.path) {
+    const empty = { mentions: [], graph: { nodes: [], edges: [] } };
+    if (!filePath || currentFile?.isDir) return empty;
+    try {
+      const [mentions, graph] = await Promise.all([
+        loadUnlinkedMentionsRequest(filePath),
+        loadNeighborsRequest(filePath),
+      ]);
+      return {
+        mentions: Array.isArray(mentions) ? mentions : [],
+        graph: Array.isArray(graph?.nodes) ? graph : empty.graph,
+      };
+    } catch (error) {
+      console.error('Failed to load connections:', error);
+      return empty;
+    }
+  }
+
+  async function refreshConnections() {
+    if (!loadedFilePath) return;
+    const [nextBacklinks, nextConnections] = await Promise.all([
+      fetchBacklinks(loadedFilePath),
+      fetchConnections(loadedFilePath),
+    ]);
+    backlinks = nextBacklinks;
+    unlinkedMentions = nextConnections.mentions;
+    neighborhood = nextConnections.graph;
+  }
+
+  // Links the mention in another note to this note. The lists are read again either way.
+  async function linkMention(item) {
+    if (!item?.path || !loadedFilePath) return;
+    linkMentionFailed = false;
+    try {
+      announceNoteLinksUpdated(await linkMentionRequest(item.path, loadedFilePath));
+    } catch (error) {
+      console.error('Failed to link mention:', error);
+      linkMentionFailed = true;
+    }
+    await refreshConnections();
+  }
+
+  $: relatedCount = new Set([
+    ...backlinks.map((item) => item.path),
+    ...neighborhood.nodes.filter((node) => !node.center).map((node) => node.path),
+    ...unlinkedMentions.map((item) => item.path),
+  ]).size;
+  $: graphLayout = layoutLocalGraph(neighborhood);
+
   function relationLabel(type) {
     return type === 'mention' ? $localizedText.sourceEditor.mention : $localizedText.sourceEditor.backlink;
   }
 
   function relatedNoteLabel(item) {
-    return `${item?.name || ''} · ${relationLabel(item?.type)}`;
+    return `${item?.name || ''}, ${relationLabel(item?.type)}`;
   }
 
   function resolveEditorImageSrc(src) {
@@ -454,7 +512,10 @@
 
       const nextFileInfo = await loadFileInfo(filePath);
       if (!isCurrentLoad(requestId, filePath)) return;
-      const nextBacklinks = await fetchBacklinks(filePath);
+      const [nextBacklinks, nextConnections] = await Promise.all([
+        fetchBacklinks(filePath),
+        fetchConnections(filePath),
+      ]);
       if (!isCurrentLoad(requestId, filePath)) return;
 
       content = nextContent;
@@ -467,6 +528,9 @@
       editableTags = fileInfo.metadata?.tags || [];
       editableCategory = fileInfo.metadata?.category || '';
       backlinks = nextBacklinks;
+      unlinkedMentions = nextConnections.mentions;
+      neighborhood = nextConnections.graph;
+      linkMentionFailed = false;
       loadedFilePath = filePath;
       displayedFile = { ...currentFile };
       dispatch('fileOpened', filePath);
@@ -1148,7 +1212,7 @@
           {/if}
         </div>
 
-        {#if backlinks.length > 0}
+        {#if relatedCount > 0}
           <div class="relative" data-panel-anchor="related">
             <button
               type="button"
@@ -1156,16 +1220,16 @@
               data-testid="property-related-button"
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'related'}
-              aria-label={`${$localizedText.editor.localNavigation}: ${backlinks.length}`}
+              aria-label={`${$localizedText.editor.localNavigation}: ${relatedCount}`}
               class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
               on:click={() => togglePropertyPanel('related')}
             >
               <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
               <span class="hidden sm:inline">{$localizedText.editor.localNavigation}</span>
-              <span class="tabular-nums">{backlinks.length}</span>
+              <span class="tabular-nums">{relatedCount}</span>
             </button>
             {#if propertyPanel === 'related'}
-              <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class={panelClass}>
+              <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class="{panelClass} max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.editor.localNavigation}</p>
                 <ul class="-mx-1 max-h-64 overflow-y-auto">
                   {#each backlinks as item}
@@ -1183,6 +1247,41 @@
                     </li>
                   {/each}
                 </ul>
+                {#if graphLayout.nodes.length > 1}
+                  <p class="{panelLabelClass} mt-3">{$localizedText.editor.localGraph}</p>
+                  <!-- Decorative: the lists above and below are the accessible way to open these notes. -->
+                  <svg viewBox="0 0 240 180" class="h-44 w-full" aria-hidden="true" data-testid="local-graph">
+                    {#each graphLayout.edges as edge (`${edge.from}->${edge.to}`)}
+                      <line x1={edge.x1} y1={edge.y1} x2={edge.x2} y2={edge.y2} class="stroke-[var(--border-subtle)]" stroke-width="1.2" />
+                    {/each}
+                    {#each graphLayout.nodes as node (node.path)}
+                      <circle cx={node.x} cy={node.y} r={node.center ? 6 : 4.5} class={node.center ? 'fill-[var(--text-primary)]' : 'fill-[var(--text-tertiary)]'} />
+                      <text x={node.x} y={node.y + 17} text-anchor="middle" font-size="9" class="fill-[var(--text-secondary)]">{truncateLabel(node.title)}</text>
+                    {/each}
+                  </svg>
+                {/if}
+                {#if unlinkedMentions.length > 0}
+                  <p class="{panelLabelClass} mt-3">{$localizedText.editor.unlinkedMentions}</p>
+                  <ul class="-mx-1 max-h-48 overflow-y-auto">
+                    {#each unlinkedMentions as item (item.path)}
+                      <li class="flex min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5 text-xs">
+                        <span class="min-w-0">
+                          <span class="block truncate font-medium text-[var(--text-primary)]">{item.title}</span>
+                          <span class="block truncate text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.editor.mentionOf.replace('{phrase}', item.phrase)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          data-testid="link-mention-button"
+                          class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                          on:click={() => linkMention(item)}
+                        >{$localizedText.editor.linkMention}</button>
+                      </li>
+                    {/each}
+                  </ul>
+                {/if}
+                {#if linkMentionFailed}
+                  <p class="mt-2 text-xs text-[var(--red)]" role="status">{$localizedText.editor.linkMentionFailed}</p>
+                {/if}
               </div>
             {/if}
           </div>

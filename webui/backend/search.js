@@ -201,16 +201,29 @@ function parseFrontmatterTags(rawValue) {
     .filter(Boolean);
 }
 
+// Items of a block YAML list: the `- item` lines that follow a key with no value on its line.
+function readBlockListItems(lines, index) {
+  const items = [];
+  let next = index;
+  while (next + 1 < lines.length && /^\s+-\s/.test(lines[next + 1])) {
+    next += 1;
+    const item = stripWrappingQuotes(lines[next].trim().replace(/^-\s*/, ''));
+    if (item) items.push(item);
+  }
+  return { items, next };
+}
+
 export function parseFrontmatterMetadata(content) {
-  const match = String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  const match = String(content || '').replace(/^﻿/, '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) {
-    return { title: '', tags: [], category: '', pinned: false };
+    return { title: '', tags: [], category: '', pinned: false, aliases: [] };
   }
 
   let title = '';
   let tags = [];
   let category = '';
   let pinned = false;
+  let aliases = [];
 
   const lines = match[1].split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
@@ -232,16 +245,25 @@ export function parseFrontmatterMetadata(content) {
         // Блочный YAML: список идёт следующими строками. Без этого теги были
         // не видны поиску по тегу и по индексации, а первое же сохранение
         // заметки их стирало.
-        while (index + 1 < lines.length && /^\s+-\s/.test(lines[index + 1])) {
-          index += 1;
-          const item = stripWrappingQuotes(lines[index].trim().replace(/^-\s*/, ''));
-          if (item) tags.push(item);
-        }
+        const block = readBlockListItems(lines, index);
+        tags = block.items;
+        index = block.next;
       }
     }
 
     if (key === 'category' && rawValue) {
       category = stripWrappingQuotes(rawValue);
+    }
+
+    // Псевдонимы: `[[Алиас]]` ведёт на эту заметку так же, как её имя. Файл только читается.
+    if (key === 'aliases') {
+      if (rawValue) {
+        aliases = parseFrontmatterTags(rawValue);
+      } else {
+        const block = readBlockListItems(lines, index);
+        aliases = block.items;
+        index = block.next;
+      }
     }
 
     // Закрепление живёт в файле заметки, а не в браузере: иначе оно не
@@ -251,7 +273,7 @@ export function parseFrontmatterMetadata(content) {
     }
   }
 
-  return { title, tags, category, pinned };
+  return { title, tags, category, pinned, aliases };
 }
 
 function matchSearchTerms(fields, terms) {

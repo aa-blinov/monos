@@ -88,6 +88,12 @@ export function indexFile(filePath, content) {
     transaction(relativePath, links);
   }
 
+  db.prepare('DELETE FROM note_aliases WHERE path = ?').run(relativePath);
+  if (!isDir) {
+    const insertAlias = db.prepare('INSERT OR IGNORE INTO note_aliases (path, alias, alias_nfc) VALUES (?, ?, ?)');
+    for (const alias of metadata.aliases || []) insertAlias.run(relativePath, alias, alias.normalize('NFC'));
+  }
+
   try {
     indexNoteForFts(db, {
       path: relativePath,

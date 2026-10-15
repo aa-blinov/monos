@@ -19,7 +19,15 @@ status: published
     category: 'Research/AI',
     // Закрепление — часть метаданных заметки, поэтому парсер его тоже отдаёт.
     pinned: false,
+    aliases: [],
   });
+});
+
+test('parseFrontmatterMetadata читает aliases: списком в строке, одним значением и блоком', () => {
+  assert.deepEqual(parseFrontmatterMetadata('---\naliases: [Алиас, "Второе имя"]\n---\n').aliases, ['Алиас', 'Второе имя']);
+  assert.deepEqual(parseFrontmatterMetadata('---\naliases: Короткое\n---\n').aliases, ['Короткое']);
+  assert.deepEqual(parseFrontmatterMetadata('---\ntitle: X\naliases:\n  - One\n  - "Two"\ntags: [a]\n---\n').aliases, ['One', 'Two']);
+  assert.deepEqual(parseFrontmatterMetadata('---\ntitle: X\n---\n').aliases, []);
 });
 
 test('parseFrontmatterMetadata читает теги в списке без кавычек, как в FRONTMATTER.md', () => {

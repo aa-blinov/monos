@@ -202,6 +202,26 @@ function maskIndentedCode(text) {
   return lines.join('\n');
 }
 
+/**
+ * The target of a wiki-link as typed: the text before the alias (`|`), trimmed and in NFC.
+ * `[[Note#Heading]]` keeps its heading here; `linkNameCandidates` tells the note part apart.
+ */
+export function wikiLinkTarget(inner) {
+  return String(inner).split('|')[0].trim().normalize('NFC');
+}
+
+/**
+ * The names a link target can point at, most exact first: the whole target, then the part before
+ * `#`, so `[[Note#Heading]]` finds `Note`. A note whose own name has `#` (`Issue #42`) still
+ * resolves by its full name.
+ */
+export function linkNameCandidates(target) {
+  const hash = target.indexOf('#');
+  if (hash <= 0) return [target];
+  const note = target.slice(0, hash);
+  return [target, note];
+}
+
 export function extractWikiLinks(content) {
   const re = /\[\[(.*?)\]\]/g;
   const links = [];
@@ -209,10 +229,24 @@ export function extractWikiLinks(content) {
   let match;
 
   while ((match = re.exec(source)) !== null) {
-    links.push(match[1].split('|')[0].trim());
+    const target = wikiLinkTarget(match[1]);
+    // `[[#Heading]]` points into the same note, so it links to no other note.
+    if (target && !target.startsWith('#')) links.push(target);
   }
 
   return links;
+}
+
+/** Every name a wiki-link can use to reach a note, in NFC: its file name, its title and its aliases. */
+export function noteLinkNames(note, aliases = []) {
+  const file = String(note.name_nfc || note.name || '').normalize('NFC').replace(/\.md$/i, '');
+  const title = String(note.title || '').trim().normalize('NFC');
+  return [...new Set([file, title, ...aliases.map((alias) => alias.normalize('NFC'))].filter(Boolean))];
+}
+
+/** A LIKE pattern (with `ESCAPE '\'`) for links to `name` followed by a heading: `name#…`. */
+export function headingLinkPattern(name) {
+  return `${name.replace(/[\\%_]/g, '\\$&')}#%`;
 }
 
 /**
@@ -236,11 +270,16 @@ export function rewriteWikiTargets(content, oldName, newName) {
     const pipe = inner.indexOf('|');
     const rawTarget = pipe === -1 ? inner : inner.slice(0, pipe);
     if (source.slice(start, start + rawTarget.length) !== rawTarget) continue;
-    if (rawTarget.trim().normalize('NFC') !== wanted) continue;
+    // The name is the part before `#`, matched exactly as links resolve: `[[Note #h]]` is not `Note`.
+    const trimmed = rawTarget.trim();
+    const hash = trimmed.indexOf('#');
+    const namePart = hash === -1 ? trimmed : trimmed.slice(0, hash);
+    if (namePart.normalize('NFC') !== wanted) continue;
     const leading = rawTarget.match(/^\s*/)[0];
-    const trailing = rawTarget.slice(rawTarget.trimEnd().length);
+    const trailing = rawTarget.slice(leading.length + trimmed.length);
+    const heading = hash === -1 ? '' : trimmed.slice(hash);
     const rest = pipe === -1 ? '' : inner.slice(pipe);
-    out += `${text.slice(last, match.index)}[[${leading}${replacement}${trailing}${rest}]]`;
+    out += `${text.slice(last, match.index)}[[${leading}${replacement}${heading}${trailing}${rest}]]`;
     last = match.index + match[0].length;
     count += 1;
   }
@@ -271,6 +310,55 @@ export function replaceOutsideCode(content, pattern, replacer) {
   }
   if (count === 0) return { content: text, count };
   return { content: out + text.slice(last), count };
+}
+
+const FRONTMATTER_BLOCK = /^﻿?---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+const WIKI_LINK_BLOCK = /\[\[[^\]\n]*\]\]/g;
+const MARKDOWN_LINK_BLOCK = /!?\[[^\]\n]*\]\([^)\n]*\)/g;
+const BARE_URL = /https?:\/\/[^\s<>()]+/g;
+const HTML_TAG = /<[^>\n]*>/g;
+const blankOut = (text) => text.replace(/[^\n]/g, ' ');
+
+/**
+ * The text as a reader sees it when looking for mentions. Frontmatter, code, wiki-links, markdown
+ * link targets, bare URLs and HTML tags are blanked out, so a match is prose and nothing else.
+ * Blanking keeps the length and the line breaks: an index found here is the same index in the
+ * original text.
+ */
+export function plainTextForMentions(content) {
+  const text = String(content || '').replace(FRONTMATTER_BLOCK, blankOut);
+  return stripCode(text)
+    .replace(WIKI_LINK_BLOCK, blankOut)
+    .replace(MARKDOWN_LINK_BLOCK, blankOut)
+    .replace(BARE_URL, blankOut)
+    .replace(HTML_TAG, blankOut);
+}
+
+/**
+ * A pattern that finds `phrase` as whole words, ignoring case, in either Unicode form: names on
+ * disk are decomposed (NFD) and typed text is composed (NFC).
+ */
+export function phraseRegExp(phrase) {
+  const forms = [...new Set([String(phrase).normalize('NFC'), String(phrase).normalize('NFD')])]
+    .map((form) => form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`(?<![\\p{L}\\p{M}\\p{N}_])(?:${forms.join('|')})(?![\\p{L}\\p{M}\\p{N}_])`, 'iu');
+}
+
+/**
+ * Links the first prose mention of `phrase` to the note `linkText`. The mention keeps its own
+ * spelling: `project plan` becomes `[[Project plan|project plan]]`. Returns the new text and how
+ * many mentions were linked (0 or 1).
+ */
+export function linkFirstMention(content, phrase, linkText) {
+  const text = String(content || '');
+  const match = phraseRegExp(phrase).exec(plainTextForMentions(text));
+  if (!match) return { content: text, count: 0 };
+  const start = match.index;
+  const end = start + match[0].length;
+  const original = text.slice(start, end);
+  const sameName = original.normalize('NFC') === String(linkText).normalize('NFC');
+  const link = sameName ? `[[${linkText}]]` : `[[${linkText}|${original}]]`;
+  return { content: text.slice(0, start) + link + text.slice(end), count: 1 };
 }
 
 export function humanSize(bytes) {

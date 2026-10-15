@@ -14,8 +14,17 @@ test('пробелы вокруг имени сохраняются', () => {
 });
 
 test('другие заметки с похожим именем не трогаются', () => {
-  const text = '[[Old Notes]] [[Older]] [[old]] [[Title Old]] [[Old#раздел]]';
+  // `Old #раздел` names another note: the space before `#` is part of the name, as resolution sees it.
+  const text = '[[Old Notes]] [[Older]] [[old]] [[Title Old]] [[Old #раздел]]';
   assert.deepEqual(rewriteWikiTargets(text, 'Old', 'New'), { content: text, count: 0 });
+});
+
+test('ссылка на заголовок переписывается, заголовок и подпись остаются как были', () => {
+  assert.deepEqual(rewriteWikiTargets('[[Old#раздел]] и [[Old#раздел|подпись]]', 'Old', 'New'), {
+    content: '[[New#раздел]] и [[New#раздел|подпись]]',
+    count: 2,
+  });
+  assert.equal(rewriteWikiTargets('[[ Old#h ]]', 'Old', 'New').content, '[[ New#h ]]');
 });
 
 test('ссылки в коде не меняются, ссылка вне кода меняется', () => {

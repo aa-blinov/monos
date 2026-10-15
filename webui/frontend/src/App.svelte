@@ -65,7 +65,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
     if (updatedLinks) parts.push($localizedText.app.linksUpdated(updatedLinks));
     if (failedPaths.length) parts.push($localizedText.app.linksNotUpdated(failedPaths.length));
     if (!parts.length) return;
-    linksNotice = parts.join(' · ');
+    linksNotice = parts.join(', ');
     clearTimeout(linksNoticeTimer);
     linksNoticeTimer = setTimeout(() => { linksNotice = ''; }, 4000);
   }
@@ -796,7 +796,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
           <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
-          <Settings on:archivePickerOpened={rememberSettingsRoute} on:notesImported={handleNotesImported} />
+          <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} />
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
@@ -884,7 +884,7 @@ import { setBusyCheck, startAutoPull, stopAutoPull } from './lib/git-sync.js';
         </Route>
         <Route path="*">
           {#if lastKnownAppRoute === '/settings'}
-            <Settings on:archivePickerOpened={rememberSettingsRoute} on:notesImported={handleNotesImported} />
+            <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} />
           {/if}
         </Route>
         {/if}
