@@ -1152,7 +1152,7 @@
       </div>
     {:else}
       <div class="flex items-center justify-center h-32">
-        <span class="text-xs uppercase tracking-widest opacity-40">{$localizedText.sidebar.empty}</span>
+        <span class="text-xs uppercase tracking-widest text-[var(--text-tertiary)]">{$localizedText.sidebar.empty}</span>
       </div>
     {/if}
     </div>

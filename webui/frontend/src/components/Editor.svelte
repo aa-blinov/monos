@@ -7,7 +7,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, focusNoteBody } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -42,7 +42,7 @@
     replaceMarkdownImagePath,
     resolveMarkdownImagePath,
   } from '../lib/attachments.js';
-  import { localizedText, locale } from '../lib/strings.js';
+  import { displayFolderName, localizedText, locale } from '../lib/strings.js';
   import { wordStats } from '../lib/word-stats.js';
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
@@ -556,6 +556,11 @@
       lockedFilePath = null;
       displayedFile = { ...currentFile };
       dispatch('fileOpened', filePath);
+      if ($focusNoteBody === filePath) {
+        focusNoteBody.set(null);
+        // The editor mounts after the loading state clears; wait for it, then put the caret in the text.
+        tick().then(() => setTimeout(() => richEditor?.focusStart?.(), 0));
+      }
     } catch (error) {
       if (!isCurrentLoad(requestId, filePath)) return;
       if (error?.status === 423) {
@@ -1115,7 +1120,7 @@
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
-            <span class="hidden max-w-[9rem] truncate sm:inline">{editableCategory || $localizedText.editor.propertyCategoryEmpty}</span>
+            <span class="hidden max-w-[9rem] truncate sm:inline">{editableCategory ? displayFolderName(editableCategory, $localizedText) : $localizedText.editor.propertyCategoryEmpty}</span>
           </button>
           {#if propertyPanel === 'category'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>

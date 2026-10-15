@@ -439,7 +439,7 @@ test('App создаёт today note из центрального действи
   await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.todayNote)).toBeTruthy());
   await fireEvent.click(screen.getByText(uiText.sidebar.modals.todayNote));
 
-  await waitFor(() => expect(window.location.pathname).toMatch(/^\/notes\/Daily\/\d{4}-\d{2}-\d{2}(?: |%20)\d{2}-\d{2}-\d{2}\.md$/));
+  await waitFor(() => expect(window.location.pathname).toMatch(/^\/notes\/Daily\/\d{4}-\d{2}-\d{2}\.md$/));
 });
 
 test('App создает заметку в папке из дерева и сразу открывает ее', async () => {

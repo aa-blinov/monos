@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { displayFolderName, localizedText } from '../lib/strings.js';
   import { Icon } from '../lib/tree-icons.js';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
 
@@ -36,7 +37,7 @@
 
   $: if (!_manualToggle && isExpanded !== expanded) isExpanded = expanded;
   $: if (selectedPath) _manualToggle = false;
-  $: fileName = formatFileName(node.name);
+  $: fileName = node.is_dir && /^(notes\/)?[^/]+$/.test(node.path) ? displayFolderName(node.name, $localizedText) : formatFileName(node.name);
   $: noteSelected = !node.is_dir && selectedPaths.has(node.path);
   $: active = noteSelected || (selectedPaths.size === 0 && selectedPath === node.path);
   $: hasColor = !!(node.color && typeof node.color === 'string');

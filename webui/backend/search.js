@@ -348,6 +348,8 @@ function toPlainExcerptText(content) {
   return String(content || '')
     // the frontmatter block: its keys are metadata, not the note's text
     .replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
+    // the blank-line marker the editor writes (`&nbsp;`) is a line break, not text
+    .replace(/&nbsp;/g, ' ')
     // fenced code blocks, markers and contents: on a card a block of code is noise
     .replace(/(?:^|\n)[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n[ \t]*\1[ \t]*(?:\n|$)/g, '\n')
     // task markers: `- [x] text` → `text`
@@ -366,7 +368,8 @@ function toPlainExcerptText(content) {
     .replace(/\$\$([^$]*)\$\$/g, (_, latex) => latex.trim())
     .replace(/(?<!\\)\$([^$\n]+?)\$/g, (_, latex) => latex.trim())
     // remaining emphasis, quotes and headings
-    .replace(/^[ \t]*#{1,6}[ \t]+/gm, '')
+    // a heading keeps its text but is set apart, so it does not run into the next line
+    .replace(/^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$/gm, '$1 ·')
     .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1')
     .replace(/^[ \t]*>[ \t]?/gm, '')
     .replace(/^[ \t]*[-*+][ \t]+/gm, '')

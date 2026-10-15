@@ -1527,6 +1527,18 @@ apiTest('GET /api/git/conflicts и POST /api/git/conflicts/resolve работа�
   assert.deepEqual(afterResolve.data, []);
 });
 
+apiTest('POST /api/notes/create с openIfExists возвращает существующую заметку, а без флага — 409', async () => {
+  const body = (extra = {}) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Today Once', category: 'Daily', tags: [], content: '', ...extra }) });
+  const first = await requestJson(buildUrl('/api/notes/create'), body());
+  assert.equal(first.response.status, 200);
+  const again = await requestJson(buildUrl('/api/notes/create'), body({ openIfExists: true }));
+  assert.equal(again.response.status, 200);
+  assert.equal(again.data.existing, true);
+  assert.equal(again.data.path, first.data.path);
+  const refused = await requestJson(buildUrl('/api/notes/create'), body());
+  assert.equal(refused.response.status, 409);
+});
+
 apiTest('POST /api/git/sync-on-quit: без выбора человека ничего не отправляет, с выбором — отправляет', async () => {
   const remoteDir = path.join(tempRoot, 'quit-remote.git');
   execSync(`git init --bare "${remoteDir}"`, { cwd: tempRoot, stdio: 'pipe' });

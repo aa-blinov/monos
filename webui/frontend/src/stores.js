@@ -54,6 +54,8 @@ export const editorAction = writable(null);
 // Id шаблона, из которого менеджер просит создать заметку: модалка создания откроется на нём.
 export const templateRequest = writable(null);
 export const noteSaveSignal = writable(null);
+// The note just created: its editor puts the caret in the body once the note has loaded.
+export const focusNoteBody = writable(null);
 
 themeMode.subscribe(value => {
   const mode = isThemeMode(value) ? value : 'system';

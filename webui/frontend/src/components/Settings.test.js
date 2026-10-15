@@ -205,9 +205,10 @@ test('Settings загружает конфликты только при кон�
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  render(Settings);
+  const { component } = render(Settings);
+  await component.refreshGitStatus();
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.refreshStatus }));
+  await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/git/conflicts'));
 });
 
@@ -223,10 +224,12 @@ test('Settings скрывает кнопку конфликтов, если ко
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  render(Settings);
+  const { component } = render(Settings);
+  await component.refreshGitStatus();
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.refreshStatus }));
+  // Without a connected repository the status section is not shown at all.
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/git/status'));
+  expect(screen.queryByRole('button', { name: uiText.settings.refreshStatus })).toBeNull();
   expect(screen.queryByRole('button', { name: uiText.settings.viewConflicts })).toBeNull();
   expect(fetchMock).not.toHaveBeenCalledWith('/api/git/conflicts');
 });
@@ -236,9 +239,10 @@ test('Settings после sync обновляет статус через /api/g
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  render(Settings);
+  const { component } = render(Settings);
+  await component.refreshGitStatus();
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.refreshStatus }));
+  await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.syncNow })).toBeTruthy());
 
   const statusCallsBeforeSync = fetchMock.mock.calls.filter(([url]) => url === '/api/git/status').length;
@@ -256,9 +260,10 @@ test('Settings блокирует sync при несохранённой тек�
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  render(Settings);
+  const { component } = render(Settings);
+  await component.refreshGitStatus();
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.refreshStatus }));
+  await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   const syncButton = await waitFor(() => screen.getByRole('button', { name: uiText.settings.syncNow }));
   editorState.set({ path: 'notes/Inbox.md', dirty: true, saving: false });
   await waitFor(() => expect(syncButton.disabled).toBe(true));

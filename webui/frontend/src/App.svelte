@@ -26,6 +26,7 @@ import { get } from 'svelte/store';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
+import { focusNoteBody } from './stores.js';
 import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
@@ -331,6 +332,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   }
 
   async function handleNoteCreated(data, title) {
+    if (data?.path) focusNoteBody.set(data.path);
     if (isMobile) setSidebarOpen(false);
     if (sidebarComponent) await sidebarComponent.loadTree();
     await loadHomeRecentNotes();
@@ -871,7 +873,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
                       </button>
                     </div>
                     <ul class="mt-10 max-w-sm space-y-2 text-left text-sm leading-relaxed text-[var(--text-secondary)]" data-testid="first-run-tips">
-                      <li><span class="text-[var(--text-primary)]">{shortcutLabel('Ctrl+K')}</span> · {$localizedText.app.tips.search}</li>
+                      {#if !isMobile}<li><span class="text-[var(--text-primary)]">{shortcutLabel('Ctrl+K')}</span> · {$localizedText.app.tips.search}</li>{/if}
                       <li>{$localizedText.app.tips.links}</li>
                       <li>{$localizedText.app.tips.commands}</li>
                     </ul>

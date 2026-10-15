@@ -1,7 +1,7 @@
 <script>
   import ModalShell from './ModalShell.svelte';
   import { localizedText, locale } from '../lib/strings.js';
-  import { localeStamp } from '../lib/date-format.js';
+  import { localeDate } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -43,7 +43,7 @@
     try {
       isCreating = true;
       createError = '';
-      const data = await createNoteRequest({ title, category: 'Daily', tags: [], content: '' });
+      const data = await createNoteRequest({ title, category: 'Daily', tags: [], content: '', openIfExists: true });
       onClose();
       onCreated(data, title);
     } catch (err) {
@@ -138,7 +138,8 @@
   $: blockedName = Boolean(titleProblem) && titleProblem !== 'empty';
 
   function formatTodayNoteTitle(date = new Date()) {
-    return localeStamp(date, $locale);
+    // Date only: a second click on the same day opens today's note instead of making another one.
+    return localeDate(date, $locale);
   }
 </script>
 

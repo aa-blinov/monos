@@ -568,6 +568,11 @@
     }
     return found;
   }
+  /** Put the caret at the start of the note, for a note that was just created. */
+  export function focusStart() {
+    editor?.commands.focus('start');
+  }
+
   export function setMarkdown(md) {
     const nextContent = md || '';
     if (!editor) {
