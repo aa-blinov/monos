@@ -39,7 +39,7 @@
     setItemColorRequest,
     uploadAttachment,
   } from '../lib/editor-api.js';
-  import { createNoteRequest, loadTagsRequest, renameItemRequest } from '../lib/sidebar-api.js';
+  import { createFolderRequest, createNoteRequest, loadDirectoriesRequest, loadTagsRequest, moveItemRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { conflictedFiles, conflictedNotes, conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
   import { uploadsChanges } from '../lib/git-sync.js';
@@ -570,7 +570,8 @@
     ...unlinkedMentions.map((item) => item.path),
   ]).size;
   $: graphLayout = layoutLocalGraph(neighborhood);
-  $: customProperties = fileInfo?.properties || [];
+  // The due date has its own button in this bar; counted again under Properties it read as two settings.
+  $: customProperties = (fileInfo?.properties || []).filter((property) => String(property.key).toLowerCase() !== 'due');
 
   function relationLabel(type) {
     return type === 'mention' ? $localizedText.sourceEditor.mention : $localizedText.sourceEditor.backlink;
@@ -1194,6 +1195,50 @@
     showToast(pinning ? $localizedText.editor.pinnedToast : $localizedText.editor.unpinnedToast);
   }
 
+  // The note's folder is where its file is: this button shows it and moves the note. (The `category` key in a
+  // note's properties is a separate label from older versions; it is left as it is.)
+  const folderOf = (notePath) => {
+    const parts = String(notePath || '').replace(/^notes\//, '').split('/');
+    parts.pop();
+    return parts.join('/');
+  };
+  const folderLabel = (folder) => (folder
+    ? folder.split('/').map((part, index) => (index === 0 ? displayFolderName(part, $localizedText) : part)).join(' / ')
+    : $localizedText.editor.noFolder);
+  $: currentFolder = folderOf(loadedFilePath || currentFile?.path);
+  $: currentFolderLabel = folderLabel(currentFolder);
+  let folderOptions = [];
+
+  async function loadFolderOptions() {
+    try {
+      const folders = await loadDirectoriesRequest();
+      folderOptions = (Array.isArray(folders) ? folders : []).map((raw) => ({ name: folderLabel(raw), raw, count: 0 }));
+    } catch {
+      folderOptions = [];
+    }
+  }
+
+  async function moveToFolder(event) {
+    const filePath = loadedFilePath || currentFile?.path;
+    const typed = String(event.detail || '').trim();
+    if (!filePath || !typed) return;
+    const known = folderOptions.find((option) => option.name.toLowerCase() === typed.toLowerCase());
+    const target = known ? known.raw : typed.replace(/\s*\/\s*/g, '/').replace(/^\/+|\/+$/g, '');
+    if (target === currentFolder) return;
+    const name = filePath.split('/').pop();
+    try {
+      await flushPendingEdits();
+      if (!known) await createFolderRequest(`notes/${target}`);
+      await moveItemRequest(filePath, target ? `notes/${target}` : 'notes');
+      propertyPanel = null;
+      const nextPath = target ? `notes/${target}/${name}` : `notes/${name}`;
+      dispatch('renamed', { path: nextPath, name, isDir: false });
+      showToast($localizedText.editor.movedToFolder(folderLabel(target)));
+    } catch (error) {
+      showToast(error?.status === 409 ? $localizedText.editor.moveExists(folderLabel(target)) : $localizedText.editor.moveFailed, 5000);
+    }
+  }
+
   async function loadCategorySuggestions() {
     try {
       categorySuggestions = await loadCategoriesRequest();
@@ -1595,27 +1640,28 @@
             data-testid="property-category-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
-            aria-label={editableCategory ? `${$localizedText.editor.propertyCategory}: ${editableCategory}` : $localizedText.editor.propertyCategoryEmpty}
+            aria-label={`${$localizedText.editor.propertyCategory}: ${currentFolderLabel}`}
             class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
-            <span class="hidden max-w-[9rem] truncate sm:inline">{editableCategory ? displayFolderName(editableCategory, $localizedText) : $localizedText.editor.propertyCategoryEmpty}</span>
+            <span class="hidden max-w-[9rem] truncate sm:inline">{currentFolderLabel}</span>
           </button>
           {#if propertyPanel === 'category'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>
               <p class={panelLabelClass}>{$localizedText.editor.propertyCategory}</p>
               <CategoryInput
-                value={editableCategory}
-                suggestions={categorySuggestions}
-                placeholder={$localizedText.editor.propertyCategoryEmpty}
+                value={currentFolderLabel}
+                suggestions={folderOptions}
+                placeholder={$localizedText.editor.folderPlaceholder}
                 label={$localizedText.editor.propertyCategory}
-                listLabel={$localizedText.editor.categorySuggestions}
+                listLabel={$localizedText.editor.folderSuggestions}
                 testid="property-category"
-                on:open={loadCategorySuggestions}
-                on:commit={commitCategory}
+                on:open={loadFolderOptions}
+                on:commit={moveToFolder}
               />
+              <p class="mt-2 max-w-[16rem] text-[length:var(--text-whisper)] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.editor.folderHint}</p>
             </div>
           {/if}
         </div>
@@ -2036,8 +2082,9 @@
 {/if}
 
 {#if formatToast}
-  <div class="fixed bottom-6 right-6 z-[200] animate-toast-in" role="status" data-testid="editor-toast">
-    <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">
+  <!-- Above the note's bottom bar, not over its Export button. -->
+  <div class="fixed bottom-16 right-6 z-[200] animate-toast-in max-sm:bottom-20 max-sm:left-4 max-sm:right-4" role="status" data-testid="editor-toast">
+    <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl max-sm:max-w-none">
       {formatToast}
     </div>
   </div>

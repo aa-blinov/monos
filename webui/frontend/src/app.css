@@ -238,6 +238,11 @@ input[type="number"]::-webkit-outer-spin-button {
   border-radius: var(--radius);
   padding: 0.5rem 0.75rem;
 }
+/* The `[!type]` marker hides while the caret is elsewhere; the title is bold, on its own line. */
+.ProseMirror blockquote.callout, .ProseMirror blockquote.callout p { font-style: normal; }
+.ProseMirror blockquote.callout .callout-marker { display: none; }
+.ProseMirror blockquote.callout .callout-title { font-weight: 700; font-style: normal; color: var(--callout-tone); }
+.ProseMirror blockquote.callout .callout-title + span[data-soft-break] { display: block; height: 0.35em; }
 .ProseMirror blockquote.callout-green { --callout-tone: var(--green); }
 .ProseMirror blockquote.callout-yellow { --callout-tone: var(--yellow); }
 .ProseMirror blockquote.callout-red { --callout-tone: var(--red); }

@@ -181,7 +181,7 @@
                 </div>
                 <div class="mt-3 flex flex-wrap gap-1.5">
                   {#each template.tags as tag}
-                    <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                    <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] text-[var(--text-secondary)]">#{tag}</span>
                   {/each}
                 </div>
                 <div class="mt-4 flex justify-end">
@@ -223,7 +223,7 @@
                     </div>
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each template.tags as tag}
-                        <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                        <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-0.5 text-[length:var(--text-whisper)] text-[var(--text-secondary)]">#{tag}</span>
                       {/each}
                     </div>
                     <div class="mt-4 flex flex-wrap items-center justify-end gap-2">

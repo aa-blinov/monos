@@ -1,10 +1,9 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
-  import { RotateCcw, Trash2, XCircle } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { deleteFilePermanentlyRequest, loadTrashNotesRequest, restoreNoteRequest } from '../lib/editor-api.js';
-  import { locale, localizedText } from '../lib/strings.js';
+  import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
   export let initialNotes = null;
 
@@ -21,8 +20,11 @@
     isLoading = false;
   }
 
+  // Where the note was, by folder: the file name only repeats the title above it.
   function pathLabel(note) {
-    return String(note?.path || '').replace(/^notes\/?/, '');
+    const parts = String(note?.path || '').replace(/^notes\/?/, '').split('/');
+    parts.pop();
+    return parts.map((part, index) => (index === 0 ? displayFolderName(part, $localizedText) : part)).join(' / ');
   }
 
   async function loadTrash() {
@@ -90,9 +92,6 @@
           {$localizedText.trash.hint}
         </p>
       </div>
-      <div class="shrink-0 rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-        {notes.length}
-      </div>
     </div>
 
     {#if isLoading}
@@ -116,41 +115,35 @@
           <article class="group flex min-h-48 flex-col overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 shadow-sm shadow-black/[0.03]">
             <div class="min-w-0">
               <h2 class="truncate font-serif text-lg font-medium tracking-tight">{note.name}</h2>
-              <div class="mt-1 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-                {pathLabel(note)}
-              </div>
+              {#if pathLabel(note)}
+                <div class="mt-1 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                  {pathLabel(note)}
+                </div>
+              {/if}
             </div>
 
             <p class="mt-4 line-clamp-3 text-sm leading-relaxed text-[var(--text-secondary)]">
               {note.excerpt || $localizedText.app.board.emptyNote}
             </p>
 
-            <div class="mt-auto flex items-center justify-between gap-3 pt-5">
-              <div class="truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                {note.trashedAt ? new Intl.DateTimeFormat($locale === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(new Date(note.trashedAt)) : ''}
-              </div>
-              <div class="flex items-center gap-1">
-                <TooltipIconButton
+            <div class="mt-auto pt-5 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+              {note.trashedAt ? new Intl.DateTimeFormat($locale === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(new Date(note.trashedAt)) : ''}
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <!-- Spelled out: two bare icons on a card were a guess, and one of them deletes for good. -->
+              <div class="contents">
+                <button
                   type="button"
-                  class="h-9 w-9 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
-                  label={$localizedText.trash.restore}
-                  tooltip={$localizedText.trash.restore}
+                  class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
                   disabled={busyPath === note.path}
                   on:click={() => restore(note)}
-                >
-                  <RotateCcw size="16" strokeWidth="1.7" aria-hidden="true" />
-                </TooltipIconButton>
-                <TooltipIconButton
+                >{$localizedText.trash.restore}</button>
+                <button
                   type="button"
-                  class="h-9 w-9 rounded-ui text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] disabled:opacity-30"
-                  label={$localizedText.trash.deleteForever}
-                  tooltip={$localizedText.trash.deleteForever}
-                  tooltipAlign="end"
+                  class="whitespace-nowrap text-xs uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30"
                   disabled={busyPath === note.path}
                   on:click={() => requestDeleteForever(note)}
-                >
-                  <XCircle size="16" strokeWidth="1.7" aria-hidden="true" />
-                </TooltipIconButton>
+                >{$localizedText.trash.deleteForever}</button>
               </div>
             </div>
           </article>

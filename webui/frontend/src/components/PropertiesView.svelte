@@ -64,12 +64,25 @@
     columns = columns.includes(key) ? columns.filter((item) => item !== key) : [...columns, key];
   }
 
+  // The due date is the app's own field: it reads as "Due", not as the key it is stored under.
+  const columnLabel = (key) => (String(key).toLowerCase() === 'due' ? $localizedText.editor.due : key);
+
   function cellText(row, key) {
     const property = row.properties.find((item) => String(item.key).toLowerCase() === key.toLowerCase());
     if (!property) return '';
     if (property.type === 'checkbox') return property.value ? $localizedText.properties.yes : $localizedText.properties.no;
+    // Dates as the Modified column shows them, not as stored (2026-10-20).
+    if (property.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(String(property.value))) return localeDate(new Date(`${property.value}T12:00:00`), $locale);
     return propertyInputText(property);
   }
+
+  // On a narrow screen the table scrolls sideways; a fade at the right edge says there is more.
+  let scroller;
+  let moreToRight = false;
+  function updateFade() {
+    moreToRight = Boolean(scroller) && scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 4;
+  }
+  $: if (scroller && rows) requestAnimationFrame(updateFade);
 
   function modifiedText(value) {
     return value ? localeDate(new Date(value), $locale) : '';
@@ -108,7 +121,7 @@
             aria-pressed={columns?.includes(item.key)}
             on:click={() => toggleColumn(item.key)}
             class="rounded-ui border px-2 py-1 text-xs {columns?.includes(item.key) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-          >{item.key} ({item.count})</button>
+          >{columnLabel(item.key)} ({item.count})</button>
         {/each}
       </div>
     {/if}
@@ -122,7 +135,8 @@
     {:else if rows.length === 0}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.emptyTable}</p>
     {:else}
-      <div class="rounded-ui overflow-x-auto border border-[var(--border-subtle)]">
+      <div class="relative">
+      <div class="rounded-ui overflow-x-auto border border-[var(--border-subtle)]" bind:this={scroller} on:scroll={updateFade}>
         <table class="w-full min-w-max border-collapse text-left text-xs">
           <thead class="bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
             <tr>
@@ -131,7 +145,7 @@
               </th>
               {#each columns || [] as key (key)}
                 <th class="px-3 py-2 font-medium" aria-sort={ariaSort(key)}>
-                  <button type="button" class="font-medium" on:click={() => sortBy(key)}>{key}</button>
+                  <button type="button" class="font-medium" on:click={() => sortBy(key)}>{columnLabel(key)}</button>
                 </th>
               {/each}
               <th class="px-3 py-2 font-medium" aria-sort={ariaSort('modified')}>
@@ -153,6 +167,10 @@
             {/each}
           </tbody>
         </table>
+      </div>
+      {#if moreToRight}
+        <span class="pointer-events-none absolute inset-y-px right-px w-10 rounded-ui bg-gradient-to-l from-[var(--bg-primary)] to-transparent" aria-hidden="true" data-testid="table-more"></span>
+      {/if}
       </div>
     {/if}
   </div>
