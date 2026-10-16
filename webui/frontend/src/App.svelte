@@ -36,6 +36,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { createNoteRequest, renameItemRequest } from './lib/sidebar-api.js';
   import { announceNoteLinksUpdated, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
+  import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -195,9 +196,15 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       openCommandPalette('notes');
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && key === 'b') {
+    // In text ⌘B is bold; the sidebar toggles only when the caret is not in a field or the note.
+    if ((e.metaKey || e.ctrlKey) && key === 'b' && !isTypingTarget) {
       e.preventDefault();
       toggleSidebar();
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && key === 'n' && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      openNewNoteFlow();
       return;
     }
     if (isDashboardRoute && (((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'f') || (!isTypingTarget && key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey))) {
@@ -323,6 +330,34 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   function openNewNoteFlow(event = null) {
     createNoteInitialCategory = event?.detail?.category || '';
     showCreateNoteModal = true;
+  }
+
+  // The notice after a note went to the trash. It stays while the pointer or focus is on it, so a slow
+  // reader is never raced by the timer.
+  let trashTimer = null;
+  let trashNoticeHeld = false;
+  let undoTrashError = '';
+  $: scheduleTrashNotice($trashedNotice, trashNoticeHeld);
+
+  function scheduleTrashNotice(notice, held) {
+    clearTimeout(trashTimer);
+    if (!notice || held) return;
+    trashTimer = setTimeout(() => dismissTrashedNotice(notice.id), UNDO_TRASH_MS);
+  }
+
+  async function undoLastTrash() {
+    const notice = $trashedNotice;
+    if (!notice) return;
+    undoTrashError = '';
+    try {
+      const restored = await undoTrash(notice);
+      if (sidebarComponent) await sidebarComponent.loadTree();
+      void loadHomeRecentNotes();
+      if (restored.length === 1) openCreatedNote(restored[0], restored[0].name);
+    } catch (error) {
+      console.error('Failed to restore the note:', error);
+      undoTrashError = $localizedText.app.trashUndoFailed;
+    }
   }
 
   function openCreatedNote(data, fallbackTitle) {
@@ -670,6 +705,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openTemplates') openTemplatesManager();
     if (event.detail === 'openTags') openTagPanel();
     if (event.detail === 'openTrash') openTrash();
+    if (event.detail === 'openSavedSearches') openSavedSearchPanel();
+    if (event.detail === 'openProperties') openPropertiesView();
   }
 
   function refreshAfterTrashChange() {
@@ -969,6 +1006,26 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     on:select={searchByTag}
     on:changed={() => { if (headerComponent?.loadTags) headerComponent.loadTags(); if (sidebarComponent?.loadTree) sidebarComponent.loadTree(); }}
   />
+  {#if $trashedNotice || undoTrashError}
+    <div
+      class="fixed bottom-6 left-1/2 z-[200] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 animate-toast-in sm:left-6 sm:translate-x-0"
+      role="status"
+      on:mouseenter={() => trashNoticeHeld = true}
+      on:mouseleave={() => trashNoticeHeld = false}
+      on:focusin={() => trashNoticeHeld = true}
+      on:focusout={() => trashNoticeHeld = false}
+    >
+      <div class="flex items-center gap-4 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 text-sm shadow-2xl">
+        {#if undoTrashError}
+          <span class="min-w-0 flex-1 text-[var(--red)]">{undoTrashError}</span>
+          <button type="button" class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition" on:click={() => undoTrashError = ''}>{$localizedText.app.dismiss}</button>
+        {:else}
+          <span class="min-w-0 flex-1 truncate">{$localizedText.app.trashed($trashedNotice.notes.length === 1 ? $trashedNotice.notes[0].name : '', $trashedNotice.notes.length)}</span>
+          <button type="button" class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition" on:click={undoLastTrash}>{$localizedText.app.undoTrash}</button>
+        {/if}
+      </div>
+    </div>
+  {/if}
   {#if linksNotice}
     <div class="fixed bottom-6 left-6 z-[200] animate-toast-in" role="status">
       <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">{linksNotice}</div>

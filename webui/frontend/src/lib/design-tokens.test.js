@@ -222,7 +222,7 @@ test('a text button has no frame and no fill', () => {
   const offenders = [];
   for (const file of files) {
     if (!file.endsWith('.svelte')) continue;
-    for (const m of read(file).matchAll(/<button\b(?:[^>"]|"[^"]*")*?class="([^"]*)"/g)) {
+    for (const m of read(file).matchAll(/<button\b(?:[^>"{]|"[^"]*"|\{[^}]*\})*?class="([^"]*)"/g)) {
       const tokens = m[1].split(/\s+/);
       if (!tokens.includes('uppercase')) continue;
       // A toggle among options (aria-pressed) shows its chosen state with a frame; that is a choice, not an action.

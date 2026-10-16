@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { trashedNotice } from '../lib/trash-undo.js';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { editorAction, outlineHidden } from '../stores.js';
@@ -461,13 +463,15 @@ test('Editor удаляет заметку', async () => {
 
   await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
 
+  // The trash is reversible, so the note goes at once and the app offers to undo it.
   editorAction.set('delete');
   await tick();
-  await waitFor(() => expect(screen.getByText(uiText.editor.moveToTrash)).toBeTruthy());
-  await fireEvent.click(screen.getByText(uiText.editor.moveToTrash));
 
   await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));
   expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FInbox.md', { method: 'DELETE' });
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(get(trashedNotice).notes).toEqual([{ path: 'notes/Inbox.md', name: 'Inbox', pinned: false }]);
+  trashedNotice.set(null);
 });
 
 test('Editor не перетирает новые правки после завершения autosave', async () => {

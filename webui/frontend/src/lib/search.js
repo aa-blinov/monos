@@ -51,14 +51,18 @@ export function highlightExcerpt(excerpt, query) {
 
   return safeExcerpt.replace(
     re,
-    '<mark class="bg-[var(--text-primary)] text-[var(--bg-primary)] px-0.5">$1</mark>'
+    '<mark class="rounded-ui bg-[var(--text-primary)] text-[var(--bg-primary)] px-0.5">$1</mark>'
   );
 }
 
+/**
+ * The part of an excerpt to show on a result card: it starts a few words before the first match, so the
+ * match is in view even when the card shows a single line, and it is at most `maxLength` long.
+ */
 export function searchSnippet(excerpt, query, maxLength = 120) {
   const text = String(excerpt || '').replace(/\s+/g, ' ').trim();
   const terms = getSearchTerms(query);
-  if (!text || terms.length === 0 || text.length <= maxLength) return text;
+  if (!text || terms.length === 0) return text;
 
   const lowerText = text.toLowerCase();
   const matchIndex = terms
@@ -66,15 +70,22 @@ export function searchSnippet(excerpt, query, maxLength = 120) {
     .filter((index) => index >= 0)
     .sort((a, b) => a - b)[0];
 
-  if (matchIndex === undefined) return text.slice(0, maxLength - 1).trimEnd() + '…';
+  if (matchIndex === undefined) return text.length <= maxLength ? text : text.slice(0, maxLength - 1).trimEnd() + '…';
 
-  const contextBefore = Math.max(16, Math.floor(maxLength * 0.35));
-  let start = Math.max(0, matchIndex - contextBefore);
+  // About one word of context: enough to read the match in its sentence, little enough that a
+  // one-line card still shows it.
+  const LEAD = 8;
+  let start = 0;
+  if (matchIndex > LEAD) {
+    const from = matchIndex - LEAD;
+    const space = text.indexOf(' ', from);
+    start = space !== -1 && space < matchIndex ? space + 1 : from;
+  }
   let end = Math.min(text.length, start + maxLength);
-
-  if (end - start < maxLength) start = Math.max(0, end - maxLength);
-  if (start > 0) start = text.indexOf(' ', start) + 1 || start;
-  if (end < text.length) end = text.lastIndexOf(' ', end) > start ? text.lastIndexOf(' ', end) : end;
+  if (end < text.length) {
+    const space = text.lastIndexOf(' ', end);
+    if (space > matchIndex) end = space;
+  }
 
   return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
 }

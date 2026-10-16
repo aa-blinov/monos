@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { trashedNotice } from '../lib/trash-undo.js';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, test, expect, vi } from 'vitest';
@@ -570,12 +572,12 @@ test('Sidebar после удаления открытой заметки сбр
   await fireEvent.contextMenu(screen.getByText('Alpha').closest('button'));
   await fireEvent.click(screen.getByText(uiText.sidebar.context.delete));
 
-  // The sidebar delete flow now confirms through the designed modal.
-  await waitFor(() => expect(screen.getByRole('button', { name: uiText.modal.confirm })).toBeTruthy());
-  await fireEvent.click(screen.getByRole('button', { name: uiText.modal.confirm }));
-
+  // One note goes to the trash without a question; the notice offers to undo it.
   await waitFor(() => expect(deletedHandler).toHaveBeenCalledTimes(1));
   expect(fetchMock).toHaveBeenCalledWith('/api/file?path=notes%2FWork%2FAlpha.md', { method: 'DELETE' });
+  expect(screen.queryByRole('button', { name: uiText.modal.confirm })).toBeNull();
+  await waitFor(() => expect(get(trashedNotice)?.notes[0].path).toBe('notes/Work/Alpha.md'));
+  trashedNotice.set(null);
 });
 
 test('Sidebar после перемещения заметки открывает ее и выделяет новый путь', async () => {

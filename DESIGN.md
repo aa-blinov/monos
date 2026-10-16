@@ -386,6 +386,10 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 
 `rounded-ui` (6px), `--bg-primary`, 1px `--border-subtle`, `p-8`, `shadow-2xl`, default `w-96`. The close control is a 36px `rounded-ui` icon button pinned top-right — the same rounded square as the panel holding it. Footer buttons are the uppercase text-only pair described above, each `flex-1` so they split the row evenly.
 
+**Ask only before what cannot be undone.** A note moved to the trash goes at once, and a notice at the bottom (`role="status"`, the one radius, `shadow-2xl`) says so with an Undo action for 8 seconds; the timer pauses while the pointer or focus is on it. A confirmation dialog is kept for what is lost for good: a folder, several notes at once, emptying the trash, a new access token.
+
+**Phone bottom bar.** Below `sm` each note action is a 44px column, icon over one short word (`editor.footerShort`), so nothing is a bare icon on a device without tooltips. Six fit at 360px; pinning moves into the ⋯ menu there.
+
 ### Note content
 
 The editor renders Markdown constructs that a CommonMark parser does not know, and it writes them back unchanged:

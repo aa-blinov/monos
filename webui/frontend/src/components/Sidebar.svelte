@@ -2,6 +2,9 @@
   import { onMount, createEventDispatcher, tick } from 'svelte';
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
+  import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
+  import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
+  import { get as getRequest } from '../lib/api/client.js';
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
   import IconPickerModal from './IconPickerModal.svelte';
@@ -124,6 +127,22 @@
       allTags = await loadTagsRequest();
     } catch {}
   }
+
+  // A new person sees the tools that have something in them. Tags, saved searches and the table of all
+  // properties appear once the first one exists; until then each stays one Ctrl/⌘+K away. A failed check
+  // shows the link rather than hide a tool that has content.
+  let hasProperties = false;
+  async function loadPropertyPresence() {
+    try {
+      const table = await getRequest('/api/notes/table', { limit: 1 });
+      hasProperties = Array.isArray(table?.keys) && table.keys.length > 0;
+    } catch {
+      hasProperties = true;
+    }
+  }
+  $: showTagsLink = allTags.length > 0;
+  $: showSavedSearchesLink = $savedSearches.length > 0;
+  $: showPropertiesLink = hasProperties;
 
   /** @type {Array<string>} */
   let directoryList = [""];
@@ -373,6 +392,7 @@
       error = '';
       tree = await loadTreeData();
       await loadTags();
+      void loadPropertyPresence();
       // Закрепления читаются из самих заметок, поэтому список живёт ровно
       // столько, сколько живёт дерево.
       setPinnedFromTree(tree);
@@ -833,6 +853,14 @@
       unpinNote(path);
     } else if (action === 'delete') {
       const deletePaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [path];
+      // One note goes to the trash at once, with an undo notice. A folder is deleted for good and a
+      // selection touches many notes, so those still ask first.
+      if (!contextMenu.isDir && deletePaths.length === 1) {
+        const note = trashedNote(deletePaths[0], displayNoteName(name));
+        closeContextMenu();
+        void deleteItems(deletePaths).then((done) => { if (done) announceTrashed([note]); });
+        return;
+      }
       pendingDelete = {
         paths: deletePaths,
         message: deletePaths.length > 1
@@ -903,8 +931,10 @@
         selectedPath = null;
         dispatch('fileDeleted');
       }
+      return true;
     } catch (err) {
       error = $localizedText.sidebar.errors.delete(err.message);
+      return false;
     }
   }
 
@@ -1026,6 +1056,7 @@
     loadTree();
     loadDirectories();
     loadTags();
+    void loadSavedSearches();
     window.addEventListener('click', closeContextMenu);
     window.addEventListener('dragend', resetDragOver);
     return () => {
@@ -1095,7 +1126,7 @@
         <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
           on:click={() => dispatch('openCreateNote')}
-          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:rounded-ui lg:border-transparent lg:bg-transparent lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
+          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui px-2 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
         >
           <span class="text-sm leading-none">+</span>
           <span class="whitespace-nowrap">{$localizedText.sidebar.new.replace(/^\+\s*/, '')}</span>
@@ -1175,18 +1206,24 @@
         <Icon.LayoutTemplate size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.templates}</span>
       </button>
-      <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Bookmark size="20" strokeWidth="1.7" />
-        <span>{$localizedText.savedSearches.title}</span>
-      </button>
-      <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Hash size="20" strokeWidth="1.7" />
-        <span>{$localizedText.tags.title}</span>
-      </button>
-      <button data-testid="open-properties" on:click={() => { dispatch('openProperties'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.SlidersHorizontal size="20" strokeWidth="1.7" />
-        <span>{$localizedText.properties.sidebar}</span>
-      </button>
+      {#if showSavedSearchesLink}
+        <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+          <Icon.Bookmark size="20" strokeWidth="1.7" />
+          <span>{$localizedText.savedSearches.title}</span>
+        </button>
+      {/if}
+      {#if showTagsLink}
+        <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+          <Icon.Hash size="20" strokeWidth="1.7" />
+          <span>{$localizedText.tags.title}</span>
+        </button>
+      {/if}
+      {#if showPropertiesLink}
+        <button data-testid="open-properties" on:click={() => { dispatch('openProperties'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+          <Icon.SlidersHorizontal size="20" strokeWidth="1.7" />
+          <span>{$localizedText.properties.sidebar}</span>
+        </button>
+      {/if}
       <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Trash2 size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.trash}</span>
@@ -1229,39 +1266,45 @@
           <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
           <span class="truncate">{$localizedText.sidebar.templates}</span>
         </TooltipIconButton>
-        <TooltipIconButton
-          data-testid="open-saved-searches"
-          on:click={() => dispatch('openSavedSearches')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.savedSearches.title}
-          tooltip={$localizedText.savedSearches.title}
-          tooltipAlign="end"
-        >
-          <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.savedSearches.title}</span>
-        </TooltipIconButton>
-        <TooltipIconButton
-          data-testid="open-tags"
-          on:click={() => dispatch('openTags')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.tags.title}
-          tooltip={$localizedText.tags.title}
-          tooltipAlign="end"
-        >
-          <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.tags.title}</span>
-        </TooltipIconButton>
-        <TooltipIconButton
-          data-testid="open-properties"
-          on:click={() => dispatch('openProperties')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.properties.sidebar}
-          tooltip={$localizedText.properties.hint}
-          tooltipAlign="end"
-        >
-          <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.properties.sidebar}</span>
-        </TooltipIconButton>
+        {#if showSavedSearchesLink}
+          <TooltipIconButton
+            data-testid="open-saved-searches"
+            on:click={() => dispatch('openSavedSearches')}
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            label={$localizedText.savedSearches.title}
+            tooltip={$localizedText.savedSearches.title}
+            tooltipAlign="end"
+          >
+            <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.savedSearches.title}</span>
+          </TooltipIconButton>
+        {/if}
+        {#if showTagsLink}
+          <TooltipIconButton
+            data-testid="open-tags"
+            on:click={() => dispatch('openTags')}
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            label={$localizedText.tags.title}
+            tooltip={$localizedText.tags.title}
+            tooltipAlign="end"
+          >
+            <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.tags.title}</span>
+          </TooltipIconButton>
+        {/if}
+        {#if showPropertiesLink}
+          <TooltipIconButton
+            data-testid="open-properties"
+            on:click={() => dispatch('openProperties')}
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            label={$localizedText.properties.sidebar}
+            tooltip={$localizedText.properties.hint}
+            tooltipAlign="end"
+          >
+            <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.properties.sidebar}</span>
+          </TooltipIconButton>
+        {/if}
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"

@@ -1,8 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { createBlankNote, prepareMonos, uniqueTitle } from './support/monos.js';
 
-test('свойства открываются из боковой панели на компьютере, как и на телефоне', async ({ page }) => {
+test('все свойства открываются из палитры всегда, а из боковой панели — когда у заметок есть свойства', async ({ page }) => {
   await prepareMonos(page);
+  await page.goto('/');
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('dialog').getByRole('combobox').fill('all properties');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('properties-view')).toBeVisible();
+
+  const title = uniqueTitle('Has Property');
+  await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: '---\nstatus: draft\n---\nТекст' } });
   await page.goto('/');
   await page.getByTestId('open-properties').click();
   await expect(page.getByTestId('properties-view')).toBeVisible();
