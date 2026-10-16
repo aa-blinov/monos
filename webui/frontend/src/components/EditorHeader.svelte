@@ -14,6 +14,8 @@
   export let onOpenHistory = () => {};
   export let outlineOpen = false;
   export let onToggleOutline = () => {};
+  /** False while the note is in a sync conflict: there is no outline to show then. */
+  export let outlineAvailable = true;
   export let onBack = () => {};
   /** The text below is scrolled: the title rides in the top row and the rest folds away. */
   export let compact = false;
@@ -163,6 +165,7 @@
           {/if}
           <!-- Actions on the note read like the bottom bar's, in sentence case; capitals are kept for labels. -->
           <span class="ml-auto flex items-center gap-4">
+            {#if outlineAvailable}
             <button
               type="button"
               aria-expanded={outlineOpen}
@@ -172,6 +175,7 @@
             >
               {$localizedText.editor.outline}
             </button>
+            {/if}
             {#if historyAvailable}
               <button
                 type="button"

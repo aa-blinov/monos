@@ -37,6 +37,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { announceNoteLinksUpdated, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
+  import { refreshConflicts } from './lib/git-conflicts.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -241,6 +242,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   function handleAutoPullResult(result) {
     if (!result) return;
     autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
+    void refreshConflicts();
     if (result.received > 0) void loadHomeRecentNotes();
   }
 
@@ -257,6 +259,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     // remembered view is still the board.
     if (routePath.startsWith('/notes/')) $noteView = 'list';
     void loadHomeRecentNotes();
+    void refreshConflicts();
     void applyShellSettings();
     void loadTemplateSettings();
     // Pull on launch and every few minutes. Uploads stay manual; a stale device

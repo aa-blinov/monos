@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import NoteBoard from './NoteBoard.svelte';
+import { conflictedNotes } from '../lib/git-conflicts.js';
 import { locale, uiText } from '../lib/strings.js';
 import { boardColumns, boardGroupByColor } from '../stores.js';
 
@@ -284,4 +285,17 @@ test('NoteBoard подсвечивает совпадение в заголов�
   const card = screen.getByRole('button', { name: /Предложение/ });
   const mark = card.querySelector('mark');
   expect(mark?.textContent).toBe('Предложение по дем');
+});
+
+test('NoteBoard помечает заметку с конфликтом синхронизации', () => {
+  conflictedNotes.set(new Set(['notes/Work/Alpha.md']));
+  try {
+    render(NoteBoard, { notes });
+    const alpha = screen.getByRole('button', { name: /Alpha/ });
+    const beta = screen.getByRole('button', { name: /Beta/ });
+    expect(alpha.textContent).toContain(uiText.app.board.conflict);
+    expect(beta.textContent).not.toContain(uiText.app.board.conflict);
+  } finally {
+    conflictedNotes.set(new Set());
+  }
 });

@@ -39,6 +39,7 @@
   } from '../lib/editor-api.js';
   import { createNoteRequest, loadTagsRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
+  import { refreshConflicts } from '../lib/git-conflicts.js';
   import {
     convertImageToWebp,
     imageNameFor,
@@ -791,8 +792,11 @@
     if (!filePath) return;
     const choices = event.detail?.choices || {};
     let next = editedContent;
-    for (const [index, choice] of Object.entries(choices)) {
-      next = resolveRegion(next, Number(index), choice);
+    // From the last part back: resolving a part removes it, so the parts after it would move up one
+    // place and a choice made for them would land on the wrong part, or on none.
+    const ordered = Object.entries(choices).map(([index, choice]) => [Number(index), choice]).sort((a, b) => b[0] - a[0]);
+    for (const [index, choice] of ordered) {
+      next = resolveRegion(next, index, choice);
     }
     if (next === editedContent) return;
 
@@ -803,17 +807,22 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: filePath, content: next }),
       });
-      if (!response.ok) {
+      // 409: git has no conflict for this note, but its text still holds markers (left over from an
+      // earlier merge). The resolved text is then saved as an ordinary edit.
+      if (!response.ok && response.status !== 409) {
         const detail = await response.json().catch(() => ({}));
         throw new Error(detail.detail || `HTTP ${response.status}`);
       }
+      void refreshConflicts();
       await saveFileContent(filePath, next);
       editedContent = next;
       content = next;
-      conflictCount = 0;
-      conflictNotice = $localizedText.editor.conflictResolved;
+      conflictCount = summarizeConflicts(next).count;
+      conflictNotice = conflictCount > 0
+        ? $localizedText.editor.conflictPartlyResolved(conflictCount)
+        : $localizedText.editor.conflictResolved;
     } catch (error) {
-      conflictNotice = $localizedText.settings.backupError(error?.message || String(error));
+      conflictNotice = $localizedText.editor.conflictFailed(error?.message || String(error));
     }
   }
 
@@ -1182,6 +1191,7 @@
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
+    outlineAvailable={conflictCount === 0}
     compact={headerCompact || focusMode}
     {focusMode}
     onExitFocus={() => setFocusMode(false)}
@@ -1259,7 +1269,9 @@
         />
         {/if}
       </div>
-      {#if !focusMode}
+      <!-- No outline over a conflict: the merge markers would read as Markdown headings and list both
+           versions of a title as if they were the note's structure. -->
+      {#if !focusMode && conflictCount === 0}
         <OutlinePanel
           content={editedContent}
           open={outlineOpen}
