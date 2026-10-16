@@ -357,3 +357,26 @@ test('Settings открывает выбор ZIP без пустого экра�
   expect(fetchMock).not.toHaveBeenCalledWith('/api/backup/import', expect.anything());
   inputClickSpy.mockRestore();
 });
+
+test('Settings показывает QR-код адреса для телефона и переключает его между адресами', async () => {
+  const urls = ['http://192.168.1.5:8000/?token=abc', 'http://10.0.0.7:8000/?token=abc'];
+  const fetchMock = createFetchMock({
+    settings: {},
+    fallback: (url) => (url === '/api/lan'
+      ? jsonResponse({ enabled: true, token: 'abc', urls, restartRequired: false })
+      : jsonResponse({}, false)),
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Settings);
+
+  const qr = await screen.findByTestId('lan-qr');
+  expect(qr.getAttribute('aria-label')).toBe(uiText.settings.lanQrLabel(urls[0]));
+  expect(qr.querySelector('path').getAttribute('d')).toMatch(/^M4 4h1v1h-1z/);
+
+  const [, second] = screen.getAllByRole('button', { name: uiText.settings.lanShowQr });
+  await fireEvent.click(second);
+  await waitFor(() => expect(screen.getByTestId('lan-qr').getAttribute('aria-label')).toBe(uiText.settings.lanQrLabel(urls[1])));
+  expect(second.getAttribute('aria-pressed')).toBe('true');
+});

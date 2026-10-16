@@ -36,6 +36,7 @@
     uploadAttachment,
   } from '../lib/editor-api.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
+  import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import {
     convertImageToWebp,
     defaultImageName,
@@ -121,7 +122,6 @@
   let isLoading = true;
   let isSaving = false;
   let isDeleting = false;
-  let deleteError = '';
   let wordCharStats = '';
   let conflictCount = 0;
   let conflictNotice = '';
@@ -129,7 +129,6 @@
   let historyNote = null;
   let formatToast = '';
   let formatToastTimer;
-  let showDeleteConfirm = false;
   let imageRename = null;
   let attachmentNewName = '';
   // Имя картинки — имя файла во вложениях: то же правило, что и для заметок.
@@ -137,6 +136,9 @@
   let autosaveTimer;
   let lastSaved = null;
   let saveMessage = '';
+  // Saving, saved, or a failure; a failure is drawn red so it is not mistaken for progress.
+  $: saveMessageIsError = Boolean(saveMessage)
+    && ![$localizedText.editor.saving, $localizedText.editor.saved].includes(saveMessage);
   let saveMessageTimeout;
   // 1250 + 250 мс на сбор разметки редактором = прежние 1500 мс от последнего
   // нажатия до сохранения. Без этой поправки отложенная сериализация незаметно
@@ -842,19 +844,21 @@
     metadataTimer = setTimeout(saveMetadataFields, METADATA_DELAY);
   }
 
+  // The note goes to the trash at once: the move is reversible, and the app's notice offers to undo it.
   async function deleteFile() {
     const filePath = currentFile?.path;
-    if (!filePath) return;
+    if (!filePath || isDeleting) return;
+    const note = trashedNote(filePath, currentFile?.name);
     try {
       isDeleting = true;
       await deleteFileRequest(filePath);
-      showDeleteConfirm = false;
+      announceTrashed([note]);
       if (currentFile?.path === filePath || loadedFilePath === filePath) {
         dispatch('fileDeleted');
         dispatch('syncComplete');
       }
     } catch (error) {
-      deleteError = $localizedText.editor.deleteError(error.message);
+      saveMessage = $localizedText.editor.deleteError(error.message);
     } finally {
       isDeleting = false;
     }
@@ -1002,7 +1006,7 @@
   $: if ($editorAction && currentFile) {
     const action = $editorAction;
     editorAction.set(null);
-    if (action === 'delete') showDeleteConfirm = true;
+    if (action === 'delete') void deleteFile();
   }
 </script>
 
@@ -1122,7 +1126,7 @@
     <!-- Нижняя панель: свойства заметки открываются окошками над ней, поэтому текст
          не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
          относятся к запрошенной заметке, а текст ещё от прежней. -->
-    <div class="relative flex h-11 shrink-0 items-center gap-2 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-3 lg:px-6" data-testid="editor-footer" inert={isLoading}>
+    <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-3 lg:px-6" data-testid="editor-footer" inert={isLoading}>
       <div class="flex min-w-0 items-center gap-1" data-testid="note-properties" inert={isLoading}>
         <div class="relative" data-panel-anchor="category">
           <button
@@ -1132,10 +1136,11 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
             aria-label={editableCategory ? `${$localizedText.editor.propertyCategory}: ${editableCategory}` : $localizedText.editor.propertyCategoryEmpty}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
             <span class="hidden max-w-[9rem] truncate sm:inline">{editableCategory ? displayFolderName(editableCategory, $localizedText) : $localizedText.editor.propertyCategoryEmpty}</span>
           </button>
           {#if propertyPanel === 'category'}
@@ -1163,13 +1168,13 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'tags'}
             aria-label={editableTags.length ? `${$localizedText.editor.propertyTags}: ${editableTags.map((tag) => `#${tag}`).join(' ')}` : $localizedText.editor.propertyTags}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('tags')}
           >
             <Tag size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.tags}{editableTags.length ? ` ${editableTags.length}` : ''}</span>
             <span class="hidden max-w-[9rem] truncate sm:inline">{tagsSummaryText(editableTags, $localizedText.editor.propertyTags)}</span>
-            {#if editableTags.length}<span class="tabular-nums sm:hidden">{editableTags.length}</span>{/if}
-          </button>
+                      </button>
           {#if propertyPanel === 'tags'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyTags} data-testid="property-panel" data-panel="tags" class={panelClass}>
               <p class={panelLabelClass}>{$localizedText.editor.propertyTags}</p>
@@ -1210,10 +1215,11 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'due'}
             aria-label={dueDate ? `${$localizedText.editor.propertyDue}: ${dueLabelOf}` : $localizedText.editor.propertyDue}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('due')}
           >
             <CalendarDays size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.due}</span>
             <span class="hidden sm:inline">{dueDate ? dueLabelOf : $localizedText.editor.propertyDue}</span>
           </button>
           {#if propertyPanel === 'due'}
@@ -1278,12 +1284,13 @@
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'properties'}
               aria-label={`${$localizedText.properties.title}: ${customProperties.length}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
               on:click={() => togglePropertyPanel('properties')}
             >
               <SlidersHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
+              <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.properties}{customProperties.length ? ` ${customProperties.length}` : ''}</span>
               <span class="hidden sm:inline">{$localizedText.properties.title}</span>
-              {#if customProperties.length}<span class="tabular-nums">{customProperties.length}</span>{/if}
+              {#if customProperties.length}<span class="tabular-nums max-sm:hidden">{customProperties.length}</span>{/if}
             </button>
             {#if propertyPanel === 'properties'}
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
@@ -1303,12 +1310,13 @@
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'related'}
               aria-label={`${$localizedText.editor.localNavigation}: ${relatedCount}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
               on:click={() => togglePropertyPanel('related')}
             >
               <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
+              <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.links} {relatedCount}</span>
               <span class="hidden sm:inline">{$localizedText.editor.localNavigation}</span>
-              <span class="tabular-nums">{relatedCount}</span>
+              <span class="tabular-nums max-sm:hidden">{relatedCount}</span>
             </button>
             {#if propertyPanel === 'related'}
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class="{panelClass} max-h-[70vh] overflow-y-auto">
@@ -1374,7 +1382,7 @@
           data-testid="property-pin"
           aria-pressed={pinnedNow}
           aria-label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-          class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
           on:click={togglePinned}
         >
           <Pin size="14" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />
@@ -1413,7 +1421,7 @@
           </div>
         {/if}
 
-        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage === $localizedText.editor.saveFailed ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
         <div class="relative" data-panel-anchor="export">
           <button
@@ -1423,7 +1431,7 @@
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'export'}
             aria-label={$localizedText.editor.exportLabel}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('export')}
           >
             <Download size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -1458,7 +1466,7 @@
           <TooltipIconButton
             type="button"
             data-testid="editor-more"
-            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] max-sm:h-11 max-sm:w-11 transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
             label={$localizedText.editor.moreActions}
             tooltip={$localizedText.editor.moreActions}
             tooltipPosition="top"
@@ -1469,13 +1477,17 @@
           </TooltipIconButton>
           {#if footerMoreOpen}
             <div class="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
-              <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
+              <!-- On a phone the bottom bar has room for six buttons; pinning moves here. -->
+              <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
+                <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+              </button>
+              <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>
-              <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; footerMoreOpen = false; }}>
+              <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; footerMoreOpen = false; }}>
                 <FileText size="16" strokeWidth="1.7" aria-hidden="true" />{rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
               </button>
-              <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
+              <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
                 <Palette size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.noteColor}
               </button>
             </div>
@@ -1486,29 +1498,6 @@
   {/if}
 </div>
 
-<!-- Delete Confirmation Modal -->
-{#if showDeleteConfirm}
-  <ModalShell title={$localizedText.editor.archiveTitle} widthClass="w-[90%] lg:w-[32rem]" on:close={() => { showDeleteConfirm = false; deleteError = ''; }}>
-      <p class="text-[var(--text-secondary)] text-base lg:text-lg mb-10 font-serif italic">
-        {$localizedText.editor.archiveConfirm(currentFile.name)}
-      </p>
-      {#if deleteError}
-        <p class="rounded-ui mb-6 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm leading-relaxed text-[var(--red)]">
-          {deleteError}
-        </p>
-      {/if}
-      <div class="flex flex-col lg:flex-row gap-4 lg:gap-8">
-        <button on:click={() => showDeleteConfirm = false} class={getModalButtonClass('secondary', { extraClass: 'py-2' })}>{$localizedText.editor.cancel}</button>
-        <button
-          on:click={deleteFile}
-          disabled={isDeleting}
-          class={getModalButtonClass('primary', { disabled: isDeleting, extraClass: 'text-[var(--red)] py-2' })}
-        >
-          {isDeleting ? $localizedText.editor.archiving : $localizedText.editor.moveToTrash}
-        </button>
-      </div>
-  </ModalShell>
-{/if}
 
 {#if imageRename}
   <ModalShell title={$localizedText.editor.renameImageTitle} widthClass="w-[90%] lg:w-[30rem]" closeOnEscape={true} on:close={() => imageRename = null}>

@@ -5,6 +5,7 @@
   import { pinnedNotes } from '../lib/sidebar-pinned.js';
   import { matchesNoteFilters, parseQuickSwitcherQuery, rankQuickSwitcherResults } from '../lib/quick-switcher.js';
   import { locale, localizedText } from '../lib/strings.js';
+  import { shortcutLabel } from '../lib/shortcut-label.js';
 
   export let open = false;
   export let mode = 'commands';
@@ -120,7 +121,7 @@
         section: 'commands',
         label: $localizedText.commandPalette.commands.quickOpen,
         detail: $localizedText.commandPalette.commandDetails.quickOpen,
-        shortcut: '⌘O',
+        shortcut: shortcutLabel('Ctrl+O'),
       },
       {
         id: 'continueWork',
@@ -142,6 +143,7 @@
         section: 'commands',
         label: $localizedText.commandPalette.commands.newNote,
         detail: $localizedText.commandPalette.commandDetails.newNote,
+        shortcut: shortcutLabel('Ctrl+N'),
       },
       {
         id: 'openTemplates',
@@ -158,6 +160,20 @@
         detail: $localizedText.commandPalette.commandDetails.openTags,
       },
       {
+        id: 'openSavedSearches',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openSavedSearches,
+        detail: $localizedText.commandPalette.commandDetails.openSavedSearches,
+      },
+      {
+        id: 'openProperties',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openProperties,
+        detail: $localizedText.commandPalette.commandDetails.openProperties,
+      },
+      {
         id: 'openTrash',
         type: 'command',
         section: 'commands',
@@ -170,7 +186,7 @@
         section: 'commands',
         label: $localizedText.commandPalette.commands.toggleSidebar,
         detail: $localizedText.commandPalette.commandDetails.toggleSidebar,
-        shortcut: '⌘B',
+        shortcut: shortcutLabel('Ctrl+B'),
       },
     ];
   }

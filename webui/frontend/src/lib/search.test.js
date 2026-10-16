@@ -40,6 +40,12 @@ test('searchSnippet показывает контекст вокруг совп�
 });
 
 
+test('searchSnippet начинает короткий текст у совпадения, чтобы оно было видно в одну строку', () => {
+  assert.equal(searchSnippet('Обсудили сроки релиза.', 'релиз', 56), '…сроки релиза.');
+  assert.equal(searchSnippet('Релиз в пятницу', 'релиз', 56), 'Релиз в пятницу');
+  assert.equal(searchSnippet('Нет совпадения', 'релиз', 56), 'Нет совпадения');
+});
+
 test('getSearchTerms убирает значение оператора updated:', () => {
   assert.deepEqual(getSearchTerms('updated:2026-10 план'), ['план']);
   assert.deepEqual(getSearchTerms('-body:черновик план'), ['черновик план', 'черновик', 'план']);

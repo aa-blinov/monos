@@ -29,6 +29,7 @@
   } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import appPackage from '../../../../package.json';
+  import { qrPath } from '../lib/qr-code.js';
 
   const dispatch = createEventDispatcher();
 
@@ -135,6 +136,10 @@
   let lanError = '';
   let lanNotice = '';
   let confirmingLanRenew = false;
+  // The address the QR code shows: the one picked, or the first one.
+  let qrUrl = '';
+  $: shownQrUrl = lan.urls.includes(qrUrl) ? qrUrl : (lan.urls[0] || '');
+  $: shownQr = shownQrUrl ? qrPath(shownQrUrl) : null;
 
   onMount(async () => {
     try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
@@ -1069,10 +1074,32 @@
                   <button
                     type="button"
                     on:click={() => copyLanUrl(url)}
-                    class="shrink-0 rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                    class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
                   >{$localizedText.settings.lanCopy}</button>
+                  {#if lan.urls.length > 1}
+                    <button
+                      type="button"
+                      aria-pressed={shownQrUrl === url}
+                      on:click={() => qrUrl = url}
+                      class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest transition hover:opacity-60 {shownQrUrl === url ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+                    >{$localizedText.settings.lanShowQr}</button>
+                  {/if}
                 </div>
               {/each}
+              {#if shownQrUrl}
+                <figure class="flex flex-col items-start gap-3 pt-2 sm:flex-row sm:items-center sm:gap-5">
+                  <!-- Black on white whatever the theme: some phone cameras do not read an inverted code. -->
+                  <svg
+                    viewBox="0 0 {shownQr.size} {shownQr.size}"
+                    class="h-40 w-40 shrink-0 rounded-ui bg-white"
+                    role="img"
+                    aria-label={$localizedText.settings.lanQrLabel(shownQrUrl)}
+                    shape-rendering="crispEdges"
+                    data-testid="lan-qr"
+                  ><path d={shownQr.path} fill="#000" /></svg>
+                  <figcaption class="max-w-xs text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.lanQrHint}</figcaption>
+                </figure>
+              {/if}
             </div>
           {:else}
             <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>

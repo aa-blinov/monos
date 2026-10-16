@@ -1047,7 +1047,8 @@
   :global(.ProseMirror img.editor-image) { max-width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--border-subtle); }
   :global(.ProseMirror .editor-image-caption) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.72em; line-height: 1.35; opacity: 0.72; }
   /* Toolbar buttons are square icons; the items of the menus here are rows and keep their own layout. */
-  button:not([role='menuitem']):not([role='option']) { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; }
+  /* 44px is the touch minimum on a phone; with a pointer the toolbar tightens to 28px. */
+  button:not([role='menuitem']):not([role='option']) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
   @media (min-width: 640px) { button:not([role='menuitem']):not([role='option']) { min-width: 28px; min-height: 28px; } }
 
   .toolbar-scroll::-webkit-scrollbar { height: 3px; }
