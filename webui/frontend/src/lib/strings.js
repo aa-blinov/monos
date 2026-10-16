@@ -174,6 +174,7 @@ const enText = {
       modified: 'Modified',
       today: 'Today',
       conflict: 'Conflict',
+      pinned: 'Pinned',
       conflictHint: 'This note changed on two devices. Open it to pick a version.',
       yesterday: 'Yesterday',
       columns(count) {
@@ -809,6 +810,8 @@ const enText = {
     conflictOwnLabel: 'Your text for this part — it replaces both versions',
     conflictThisDevice: 'this device',
     conflictPropertiesLabel: 'Note properties',
+    pinnedToast: 'Pinned: this note is first on the board and in the sidebar.',
+    unpinnedToast: 'Unpinned.',
     conflictDeletedThereTitle: (name) => `${name ? `${name}` : 'Another device'} deleted this note, and it was changed here`,
     conflictDeletedHereTitle: (name) => `This note was deleted here, and ${name ? `${name}` : 'another device'} changed it`,
     conflictDeletedHint: 'Keep the note with the changes, or let the deletion stand. The text stays in the note’s history either way.',
@@ -1129,6 +1132,7 @@ const ruText = {
       modified: 'Изменена',
       today: 'Сегодня',
       conflict: 'Конфликт',
+      pinned: 'Закреплена',
       conflictHint: 'Заметку изменили на двух устройствах. Откройте её, чтобы выбрать версию.',
       yesterday: 'Вчера',
       columns(count) {
@@ -1796,6 +1800,8 @@ const ruText = {
     conflictOwnLabel: 'Ваш текст для этой части — он заменит обе версии',
     conflictThisDevice: 'это устройство',
     conflictPropertiesLabel: 'Свойства заметки',
+    pinnedToast: 'Закреплено: заметка теперь первая на доске и в боковой панели.',
+    unpinnedToast: 'Откреплено.',
     conflictDeletedThereTitle: (name) => `${name ? `На устройстве «${name}»` : 'На другом устройстве'} заметку удалили, а здесь её изменили`,
     conflictDeletedHereTitle: (name) => `Здесь заметку удалили, а ${name ? `на устройстве «${name}»` : 'на другом устройстве'} её изменили`,
     conflictDeletedHint: 'Оставьте заметку с правками или согласитесь с удалением. Текст в любом случае останется в истории.',

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   collectPinned,
   isPinned,
+  markPinned,
   pinNote,
   unpinNote,
   setPinnedFromTree,
@@ -154,3 +155,12 @@ function get(store) {
   store.subscribe((current) => { value = current; })();
   return value;
 }
+test('markPinned сразу добавляет и убирает заметку в списке боковой панели', () => {
+  pinnedNotes.set([]);
+  markPinned('notes/Вторая.md', true, 'Вторая');
+  assert.deepEqual(get(pinnedNotes).map((note) => note.path), ['notes/Вторая.md']);
+  markPinned('notes/Вторая.md', true, 'Вторая');
+  assert.equal(get(pinnedNotes).length, 1);
+  markPinned('notes/Вторая.md', false);
+  assert.equal(get(pinnedNotes).length, 0);
+});

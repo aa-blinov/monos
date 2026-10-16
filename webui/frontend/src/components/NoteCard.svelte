@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Pin } from 'lucide-svelte';
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { relativeDay } from '../lib/date-format.js';
@@ -90,6 +91,10 @@
   <span class="pointer-events-none absolute -right-12 -top-16 h-32 w-32 rounded-full bg-[var(--note-glow)] blur-2xl"></span>
 
   <span class="relative block shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'truncate text-lg sm:text-xl'} font-bold leading-tight tracking-tight break-anywhere">
+    {#if note?.pinned}
+      <!-- Pinned notes lead the board; the pin says why this one is first. -->
+      <Pin class="mr-1.5 inline-block h-3.5 w-3.5 -translate-y-px align-baseline text-[var(--text-tertiary)]" fill="currentColor" strokeWidth="1.7" aria-label={$localizedText.app.board.pinned} data-testid="card-pinned" />
+    {/if}
     {#if highlight && query}
       {@html highlightExcerpt(visibleName, query)}
     {:else}
