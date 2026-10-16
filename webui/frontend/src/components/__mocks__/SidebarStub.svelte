@@ -4,10 +4,12 @@
   const dispatch = createEventDispatcher();
   export let mobile = false;
   export let gitConfigured = true;
+  export let autoPullState = { conflicts: false, received: 0 };
   let createFlowOpen = false;
   let selectedPath = '';
   $: void mobile;
   $: void gitConfigured;
+  $: void autoPullState;
 
   export function loadTree() {}
   export function setSelected(path) {

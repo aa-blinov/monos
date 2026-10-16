@@ -5,7 +5,16 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
 import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults } from './stores.js';
-import { homeRecentNotes, homeRecentError } from './lib/dashboard.js';
+import { homeRecentNotes, homeRecentError, homeRecentLoading } from './lib/dashboard.js';
+
+// The board loads its notes when the app opens. A load already running ignores a second one and its answer
+// replaces the board, so a test acts on the board only after that first load has landed.
+async function boardLoaded() {
+  await waitFor(() => {
+    expect(globalThis.fetch.mock.calls.some(([url]) => String(url).includes('/api/notes/recent'))).toBe(true);
+    expect(get(homeRecentLoading)).toBe(false);
+  });
+}
 
 vi.mock('./components/Header.svelte', async () => ({
   default: (await import('./components/__mocks__/HeaderStub.svelte')).default,
@@ -417,6 +426,7 @@ test('App добавляет quick note в homeRecentNotes, чтобы дашб�
   noteView.set('board');
   const { default: App } = await import('./App.svelte');
   render(App);
+  await boardLoaded();
 
   await waitFor(() => expect(screen.getByText('quick note')).toBeTruthy());
   await fireEvent.click(screen.getByText('quick note'));
@@ -517,6 +527,7 @@ test('App показывает ошибку загрузки доски с по�
   const { default: App } = await import('./App.svelte');
   render(App);
 
+  await boardLoaded();
   await waitFor(() => expect(screen.getByText(uiText.app.board.loadFailed)).toBeTruthy());
   expect(screen.getByText(uiText.app.board.loadFailedHint)).toBeTruthy();
   expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();

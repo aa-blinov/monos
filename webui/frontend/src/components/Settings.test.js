@@ -14,6 +14,13 @@ function jsonResponse(data, ok = true) {
   };
 }
 
+// The page loads the saved settings when it opens. A token typed before that load finishes would be taken
+// for a saved one, so a test types only after the load.
+async function settingsLoaded(fetchMock) {
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/settings'));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 function createFetchMock(overrides = {}) {
   const statusQueue = overrides.statusQueue ? [...overrides.statusQueue] : [
     { initialized: true, current_branch: 'main', status: 'dirty', ahead: 1, behind: 0, last_sync: null },
@@ -96,12 +103,10 @@ test('Settings загружает настройки и принимает ма�
 
   render(Settings);
 
-  const tokenInput = screen.getByLabelText(uiText.settings.personalAccessToken);
-  await fireEvent.input(tokenInput, { target: { value: 'ghp_test' } });
-  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.authenticate }));
-
+  // A saved token means the page opens already signed in, with the repositories loaded.
   await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.reset })).toBeTruthy());
-  expect(screen.getByRole('option', { name: 'alice/wiki' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: uiText.settings.authenticate })).toBeNull();
+  await waitFor(() => expect(screen.getByRole('option', { name: 'alice/wiki' })).toBeTruthy());
   expect(screen.getByLabelText(uiText.settings.owner).value).toBe('alice');
 
   const repository = screen.getByLabelText(uiText.settings.repository);
@@ -137,6 +142,7 @@ test('Settings не запускает git setup без явного дейст�
   window.fetch = fetchMock;
 
   render(Settings);
+  await settingsLoaded(fetchMock);
 
   const tokenInput = screen.getByLabelText(uiText.settings.personalAccessToken);
   await fireEvent.input(tokenInput, { target: { value: 'ghp_test' } });
@@ -205,8 +211,7 @@ test('Settings загружает конфликты только при кон�
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  const { component } = render(Settings);
-  await component.refreshGitStatus();
+  render(Settings);
 
   await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/git/conflicts'));
@@ -224,8 +229,7 @@ test('Settings скрывает кнопку конфликтов, если ко
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  const { component } = render(Settings);
-  await component.refreshGitStatus();
+  render(Settings);
 
   // Without a connected repository the status section is not shown at all.
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/git/status'));
@@ -239,8 +243,7 @@ test('Settings после sync обновляет статус через /api/g
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  const { component } = render(Settings);
-  await component.refreshGitStatus();
+  render(Settings);
 
   await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.syncNow })).toBeTruthy());
@@ -260,8 +263,7 @@ test('Settings блокирует sync при несохранённой тек�
   globalThis.fetch = fetchMock;
   window.fetch = fetchMock;
 
-  const { component } = render(Settings);
-  await component.refreshGitStatus();
+  render(Settings);
 
   await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.refreshStatus }));
   const syncButton = await waitFor(() => screen.getByRole('button', { name: uiText.settings.syncNow }));
