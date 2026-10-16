@@ -403,6 +403,16 @@
     setAutoSyncPolicy({ minutes: settings.git_auto_sync_minutes, upload: settings.git_auto_upload });
   }
 
+  // The name goes through its own route: it also re-signs this device's next commits in git.
+  async function saveDeviceName() {
+    const name = String(settings.device_name || '').trim();
+    if (!name) return;
+    try {
+      const response = await fetch('/api/device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      if (response.ok) settings.device_name = (await response.json()).name;
+    } catch (e) { console.error(e); }
+  }
+
   async function saveSettings() {
     try {
       const payload = { ...settings, theme: $activeTheme, themeMode: $themeMode, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, locale: $locale };
@@ -977,7 +987,8 @@
         </div>
         <div>
           <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" bind:value={settings.device_name} on:change={saveSettings} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+          <input id="device-name" type="text" maxlength="40" bind:value={settings.device_name} on:change={saveDeviceName} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+          <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.deviceNameHint}</p>
         </div>
       </div>
 

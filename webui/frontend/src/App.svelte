@@ -38,6 +38,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { loadTemplateSettings } from './lib/template-library.js';
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
+  import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -238,6 +239,25 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     startAutoSync({ onResult: handleAutoPullResult });
   }
 
+  /**
+   * First launch asks what this device is called (DeviceNamePrompt). Only on the computer that keeps the
+   * notes: a phone that opens them over Wi-Fi uses that computer's notes, so the name is not its own.
+   */
+  let deviceNameSuggestion = '';
+  async function askDeviceNameOnce() {
+    const local = /Electron\//.test(navigator.userAgent) || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    if (!local) return;
+    try {
+      const response = await fetch('/api/device');
+      // Only a clear "no name yet" asks: an error answer is not a first launch.
+      if (!response.ok) return;
+      const device = await response.json();
+      if (device && !device.name) deviceNameSuggestion = device.suggested || 'Monos';
+    } catch {
+      // Offline backend: asked on the next launch.
+    }
+  }
+
   function handleAutoPullResult(result) {
     if (!result) return;
     autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
@@ -262,6 +282,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (routePath.startsWith('/notes/')) $noteView = 'list';
     void loadHomeRecentNotes();
     void refreshConflicts();
+    void askDeviceNameOnce();
     void applyShellSettings();
     void loadTemplateSettings();
     // Pull on launch and every few minutes. Uploads stay manual; a stale device
@@ -1055,3 +1076,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     </div>
   {/if}
 </Router>
+
+{#if deviceNameSuggestion}
+  <DeviceNamePrompt suggested={deviceNameSuggestion} on:saved={() => { deviceNameSuggestion = ''; }} />
+{/if}

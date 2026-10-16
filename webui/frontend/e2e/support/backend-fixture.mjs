@@ -49,6 +49,10 @@ process.env.ALLOWED_ORIGINS = allowedOrigin;
 
 const { startServer, stopServer } = await import('../../../backend/index.js');
 await startServer({ port });
+// The device is named, as after a first launch: the question is covered by its own test.
+await fetch(`http://127.0.0.1:${port}/api/device`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'E2E' }),
+});
 console.log(`MONOS_E2E_BACKEND_READY ${root}`);
 
 async function shutdown() {

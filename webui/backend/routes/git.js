@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { execFileSync } from 'child_process';
 import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
@@ -569,10 +570,67 @@ function scopeWarnings(scopes) {
     .map((scope) => ({ scope, why: RISKY_SCOPES[scope] }));
 }
 
+/**
+ * What this computer calls itself, offered as the device's name on first launch: "Alex's MacBook Pro"
+ * rather than a host name like `alexs-mbp.local`.
+ */
+export function suggestedDeviceName() {
+  if (process.platform === 'darwin') {
+    try {
+      const name = execFileSync('scutil', ['--get', 'ComputerName'], { encoding: 'utf-8', timeout: 2000 }).trim();
+      if (name) return name.slice(0, 40);
+    } catch { /* fall back to the host name */ }
+  }
+  const host = os.hostname().replace(/\.(local|lan|home)$/i, '').replace(/[-_]+/g, ' ').trim();
+  return (host || 'Monos').slice(0, 40);
+}
+
+/** A device name as stored: one line, at most 40 characters, nothing that breaks a git identity. */
+export function cleanDeviceName(value) {
+  return String(value ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+
+/** The name this device signs its commits with: chosen on first launch or in Settings. */
+function storedDeviceName() {
+  const saved = readSetting('device_name');
+  return cleanDeviceName(typeof saved === 'string' ? saved : '') || cleanDeviceName(readGitSettings().device_name);
+}
+
+/** Every later commit carries the new name; the commits already made keep the one they were made with. */
+function applyDeviceNameToRepo(name) {
+  if (!isGitRepo()) return;
+  gitExec(['config', 'user.name', name]);
+  gitExec(['config', 'user.email', `${name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'user'}@monos.local`]);
+  const gitSettings = readGitSettings();
+  if (gitSettings.repo) writeGitSettings({ ...gitSettings, device_name: name });
+}
+
 export function registerGitRoutes(app) {
+  // The device's name: what the history and the conflict screens call it ("Phone, today 14:35").
+  app.get('/api/device', (_req, res) => {
+    try {
+      res.json({ name: storedDeviceName(), suggested: suggestedDeviceName() });
+    } catch (error) {
+      res.status(500).json({ detail: error.message || String(error) });
+    }
+  });
+
+  app.post('/api/device', (req, res) => {
+    try {
+      const name = cleanDeviceName(req.body?.name);
+      if (!name) return res.status(400).json({ detail: 'Device name is required' });
+      getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('device_name', name);
+      applyDeviceNameToRepo(name);
+      res.json({ name });
+    } catch (error) {
+      res.status(500).json({ detail: error.message || String(error) });
+    }
+  });
+
   app.post('/api/git/setup', async (req, res) => {
     try {
-      const { token, repo, branch, device_name, acknowledgePublic } = req.body;
+      const { token, repo, branch, acknowledgePublic } = req.body;
+      const device_name = cleanDeviceName(req.body.device_name) || storedDeviceName() || suggestedDeviceName();
       if (!token || !repo || !branch) return res.status(400).json({ detail: 'Missing token, repo, or branch' });
 
       const remoteUrl = buildGithubRemoteUrl(repo);
@@ -603,12 +661,12 @@ export function registerGitRoutes(app) {
         gitExec(['remote', 'set-url', 'origin', remoteUrl]);
       }
 
-      gitExec(['config', 'user.name', device_name || 'Monos']);
       // zdiff3 adds the `|||||||` base section. For prose, seeing the original
       // text is the difference between guessing which side is right and knowing.
       gitExec(['config', 'merge.conflictStyle', 'zdiff3']);
-      gitExec(['config', 'user.email', `${device_name || 'user'}@monos.local`]);
       writeGitSettings({ repo, branch, device_name });
+      getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('device_name', device_name);
+      applyDeviceNameToRepo(device_name);
       writeRepoHygieneFiles();
 
       gitExec(['checkout', '-B', branch]);
@@ -899,7 +957,8 @@ export function registerGitRoutes(app) {
       finishResolvedMerge();
 
       const authToken = await readStoredGitToken();
-      const { device_name: deviceName, branch } = readGitSettings();
+      const { branch } = readGitSettings();
+      const deviceName = storedDeviceName();
 
       gitExec(['add', '-A']);
       // A note that still holds merge markers is never sent: they would reach the other devices as text.
