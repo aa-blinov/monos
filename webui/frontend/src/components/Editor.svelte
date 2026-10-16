@@ -15,6 +15,7 @@
   import { formFieldClass } from '../lib/form-field.js';
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
+  import { markPinned } from '../lib/sidebar-pinned.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
@@ -1125,8 +1126,12 @@
   }
 
   function togglePinned() {
-    editedContent = setFrontmatterKey(editedContent, 'pinned', noteIsPinned() ? '' : 'true');
+    const pinning = !noteIsPinned();
+    editedContent = setFrontmatterKey(editedContent, 'pinned', pinning ? 'true' : '');
+    markPinned(currentFile?.path, pinning, editedTitle);
     void saveMetadataFields();
+    // The effect is on the board and in the sidebar, not here: say where to look.
+    showToast(pinning ? $localizedText.editor.pinnedToast : $localizedText.editor.unpinnedToast);
   }
 
   async function loadCategorySuggestions() {

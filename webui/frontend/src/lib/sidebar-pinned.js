@@ -49,6 +49,11 @@ export function setPinnedFromTree(tree) {
   pinnedNotes.set(collectPinned(tree));
 }
 
+/** Pinning from the open note: the sidebar's list follows at once instead of after the next tree load. */
+export function markPinned(path, pinned, name) {
+  if (path) setPinnedInStore(path, pinned, name);
+}
+
 function setPinnedInStore(path, pinned, name) {
   pinnedNotes.update((current) => (
     pinned

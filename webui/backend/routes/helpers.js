@@ -58,6 +58,7 @@ export function noteCardPayload(entry) {
     modified: entry.modified_at || null,
     lastOpened: entry.last_opened,
     boardOrder: entry.board_order ?? null,
+    pinned: Boolean(entry.pinned),
     trashedAt: entry.trashed_at || null,
   };
 }

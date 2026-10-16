@@ -193,11 +193,14 @@ export function registerNoteRoutes(app) {
       const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
       const offset = Math.max(parseInt(req.query.offset) || 0, 0);
       const sort = String(req.query.sort || '').trim();
+      // Pinned notes come first in either order: pinning is how a note is kept at the top of the board.
       const orderBy = sort === 'modified'
-        ? `notes_index.modified_at DESC,
+        ? `notes_index.pinned DESC,
+                  notes_index.modified_at DESC,
                   notes_index.last_opened DESC,
                   notes_index.path COLLATE NOCASE ASC`
-        : `notes_index.board_order IS NULL ASC,
+        : `notes_index.pinned DESC,
+                  notes_index.board_order IS NULL ASC,
                   notes_index.board_order ASC,
                   notes_index.last_opened DESC,
                   notes_index.path COLLATE NOCASE ASC`;
