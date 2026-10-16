@@ -43,7 +43,10 @@
     : [];
 </script>
 
-<div class="px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
+<div class="relative isolate overflow-hidden px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
+  <!-- The note's colour, set by the editor: the same tint and glow its card has on the board. -->
+  <span class="pointer-events-none absolute inset-0 -z-10 bg-[var(--note-header-tint,transparent)]" aria-hidden="true"></span>
+  <span class="pointer-events-none absolute -right-16 -top-24 -z-10 h-56 w-56 rounded-full bg-[var(--note-header-glow,transparent)] blur-3xl" aria-hidden="true"></span>
   <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
     <div class="flex-1 min-w-0">
       {#if breadcrumbParts.length > 0}
@@ -106,8 +109,9 @@
             <button
               type="button"
               aria-expanded={outlineOpen}
+              data-testid="outline-toggle"
               on:click={onToggleOutline}
-              class="-my-4 py-4 uppercase tracking-[0.12em] transition hover:text-[var(--text-primary)] lg:hidden {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="-my-4 py-4 uppercase tracking-[0.12em] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             >
               {$localizedText.editor.outline}
             </button>

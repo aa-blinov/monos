@@ -398,6 +398,8 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 - **Toggles keep their name.** Pin stays "Pin" and shows the pinned state by being pressed (filled pin, `--bg-secondary`), never by turning into "Unpin".
 - **Destructive icons are quiet at rest.** The trash in the note header is `--text-secondary` and turns `--red` on hover or focus.
 - **Locking a note** is an action, so it lives in the note's ⋯ menu ("Password protection…"), not among its properties.
+- **A note's colour in the editor** is the header only: the same 13% tint and 18% blurred glow as its card, behind the title. The page the text is written on, the toolbar and the bottom bar stay the theme's own, so the colour never sits under every line. Focus mode drops it.
+- **Outline** has one control, "Outline" in the note header, on every screen: on a wide window it shows or hides the column (hiding is remembered), on a narrow one it opens the panel over the note. The column comes up by itself only from three headings on; a shorter note shows its headings in the text already.
 
 ### Note content
 

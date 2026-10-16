@@ -113,15 +113,24 @@ test('связанные заметки открываются окошком п
   await expect(editorBody(page)).toContainText('See');
 });
 
-test('оглавление свёрнуто, пока в заметке нет заголовков, и открывается при появлении', async ({ page }) => {
+test('структура появляется сама от трёх заголовков; одна кнопка в шапке прячет и показывает её', async ({ page }) => {
   const title = uniqueTitle('Outline Note');
+  const toggle = page.getByTestId('outline-toggle');
+  const panel = page.getByTestId('outline-panel');
 
   await createBlankNote(page, title);
-  await fillEditor(page, 'Just a paragraph.');
-  await expect(page.getByRole('button', { name: 'Show outline' })).toBeVisible();
+  await fillEditor(page, '# Only heading\n\nA short note.');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toBeHidden();
 
-  await fillEditor(page, '# Real heading\n\nText under it.');
-  await expect(page.getByRole('button', { name: 'Hide outline' })).toBeVisible();
+  await fillEditor(page, '# One\n\nText.\n\n## Two\n\nText.\n\n## Three\n\nText.');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toBeVisible();
+
+  await toggle.click();
+  await expect(panel).toBeHidden();
+  await toggle.click();
+  await expect(panel).toBeVisible();
 });
 
 test('панель инструментов: «More tools» открывает таблицу, зачёркивание и настройки вида', async ({ page }) => {

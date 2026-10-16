@@ -377,34 +377,70 @@ test('Editor открывает заметку снова после возвр�
   await waitFor(() => expect(screen.getByDisplayValue('Beta')).toBeTruthy());
 });
 
-test('Editor сворачивает оглавление стрелкой, помнит это и возвращает обратно', async () => {
+function wideWindowMedia() {
+  const original = window.matchMedia;
+  const wide = (query) => ({
+    matches: query.includes('min-width: 1024px'),
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  });
+  Object.defineProperty(window, 'matchMedia', { configurable: true, value: wide });
+  return () => Object.defineProperty(window, 'matchMedia', { configurable: true, value: original });
+}
+
+function outlineNote(content) {
   installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
-    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: '# Alpha\n\nBody' }),
+    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content }),
     '/api/file-info?path=notes%2FWork%2FAlpha.md': jsonResponse({
       created: '2026-05-07T10:00:00.000Z',
       modified: '2026-05-07T12:00:00.000Z',
       metadata: { title: 'Alpha', tags: [] },
     }),
   }));
-
   render(Editor, {
     currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
   });
-  await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
-  expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
+}
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.hideOutline }));
-  expect(screen.getByTestId('outline-panel').className).toContain('lg:hidden');
-  expect(localStorage.getItem('outlineHidden')).toBe('true');
-  const rail = screen.getByRole('button', { name: uiText.editor.showOutline });
-  await waitFor(() => expect(document.activeElement).toBe(rail));
+test('Editor показывает структуру сама от трёх заголовков; один переключатель прячет её и помнит выбор', async () => {
+  const restore = wideWindowMedia();
+  try {
+    outlineNote('# Alpha\n\n## One\n\n## Two\n\nBody');
+    await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+    const toggle = screen.getByTestId('outline-toggle');
+    await waitFor(() => expect(screen.getByTestId('outline-panel').className).toContain('lg:block'));
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
 
-  await fireEvent.click(rail);
-  expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
-  expect(localStorage.getItem('outlineHidden')).toBe('false');
-  expect(screen.queryByRole('button', { name: uiText.editor.showOutline })).toBeNull();
+    await fireEvent.click(toggle);
+    expect(screen.getByTestId('outline-panel').className).toContain('lg:hidden');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(localStorage.getItem('outlineHidden')).toBe('true');
 
-  outlineHidden.set(false);
+    await fireEvent.click(toggle);
+    expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
+    expect(localStorage.getItem('outlineHidden')).toBe('false');
+  } finally {
+    restore();
+    outlineHidden.set(false);
+  }
+});
+
+test('Editor не дублирует заголовки короткой заметки колонкой, но открывает её по кнопке', async () => {
+  const restore = wideWindowMedia();
+  try {
+    outlineNote('# Alpha\n\nBody');
+    await waitFor(() => expect(screen.getByDisplayValue('Alpha')).toBeTruthy());
+    expect(screen.getByTestId('outline-panel').className).toContain('lg:hidden');
+
+    await fireEvent.click(screen.getByTestId('outline-toggle'));
+    expect(screen.getByTestId('outline-panel').className).toContain('lg:block');
+  } finally {
+    restore();
+    outlineHidden.set(false);
+  }
 });
 
 test('Editor переименовывает вложение и обновляет markdown-ссылку', async () => {

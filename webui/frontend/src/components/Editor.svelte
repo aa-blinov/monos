@@ -49,7 +49,7 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
-  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -70,18 +70,32 @@
   let focusMode = false;
   // Оглавление на узком экране открывается поверх заметки (см. OutlinePanel).
   let outlineOpen = false;
-  let outlinePanel;
-  let outlineRail;
-  // Стрелка на десктопе сворачивает колонку оглавления в полоску. Фокус
-  // переносим на видимый элемент, иначе он потерялся бы в скрытой панели.
-  function hideOutline() {
-    outlineHidden.set(true);
-    tick().then(() => outlineRail?.focus());
-  }
-  function showOutline() {
-    outlineHidden.set(false);
-    outlineRevealed = true;
-    tick().then(() => outlinePanel?.focusHide());
+  // One control, «Outline» in the note header, on every screen. On a wide window it shows or hides the
+  // column beside the note, and the choice to hide it is remembered; on a narrow one it opens the panel over
+  // the note. The column comes up by itself only when it helps: from three headings on. A shorter note
+  // shows its headings in the text already, so a column repeating them is noise until asked for.
+  const OUTLINE_MIN_HEADINGS = 3;
+  let wideWindow = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(min-width: 1024px)')?.matches);
+  onMount(() => {
+    const query = window.matchMedia?.('(min-width: 1024px)');
+    if (!query) return undefined;
+    const update = () => { wideWindow = Boolean(query.matches); };
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  });
+  function toggleOutline() {
+    if (!wideWindow) {
+      outlineOpen = !outlineOpen;
+      return;
+    }
+    if (outlineColumnShown) {
+      outlineHidden.set(true);
+      outlineRevealed = false;
+    } else {
+      outlineHidden.set(false);
+      outlineRevealed = true;
+    }
   }
   // Дедлайн заметки живёт в YAML-шапке и потому переживает перезагрузку,
   // экспорт в PDF и попадает в git как обычная строка. В поле его можно печатать
@@ -110,12 +124,12 @@
     { id: 'txt', label: $localizedText.editor.exportText, extension: 'txt' },
     { id: 'pdf', label: $localizedText.editor.exportPdf, extension: 'pdf' },
   ];
-  // Пустое оглавление не занимает колонку: показывать там нечего.
-  $: hasHeadings = extractOutline(splitFrontmatter(editedContent).body).length > 0;
-  // Без заголовков оглавление свёрнуто, но по кнопке показывает пустое состояние с подсказкой.
+  $: headingCount = extractOutline(splitFrontmatter(editedContent).body).length;
+  // Asked for on this note with the button: shown even with few headings, until the next note opens.
   let outlineRevealed = false;
   $: if (currentFile?.path) outlineRevealed = false;
-  $: outlineCollapsed = $outlineHidden || (!hasHeadings && !outlineRevealed);
+  $: outlineColumnShown = outlineRevealed || (!$outlineHidden && headingCount >= OUTLINE_MIN_HEADINGS);
+  $: outlineCollapsed = !outlineColumnShown;
   let title = '';
   let editedTitle = '';
   let fileInfo = null;
@@ -995,13 +1009,15 @@
     }
   }
 
-  // Фокус сужает колонку и убирает подсветку цвета заметки: на экране остаётся
-  // только текст, который пишется прямо сейчас.
+  // The note's colour belongs to its header, as on its card: a tint and a soft glow behind the title.
+  // The page the text is written on stays the theme's own, so the colour never sits under every line.
+  // Focus mode narrows the column and drops the colour: only the text being written is left.
+  const NEUTRAL_PAGE = '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-border: var(--border-subtle);';
   $: noteSurfaceStyle = focusMode
-    ? '--content-width: 46rem; --note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-soft: transparent; --note-page-border: var(--border-subtle);'
+    ? `--content-width: 46rem; ${NEUTRAL_PAGE}`
     : currentNoteColor
-    ? `--note-accent: ${currentNoteColor}; --note-page-bg: color-mix(in srgb, ${currentNoteColor} 12%, var(--bg-primary)); --note-page-panel: color-mix(in srgb, ${currentNoteColor} 9%, var(--bg-primary)); --note-page-soft: color-mix(in srgb, ${currentNoteColor} 16%, transparent); --note-page-border: color-mix(in srgb, ${currentNoteColor} 30%, var(--border-subtle));`
-    : '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-soft: transparent; --note-page-border: var(--border-subtle);';
+    ? `${NEUTRAL_PAGE} --note-accent: ${currentNoteColor}; --note-header-tint: color-mix(in srgb, ${currentNoteColor} 13%, transparent); --note-header-glow: color-mix(in srgb, ${currentNoteColor} 18%, transparent);`
+    : NEUTRAL_PAGE;
 
   $: if ($editorAction && currentFile) {
     const action = $editorAction;
@@ -1030,8 +1046,8 @@
     {taskProgress}
     historyAvailable={Boolean(loadedFilePath) && conflictCount === 0}
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
-    {outlineOpen}
-    onToggleOutline={() => { outlineOpen = !outlineOpen; }}
+    outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
+    onToggleOutline={toggleOutline}
   />
 
   {#if showHistory && historyNote?.path}
@@ -1098,26 +1114,12 @@
       </div>
       {#if !focusMode}
         <OutlinePanel
-          bind:this={outlinePanel}
           content={editedContent}
           open={outlineOpen}
           collapsed={outlineCollapsed}
           on:navigate={handleOutlineNavigate}
           on:close={() => { outlineOpen = false; }}
-          on:hide={hideOutline}
         />
-        {#if outlineCollapsed}
-          <button
-            type="button"
-            bind:this={outlineRail}
-            title={$localizedText.editor.showOutline}
-            aria-label={$localizedText.editor.showOutline}
-            class="hidden w-8 shrink-0 items-start justify-center border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] pt-5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:flex"
-            on:click={showOutline}
-          >
-            <ChevronLeft class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-          </button>
-        {/if}
       {/if}
     </div>
   {/if}
