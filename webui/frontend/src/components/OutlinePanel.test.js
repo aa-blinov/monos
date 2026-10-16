@@ -28,15 +28,6 @@ beforeEach(() => {
   locale.set('en');
 });
 
-test('стрелка на десктопе отправляет hide, а свёрнутая панель прячется на lg', async () => {
-  const { component } = render(OutlinePanel, { content: NOTE });
-  const hide = vi.fn();
-  component.$on('hide', hide);
-
-  await fireEvent.click(screen.getByRole('button', { name: uiText.editor.hideOutline }));
-  expect(hide).toHaveBeenCalledTimes(1);
-});
-
 test('свёрнутое оглавление остаётся в DOM и прячется только на десктопе', () => {
   render(OutlinePanel, { content: NOTE, collapsed: true });
   expect(screen.getByTestId('outline-panel').className).toContain('lg:hidden');

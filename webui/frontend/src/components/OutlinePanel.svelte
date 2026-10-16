@@ -3,7 +3,7 @@
   import { scrollBehavior } from '../lib/motion.js';
   import { localizedText } from '../lib/strings.js';
   import { createEventDispatcher, tick } from 'svelte';
-  import { ChevronRight, X } from 'lucide-svelte';
+  import { X } from 'lucide-svelte';
 
   /** The markdown source to extract the outline from. */
   export let content = '';
@@ -20,18 +20,8 @@
   const dispatch = createEventDispatcher();
 
   let closeButton;
-  let hideButton;
   let openerEl = null;
   let wasOpen = false;
-
-  /** Lets the editor move focus here once the panel is shown again. */
-  export function focusHide() {
-    hideButton?.focus();
-  }
-
-  function hide() {
-    dispatch('hide');
-  }
 
   // Номер повтора считаем по всем заголовкам, а не по видимым: редактор ищет
   // заголовок по тексту во всём документе, и порядок должен совпадать.
@@ -102,16 +92,6 @@
       on:click={close}
     >
       <X class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-    </button>
-    <button
-      type="button"
-      bind:this={hideButton}
-      aria-label={$localizedText.editor.hideOutline}
-      title={$localizedText.editor.hideOutline}
-      class="-my-2 -mr-2 hidden h-8 w-8 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:inline-flex"
-      on:click={hide}
-    >
-      <ChevronRight class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
     </button>
   </div>
   {#if items.length === 0}
