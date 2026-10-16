@@ -793,12 +793,12 @@ const enText = {
     noteNotFound(target) {
       return `Note "${target}" not found.`;
     },
-    conflictResolveHint: 'Pick a side for each conflicting part, then apply. Everything outside them stays untouched.',
-    conflictKeepOurs: 'Keep mine',
-    conflictKeepTheirs: 'Keep theirs',
+    conflictResolveHint: 'All parts at once:',
+    conflictKeepOurs: 'Keep this device’s',
+    conflictKeepTheirs: 'Keep the other device’s',
     conflictKeepBoth: 'Keep both',
-    conflictKeepAllOurs: 'Keep mine everywhere',
-    conflictKeepAllTheirs: 'Keep theirs everywhere',
+    conflictKeepAllOurs: 'This device everywhere',
+    conflictKeepAllTheirs: 'Other device everywhere',
     conflictApply: 'Apply',
     conflictRegionLabel: 'Conflicting part',
     conflictResolved: 'Conflict resolved in this note.',
@@ -809,8 +809,8 @@ const enText = {
     conflictBase: 'Original (both started here)',
     conflictOurs: 'This device',
     conflictTheirs: 'Other device',
-    conflictTitle: 'This note has an unresolved sync conflict',
-    conflictHint: 'It is read-only on purpose: opening it in the editor would rewrite the merge markers and damage the note. Resolve the conflict in Settings, then reopen.',
+    conflictTitle: 'This note changed on two devices',
+    conflictHint: 'Pick a version for each part below and apply: the note opens in the editor again. Until then it is read-only, so the merge markers are not damaged.',
     conflictCount(count) {
       return `${count} conflict${count === 1 ? '' : 's'} in this note`;
     },
@@ -830,7 +830,7 @@ const enText = {
     attachmentUploadFailed: 'Could not attach the file',
     imageRenameFailed: 'Image rename failed',
     renameImageTitle: 'Rename image',
-    renameImageHint: 'The file will be renamed on disk and the Markdown link in this note will be updated.',
+    renameImageHint: 'The file is renamed on disk, and the links to it are updated in every note.',
     renameImage: 'Rename',
     focusOn: 'Focus mode',
     focusOff: 'Leave focus mode',
@@ -1726,12 +1726,12 @@ const ruText = {
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
     },
-    conflictResolveHint: 'Выберите сторону для каждой конфликтной части и примените. Всё остальное останется как есть.',
-    conflictKeepOurs: 'Оставить мою',
-    conflictKeepTheirs: 'Оставить чужую',
+    conflictResolveHint: 'Для всех частей сразу:',
+    conflictKeepOurs: 'Оставить с этого',
+    conflictKeepTheirs: 'Оставить с другого',
     conflictKeepBoth: 'Оставить обе',
-    conflictKeepAllOurs: 'Оставить мою везде',
-    conflictKeepAllTheirs: 'Оставить чужую везде',
+    conflictKeepAllOurs: 'С этого устройства везде',
+    conflictKeepAllTheirs: 'С другого устройства везде',
     conflictApply: 'Применить',
     conflictRegionLabel: 'Конфликтная часть',
     conflictResolved: 'Конфликт в этой заметке разрешён.',
@@ -1739,8 +1739,8 @@ const ruText = {
     conflictBase: 'Исходник (от него отталкивались оба)',
     conflictOurs: 'Это устройство',
     conflictTheirs: 'Другое устройство',
-    conflictTitle: 'В этой заметке неразрешён конфликт синхронизации',
-    conflictHint: 'Она намеренно только для чтения: открытие в редакторе перепишет маркеры слияния и повредит заметку. Разрешите конфликт в настройках, затем откройте снова.',
+    conflictTitle: 'Заметку изменили на двух устройствах',
+    conflictHint: 'Выберите версию для каждой части ниже и примените — заметка снова откроется в редакторе. До этого она только для чтения, чтобы не повредить маркеры слияния.',
     conflictCount(count) {
       const mod10 = count % 10;
       const mod100 = count % 100;
@@ -1767,7 +1767,7 @@ const ruText = {
     attachmentUploadFailed: 'Не удалось прикрепить файл',
     imageRenameFailed: 'Не удалось переименовать изображение',
     renameImageTitle: 'Переименовать изображение',
-    renameImageHint: 'Файл будет переименован на диске, а Markdown-ссылка в этой заметке обновится.',
+    renameImageHint: 'Файл переименуется на диске, а ссылки на него обновятся во всех заметках.',
     renameImage: 'Переименовать',
     focusOn: 'Режим фокуса',
     focusOff: 'Выйти из фокуса',

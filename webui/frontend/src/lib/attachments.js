@@ -21,6 +21,26 @@ export function defaultImageName(date = new Date()) {
   return `image-${attachmentTimestamp(date)}.webp`;
 }
 
+// Names a camera, the clipboard or a browser give a picture that say nothing about it.
+const GENERIC_IMAGE_NAME = /^(image|blob|clipboard|pasted[\s_-]*image|screenshot|untitled|photo|picture|unnamed|download)([\s_-]*\d+)?$/i;
+
+/**
+ * The name a picture keeps in the note's attachments: its own name when it has a meaningful one
+ * ("Снимок экрана 2026-10-16" stays), a dated `image-…` when it came from the clipboard or is called
+ * "image.png". Always `.webp`, since pictures are converted. The server makes a taken name unique.
+ */
+export function imageNameFor(file, date = new Date()) {
+  const original = String(file?.name || '').replace(/\.[a-z0-9]{2,5}$/i, '');
+  const base = original
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
+    .replace(/[.\s]+$/, '');
+  if (!base || GENERIC_IMAGE_NAME.test(base)) return defaultImageName(date);
+  return `${base}.webp`;
+}
+
 const PDF_MIME = 'application/pdf';
 
 export function isPdfFile(file) {
@@ -215,6 +235,14 @@ export function displayImageSrc(notePath, src) {
   const resolved = resolveMarkdownImagePath(notePath, src);
   if (!resolved || isExternalImageSrc(resolved)) return resolved;
   return rawAttachmentUrl(resolved);
+}
+
+/**
+ * A path as a Markdown link can hold it: spaces and parentheses are escaped, everything else (Cyrillic
+ * included) stays readable. `Снимок экрана.webp` → `Снимок%20экрана.webp`, as Obsidian writes it.
+ */
+export function markdownLinkPath(path) {
+  return String(path || '').replace(/ /g, '%20').replace(/\(/g, '%28').replace(/\)/g, '%29');
 }
 
 export function relativeAttachmentPathFromUpload(uploadResult) {

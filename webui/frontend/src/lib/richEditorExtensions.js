@@ -47,11 +47,14 @@ const AttachmentImage = Image.extend({
       ? { src, 'data-attachment-path': attachmentPath }
       : { src };
     const imageAttrs = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, attrs);
+    const caption = imageCaption(HTMLAttributes, attachmentPath);
+    // A dated name the app made up (image-20261016-105833) says nothing; the picture goes without a caption.
+    const showsCaption = !/^image-\d{8}-\d{6}(?:[-\s]\d+)?$/.test(caption);
     return [
       'span',
       { class: 'editor-image-frame', contenteditable: 'false' },
       ['img', imageAttrs],
-      ['span', { class: 'editor-image-caption' }, imageCaption(HTMLAttributes, attachmentPath)],
+      ...(showsCaption ? [['span', { class: 'editor-image-caption' }, caption]] : []),
     ];
   },
 
