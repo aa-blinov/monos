@@ -281,17 +281,17 @@
     on:keydown={(event) => event.key === 'Escape' && closeContextMenu()}
   >
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => openFull(contextMenu.note)}>
-      <ExternalLink size="14" aria-hidden="true" /> {$localizedText.app.board.openFull}
+      <ExternalLink size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.openFull}
     </button>
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => revealNote(contextMenu.note)}>
-      <PanelTop size="14" aria-hidden="true" /> {$localizedText.editorHeader.revealInTree}
+      <PanelTop size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.editorHeader.revealInTree}
     </button>
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => copyPath(contextMenu.note)}>
-      <Copy size="14" aria-hidden="true" /> {$localizedText.app.board.copyPath}
+      <Copy size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.copyPath}
     </button>
     <div class="mt-1 border-t border-[var(--border-subtle)] px-3 py-2">
       <div class="mb-2 flex items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-        <Palette size="12" aria-hidden="true" /> {$localizedText.app.board.color}
+        <Palette size="12" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.color}
       </div>
       <div class="grid grid-cols-5 gap-1.5">
         {#each colorOptions as color}

@@ -27,12 +27,14 @@ h2 { font-size: 1.05rem; margin: 2rem 0 0.5rem; }
 img { max-width: 100%; height: auto; border-radius: 6px; }
 pre, code { font-family: inherit; }
 pre { background: #f1eee6; padding: 0.75rem; overflow-x: auto; border-radius: 6px; }
-blockquote { margin: 1rem 0; padding: 0.5rem 0.9rem; border: 1px solid #d8d2c4; border-radius: 8px; background: #f3efe4; }
+blockquote { margin: 1rem 0; padding: 0.5rem 0.9rem; border: 1px solid #d8d2c4; border-radius: 6px; background: #f3efe4; }
 blockquote p:first-child { margin-top: 0; }
 blockquote p:last-child { margin-bottom: 0; }
-table { border-collapse: collapse; }
-td, th { border: 1px solid #d8d2c4; padding: 0.25rem 0.5rem; }
-.pdf { margin: 1.25rem 0; border: 1px solid #d8d2c4; border-radius: 8px; overflow: hidden; }
+table { border-collapse: separate; border-spacing: 0; border: 1px solid #d8d2c4; border-radius: 6px; overflow: hidden; }
+td, th { border-right: 1px solid #d8d2c4; border-bottom: 1px solid #d8d2c4; padding: 0.25rem 0.5rem; }
+tr > :last-child { border-right: 0; }
+table > :last-child > tr:last-child > * { border-bottom: 0; }
+.pdf { margin: 1.25rem 0; border: 1px solid #d8d2c4; border-radius: 6px; overflow: hidden; }
 .pdf-head { padding: 0.35rem 0.75rem; font-size: 0.8125rem; border-bottom: 1px solid #d8d2c4; }
 .pdf iframe { display: block; width: 100%; height: 70vh; min-height: 320px; border: 0; }
 ul.notes { list-style: none; padding: 0; margin: 0; }

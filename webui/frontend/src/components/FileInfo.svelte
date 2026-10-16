@@ -97,7 +97,7 @@
       {/if}
     </div>
   {:else}
-    <div class="h-64 flex items-center justify-center border border-dashed border-[var(--border-subtle)]">
+    <div class="rounded-ui h-64 flex items-center justify-center border border-dashed border-[var(--border-subtle)]">
       <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.2em] text-[var(--text-secondary)]">{$localizedText.fileInfo.awaitingFocus}</p>
     </div>
   {/if}

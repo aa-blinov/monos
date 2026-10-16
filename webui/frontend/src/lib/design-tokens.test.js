@@ -186,11 +186,46 @@ test('радиусы, заданные в CSS, тоже лежат на шкал
   assert.deepEqual(offenders, [], `радиус в CSS вне шкалы: ${offenders.join(', ')}`);
 });
 
+test('a floating surface has the one radius', () => {
+  // A menu, palette or notice floats over the page with a heavy shadow. A square one reads as a
+  // different system next to the rounded modals. Only a drawer pinned to a screen edge stays square.
+  const offenders = [];
+  for (const file of files) {
+    if (!file.endsWith('.svelte')) continue;
+    for (const m of read(file).matchAll(/class="([^"]*\bshadow-(?:xl|2xl)\b[^"]*)"/g)) {
+      const classes = m[1];
+      if (/\brounded-/.test(classes) || /\binset-y-0\b/.test(classes) || /\bhover:shadow/.test(classes)) continue;
+      offenders.push(`${path.basename(file)}: ${classes.slice(0, 60)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `плавающая поверхность без радиуса: ${offenders.join(' | ')}`);
+});
+
+test('a bordered rectangle has the one radius', () => {
+  // A full border draws the corner for everyone to see, so a bordered box without rounded-ui is a
+  // square among rounded ones. Elements with only one side bordered (dividers, underlines) are not boxes.
+  const offenders = [];
+  for (const file of files) {
+    if (!file.endsWith('.svelte')) continue;
+    for (const m of read(file).matchAll(/class="([^"]*)"/g)) {
+      const tokens = m[1].split(/\s+/);
+      if (!tokens.some((t) => /^(?:[a-z]+:)?border$/.test(t))) continue;
+      if (/\brounded-/.test(m[1])) continue;
+      offenders.push(`${path.basename(file)}: ${m[1].trim().slice(0, 60)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `рамка без радиуса: ${offenders.join(' | ')}`);
+});
+
 test('icon stroke width is one value everywhere', () => {
   const offenders = [];
   for (const file of files) {
     for (const m of read(file).matchAll(/strokeWidth="([\d.]+)"/g)) {
       if (m[1] !== '1.7') offenders.push(`${path.basename(file)} strokeWidth="${m[1]}"`);
+    }
+    // An icon without strokeWidth draws Lucide's default 2, heavier than the rest of the interface.
+    for (const m of read(file).matchAll(/<([A-Z][A-Za-z0-9]+) size="\d+"[^>]*\/>/g)) {
+      if (!m[0].includes('strokeWidth')) offenders.push(`${path.basename(file)} <${m[1]}> без strokeWidth`);
     }
   }
   assert.deepEqual(offenders, [], `толщина штриха вне шкалы: ${offenders.join(', ')}`);

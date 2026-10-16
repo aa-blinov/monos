@@ -37,7 +37,7 @@
   <div class="grid grid-cols-6 gap-3">
     <TooltipIconButton
       on:click={() => dispatch('icon', null)}
-      class="w-full aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[length:var(--text-whisper)] uppercase tracking-tighter opacity-50"
+      class="rounded-ui w-full aspect-square flex items-center justify-center border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition text-[length:var(--text-whisper)] uppercase tracking-tighter opacity-50"
       label={noneLabel}
     >{noneLabel}</TooltipIconButton>
     {#each iconOptions as icon}

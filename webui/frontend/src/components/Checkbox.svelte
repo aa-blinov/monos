@@ -22,7 +22,7 @@
       on:input
       {disabled}
       data-testid="checkbox-input"
-      class="peer absolute inset-0 m-0 w-full h-full appearance-none cursor-pointer
+      class="rounded-ui peer absolute inset-0 m-0 w-full h-full appearance-none cursor-pointer
              border border-[var(--border-subtle)] bg-[var(--bg-primary)]
              checked:border-[var(--text-primary)] checked:bg-[var(--text-primary)]
              group-hover:border-[var(--text-secondary)]

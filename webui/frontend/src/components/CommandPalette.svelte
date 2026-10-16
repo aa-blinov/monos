@@ -346,7 +346,7 @@
     <button class="absolute inset-0 cursor-default" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
 
     <div
-      class="relative w-full max-w-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl"
+      class="relative w-full max-w-2xl overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl"
       role="dialog"
       aria-modal="true"
       aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcher : $localizedText.commandPalette.title}
@@ -362,9 +362,9 @@
             </div>
           </div>
           <div class="hidden items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)] sm:flex">
-            <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">↑↓</span>
-            <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">Enter</span>
-            <span class="border border-[var(--border-subtle)] px-1.5 py-0.5">Esc</span>
+            <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">↑↓</span>
+            <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">Enter</span>
+            <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">Esc</span>
           </div>
         </div>
 
@@ -406,7 +406,7 @@
                 <span class="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{item.detail}</span>
               </span>
               {#if item.shortcut}
-                <span class="shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)]">{item.shortcut}</span>
+                <span class="rounded-ui shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)]">{item.shortcut}</span>
               {/if}
             </button>
           {/each}

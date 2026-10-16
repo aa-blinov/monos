@@ -53,7 +53,7 @@
             on:click={chooseOurs}
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--green)]/10 text-[var(--green)] hover:bg-[var(--green)]/20 transition"
           >
-            <ChevronLeft size="14" />
+            <ChevronLeft size="14" strokeWidth="1.7" />
             {$localizedText.settings.keepLocal}
           </button>
         </div>
@@ -68,7 +68,7 @@
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--blue)]/10 text-[var(--blue)] hover:bg-[var(--blue)]/20 transition"
           >
             {$localizedText.settings.keepRemote}
-            <ChevronRight size="14" />
+            <ChevronRight size="14" strokeWidth="1.7" />
           </button>
         </div>
         <pre class="p-4 text-xs leading-relaxed font-mono overflow-x-auto max-h-80 overflow-y-auto text-[var(--text-primary)]">{current.theirs || $localizedText.settings.empty}</pre>

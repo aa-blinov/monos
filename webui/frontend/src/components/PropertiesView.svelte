@@ -119,7 +119,7 @@
     {:else if rows.length === 0}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.emptyTable}</p>
     {:else}
-      <div class="overflow-x-auto border border-[var(--border-subtle)]">
+      <div class="rounded-ui overflow-x-auto border border-[var(--border-subtle)]">
         <table class="w-full min-w-max border-collapse text-left text-xs">
           <thead class="bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
             <tr>
