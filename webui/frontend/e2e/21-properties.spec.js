@@ -1,11 +1,18 @@
 import { expect, test } from '@playwright/test';
 import { createBlankNote, prepareMonos, uniqueTitle } from './support/monos.js';
 
-test('все свойства открываются из палитры всегда, а из боковой панели — когда у заметок есть свойства', async ({ page }) => {
+test('таблица заметок открывается из палитры всегда, а из боковой панели — когда у заметок есть свойства', async ({ page }) => {
   await prepareMonos(page);
   await page.goto('/');
   await page.keyboard.press('ControlOrMeta+k');
-  await page.getByRole('dialog').getByRole('combobox').fill('all properties');
+  await page.getByRole('dialog').getByRole('combobox').fill('notes table');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('properties-view')).toBeVisible();
+
+  // The old word still finds it: "properties" is in the command's description.
+  await page.goto('/');
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('dialog').getByRole('combobox').fill('properties');
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('properties-view')).toBeVisible();
 

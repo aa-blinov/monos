@@ -137,7 +137,7 @@
           on:mouseenter={() => { activeIndex = index; }}
         >
           <span class="truncate">{item.name}</span>
-          <span class="tabular-nums text-[var(--text-tertiary)]">{item.count}</span>
+          {#if item.count}<span class="tabular-nums text-[var(--text-tertiary)]">{item.count}</span>{/if}
         </li>
       {/each}
     </ul>

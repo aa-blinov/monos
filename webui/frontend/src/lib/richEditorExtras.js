@@ -509,6 +509,21 @@ export const Callouts = Extension.create({
                 class: `callout callout-${calloutTone(marker.type)}`,
                 'data-callout': marker.type,
               }));
+              // As Obsidian shows it: the `[!type]` marker is hidden unless the caret is on that line, and the
+              // title is a line of its own, in bold. Only the look changes; the text and the file stay as written.
+              const lineStart = pos + 2;
+              let lineEnd = lineStart + first.content.size;
+              first.forEach((child, offset) => {
+                if (child.type.name === 'softBreak' && lineEnd === lineStart + first.content.size) lineEnd = lineStart + offset;
+              });
+              const head = state.selection.$head.pos;
+              const editingTitle = head >= lineStart && head <= lineEnd;
+              const markerMatch = /^\s*\[![^\]]+\][+-]?\s*/.exec(first.textBetween(0, lineEnd - lineStart, ''));
+              const markerEnd = lineStart + (markerMatch ? markerMatch[0].length : 0);
+              if (markerMatch && !editingTitle) {
+                decorations.push(Decoration.inline(lineStart, markerEnd, { class: 'callout-marker' }));
+              }
+              if (lineEnd > markerEnd) decorations.push(Decoration.inline(markerEnd, lineEnd, { class: 'callout-title' }));
             }
             return true;
           });

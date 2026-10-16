@@ -93,6 +93,9 @@
         под ней — тихий контекст и действие. Узкое поле между двумя надписями
         читалось как третье поле рядом с двумя другими.
       -->
+      <!-- Opened to run a search, the panel shows the list first: the form to save one only appears once there
+           is a query to save. -->
+      {#if trimmedQuery}
       <input
         data-testid="saved-search-name"
         type="text"
@@ -132,6 +135,9 @@
             : $localizedText.savedSearches.save}
         </button>
       </div>
+      {:else}
+        <p class="text-xs leading-relaxed text-[var(--text-tertiary)]" data-testid="saved-search-howto">{$localizedText.savedSearches.howToSave}</p>
+      {/if}
 
       {#if error}
         <p class="text-sm text-[var(--red)]">{error}</p>
