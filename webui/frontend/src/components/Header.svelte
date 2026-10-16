@@ -122,7 +122,7 @@
 
   {#if showSearch}
   <div class="relative min-w-0 flex-1">
-    <Search size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
+    <Search size="16" strokeWidth="1.7" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
     <input
       bind:this={searchInputEl}
       type="text"

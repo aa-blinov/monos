@@ -1036,7 +1036,7 @@
     <div class="flex-1 flex min-w-0 min-h-0">
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
         {#if conflictCount > 0}
-          <div class="mb-4 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+          <div class="rounded-ui mb-4 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
             <p class="text-sm font-bold text-[var(--red)]">{$localizedText.editor.conflictTitle}</p>
             <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
               {$localizedText.editor.conflictHint}
@@ -1475,7 +1475,7 @@
         {$localizedText.editor.archiveConfirm(currentFile.name)}
       </p>
       {#if deleteError}
-        <p class="mb-6 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm leading-relaxed text-[var(--red)]">
+        <p class="rounded-ui mb-6 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm leading-relaxed text-[var(--red)]">
           {deleteError}
         </p>
       {/if}
@@ -1521,7 +1521,7 @@
 
 {#if formatToast}
   <div class="fixed bottom-6 right-6 z-[200] animate-toast-in">
-    <div class="border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">
+    <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">
       {formatToast}
     </div>
   </div>

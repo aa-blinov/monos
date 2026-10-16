@@ -100,7 +100,7 @@
         {$localizedText.trash.loading}
       </div>
     {:else if error}
-      <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm text-[var(--red)]">
+      <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm text-[var(--red)]">
         {error}
       </div>
     {:else if notes.length === 0}

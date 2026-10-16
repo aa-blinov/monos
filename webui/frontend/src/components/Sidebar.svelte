@@ -1293,7 +1293,7 @@
       role="menu"
       tabindex="-1"
       on:keydown={handleContextMenuKeys}
-      class="fixed bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48"
+      class="fixed rounded-ui bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48"
       style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
@@ -1554,7 +1554,7 @@
         </div>
 
         {#if templateError}
-          <div role="alert" class="mt-5 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+          <div role="alert" class="rounded-ui mt-5 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
             <p class="text-sm leading-relaxed text-[var(--red)]">{templateError}</p>
             {#if templateDuplicatePath}
               <div class="mt-3 flex flex-wrap gap-4">

@@ -66,7 +66,7 @@
 
 <div class="space-y-4">
   {#if conflictCount > 0}
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+    <div class="rounded-ui flex flex-wrap items-center gap-x-6 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
       <p class="mr-auto text-xs leading-relaxed text-[var(--text-secondary)]">
         {$localizedText.editor.conflictResolveHint}
       </p>
@@ -101,7 +101,7 @@
     {#if segment.type === 'text'}
       <div class="prose-plain">{@html renderMarkdownPreview(segment.value)}</div>
     {:else}
-      <section class="border border-[color-mix(in_srgb,var(--red)_30%,transparent)]">
+      <section class="rounded-ui border border-[color-mix(in_srgb,var(--red)_30%,transparent)]">
         <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)] px-4 py-2">
           <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--red)]">
             {$localizedText.editor.conflictRegionLabel}

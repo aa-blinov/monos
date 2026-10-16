@@ -104,7 +104,7 @@
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.empty}</p>
   {:else}
     <div class="grid gap-6 lg:grid-cols-[minmax(0,18rem)_1fr]">
-      <ol class="max-h-[60vh] space-y-px overflow-y-auto border border-[var(--border-subtle)]">
+      <ol class="rounded-ui max-h-[60vh] space-y-px overflow-y-auto border border-[var(--border-subtle)]">
         {#each revisions as revision (revision.sha)}
           <li>
             <button
@@ -146,7 +146,7 @@
           {#if !selectedContent.changed}
             <p class="mt-2 text-xs text-[var(--text-tertiary)]">{$localizedText.history.unchanged}</p>
           {:else}
-            <pre class="mt-3 max-h-[52vh] overflow-auto border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-3 font-mono text-xs leading-relaxed">{#each selectedContent.diff.split('\n') as line, i}<span class="block {lineClass(line)}">{line || ' '}</span>{/each}</pre>
+            <pre class="rounded-ui mt-3 max-h-[52vh] overflow-auto border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-3 font-mono text-xs leading-relaxed">{#each selectedContent.diff.split('\n') as line, i}<span class="block {lineClass(line)}">{line || ' '}</span>{/each}</pre>
           {/if}
         {/if}
       </div>

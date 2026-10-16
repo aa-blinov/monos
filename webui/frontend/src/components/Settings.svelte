@@ -677,7 +677,7 @@
         {#each Object.entries(themes) as [key, t]}
           <button
             on:click={() => { $activeTheme = key; saveSettings(); }}
-            class="p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
+            class="rounded-ui p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
           >
             <div class="flex gap-1.5 mb-2">
               <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
@@ -756,7 +756,7 @@
             type="button"
             on:click={printAllNotes}
             disabled={isExporting || isImporting}
-            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
           >
             {$localizedText.settings.printAllNotes}
           </button>
@@ -764,7 +764,7 @@
             type="button"
             on:click={exportNotes}
             disabled={isExporting}
-            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
           >
             {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
           </button>
@@ -788,7 +788,7 @@
               type="button"
               on:click={openArchivePicker}
               disabled={isImporting}
-              class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+              class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
             >
               {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
             </button>
@@ -817,7 +817,7 @@
       {#if storageStatus === 'remote'}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageRemoteOnly}</p>
       {:else if storage}
-        <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
+        <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
         {#if storage.unavailable}
           <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
         {:else if storage.restartRequired}
@@ -889,14 +889,14 @@
       </form>
 
       {#if repoSafety && !repoSafety.safe}
-        <div class="border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+        <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
           <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
           <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
         </div>
       {/if}
 
       {#if scopeWarnings.length}
-        <div class="border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+        <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
           <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
           <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
             {#each scopeWarnings as warning}
@@ -953,7 +953,7 @@
           type="button"
           on:click={setupGitRepo}
           disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
-          class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
         >
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
         </button>
@@ -1018,7 +1018,7 @@
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
               {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
             </div>
-            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
+            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
             </button>
           </div>
@@ -1171,7 +1171,7 @@
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
         {#if notesDir}
-          <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+          <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
         {/if}
         <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
       </div>
@@ -1238,7 +1238,7 @@
           <div class="text-xs text-[var(--text-secondary)]">
             {$localizedText.settings.attachmentsFound.replace('{count}', orphans.length).replace('{size}', humanSize(orphanTotalSize))}
           </div>
-          <ul class="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
+          <ul class="rounded-ui divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
             {#each orphans as orphan (orphan.path)}
               <li class="flex items-center justify-between gap-3 px-3 py-2">
                 <span class="min-w-0">
@@ -1263,7 +1263,7 @@
         {:else}
           {#if connectionReport.broken.length > 0}
             <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.brokenLinks}, {connectionReport.broken.length}</h3>
-            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="broken-links">
+            <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="broken-links">
               {#each connectionReport.broken as item (item.target)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
                   <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
@@ -1278,7 +1278,7 @@
           {/if}
           {#if connectionReport.orphanCount > 0}
             <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.orphanNotes}, {connectionReport.orphanCount}</h3>
-            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
+            <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
               {#each connectionReport.orphans as item (item.path)}
                 <li>
                   <button type="button" class="block w-full truncate px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>{item.title}</button>
@@ -1291,7 +1291,7 @@
           {/if}
           {#if connectionReport.staleCount > 0}
             <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.staleNotes.replace('{days}', connectionReport.staleDays)}, {connectionReport.staleCount}</h3>
-            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
+            <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
               {#each connectionReport.stale as item (item.path)}
                 <li>
                   <button type="button" class="flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>
@@ -1304,7 +1304,7 @@
           {/if}
           {#if connectionReport.conflictCopyCount > 0}
             <h3 class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.settings.conflictCopies}, {connectionReport.conflictCopyCount}</h3>
-            <ul class="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
+            <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
               {#each connectionReport.conflictCopies as item (item.path)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
                   <button type="button" class="min-w-0 truncate text-left text-xs text-[var(--text-primary)] hover:underline" on:click={() => openNote(item.path)}>{item.title}</button>
@@ -1357,16 +1357,16 @@
             type="button"
             on:click={revealClipperToken}
             disabled={showClipperToken}
-            class="text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
           >
             {$localizedText.settings.clipperShowToken}
           </button>
           {#if showClipperToken}
             <div class="min-w-0 flex-1 space-y-1">
               <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>
-              <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
+              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
               <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperTokenLabel}</div>
-              <code class="block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
+              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
             </div>
           {/if}
         </div>
