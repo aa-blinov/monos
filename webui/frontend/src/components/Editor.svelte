@@ -56,6 +56,7 @@
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
+  import LockedConflictView from './LockedConflictView.svelte';
   import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
@@ -152,8 +153,23 @@
   /** One device deleted the note and the other changed it: `{ deletedHere }`, or null. */
   let deletedConflict = null;
   let resolvingDeleted = false;
-  // In conflict either way: markers in the text, or a deletion against a change with no text to merge.
-  $: inConflict = conflictCount > 0 || Boolean(deletedConflict);
+  /** A locked note in a sync conflict (its entry from the conflict list), or null: see LockedConflictView. */
+  let lockedConflictEntry = null;
+  /** The note last loaded while the conflict list already named it: a later arrival of that list reloads once. */
+  let conflictCheckedFor = null;
+  // In conflict either way: markers in the text, a deletion against a change, or a sealed note.
+  $: inConflict = conflictCount > 0 || Boolean(deletedConflict) || Boolean(lockedConflictEntry);
+
+  // The conflict list loads after the app starts and after every sync; a note opened before it arrived
+  // (straight from a link, or just as a sync finished) is read again once it names that note, so a locked
+  // or deleted note in conflict gets its conflict screen instead of an ordinary one.
+  $: {
+    const openPath = loadedFilePath || lockedFilePath;
+    if (openPath && $conflictedNotes.has(openPath) && conflictCheckedFor !== openPath && !isLoading && !isSaving && !hasUnsavedChanges()) {
+      conflictCheckedFor = openPath;
+      void loadFile();
+    }
+  }
   let conflictNotice = '';
   let showHistory = false;
   let historyNote = null;
@@ -692,6 +708,27 @@
         if (!isCurrentLoad(requestId, filePath)) return;
       }
       isLoading = true;
+      lockedConflictEntry = null;
+      conflictCheckedFor = $conflictedNotes.has(filePath) ? filePath : null;
+      // A locked note in conflict is not opened with its own passphrase screen: that would show this device's
+      // version alone and let it be edited, while the other one waits unseen.
+      if ($conflictedNotes.has(filePath)) {
+        const entry = await fetchConflictEntry(filePath);
+        if (!isCurrentLoad(requestId, filePath)) return;
+        if (entry?.locked) {
+          lockedConflictEntry = entry;
+          lockedFilePath = null;
+          loadedFilePath = filePath;
+          displayedFile = { ...currentFile };
+          title = fileName.replace('.md', '');
+          editedTitle = title;
+          content = '';
+          editedContent = '';
+          conflictCount = 0;
+          deletedConflict = null;
+          return;
+        }
+      }
       const data = await loadFileContent(filePath);
       if (!isCurrentLoad(requestId, filePath)) return;
       const nextContent = data.content;
@@ -904,6 +941,29 @@
   async function loadConflictSides(filePath) {
     const entry = await fetchConflictEntry(filePath);
     if ((loadedFilePath || currentFile?.path) === filePath) applyConflictEntry(entry);
+  }
+
+  /** A locked note's conflict: keep one sealed side whole, or save the merged text (sealed by the server). */
+  async function resolveLockedConflict(body) {
+    const filePath = loadedFilePath || currentFile?.path;
+    if (!filePath || resolvingDeleted) return;
+    resolvingDeleted = true;
+    try {
+      const response = await fetch('/api/git/resolve-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: filePath, ...body }),
+      });
+      const answer = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(answer.detail || `HTTP ${response.status}`);
+      lockedConflictEntry = null;
+      await sendResolution(Boolean(body.keep));
+      await loadFile();
+    } catch (error) {
+      showToast($localizedText.editor.conflictFailed(error?.message || String(error)), 7000);
+    } finally {
+      resolvingDeleted = false;
+    }
   }
 
   /** Keep the note or let the deletion stand (ConflictDeletedView), then send the result. */
@@ -1436,7 +1496,19 @@
   {:else}
     <div class="flex-1 flex min-w-0 min-h-0">
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
-        {#if deletedConflict}
+        {#if lockedConflictEntry}
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
+            <div class="mx-auto max-w-[var(--content-width,56rem)]">
+              <LockedConflictView
+                filePath={loadedFilePath}
+                sides={lockedConflictEntry.sides}
+                busy={resolvingDeleted}
+                on:keep={(event) => resolveLockedConflict({ keep: event.detail.side })}
+                on:resolveText={(event) => resolveLockedConflict({ content: event.detail.content })}
+              />
+            </div>
+          </div>
+        {:else if deletedConflict}
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
             <div class="mx-auto max-w-[var(--content-width,56rem)]">
               <ConflictDeletedView

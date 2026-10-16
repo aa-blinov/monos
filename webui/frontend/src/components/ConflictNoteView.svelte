@@ -32,6 +32,8 @@
    * Either may be missing (markers left in a note with no conflict in git); the generic names stand in.
    */
   export let sides = null;
+  /** Apply only once every part has a choice (a locked note cannot be saved half-resolved). */
+  export let requireAll = false;
 
   // A side is named by its device, as Obsidian names a conflict copy: "Phone" means more than "the other version".
   $: oursName = sides?.ours?.device || $localizedText.editor.conflictOurs;
@@ -266,7 +268,7 @@
       <button
         type="button"
         on:click={apply}
-        disabled={pending === 0}
+        disabled={pending === 0 || (requireAll && pending < conflictCount)}
         class="text-xs uppercase tracking-widest font-bold text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
       >
         {$localizedText.editor.conflictApply}
