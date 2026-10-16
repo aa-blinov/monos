@@ -11,7 +11,7 @@
   import ModalShell from './ModalShell.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { locale, localizedText } from '../lib/strings.js';
-  import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest } from '../lib/git-history.js';
+  import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle } from '../lib/git-history.js';
 
   export let notePath = '';
   export let onRestored = () => {};
@@ -119,7 +119,7 @@
               on:click={() => openRevision(revision)}
               class="w-full border-0 border-b border-[var(--border-subtle)] px-3 py-2.5 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)]/50'}"
             >
-              <span class="block text-xs font-bold text-[var(--text-primary)]">{revision.message || $localizedText.history.noMessage}</span>
+              <span class="block text-xs font-bold text-[var(--text-primary)]">{revisionTitle(revision.message, $localizedText.history.messages) || $localizedText.history.noMessage}</span>
               <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                 {revision.author}, {formatDate(revision.date)}, {revision.short}
               </span>

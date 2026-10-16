@@ -13,6 +13,8 @@
  * represent a merge conflict. This module is how Monos notices the situation.
  */
 
+import { frontmatterEnd, mergeProperties } from './conflict-properties.js';
+
 const START = /^<{7}(?: .*)?$/;
 const SEPARATOR = /^={7}$/;
 const BASE = /^\|{7}(?: .*)?$/;
@@ -140,9 +142,13 @@ const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/;
  */
 function regionReplacement(source, region, choice) {
   let replacement;
-  if (choice === 'ours') replacement = region.ours;
+  if (choice && typeof choice === 'object') replacement = String(choice.custom ?? '');
+  else if (choice === 'ours') replacement = region.ours;
   else if (choice === 'theirs') replacement = region.theirs;
-  else {
+  else if (region.start < frontmatterEnd(source)) {
+    // A part inside the properties: both sides merge by key, or two `tags:` lines would break the block.
+    replacement = mergeProperties(region.ours, region.theirs) ?? region.ours;
+  } else {
     const sides = [region.ours, region.theirs].filter(Boolean);
     const listy = sides.length === 2 && sides.every((side) => LIST_ITEM.test(side));
     replacement = sides.join(listy ? '\n' : '\n\n');
@@ -199,9 +205,11 @@ export function splitByConflicts(text) {
 /**
  * Resolve one conflict region by index, leaving the rest untouched.
  *
+ * `choice` may also be `{ custom }`: text the person wrote for this part themselves.
+ *
  * @param {string} text
  * @param {number} index
- * @param {'ours'|'theirs'|'both'} choice
+ * @param {'ours'|'theirs'|'both'|{ custom: string }} choice
  * @returns {string}
  */
 export function resolveRegion(text, index, choice) {

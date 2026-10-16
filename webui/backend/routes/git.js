@@ -89,6 +89,22 @@ function hasUnmergedFiles() {
   return listUnmergedFiles().length > 0;
 }
 
+/**
+ * After a merge stops on conflicts: a note both devices deleted has nothing to choose between, so it is
+ * settled here instead of waiting for a person; then the notes that did merge cleanly are indexed, or the
+ * board would not show them until the conflict is resolved.
+ */
+function afterConflictedMerge() {
+  for (const filePath of listUnmergedFiles()) {
+    const stages = getConflictStages(filePath);
+    if (!stages.has(2) && !stages.has(3)) gitExec(['rm', '-q', '--ignore-unmatch', '--', filePath]);
+  }
+  if (!hasUnmergedFiles()) {
+    try { commitStagedChanges('Merge: notes deleted on both devices'); } catch { /* nothing to commit */ }
+  }
+  indexAllFiles();
+}
+
 function assertSafeGitPath(filePath) {
   if (typeof filePath !== 'string' || !filePath) {
     throw httpError(400, 'Invalid conflict path');
@@ -141,17 +157,54 @@ function holdBackNotesWithMarkers() {
   return held;
 }
 
+/**
+ * Notes whose text holds merge markers without a conflict in git: held back from a sync, left by an older
+ * version, or written by the editor when a sync changed an open note in the place it was being edited.
+ * They are conflicts to the person all the same, so the board and the sidebar mark them.
+ */
+function notesWithMarkers() {
+  try {
+    const unmerged = new Set(listUnmergedFiles());
+    return gitExec(['grep', '-l', '--untracked', '-E', '^<{7}( |$)', '--', '*.md', ':!.monos'])
+      .split('\n').filter((file) => file && !unmerged.has(file));
+  } catch {
+    // git grep exits 1 when nothing matches
+    return [];
+  }
+}
+
 /** Whether a text still holds merge markers. */
 export function hasConflictMarkers(text) {
   return MARKER_LINE.test(String(text || ''));
 }
 
+function mergeInProgress() {
+  try {
+    gitExec(['rev-parse', '-q', '--verify', 'MERGE_HEAD']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function commitStagedChanges(message) {
+  // A merge is committed even when its result equals this device's version (every conflict resolved
+  // "as here"): the commit is what records the other side as merged. Skipped, git keeps MERGE_HEAD and
+  // refuses every later pull.
+  if (mergeInProgress()) {
+    gitExec(['commit', '--no-edit', '-m', message]);
+    return;
+  }
   try {
     gitExec(['diff', '--cached', '--quiet']);
   } catch {
     gitExec(['commit', '-m', message]);
   }
+}
+
+/** A merge whose conflicts are all resolved but that was never committed (an older version left it so). */
+function finishResolvedMerge() {
+  if (mergeInProgress() && !hasUnmergedFiles()) commitStagedChanges('Resolve conflicts');
 }
 
 function hasCommits() {
@@ -313,7 +366,9 @@ function resolveConflictPath(filePath, choice) {
     : (choice === 'ours' ? 2 : 3);
 
   if (!stage || !stages.has(stage)) {
-    gitExec(['rm', '--ignore-unmatch', '--', safePath]);
+    // The kept side is the deletion: the edited text is archived first, so removing it loses nothing.
+    archiveConflictVersions(safePath, stages);
+    gitExec(['rm', '-q', '--ignore-unmatch', '--', safePath]);
     return;
   }
 
@@ -598,7 +653,7 @@ export function registerGitRoutes(app) {
       const currentBranch = gitExec(['rev-parse', '--abbrev-ref', 'HEAD']);
       const statusOut = gitExec(['status', '--porcelain']);
       const hasChanges = statusOut.length > 0;
-      const hasConflicts = hasUnmergedFiles();
+      const hasConflicts = hasUnmergedFiles() || notesWithMarkers().length > 0;
       let ahead = 0;
       let behind = 0;
 
@@ -722,11 +777,26 @@ export function registerGitRoutes(app) {
   app.post('/api/git/resolve-note', async (req, res) => {
     try {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
-      const { path: requestPath, content } = req.body || {};
-      if (typeof content !== 'string') return res.status(400).json({ detail: 'Content is required' });
-
+      const { path: requestPath, content, keep } = req.body || {};
       const safePath = notesRelativePath(assertSafeGitPath(requestPath || ''));
       const absolute = path.join(NOTES_DIR, safePath);
+
+      // One side of the file as a whole, for a conflict that has no text to merge: one device deleted the
+      // note and the other changed it. Keeping the deletion removes the file; its text stays in the archive
+      // and in the history.
+      if (keep === 'ours' || keep === 'theirs') {
+        const stages = getConflictStages(safePath);
+        if (!stages.size) return res.status(409).json({ detail: 'This note has no unresolved conflict' });
+        resolveConflictPath(safePath, keep);
+        let mergeCommitted = false;
+        if (!hasUnmergedFiles()) {
+          try { commitStagedChanges(`Resolve conflict in ${safePath}`); mergeCommitted = true; } catch { /* already recorded */ }
+        }
+        indexAllFiles();
+        return res.json({ message: 'Conflict resolved', resolved: true, removed: !fs.existsSync(absolute), mergeCommitted, remaining: listUnmergedFiles() });
+      }
+
+      if (typeof content !== 'string') return res.status(400).json({ detail: 'Content is required' });
       if (!fs.existsSync(absolute)) return res.status(404).json({ detail: 'Note not found' });
 
       const stages = getConflictStages(safePath);
@@ -775,6 +845,7 @@ export function registerGitRoutes(app) {
       // An automatic round while Git is not connected is ordinary: a 400 here filled the console every round.
       if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized' });
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
+      finishResolvedMerge();
 
       const authToken = await readStoredGitToken();
       const { branch } = readGitSettings();
@@ -795,7 +866,8 @@ export function registerGitRoutes(app) {
       } catch (error) {
         const errorText = error.stderr || error.message || '';
         if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
-          return res.json({ message: 'Conflicts detected', conflicts: true, dirtied });
+          afterConflictedMerge();
+          return res.json({ message: 'Conflicts detected', conflicts: hasUnmergedFiles(), dirtied });
         }
         throw error;
       }
@@ -824,6 +896,7 @@ export function registerGitRoutes(app) {
       // Idempotent: an existing repo adopts the hygiene files on its next sync.
       writeRepoHygieneFiles();
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
+      finishResolvedMerge();
 
       const authToken = await readStoredGitToken();
       const { device_name: deviceName, branch } = readGitSettings();
@@ -845,9 +918,10 @@ export function registerGitRoutes(app) {
       } catch (error) {
         const errorText = error.stderr || error.message || '';
         if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
+          afterConflictedMerge();
           return res.json({
             message: 'Conflicts detected',
-            conflicts: true,
+            conflicts: hasUnmergedFiles(),
             committed,
             pushed: [],
             device: deviceName || null,
@@ -1041,9 +1115,33 @@ export function registerGitRoutes(app) {
           sides: { ours: conflictSide('HEAD', safePath), theirs: conflictSide('MERGE_HEAD', safePath) },
         };
       });
+      for (const filePath of notesWithMarkers()) {
+        details.push({ path: filePath, markers: true, ours: '', theirs: '', oursExists: true, theirsExists: true, binary: false, raw: '', sides: null });
+      }
       res.json(details);
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
+    }
+  });
+
+  // One side of a conflicted file as it is, so an image can be shown as an image when choosing between two.
+  app.get('/api/git/conflict-file', (req, res) => {
+    try {
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      // The conflict list names files relative to the notes folder, as git does.
+      const safePath = assertSafeGitPath(String(req.query.path || '').replace(/^notes\//, ''));
+      const stage = req.query.side === 'theirs' ? 3 : 2;
+      const buffer = readConflictStage(safePath, stage);
+      if (!buffer) return res.status(404).json({ detail: 'No such version' });
+      const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif' };
+      const ext = path.extname(safePath).slice(1).toLowerCase();
+      res.set('Content-Type', types[ext] || 'application/octet-stream');
+      // An SVG from the other device is shown as a picture, never run as a document.
+      res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.set('X-Content-Type-Options', 'nosniff');
+      res.send(buffer);
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
   });
 
@@ -1053,6 +1151,9 @@ export function registerGitRoutes(app) {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
       if (resolutions && typeof resolutions === 'object') {
         for (const [filePath, choice] of Object.entries(resolutions)) {
+          // A file with no conflict in git (a note that only holds markers) has no sides to pick here:
+          // resolveConflictPath would take "no side" for a deletion and remove the note.
+          if (!getConflictStages(filePath).size) continue;
           if (choice === 'ours' || choice === 'theirs' || choice === 'auto') {
             resolveConflictPath(filePath, choice);
           } else {
@@ -1062,7 +1163,10 @@ export function registerGitRoutes(app) {
       } else {
         for (const file of (files || [])) gitExec(['add', '--', assertSafeGitPath(file)]);
       }
-      gitExec(['commit', '-m', 'Resolve conflicts']);
+      // The merge is committed once nothing is left unmerged; until then each choice is staged.
+      if (!hasUnmergedFiles()) {
+        try { commitStagedChanges('Resolve conflicts'); } catch { /* nothing staged */ }
+      }
       indexAllFiles();
       res.json({ message: 'Conflicts resolved' });
     } catch (error) {

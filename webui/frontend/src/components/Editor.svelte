@@ -13,7 +13,8 @@
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
-  import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT } from '../lib/note-refresh.js';
+  import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
+  import { mergeThreeWay } from '../lib/three-way-merge.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
@@ -39,7 +40,7 @@
   } from '../lib/editor-api.js';
   import { createNoteRequest, loadTagsRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
-  import { conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
+  import { conflictedFiles, conflictedNotes, conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
   import { uploadsChanges } from '../lib/git-sync.js';
   import {
     convertImageToWebp,
@@ -53,6 +54,7 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
+  import ConflictDeletedView from './ConflictDeletedView.svelte';
   import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
@@ -142,8 +144,15 @@
   let isDeleting = false;
   let wordCharStats = '';
   let conflictCount = 0;
+  /** The version of the text on disk this editor started from; sent with every save (see saveFileContent). */
+  let diskVersion = '';
   /** Who wrote each side of this note's conflict, and when; null until known. */
   let conflictSides = null;
+  /** One device deleted the note and the other changed it: `{ deletedHere }`, or null. */
+  let deletedConflict = null;
+  let resolvingDeleted = false;
+  // In conflict either way: markers in the text, or a deletion against a change with no text to merge.
+  $: inConflict = conflictCount > 0 || Boolean(deletedConflict);
   let conflictNotice = '';
   let showHistory = false;
   let historyNote = null;
@@ -445,7 +454,7 @@
   const fileBaseName = (path) => String(path || '').split('/').pop().replace(/\.md$/i, '');
 
   async function commitTitle() {
-    if (!titleTouched || !currentFile?.path || currentFile.isDir) return;
+    if (!titleTouched || !currentFile?.path || currentFile.isDir || inConflict) return;
     titleTouched = false;
     const filePath = currentFile.path;
     const currentName = fileBaseName(filePath);
@@ -566,6 +575,7 @@
     const modified = response?.modified || new Date().toISOString();
     if (loadedFilePath === filePath) {
       fileInfo = fileInfo ? { ...fileInfo, modified } : fileInfo;
+      if (response?.version) diskVersion = response.version;
     }
     const detail = { path: filePath, modified, savedAt: Date.now() };
     noteSaveSignal.set(detail);
@@ -616,6 +626,19 @@
       await flushPendingEdits();
       const renamed = await renameAttachment(filePath, imageRename.path, attachmentNewName.trim());
       if (loadedFilePath !== filePath) return;
+      // The server already rewrote the link in this note (and in every other): read it back rather than
+      // rewrite it a second time here, which would differ in small ways and look like a conflict.
+      if ((renamed.updatedPaths || []).includes(filePath)) {
+        const data = await loadFileContent(filePath);
+        if (loadedFilePath !== filePath) return;
+        content = data.content;
+        editedContent = data.content;
+        diskVersion = data.version || '';
+        if (richEditor) richEditor.setMarkdown(richEditorBody(data.content));
+        imageRename = null;
+        attachmentNewName = '';
+        return;
+      }
       const nextContent = replaceMarkdownImagePath(
         editedContent,
         renamed.oldRelativePath,
@@ -629,7 +652,8 @@
       }
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      const saved = await saveFileContent(filePath, nextContent);
+      // The server rewrites the link in the file as well: the two edits are combined, not refused.
+      const saved = await saveOrCombine(filePath, nextContent);
       if (loadedFilePath === filePath) {
         content = nextContent;
         markFileSaved(filePath, saved);
@@ -679,11 +703,16 @@
       ]);
       if (!isCurrentLoad(requestId, filePath)) return;
 
+      // Known before the text is shown, so a note in conflict never opens editable for a moment.
+      const conflictEntry = summarizeConflicts(nextContent).count > 0 || $conflictedNotes.has(filePath)
+        ? await fetchConflictEntry(filePath)
+        : null;
+      if (!isCurrentLoad(requestId, filePath)) return;
       content = nextContent;
       editedContent = nextContent;
+      diskVersion = data.version || '';
       conflictCount = summarizeConflicts(nextContent).count;
-      conflictSides = null;
-      if (conflictCount > 0) void loadConflictSides(filePath);
+      applyConflictEntry(conflictEntry);
       fileInfo = nextFileInfo;
       currentNoteColor = nextFileInfo.color || '';
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
@@ -749,7 +778,7 @@
     try {
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      const saved = await saveFileContent(filePath, savedContent);
+      const saved = await saveOrCombine(filePath, savedContent);
       if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
       markFileSaved(filePath, saved);
     } catch (error) {
@@ -792,13 +821,111 @@
    * everything outside a conflict survives byte-for-byte. The backend writes it
    * and stages the path so git can finish the merge.
    */
-  async function loadConflictSides(filePath) {
+  const baseFor = (filePath) => (loadedFilePath === filePath ? diskVersion : '');
+
+  /**
+   * Save, and when a sync changed the file since this editor read it, combine the two instead of writing
+   * over the other device's edit: parts changed on one side are taken, parts changed on both become a
+   * conflict to resolve. `content` is the text the edit started from.
+   */
+  async function saveOrCombine(filePath, text) {
+    try {
+      return await saveFileContent(filePath, text, baseFor(filePath));
+    } catch (error) {
+      if (error?.status !== 409 || !error.body?.changed) throw error;
+      const merged = mergeThreeWay(content, text, error.body.content, { ours: 'this device', theirs: 'synced' });
+      const saved = await saveFileContent(filePath, merged.text, error.body.version);
+      if (loadedFilePath === filePath) {
+        content = merged.text;
+        // Typing that arrived while the save was out is not dropped: it is applied on top only if nothing else changed.
+        editedContent = editedContent === text ? merged.text : editedContent;
+        diskVersion = saved?.version || '';
+        conflictCount = summarizeConflicts(content).count;
+        if (conflictCount > 0) void loadConflictSides(filePath);
+        showToast(conflictCount > 0 ? $localizedText.editor.syncedWhileOpenConflict : $localizedText.editor.syncedWhileOpenMerged, 7000);
+      }
+      void refreshConflicts();
+      return saved;
+    }
+  }
+
+  /** After a sync: the open note reads its file again, unless it holds edits not yet saved (those combine on save). */
+  async function reloadAfterPull() {
+    const filePath = loadedFilePath;
+    if (!filePath || hasUnsavedChanges() || isSaving) return;
+    let data;
+    try {
+      data = await loadFileContent(filePath);
+    } catch (error) {
+      if (error?.status === 404 && loadedFilePath === filePath) {
+        showToast($localizedText.editor.deletedElsewhere, 7000);
+        dispatch('goHome');
+      }
+      return;
+    }
+    if (loadedFilePath !== filePath || hasUnsavedChanges() || isSaving || !data?.version || data.version === diskVersion) return;
+    content = data.content;
+    editedContent = data.content;
+    diskVersion = data.version;
+    conflictCount = summarizeConflicts(data.content).count;
+    applyConflictEntry(conflictCount > 0 || $conflictedNotes.has(filePath) ? await fetchConflictEntry(filePath) : null);
+    try {
+      fileInfo = await loadFileInfo(filePath);
+      editableTags = fileInfo.metadata?.tags || [];
+      editableCategory = fileInfo.metadata?.category || '';
+      currentNoteColor = fileInfo.color || '';
+    } catch { /* the text is what matters; details refresh on the next open */ }
+  }
+
+  /** This note's entry in the server's conflict list, or null. */
+  async function fetchConflictEntry(filePath) {
     try {
       const list = await (await fetch('/api/git/conflicts')).json();
-      const item = (Array.isArray(list) ? list : []).find((entry) => conflictNotePath(entry?.path) === filePath);
-      if ((loadedFilePath || currentFile?.path) === filePath) conflictSides = item?.sides || null;
+      return (Array.isArray(list) ? list : []).find((entry) => conflictNotePath(entry?.path) === filePath) || null;
     } catch {
-      conflictSides = null;
+      return null;
+    }
+  }
+
+  function applyConflictEntry(entry) {
+    conflictSides = entry?.sides || null;
+    deletedConflict = entry && !entry.binary && (!entry.oursExists || !entry.theirsExists)
+      ? { deletedHere: !entry.oursExists }
+      : null;
+  }
+
+  async function loadConflictSides(filePath) {
+    const entry = await fetchConflictEntry(filePath);
+    if ((loadedFilePath || currentFile?.path) === filePath) applyConflictEntry(entry);
+  }
+
+  /** Keep the note or let the deletion stand (ConflictDeletedView), then send the result. */
+  async function resolveDeletedConflict(event) {
+    const filePath = loadedFilePath || currentFile?.path;
+    if (!filePath || resolvingDeleted) return;
+    resolvingDeleted = true;
+    try {
+      const response = await fetch('/api/git/resolve-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: filePath, keep: event.detail.side }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+      deletedConflict = null;
+      void refreshConflicts();
+      if (body.removed) {
+        dispatch('goHome');
+        await sendResolution(false);
+        showToast($localizedText.editor.conflictDeletedDone, 7000);
+        return;
+      }
+      await sendResolution(false);
+      await reloadAfterPull();
+    } catch (error) {
+      showToast($localizedText.editor.conflictFailed(error?.message || String(error)), 7000);
+    } finally {
+      resolvingDeleted = false;
     }
   }
 
@@ -814,19 +941,34 @@
    */
   async function sendResolution(whole) {
     const kept = whole ? ` ${$localizedText.editor.conflictWholeKeptDone}` : '';
+    // Nothing goes out while another note is still in conflict: say how many are left instead.
+    await refreshConflicts();
+    const left = $conflictedNotes.size + $conflictedFiles.size;
+    if (left > 0) {
+      showToast($localizedText.editor.conflictResolvedWaiting(left) + kept, 7000);
+      return;
+    }
     if (!uploadsChanges()) {
       showToast($localizedText.editor.conflictResolvedManual + kept, 7000);
       return;
     }
     let sent = false;
+    let newConflict = false;
     try {
       const response = await fetch('/api/git/sync', { method: 'POST' });
       const data = await response.json().catch(() => ({}));
       sent = response.ok && !data.conflicts;
+      newConflict = response.ok && Boolean(data.conflicts);
     } catch {
       sent = false;
     }
-    void refreshConflicts();
+    await refreshConflicts();
+    if (newConflict) {
+      // The sync brought another conflict along: that is the news, not "it goes out later".
+      showToast($localizedText.editor.conflictResolvedNewConflict + kept, 7000);
+      return;
+    }
+    if (sent) void reloadAfterPull();
     showToast((sent ? $localizedText.editor.conflictResolvedSent : $localizedText.editor.conflictResolvedLater) + kept, 7000);
   }
 
@@ -880,7 +1022,7 @@
     // A note with conflict markers cannot survive the editor round-trip: `marked`
     // turns the `=======` separator into a setext underline and the markers are
     // gone. Saving would write that damage over the file, so refuse instead.
-    if (conflictCount > 0) return;
+    if (inConflict) return;
 
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
@@ -893,7 +1035,7 @@
     try {
       isSaving = true;
       saveMessage = $localizedText.editor.saving;
-      const saved = await saveFileContent(filePath, savedContent);
+      const saved = await saveOrCombine(filePath, savedContent);
 
       if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
       if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
@@ -997,7 +1139,8 @@
   }
 
   async function saveMetadataFields() {
-    if (!currentFile || !fileInfo || !hasMetadataChanges()) return;
+    // A note in conflict is not written: the rewrite would drop the merge markers in its properties.
+    if (!currentFile || !fileInfo || !hasMetadataChanges() || inConflict) return;
     if (metadataTimer) clearTimeout(metadataTimer);
     const nextContent = upsertFrontmatter(editedContent, {
       title: editedTitle,
@@ -1012,7 +1155,7 @@
     if (nextContent !== editedContent) editedContent = nextContent;
 
     const filePath = currentFile.path;
-    const payload = { title: editedTitle, tags: editableTags, content: nextContent };
+    const payload = { title: editedTitle, tags: editableTags, content: nextContent, base_version: baseFor(filePath) };
     try {
       const meta = await saveFileMetadata(filePath, payload);
       if (currentFile?.path !== filePath) return;
@@ -1034,7 +1177,17 @@
         content = meta.content;
         editedContent = meta.content;
       }
+      if (meta.version) diskVersion = meta.version;
     } catch (e) {
+      // A sync changed the note since it was read: the property change is combined with it like any edit.
+      if (e?.status === 409 && e.body?.changed) {
+        try {
+          markFileSaved(filePath, await saveOrCombine(filePath, nextContent));
+        } catch (error) {
+          console.error('Metadata save failed:', error);
+        }
+        return;
+      }
       console.error('Metadata save failed:', e);
     }
   }
@@ -1131,11 +1284,14 @@
     const reloadIfRewritten = (event) => {
       if (loadedFilePath && event.detail.updatedPaths.includes(loadedFilePath)) loadFile();
     };
+    const reloadOnPull = () => { void reloadAfterPull(); };
     window.addEventListener(FLUSH_OPEN_NOTE_EVENT, flushOnRequest);
     window.addEventListener(NOTE_LINKS_UPDATED_EVENT, reloadIfRewritten);
+    window.addEventListener(NOTES_PULLED_EVENT, reloadOnPull);
     return () => {
       window.removeEventListener(FLUSH_OPEN_NOTE_EVENT, flushOnRequest);
       window.removeEventListener(NOTE_LINKS_UPDATED_EVENT, reloadIfRewritten);
+      window.removeEventListener(NOTES_PULLED_EVENT, reloadOnPull);
     };
   });
 
@@ -1149,12 +1305,12 @@
     }
     // Same guard as saveContent: a note with conflict markers must not be written
     // back from the editor, where the markers no longer survive the round-trip.
-    if (loadedFilePath && hasUnsavedChanges() && !isSaving && conflictCount === 0) {
+    if (loadedFilePath && hasUnsavedChanges() && !isSaving && !inConflict) {
       const filePath = loadedFilePath;
       const savedContent = editedContent;
       const savedTitle = editedTitle;
       isSaving = true;
-      saveFileContent(filePath, savedContent).then((saved) => {
+      saveOrCombine(filePath, savedContent).then((saved) => {
         if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
         if (loadedFilePath === filePath && editedTitle === savedTitle) title = savedTitle;
         markFileSaved(filePath, saved);
@@ -1233,11 +1389,12 @@
     {fileInfo}
     {wordCharStats}
     {taskProgress}
-    historyAvailable={Boolean(loadedFilePath) && conflictCount === 0}
+    historyAvailable={Boolean(loadedFilePath) && !inConflict}
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
-    outlineAvailable={conflictCount === 0}
+    outlineAvailable={!inConflict}
+    titleLocked={inConflict}
     compact={headerCompact || focusMode}
     {focusMode}
     onExitFocus={() => setFocusMode(false)}
@@ -1268,7 +1425,19 @@
   {:else}
     <div class="flex-1 flex min-w-0 min-h-0">
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
-        {#if conflictCount > 0}
+        {#if deletedConflict}
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
+            <div class="mx-auto max-w-[var(--content-width,56rem)]">
+              <ConflictDeletedView
+                content={editedContent}
+                deletedHere={deletedConflict.deletedHere}
+                otherDevice={conflictSides?.theirs?.device || ''}
+                busy={resolvingDeleted}
+                on:keep={resolveDeletedConflict}
+              />
+            </div>
+          </div>
+        {:else if conflictCount > 0}
           <!-- The conflict sits in the same column as the text: the banner says what happened and the parts
                below are where it is resolved, right here. -->
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
@@ -1317,7 +1486,7 @@
       </div>
       <!-- No outline over a conflict: the merge markers would read as Markdown headings and list both
            versions of a title as if they were the note's structure. -->
-      {#if !focusMode && conflictCount === 0}
+      {#if !focusMode && !inConflict}
         <OutlinePanel
           content={editedContent}
           open={outlineOpen}
@@ -1334,7 +1503,8 @@
          не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
          относятся к запрошенной заметке, а текст ещё от прежней. -->
     <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-3 lg:px-6" data-testid="editor-footer" inert={isLoading}>
-      <div class="flex min-w-0 items-center gap-1" data-testid="note-properties" inert={isLoading}>
+      <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
+      <div class="flex min-w-0 items-center gap-1 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
         <div class="relative" data-panel-anchor="category">
           <button
             type="button"

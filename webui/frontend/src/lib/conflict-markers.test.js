@@ -152,3 +152,13 @@ test('«обе» для пунктов списка оставляет один 
   const text = '<<<<<<< HEAD\n- молоко\n=======\n- хлеб\n>>>>>>> origin/master\n- кофе';
   assert.equal(resolveRegion(text, 0, 'both'), '- молоко\n- хлеб\n- кофе');
 });
+
+test('«обе» в свойствах объединяет теги, а не дублирует ключ', () => {
+  const text = '---\ntitle: "Покупки"\n<<<<<<< HEAD\ntags: ["магазин"]\n=======\ntags: ["дом"]\n>>>>>>> x\n---\n\n- хлеб\n';
+  assert.equal(resolveRegion(text, 0, 'both'), '---\ntitle: "Покупки"\ntags: ["магазин", "дом"]\n---\n\n- хлеб\n');
+});
+
+test('свой текст для части заменяет обе версии и сохраняет абзацы вокруг', () => {
+  const text = 'До.\n\n<<<<<<< HEAD\nА\n=======\nБ\n>>>>>>> x\n\nПосле.\n';
+  assert.equal(resolveRegion(text, 0, { custom: 'А и Б' }), 'До.\n\nА и Б\n\nПосле.\n');
+});

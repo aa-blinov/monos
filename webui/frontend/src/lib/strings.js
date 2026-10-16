@@ -350,6 +350,7 @@ const enText = {
     dropToRoot: 'Drop to root',
     syncWithGit: 'Back up notes',
     conflictNotice: (count) => `Conflict in ${count} ${count === 1 ? 'note' : 'notes'} — open`,
+    conflictFilesNotice: (count) => `Conflict in ${count} ${count === 1 ? 'file' : 'files'} — resolve`,
     quickNoteFromClipboard: 'Create note from clipboard',
     saveBeforeSync: 'Save the current note before syncing',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
@@ -735,7 +736,7 @@ const enText = {
     lastSync(value) {
       return `Last sync: ${value}`;
     },
-    conflictStatus: 'A note changed on two devices. Open it and pick a version for each part.',
+    conflictStatus: 'Something changed on two devices at once. What to resolve is listed below.',
     syncNow: 'Sync Now',
     syncing: 'Syncing...',
     notInitialized: 'Not initialized. Authenticate and select a repository above.',
@@ -746,15 +747,17 @@ const enText = {
       return `Conflicts (${count})`;
     },
     markResolved: 'Mark Resolved (delete _conflicts/)',
-    resolveConflicts: 'Resolve Conflicts',
-    conflictOurs: 'Ours (Local)',
-    conflictTheirs: 'Theirs (Remote)',
-    keepLocal: 'Keep Local',
-    keepRemote: 'Keep Remote',
+    resolveConflicts: 'Resolve conflicts',
+    conflictOurs: 'This device',
+    conflictTheirs: 'Other device',
+    openConflictNote: 'Open',
+    resolveFileConflicts: 'Resolve files',
+    keepLocal: 'Keep this one',
+    keepRemote: 'Keep this one',
     conflictsRemaining(count) {
       return `${count} more conflict${count > 1 ? 's' : ''} remaining`;
     },
-    chooseConflictVersion: 'Choose local or remote to resolve this conflict.',
+    chooseConflictVersion: 'Pick the version to keep. The other stays in the history.',
     empty: '(empty)',
     saveBeforeSync: 'Save the current note before syncing.',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
@@ -796,16 +799,37 @@ const enText = {
     noteNotFound(target) {
       return `Note "${target}" not found.`;
     },
-    conflictResolveHint: 'Keep the whole note as on:',
+    conflictResolveHint: 'Keep the whole note:',
     conflictKeepSide: (name) => `Keep ${name}`,
     conflictKeepBoth: 'Keep both',
+    conflictWriteOwn: 'Write my own',
+    conflictOwnLabel: 'Your text for this part — it replaces both versions',
     conflictThisDevice: 'this device',
+    conflictPropertiesLabel: 'Note properties',
+    conflictDeletedThereTitle: (name) => `${name ? `${name}` : 'Another device'} deleted this note, and it was changed here`,
+    conflictDeletedHereTitle: (name) => `This note was deleted here, and ${name ? `${name}` : 'another device'} changed it`,
+    conflictDeletedHint: 'Keep the note with the changes, or let the deletion stand. The text stays in the note’s history either way.',
+    conflictKeepNote: 'Keep the note',
+    conflictRestoreNote: 'Bring the note back',
+    conflictDeleteNote: 'Delete the note',
+    conflictDeletedThereText: 'Your version',
+    conflictDeletedHereText: (name) => `The version from ${name || 'the other device'}`,
+    conflictDeletedDone: 'The note is deleted. Its text stays in the history.',
+    syncedWhileOpenMerged: 'This note changed on another device while it was open. Both edits are in the text now.',
+    syncedWhileOpenConflict: 'This note changed on another device while it was open, in the same place you edited. Pick a version below.',
+    deletedElsewhere: 'This note was deleted on another device.',
+    conflictPropertiesLocked: 'Available once the conflict is resolved',
+    conflictPropertyNames: { title: 'Title', tags: 'Tags', due: 'Due', category: 'Folder', pinned: 'Pinned', color: 'Colour', aliases: 'Other names' },
+    conflictYes: 'yes',
+    conflictNo: 'no',
     conflictWholeKept: 'The other version stays in the note’s history.',
     conflictWholeKeptDone: 'The other version is in the note’s history.',
     conflictApply: 'Apply',
     conflictChosen: (done, total) => `Chosen: ${done} of ${total}${done && done < total ? ' — the rest stay in conflict' : ''}`,
     conflictRegionLabel: 'Conflicting part',
     conflictResolvedSent: 'Conflict resolved and sent to your other devices.',
+    conflictResolvedNewConflict: 'Conflict resolved. The sync brought a new one from another device: it is marked in the sidebar.',
+    conflictResolvedWaiting: (left) => `Resolved. ${left} more ${left === 1 ? 'conflict is' : 'conflicts are'} left; once they are resolved, everything goes to your other devices.`,
     conflictResolvedLater: 'Conflict resolved. It reaches your other devices on the next sync.',
     conflictResolvedManual: 'Conflict resolved. It reaches your other devices when you press “Back up notes”.',
     conflictPartlyResolved: (left) => `Saved. ${left} ${left === 1 ? 'part still waits' : 'parts still wait'} for a choice.`,
@@ -872,6 +896,7 @@ const enText = {
     restoring: 'Restoring…',
     unchanged: 'This is the version the note already has.',
     noMessage: '(no message)',
+    messages: { synced: 'Sync', savedBeforePull: 'Edits saved before a sync', connected: 'Sync connected', resolved: 'Conflict resolved', merged: 'Edits from another device combined' },
   },
   editorHeader: {
     noteTitle: 'Note Title',
@@ -1280,6 +1305,10 @@ const ruText = {
       const one = count % 10 === 1 && count % 100 !== 11;
       return `Конфликт в ${count} ${one ? 'заметке' : 'заметках'} — открыть`;
     },
+    conflictFilesNotice: (count) => {
+      const one = count % 10 === 1 && count % 100 !== 11;
+      return `Конфликт в ${count} ${one ? 'файле' : 'файлах'} — разобрать`;
+    },
     quickNoteFromClipboard: 'Создать заметку из буфера обмена',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
@@ -1679,7 +1708,7 @@ const ruText = {
       const few = count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14);
       return `↓ ${count} ${one ? 'изменение' : few ? 'изменения' : 'изменений'} с других устройств ${one ? 'ждёт' : 'ждут'} получения`;
     },
-    conflictStatus: 'Заметку изменили на двух устройствах. Откройте её и выберите версию для каждой части.',
+    conflictStatus: 'Что-то изменили на двух устройствах сразу. Что разобрать — ниже.',
     lastSync(value) {
       return `Последняя синхронизация: ${value}`;
     },
@@ -1693,16 +1722,18 @@ const ruText = {
       return `Конфликты (${count})`;
     },
     markResolved: 'Отметить решёнными (удалить _conflicts/)',
-    resolveConflicts: 'Разрешить конфликты',
-    conflictOurs: 'Наши (Локальные)',
-    conflictTheirs: 'Их (Удалённые)',
-    keepLocal: 'Оставить локальные',
-    keepRemote: 'Оставить удалённые',
+    resolveConflicts: 'Разобрать конфликты',
+    conflictOurs: 'Это устройство',
+    conflictTheirs: 'Другое устройство',
+    openConflictNote: 'Открыть',
+    resolveFileConflicts: 'Разобрать файлы',
+    keepLocal: 'Оставить эту',
+    keepRemote: 'Оставить эту',
     conflictsRemaining(count) {
       const form = count === 1 ? 'конфликт' : count > 1 && count < 5 ? 'конфликта' : 'конфликтов';
       return `Осталось ${count} ${form}`;
     },
-    chooseConflictVersion: 'Выберите локальную или удалённую версию, чтобы разрешить конфликт.',
+    chooseConflictVersion: 'Выберите версию, которую оставить. Другая останется в истории.',
     empty: '(пусто)',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией.',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
@@ -1744,16 +1775,41 @@ const ruText = {
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
     },
-    conflictResolveHint: 'Оставить всю заметку как на:',
+    conflictResolveHint: 'Оставить всю заметку целиком:',
     conflictKeepSide: (name) => `Оставить: ${name}`,
     conflictKeepBoth: 'Оставить обе',
+    conflictWriteOwn: 'Написать свою',
+    conflictOwnLabel: 'Ваш текст для этой части — он заменит обе версии',
     conflictThisDevice: 'это устройство',
+    conflictPropertiesLabel: 'Свойства заметки',
+    conflictDeletedThereTitle: (name) => `${name ? `На устройстве «${name}»` : 'На другом устройстве'} заметку удалили, а здесь её изменили`,
+    conflictDeletedHereTitle: (name) => `Здесь заметку удалили, а ${name ? `на устройстве «${name}»` : 'на другом устройстве'} её изменили`,
+    conflictDeletedHint: 'Оставьте заметку с правками или согласитесь с удалением. Текст в любом случае останется в истории.',
+    conflictKeepNote: 'Оставить заметку',
+    conflictRestoreNote: 'Вернуть заметку',
+    conflictDeleteNote: 'Удалить заметку',
+    conflictDeletedThereText: 'Ваша версия',
+    conflictDeletedHereText: (name) => (name ? `Версия с устройства «${name}»` : 'Версия с другого устройства'),
+    conflictDeletedDone: 'Заметка удалена. Её текст остался в истории.',
+    syncedWhileOpenMerged: 'Заметку изменили на другом устройстве, пока она была открыта. Обе правки теперь в тексте.',
+    syncedWhileOpenConflict: 'Заметку изменили на другом устройстве в том же месте, что и вы. Выберите версию ниже.',
+    deletedElsewhere: 'Эту заметку удалили на другом устройстве.',
+    conflictPropertiesLocked: 'Станет доступно, когда конфликт будет разобран',
+    conflictPropertyNames: { title: 'Заголовок', tags: 'Теги', due: 'Срок', category: 'Папка', pinned: 'Закреплено', color: 'Цвет', aliases: 'Другие названия' },
+    conflictYes: 'да',
+    conflictNo: 'нет',
     conflictWholeKept: 'Другая версия останется в истории заметки.',
     conflictWholeKeptDone: 'Другая версия осталась в истории заметки.',
     conflictApply: 'Применить',
     conflictChosen: (done, total) => `Выбрано: ${done} из ${total}${done && done < total ? ' — остальные части останутся конфликтными' : ''}`,
     conflictRegionLabel: 'Конфликтная часть',
     conflictResolvedSent: 'Конфликт разобран и отправлен на другие устройства.',
+    conflictResolvedNewConflict: 'Конфликт разобран. Синхронизация принесла новый с другого устройства — он отмечен в боковой панели.',
+    conflictResolvedWaiting: (left) => {
+      const one = left % 10 === 1 && left % 100 !== 11;
+      const few = [2, 3, 4].includes(left % 10) && ![12, 13, 14].includes(left % 100);
+      return `Готово. Осталось ${left} ${one ? 'конфликт' : few ? 'конфликта' : 'конфликтов'} — когда разберёте, всё уйдёт на другие устройства.`;
+    },
     conflictResolvedLater: 'Конфликт разобран. На другие устройства он уйдёт при следующей синхронизации.',
     conflictResolvedManual: 'Конфликт разобран. На другие устройства он уйдёт, когда вы нажмёте «Резервная копия».',
     conflictPartlyResolved: (left) => `Сохранено. Ещё ${left} ${left % 10 === 1 && left % 100 !== 11 ? 'часть ждёт' : 'части ждут'} выбора.`,
@@ -1832,6 +1888,7 @@ const ruText = {
     restoring: 'Восстанавливаем…',
     unchanged: 'Это уже текущая версия заметки.',
     noMessage: '(без сообщения)',
+    messages: { synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена синхронизация', resolved: 'Разобран конфликт', merged: 'Объединены правки с другого устройства' },
   },
   editorHeader: {
     noteTitle: 'Заголовок заметки',

@@ -42,3 +42,20 @@ export async function restoreNoteRevisionRequest(notePath, sha) {
     body: JSON.stringify({ path: notePath, sha }),
   });
 }
+/**
+ * A version's title in the interface language. Commit messages are written in English on every device (a
+ * history shared by devices set to different languages has to pick one), so the known ones are named here;
+ * the device is already on the line under the title.
+ *
+ * @param {string} message
+ * @param {{ synced: string, savedBeforePull: string, connected: string, resolved: string, merged: string }} words
+ */
+export function revisionTitle(message, words) {
+  const text = String(message || '').trim();
+  if (/^Auto-sync from .+ \(pending pull\)$/.test(text)) return words.savedBeforePull;
+  if (/^Auto-sync from /.test(text)) return words.synced;
+  if (/^Init from /.test(text)) return words.connected;
+  if (/^Resolve conflicts?\b/.test(text)) return words.resolved;
+  if (/^Merge\b/.test(text)) return words.merged;
+  return text;
+}

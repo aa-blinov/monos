@@ -54,3 +54,16 @@ test('без сведений об устройствах версии назы�
   expect(screen.getByRole('button', { name: 'Оставить: Это устройство' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Оставить: Другое устройство' })).toBeTruthy();
 });
+
+test('«Написать свою» открывает поле с текстом этого устройства и отдаёт написанное', async () => {
+  locale.set('ru');
+  const { component } = render(ConflictNoteView, { content });
+  const resolve = vi.fn();
+  component.$on('resolve', resolve);
+  await fireEvent.click(screen.getByRole('button', { name: 'Написать свою' }));
+  const field = screen.getByTestId('conflict-own-text');
+  expect(field.value).toBe('Моя версия.');
+  await fireEvent.input(field, { target: { value: 'Общая версия.' } });
+  await fireEvent.click(screen.getAllByRole('button', { name: 'Применить' }).at(-1));
+  expect(resolve.mock.calls[0][0].detail).toEqual({ choices: { 0: { custom: 'Общая версия.' } } });
+});

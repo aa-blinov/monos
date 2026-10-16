@@ -36,8 +36,13 @@ export const loadTrashNotesRequest = () => get('/api/notes/trash', { limit: 200 
 export const touchNoteRequest = (filePath) => post('/api/notes/touch', null, { query: { path: filePath } });
 export const restoreNoteRequest = (filePath) => post('/api/notes/restore', null, { query: { path: filePath } });
 
-export const saveFileContent = (filePath, content) =>
-  post('/api/file', { content }, { query: { path: filePath } });
+/**
+ * `baseVersion` is the version of the text the edit started from (from loading or the last save). The server
+ * refuses the save with 409 and the text on disk when the file has changed since, so a sync's edit is never
+ * written over. Without it the save is not checked.
+ */
+export const saveFileContent = (filePath, content, baseVersion = '') =>
+  post('/api/file', baseVersion ? { content, base_version: baseVersion } : { content }, { query: { path: filePath } });
 
 export const saveFileMetadata = (filePath, payload) =>
   put('/api/file/metadata', payload, { query: { path: filePath } });
