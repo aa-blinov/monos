@@ -8,6 +8,7 @@ import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
 import { httpError, notesRelativePath, readTextFile } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
+import { isLockedNote, rememberSession, sealWithSession, sessionFor, unlockContent } from '../note-lock.js';
 
 export function buildGithubRemoteUrl(repo) {
   return `https://github.com/${repo}.git`;
@@ -99,6 +100,7 @@ function afterConflictedMerge() {
   for (const filePath of listUnmergedFiles()) {
     const stages = getConflictStages(filePath);
     if (!stages.has(2) && !stages.has(3)) gitExec(['rm', '-q', '--ignore-unmatch', '--', filePath]);
+    else keepLockedNoteWhole(filePath, stages);
   }
   if (!hasUnmergedFiles()) {
     try { commitStagedChanges('Merge: notes deleted on both devices'); } catch { /* nothing to commit */ }
@@ -172,6 +174,23 @@ function notesWithMarkers() {
     // git grep exits 1 when nothing matches
     return [];
   }
+}
+
+/**
+ * A locked note's text is one sealed envelope: merging two of them line by line puts markers inside the
+ * cipher and leaves a file no passphrase opens. Git keeps both versions as the conflict's sides, so the
+ * working file goes back to this device's sealed version, whole and readable; the person then keeps one
+ * side, or opens both with the passphrase and merges the plain texts (see /api/git/locked-conflict).
+ */
+function lockedConflict(filePath, stages = getConflictStages(filePath)) {
+  if (!String(filePath).toLowerCase().endsWith('.md')) return false;
+  return [1, 2, 3].some((stage) => stages.has(stage) && isLockedNote(readConflictStage(filePath, stage)?.toString('utf-8') || ''));
+}
+
+function keepLockedNoteWhole(filePath, stages) {
+  if (!lockedConflict(filePath, stages)) return;
+  const side = readConflictStage(filePath, stages.has(2) ? 2 : 3);
+  if (side) fs.writeFileSync(path.join(NOTES_DIR, filePath), side);
 }
 
 /** Whether a text still holds merge markers. */
@@ -713,8 +732,8 @@ export function registerGitRoutes(app) {
           } catch (error) {
             const errorText = error.stderr || error.message || '';
             if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
-              indexAllFiles();
-              return res.json({ message: 'Conflicts detected during setup', conflicts: true });
+              afterConflictedMerge();
+              return res.json({ message: 'Conflicts detected during setup', conflicts: hasUnmergedFiles() });
             }
             throw error;
           }
@@ -863,6 +882,49 @@ export function registerGitRoutes(app) {
    * was the last conflict, the merge is committed straight away rather than
    * leaving the repository stuck mid-merge.
    */
+  /**
+   * Opens both sides of a locked note's conflict with its passphrase, for the conflict view to merge.
+   * The plain texts go back in this answer only; nothing is written. A side sealed with another passphrase
+   * (it was changed on the other device) comes back as null and is named in `unreadable`.
+   */
+  app.post('/api/git/locked-conflict', (req, res) => {
+    try {
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      const requestPath = String(req.body?.path || '');
+      const passphrase = req.body?.passphrase;
+      if (typeof passphrase !== 'string' || !passphrase) return res.status(400).json({ detail: 'Enter the passphrase' });
+      const safePath = notesRelativePath(assertSafeGitPath(requestPath));
+      const stages = getConflictStages(safePath);
+      if (!lockedConflict(safePath, stages)) return res.status(409).json({ detail: 'This note has no locked conflict' });
+
+      const open = (stage) => {
+        if (!stages.has(stage)) return { text: '', session: null, readable: true };
+        const raw = readConflictStage(safePath, stage)?.toString('utf-8') || '';
+        if (!isLockedNote(raw)) return { text: raw, session: null, readable: true };
+        try {
+          const { plaintext, session } = unlockContent(raw, passphrase);
+          return { text: plaintext, session, readable: true };
+        } catch {
+          return { text: null, session: null, readable: false };
+        }
+      };
+      const [base, ours, theirs] = [open(1), open(2), open(3)];
+      if (!ours.readable && !theirs.readable) return res.status(403).json({ detail: 'The passphrase is wrong' });
+      // The result is sealed again with this device's key (or the other one's, if only that side opened).
+      const session = ours.session || theirs.session;
+      if (session) rememberSession(`notes/${safePath}`, session);
+      res.json({
+        base: base.text ?? '',
+        ours: ours.text,
+        theirs: theirs.text,
+        unreadable: [!ours.readable && 'ours', !theirs.readable && 'theirs'].filter(Boolean),
+        sides: { ours: conflictSide('HEAD', safePath), theirs: conflictSide('MERGE_HEAD', safePath) },
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+    }
+  });
+
   app.post('/api/git/resolve-note', async (req, res) => {
     try {
       if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
@@ -900,9 +962,17 @@ export function registerGitRoutes(app) {
         return res.status(409).json({ detail: 'This note has no unresolved conflict' });
       }
 
+      // A locked note's merged text is sealed again before it touches the disk, and only a full resolution
+      // is taken: markers inside a sealed note could not be seen by anything that does not hold its key.
+      const locked = lockedConflict(safePath, stages);
+      const session = locked ? sessionFor(`notes/${safePath}`) : null;
+      if (locked && !session) return res.status(423).json({ detail: 'Open the note with its passphrase first', locked: true });
+      if (locked && hasConflictMarkers(content)) return res.status(409).json({ detail: 'Choose a version for every part', partial: true });
+
       // Keep a copy of everything involved before the working tree is rewritten.
       archiveConflictVersions(safePath, stages);
-      fs.writeFileSync(absolute, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+      const plain = content.endsWith('\n') ? content : `${content}\n`;
+      fs.writeFileSync(absolute, locked ? sealWithSession(plain, session) : plain, 'utf8');
 
       // Some parts are still undecided: keep what was chosen, but leave the note in conflict. Marking it
       // resolved would commit the remaining markers and send them to the other devices as text.
@@ -1203,6 +1273,7 @@ export function registerGitRoutes(app) {
           binary,
           raw: binary ? '[Binary file]' : '',
           sides: { ours: conflictSide('HEAD', safePath), theirs: conflictSide('MERGE_HEAD', safePath) },
+          locked: lockedConflict(safePath),
         };
       });
       for (const filePath of notesWithMarkers()) {
