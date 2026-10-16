@@ -675,27 +675,6 @@
     }
   }
 
-  export async function createTodayNote() {
-    try {
-      isCreating = true;
-      showCreateModal = false;
-      const title = formatTodayNoteTitle();
-      const data = await createNoteRequest({
-        title,
-        category: 'Daily',
-        tags: [],
-        content: '',
-      });
-      await loadTree();
-      await loadDirectories();
-      dispatch('navigate', { path: data.path, name: title, isDir: false });
-    } catch (err) {
-      error = err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
-    } finally {
-      isCreating = false;
-    }
-  }
-
   // Two captures in the same second get the same timestamp title. The backend refuses a
   // taken name with 409, so the capture takes the next free number instead of failing.
   async function createQuickNoteRecord(baseTitle, payload) {
@@ -1101,7 +1080,7 @@
     <div class="mb-4 shrink-0 px-4">
       <div class="mb-3 flex min-h-10 items-center justify-between text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)]">
         <span>{$localizedText.sidebar.pinned}</span>
-        <span class="rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] tabular-nums">{$pinnedNotes.length}</span>
+        <span class="text-[length:var(--text-whisper)] tabular-nums text-[var(--text-tertiary)]">{$pinnedNotes.length}</span>
       </div>
       <div class="space-y-2">
         {#each $pinnedNotes as note (note.path)}

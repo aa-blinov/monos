@@ -1170,7 +1170,7 @@
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
         <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
+          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+N', $localizedText.settings.docsShortcutNew], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
             <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
             <dd class="text-[var(--text-secondary)]">{label}</dd>
           {/each}
@@ -1179,7 +1179,7 @@
 
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
-        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsOperatorsHint}</p>
+        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{shortcutLabel($localizedText.settings.docsOperatorsHint)}</p>
         <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
           {#each [
               [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],

@@ -113,7 +113,7 @@ const enText = {
     emptyTable: 'No notes match this filter.',
     noProperties: 'No note has a custom property yet.',
     sidebar: 'All properties',
-    hint: 'Fields of a note, such as status, priority or a date. All notes with fields are listed in one table.',
+    hint: 'Note properties such as status, priority or a date. Every note that has them is listed in one table.',
     syntaxHint: 'prop:name (has it), prop:name=value, prop:priority>=3, prop:due<2026-12-01; exclude with -prop:name=value.',
     loading: 'Loading properties…',
     loadFailed: 'Could not load the properties',
@@ -168,9 +168,10 @@ const enText = {
       retry: 'Try again',
       filter: 'Search notes',
       filterPlaceholder: 'Search notes...',
-      columnsShort: 'cols',
       opened: 'Opened',
       modified: 'Modified',
+      today: 'Today',
+      yesterday: 'Yesterday',
       columns(count) {
         return `${count} columns`;
       },
@@ -394,8 +395,8 @@ const enText = {
       createNumbered(name) {
         return `Create as ${name}`;
       },
-      todayNote: 'Daily note',
-      todayNoteHint: 'Create a note with the current date and time',
+      todayNote: 'Today’s note',
+      todayNoteHint: 'One note per day in Daily notes. If today’s exists, it opens.',
       fromTemplate: 'Note from template',
       fromTemplateHint: 'Create a note from a selected template',
       title: 'Name',
@@ -646,6 +647,7 @@ const enText = {
     docsFrontmatter: 'Frontmatter at the top of each note carries title, tags, and dates.',
     docsWikiLinks: 'Typing [[ and a note name links to it; the note lists what links back.',
     docsShortcutCommands: 'Command palette',
+    docsShortcutNew: 'New note',
     docsShortcutOpen: 'Open a note by name',
     docsShortcutSidebar: 'Show or hide the sidebar',
     docsShortcutSearch: 'Search',
@@ -689,7 +691,7 @@ const enText = {
     tokenHelpNote: 'The token opens only this one repository. Monos keeps it in the macOS keychain, not in a file.',
     autoUploadNotice: (minutes) => `After connecting, your changes go to GitHub by themselves every ${minutes} min. You can turn this off in Sync Settings below.`,
     manualUploadNotice: 'After connecting, your changes go to GitHub when you press Sync Now.',
-    personalAccessToken: 'Personal Access Token',
+    personalAccessToken: 'GitHub access token',
     tokenPlaceholder: 'github_pat_...',
     reset: 'Reset',
     authenticate: 'Authenticate',
@@ -757,6 +759,7 @@ const enText = {
   },
   editor: {
     pinDo: 'Pin',
+    lockMenu: 'Password protection…',
     pinUnpin: 'Unpin',
     // One word under each icon of the note's bottom bar on a phone, where the full labels do not fit.
     footerShort: { folder: 'Folder', tags: 'Tags', due: 'Due', properties: 'Properties', links: 'Links' },
@@ -875,7 +878,7 @@ const enText = {
     },
     taskProgress: {
       label(done, total) {
-        return `${done}/${total}`;
+        return `${done} of ${total} ${total === 1 ? 'task' : 'tasks'}`;
       },
       percent(value) {
         return `${value}%`;
@@ -1012,7 +1015,7 @@ const ruText = {
     emptyTable: 'Нет заметок по этому фильтру.',
     noProperties: 'Ни у одной заметки пока нет своих свойств.',
     sidebar: 'Все свойства',
-    hint: 'Поля заметки: статус, приоритет, дата. Все заметки с полями собраны в одну таблицу.',
+    hint: 'Свойства заметок — статус, приоритет, дата. Здесь все заметки со свойствами собраны в одну таблицу.',
     syntaxHint: 'prop:имя (есть), prop:имя=значение, prop:priority>=3, prop:due<2026-12-01; исключить: -prop:имя=значение.',
     loading: 'Загружаю свойства…',
     loadFailed: 'Не удалось загрузить свойства',
@@ -1067,9 +1070,10 @@ const ruText = {
       retry: 'Повторить',
       filter: 'Поиск по заметкам',
       filterPlaceholder: 'Искать заметки...',
-      columnsShort: 'кол.',
       opened: 'Открыта',
       modified: 'Изменена',
+      today: 'Сегодня',
+      yesterday: 'Вчера',
       columns(count) {
         return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
       },
@@ -1305,8 +1309,8 @@ const ruText = {
       createNumbered(name) {
         return `Создать как ${name}`;
       },
-      todayNote: 'Дневная заметка',
-      todayNoteHint: 'Создать заметку с текущей датой и временем',
+      todayNote: 'Заметка на сегодня',
+      todayNoteHint: 'Одна заметка на день в «Ежедневнике». Если сегодняшняя уже есть, она откроется.',
       fromTemplate: 'Заметка из шаблона',
       fromTemplateHint: 'Создать заметку по выбранному шаблону',
       title: 'Название',
@@ -1564,6 +1568,7 @@ const ruText = {
     docsFrontmatter: 'Фронтматтер в начале заметки хранит заголовок, теги и даты.',
     docsWikiLinks: 'Ввод [[ и названия заметки создаёт ссылку; заметка перечисляет, кто на неё ссылается.',
     docsShortcutCommands: 'Палитра команд',
+    docsShortcutNew: 'Новая заметка',
     docsShortcutOpen: 'Открыть заметку по имени',
     docsShortcutSidebar: 'Показать или скрыть боковую панель',
     docsShortcutSearch: 'Поиск',
@@ -1609,7 +1614,7 @@ const ruText = {
     tokenHelpNote: 'Токен открывает только этот репозиторий. Monos хранит его в связке ключей macOS, а не в файле.',
     autoUploadNotice: (minutes) => `После подключения ваши изменения сами уходят на GitHub каждые ${minutes} мин. Выключить можно в «Настройках синхронизации» ниже.`,
     manualUploadNotice: 'После подключения ваши изменения уходят на GitHub по кнопке «Синхронизировать».',
-    personalAccessToken: 'Personal Access Token',
+    personalAccessToken: 'Токен доступа GitHub',
     tokenPlaceholder: 'github_pat_...',
     reset: 'Сбросить',
     authenticate: 'Авторизоваться',
@@ -1678,6 +1683,7 @@ const ruText = {
   },
   editor: {
     pinDo: 'Закрепить',
+    lockMenu: 'Защита паролем…',
     pinUnpin: 'Открепить',
     // Одно слово под каждой иконкой нижней панели заметки на телефоне, где полные подписи не помещаются.
     footerShort: { folder: 'Папка', tags: 'Теги', due: 'Срок', properties: 'Свойства', links: 'Связи' },
@@ -1806,17 +1812,15 @@ const ruText = {
         return `${count} слов`;
       },
       readingMinutes(count) {
-        const mod10 = count % 10;
-        const mod100 = count % 100;
-        if (mod10 === 1 && mod100 !== 11) return `${count} минута`;
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} минуты`;
-        return `${count} минут`;
+        return `${count} мин чтения`;
       },
       empty: 'Пока нет слов',
     },
     taskProgress: {
       label(done, total) {
-        return `${done}/${total}`;
+        // «из» takes the genitive: из 1 задачи, из 21 задачи, but из 3 задач.
+        const one = total % 10 === 1 && total % 100 !== 11;
+        return `${done} из ${total} ${one ? 'задачи' : 'задач'}`;
       },
       percent(value) {
         return `${value}%`;

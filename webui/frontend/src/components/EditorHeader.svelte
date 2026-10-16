@@ -66,14 +66,16 @@
       />
       {#if fileInfo}
         <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
-          <p class="text-[var(--text-tertiary)] lg:hidden">
+          <!-- One date on the line; when the note was made is in the tooltip. Items are set apart by a middle dot. -->
+          <p class="text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
-          <p class="hidden text-[var(--text-tertiary)] lg:block">
-            {$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}, {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
-          </p>
-          <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
+          {#if wordCharStats}
+            <span class="hidden text-[var(--text-tertiary)] sm:inline" aria-hidden="true">·</span>
+            <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
+          {/if}
           {#if taskProgress && taskProgress.total > 0}
+            <span class="hidden text-[var(--text-tertiary)] sm:inline" aria-hidden="true">·</span>
             <span
               class="hidden items-center gap-2 text-[var(--text-tertiary)] sm:inline-flex"
               data-testid="task-progress"

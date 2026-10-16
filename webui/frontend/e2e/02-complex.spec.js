@@ -27,7 +27,8 @@ test('finds a newly saved note through global search', async ({ page }) => {
   await page.getByPlaceholder('Search').fill(token);
   const result = page.locator('main').getByRole('button', { name: new RegExp(`^${title}\\b`) });
   await expect(result).toBeVisible();
-  await expect(result).toContainText(token.replaceAll('-', ''));
+  // The card keeps the text as written, hyphens included.
+  await expect(result).toContainText(token);
 });
 
 test('inserts an image attachment, previews it, renames it, and updates markdown', async ({ page }) => {

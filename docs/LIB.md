@@ -51,6 +51,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `wiki-links.test.js` | Multiple links per line, deduplication, malformed input, trailing punctuation |
 | `wiki-link-decorations.js` | `collectWikiLinks(doc)`, `wikiLinkAt`, `wikiLinkStatus` — wiki links of an editor document with positions (code skipped) and what each one leads to; drives the `WikiLinks` editor extension |
 | `wiki-link-decorations.test.js` | Positions across marks, code and inline nodes; found, ambiguous and missing answers; folder and heading in a new note's name |
+| `card-excerpt.js` | `cardExcerpt(markdown)` — the words a note card shows: Markdown removed, list items and headings set apart by ` · ` |
+| `card-excerpt.test.js` | Lists, headings, tables, code, callouts, links and long text |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
 | `trash-undo.test.js` | Name and pin remembered, a newer notice wins, undo restores and re-pins |
 | `qr-code.js` | `qrPath(text)` — a QR code as one SVG path with its quiet zone, made locally for the phone-access address |
