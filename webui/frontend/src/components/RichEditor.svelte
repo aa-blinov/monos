@@ -25,8 +25,8 @@
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
     Maximize2, WrapText, Type, MoreHorizontal, ArrowUpRight, FilePlus
   } from 'lucide-svelte';
-  import { wikiLinksKey } from '../lib/richEditorExtras.js';
-  import { wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
+  import { externalLinkAt, wikiLinksKey } from '../lib/richEditorExtras.js';
+  import { isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
   import { newNoteForWikiLink } from '../lib/wiki-links.js';
   import { resolveWikiLink } from '../lib/editor-api.js';
 
@@ -61,7 +61,7 @@
   let editor;
   let canUndo = false;
   let canRedo = false;
-  let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false };
+  let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false, table: false, codeLanguage: '' };
   let slashMenuOpen = false;
   let activeSlashIndex = 0;
   let slashMenuEl;
@@ -203,6 +203,7 @@
   // so its text stays editable; Ctrl/⌘+click and Ctrl/⌘+Enter open it at once.
   let wikiLinkHere = null;
   let wikiBarPosition = { left: 0, top: 0 };
+  let wikiBarEl;
 
   function wikiStatusOf(target) {
     return editor?.storage.wikiLinks?.statuses.get(wikiLinkKey(target)) || { kind: 'pending' };
@@ -214,9 +215,17 @@
       return;
     }
     const state = wikiLinksKey.getState(editor.state);
-    const link = state ? wikiLinkAt(state.links, editor.state.selection.from) : null;
+    const caret = editor.state.selection.from;
+    const link = state ? wikiLinkAt(state.links, caret) : null;
     if (!link) {
-      wikiLinkHere = null;
+      // A web address under the caret gets the same bar, with one action: open it in the browser.
+      const external = externalLinkAt(editor.state, caret);
+      if (external && isOpenableUrl(external.href)) {
+        wikiLinkHere = { from: external.from ?? caret, to: external.to ?? caret, target: external.href, status: { kind: 'external', href: external.href } };
+        placeWikiBar(wikiLinkHere);
+      } else {
+        wikiLinkHere = null;
+      }
       return;
     }
     wikiLinkHere = { ...link, status: wikiStatusOf(link.target) };
@@ -230,7 +239,7 @@
       const start = editor.view.coordsAtPos(link.from);
       const end = editor.view.coordsAtPos(link.to);
       // The bar is 18rem wide, or the surface less a margin on each side when that is narrower.
-      const barWidth = Math.min(288, surface.width - 16);
+      const barWidth = Math.min(wikiBarEl?.offsetWidth || 288, surface.width - 16);
       wikiBarPosition = {
         left: Math.max(8, Math.min(start.left - surface.left, surface.width - barWidth - 8)),
         top: Math.max(start.bottom, end.bottom) - surface.top + 6,
@@ -260,6 +269,41 @@
     }
   }
 
+  // Tools for the block the caret is in: a table grows and shrinks here, a code block picks its language
+  // and copies its text. They appear under the toolbar only while they apply.
+  const CODE_LANGUAGES = ['', 'javascript', 'typescript', 'python', 'bash', 'json', 'html', 'css', 'sql', 'go', 'rust', 'java', 'yaml', 'markdown'];
+  $: codeLanguages = active.codeLanguage && !CODE_LANGUAGES.includes(active.codeLanguage)
+    ? [...CODE_LANGUAGES, active.codeLanguage]
+    : CODE_LANGUAGES;
+  let codeCopied = false;
+  let codeCopiedTimer = null;
+
+  function tableCommand(name) {
+    editor?.chain().focus()[name]().run();
+  }
+
+  function setCodeLanguage(language) {
+    editor?.chain().focus().updateAttributes('codeBlock', { language: language || null }).run();
+  }
+
+  async function copyCodeBlock() {
+    const block = editor?.state.selection.$from.parent;
+    if (!block || block.type.name !== 'codeBlock') return;
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      codeCopied = true;
+      if (codeCopiedTimer) clearTimeout(codeCopiedTimer);
+      codeCopiedTimer = setTimeout(() => { codeCopied = false; }, 1500);
+    } catch (error) {
+      console.error('Failed to copy the code block:', error);
+    }
+  }
+
+  function openExternal(href) {
+    if (!isOpenableUrl(href)) return;
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
+
   function openWikiNote(note) {
     wikiLinkHere = null;
     dispatch('openNote', { path: note.path, name: note.name });
@@ -276,6 +320,7 @@
       heading: ed.isActive('heading') ? ed.getAttributes('heading').level : 0,
       bullet: ed.isActive('bulletList'), ordered: ed.isActive('orderedList'), task: ed.isActive('taskList'),
       quote: ed.isActive('blockquote'), codeBlock: ed.isActive('codeBlock'),
+      table: ed.isActive('table'), codeLanguage: ed.getAttributes('codeBlock')?.language || '',
     };
     canUndo = ed.can().undo(); canRedo = ed.can().redo();
   }
@@ -733,6 +778,7 @@
     title={pendingUrl.kind === 'link' ? $localizedText.richEditor.insertLink : $localizedText.richEditor.insertImage}
     label={pendingUrl.kind === 'link' ? $localizedText.richEditor.linkPrompt : $localizedText.richEditor.imagePrompt}
     placeholder="https://"
+    submitLabel={$localizedText.richEditor.insertButton}
     on:submit={(e) => applyUrlPrompt(e.detail)}
     on:cancel={cancelUrlPrompt}
   />
@@ -766,6 +812,31 @@
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
+    {#if active.table || active.codeBlock}
+      <!-- Tools for the block the caret is in sit in the same row, so the text never jumps when they appear. -->
+      <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
+      <div class="flex shrink-0 items-center gap-1 text-xs" role="group" aria-label={active.table ? $localizedText.richEditor.blockTools.table : $localizedText.richEditor.blockTools.code} data-testid="block-tools">
+      <span class="mr-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{active.table ? $localizedText.richEditor.blockTools.table : $localizedText.richEditor.blockTools.code}</span>
+      {#if active.table}
+        {#each [['addRowAfter', 'addRow'], ['addColumnAfter', 'addColumn'], ['deleteRow', 'deleteRow'], ['deleteColumn', 'deleteColumn']] as [command, label]}
+          <button type="button" on:mousedown|preventDefault on:click={() => tableCommand(command)} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]">{$localizedText.richEditor.blockTools[label]}</button>
+        {/each}
+        <button type="button" on:mousedown|preventDefault on:click={() => tableCommand('deleteTable')} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)]">{$localizedText.richEditor.blockTools.deleteTable}</button>
+      {:else}
+        <select
+          aria-label={$localizedText.richEditor.blockTools.language}
+          value={active.codeLanguage}
+          on:change={(event) => setCodeLanguage(event.currentTarget.value)}
+          class="h-7 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)]"
+        >
+          {#each codeLanguages as language}
+            <option value={language}>{language || $localizedText.richEditor.blockTools.plainText}</option>
+          {/each}
+        </select>
+        <button type="button" on:mousedown|preventDefault on:click={copyCodeBlock} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]">{codeCopied ? $localizedText.richEditor.blockTools.copied : $localizedText.richEditor.blockTools.copy}</button>
+      {/if}
+      </div>
+    {/if}
     </div>
 
     <button
@@ -838,21 +909,29 @@
     {/if}
   </div>
 
+
   <!-- Editor -->
   <div
     bind:this={surfaceEl}
     class="relative flex flex-col flex-1 min-h-0 overflow-hidden"
     data-testid="rich-editor-surface"
   >
-  {#if wikiLinkHere && !wikiSuggestionsOpen && !slashMenuOpen && ['found', 'missing', 'ambiguous'].includes(wikiLinkHere.status.kind)}
+  {#if wikiLinkHere && !wikiSuggestionsOpen && !slashMenuOpen && ['found', 'missing', 'ambiguous', 'external'].includes(wikiLinkHere.status.kind)}
     <div
-      class="absolute z-20 w-72 max-w-[calc(100%-1rem)] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-xl shadow-black/15"
+      bind:this={wikiBarEl}
+      class="absolute z-20 w-max min-w-72 max-w-[min(28rem,calc(100%-1rem))] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-xl shadow-black/15"
       style="left: {wikiBarPosition.left}px; top: {wikiBarPosition.top}px"
       role="group"
       aria-label={$localizedText.richEditor.wikiLink.label}
       data-testid="wiki-link-bar"
     >
-      {#if wikiLinkHere.status.kind === 'found'}
+      {#if wikiLinkHere.status.kind === 'external'}
+        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => openExternal(wikiLinkHere.status.href)}>
+          <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
+          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.openExternal}<span class="ml-2 text-[var(--text-tertiary)]">{wikiLinkHere.status.href.replace(/^https?:\/\//, '')}</span></span>
+          <kbd class="hidden shrink-0 font-sans text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:inline">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
+        </button>
+      {:else if wikiLinkHere.status.kind === 'found'}
         <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => openWikiNote(wikiLinkHere.status)}>
           <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.open(wikiLinkHere.status.name)}</span>
@@ -986,6 +1065,7 @@
   :global(.ProseMirror table > :last-child > tr:last-child > *) { border-bottom: 0; }
   /* A wiki link reads as a link; one that leads nowhere is drawn dashed and quieter, like a draft. */
   :global(.ProseMirror .wiki-link) { color: var(--text-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  :global(.ProseMirror .external-link) { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
   :global(.ProseMirror .wiki-link-missing) { color: var(--text-secondary); text-decoration-style: dashed; }
   :global(.ProseMirror .wiki-link-ambiguous) { text-decoration-style: double; }
   /* flow-root keeps the paragraphs' margins inside the editor: a collapsed margin would stick out past min-height and show a scrollbar on a short note. */

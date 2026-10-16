@@ -1,5 +1,7 @@
 <script>
   import { onDestroy, onMount, createEventDispatcher, tick } from 'svelte';
+  import { get } from 'svelte/store';
+  import { sidebarOpen, setSidebarOpen } from '../lib/sidebar.js';
   import EditorHeader from './EditorHeader.svelte';
   import ModalShell from './ModalShell.svelte';
   import RichEditor from './RichEditor.svelte';
@@ -303,8 +305,28 @@
 
   function closePopoversOnEscape(event) {
     if (event.key !== 'Escape') return;
+    // Escape leaves focus mode only when nothing else is open to close.
+    if (focusMode && !footerMoreOpen && !propertyPanel && !document.querySelector('[aria-modal="true"]')) {
+      setFocusMode(false);
+      return;
+    }
     footerMoreOpen = false;
     if (propertyPanel) closePropertyPanel({ restoreFocus: true });
+  }
+
+  // Focus mode leaves only the text: the sidebar closes (and comes back as it was), the bottom bar and
+  // the stats go, the header folds to the title row with a way out. Escape leaves it too.
+  let sidebarBeforeFocus = null;
+  function setFocusMode(on) {
+    if (on === focusMode) return;
+    focusMode = on;
+    if (on) {
+      sidebarBeforeFocus = get(sidebarOpen);
+      setSidebarOpen(false);
+    } else if (sidebarBeforeFocus !== null) {
+      setSidebarOpen(sidebarBeforeFocus);
+      sidebarBeforeFocus = null;
+    }
   }
 
   // Экспорт сначала отдаёт правки редактора и дожидается сохранения: HTML и PDF
@@ -1064,6 +1086,8 @@
 
   onDestroy(() => {
     flushEditorMarkdown();
+    // Leaving the note in focus mode gives the sidebar back as it was.
+    if (focusMode && sidebarBeforeFocus !== null) setSidebarOpen(sidebarBeforeFocus);
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
       autosaveTimer = null;
@@ -1158,7 +1182,9 @@
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
-    compact={headerCompact}
+    compact={headerCompact || focusMode}
+    {focusMode}
+    onExitFocus={() => setFocusMode(false)}
     onBack={() => dispatch('goHome')}
     onTitleInput={() => { titleTouched = true; }}
     onCommitTitle={commitTitle}
@@ -1206,7 +1232,7 @@
         {:else if rawMode}
           <textarea
             data-testid="raw-source"
-            class="h-full min-h-0 w-full resize-none bg-transparent px-4 pb-6 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-8"
+            class="h-full min-h-0 w-full resize-none bg-transparent px-4 py-4 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-12 lg:py-10"
             placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
             spellcheck="false"
             bind:value={editedContent}
@@ -1242,7 +1268,7 @@
     </div>
   {/if}
 
-  {#if displayedFile && !displayedFile.isDir}
+  {#if displayedFile && !displayedFile.isDir && !focusMode}
     <!-- Нижняя панель: свойства заметки открываются окошками над ней, поэтому текст
          не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
          относятся к запрошенной заметке, а текст ещё от прежней. -->
@@ -1645,7 +1671,7 @@
               <button type="button" role="menuitem" data-testid="menu-lock" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { propertyTriggers.lock = document.querySelector('[data-testid="editor-more"]'); togglePropertyPanel('lock'); }}>
                 <Lock size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.lockMenu}
               </button>
-              <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
+              <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; setFocusMode(!focusMode); }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>
               <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; footerMoreOpen = false; }}>

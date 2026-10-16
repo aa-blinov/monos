@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Schema } from '@tiptap/pm/model';
-import { collectWikiLinks, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from './wiki-link-decorations.js';
+import { collectBareUrls, collectWikiLinks, isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from './wiki-link-decorations.js';
 import { newNoteForWikiLink, wikiLinkSpans } from './wiki-links.js';
 
 const schema = new Schema({
@@ -12,7 +12,7 @@ const schema = new Schema({
     image: { group: 'inline', inline: true, atom: true },
     text: { group: 'inline' },
   },
-  marks: { code: { code: true }, bold: {} },
+  marks: { code: { code: true }, bold: {}, link: { attrs: { href: {} } } },
 });
 
 const p = (...parts) => schema.node('paragraph', null, parts);
@@ -54,4 +54,18 @@ test('newNoteForWikiLink: папка из пути, заголовок отбр�
   assert.deepEqual(newNoteForWikiLink('Идея'), { title: 'Идея', category: '' });
   assert.deepEqual(newNoteForWikiLink('Проекты/План#Шаги'), { title: 'План', category: 'Проекты' });
   assert.deepEqual(newNoteForWikiLink('Issue #42'), { title: 'Issue #42', category: '' });
+});
+
+test('collectBareUrls: адрес без знаков препинания в конце; код и готовые ссылки пропускаются', () => {
+  const doc = schema.node('doc', null, [
+    p(t('См. https://example.com/a?b=1, и (http://x.org).')),
+    p(t('https://in.code', ['code']), t(' и '), schema.text('https://linked.org', [schema.mark('link', { href: 'https://linked.org' })])),
+  ]);
+  const urls = collectBareUrls(doc);
+  assert.deepEqual(urls.map((u) => u.href), ['https://example.com/a?b=1', 'http://x.org']);
+  assert.equal(doc.textBetween(urls[0].from, urls[0].to), 'https://example.com/a?b=1');
+  assert.equal(isOpenableUrl('https://a.b'), true);
+  assert.equal(isOpenableUrl('mailto:a@b.c'), true);
+  assert.equal(isOpenableUrl('javascript:alert(1)'), false);
+  assert.equal(isOpenableUrl('file:///etc/passwd'), false);
 });

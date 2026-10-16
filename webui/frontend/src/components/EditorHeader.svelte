@@ -17,6 +17,8 @@
   export let onBack = () => {};
   /** The text below is scrolled: the title rides in the top row and the rest folds away. */
   export let compact = false;
+  export let focusMode = false;
+  export let onExitFocus = () => {};
   let titleFocused = false;
   $: folded = compact && !titleFocused;
   export let onTitleInput = () => {};
@@ -95,6 +97,9 @@
           <span class="max-w-[12rem] truncate">{part.name}</span>
         {/each}
       </div>
+    {/if}
+    {#if focusMode}
+      <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
     {/if}
     <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
     <TooltipIconButton
