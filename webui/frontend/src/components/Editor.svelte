@@ -39,7 +39,8 @@
   } from '../lib/editor-api.js';
   import { createNoteRequest, loadTagsRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
-  import { refreshConflicts } from '../lib/git-conflicts.js';
+  import { conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
+  import { uploadsChanges } from '../lib/git-sync.js';
   import {
     convertImageToWebp,
     imageNameFor,
@@ -141,6 +142,8 @@
   let isDeleting = false;
   let wordCharStats = '';
   let conflictCount = 0;
+  /** Who wrote each side of this note's conflict, and when; null until known. */
+  let conflictSides = null;
   let conflictNotice = '';
   let showHistory = false;
   let historyNote = null;
@@ -679,6 +682,8 @@
       content = nextContent;
       editedContent = nextContent;
       conflictCount = summarizeConflicts(nextContent).count;
+      conflictSides = null;
+      if (conflictCount > 0) void loadConflictSides(filePath);
       fileInfo = nextFileInfo;
       currentNoteColor = nextFileInfo.color || '';
       title = fileInfo.metadata?.title || fileName.replace('.md', '');
@@ -787,6 +792,44 @@
    * everything outside a conflict survives byte-for-byte. The backend writes it
    * and stages the path so git can finish the merge.
    */
+  async function loadConflictSides(filePath) {
+    try {
+      const list = await (await fetch('/api/git/conflicts')).json();
+      const item = (Array.isArray(list) ? list : []).find((entry) => conflictNotePath(entry?.path) === filePath);
+      if ((loadedFilePath || currentFile?.path) === filePath) conflictSides = item?.sides || null;
+    } catch {
+      conflictSides = null;
+    }
+  }
+
+  function showToast(message, ms = 3000) {
+    formatToast = message;
+    if (formatToastTimer) clearTimeout(formatToastTimer);
+    formatToastTimer = setTimeout(() => formatToast = '', ms);
+  }
+
+  /**
+   * A resolved conflict is only half done until the other devices have it. When sync sends changes on its
+   * own, the result goes out now; otherwise the person is told when it will.
+   */
+  async function sendResolution(whole) {
+    const kept = whole ? ` ${$localizedText.editor.conflictWholeKeptDone}` : '';
+    if (!uploadsChanges()) {
+      showToast($localizedText.editor.conflictResolvedManual + kept, 7000);
+      return;
+    }
+    let sent = false;
+    try {
+      const response = await fetch('/api/git/sync', { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      sent = response.ok && !data.conflicts;
+    } catch {
+      sent = false;
+    }
+    void refreshConflicts();
+    showToast((sent ? $localizedText.editor.conflictResolvedSent : $localizedText.editor.conflictResolvedLater) + kept, 7000);
+  }
+
   async function applyConflictResolution(event) {
     const filePath = loadedFilePath || currentFile?.path;
     if (!filePath) return;
@@ -818,9 +861,12 @@
       editedContent = next;
       content = next;
       conflictCount = summarizeConflicts(next).count;
-      conflictNotice = conflictCount > 0
-        ? $localizedText.editor.conflictPartlyResolved(conflictCount)
-        : $localizedText.editor.conflictResolved;
+      if (conflictCount > 0) {
+        conflictNotice = $localizedText.editor.conflictPartlyResolved(conflictCount);
+      } else {
+        conflictNotice = '';
+        await sendResolution(Boolean(event.detail?.whole));
+      }
     } catch (error) {
       conflictNotice = $localizedText.editor.conflictFailed(error?.message || String(error));
     }
@@ -1239,7 +1285,7 @@
                   <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-primary)]">{conflictNotice}</p>
                 {/if}
               </div>
-              <ConflictNoteView content={editedContent} on:resolve={applyConflictResolution} />
+              <ConflictNoteView content={editedContent} sides={conflictSides} on:resolve={applyConflictResolution} />
             </div>
           </div>
         {:else if rawMode}
@@ -1737,7 +1783,7 @@
 {/if}
 
 {#if formatToast}
-  <div class="fixed bottom-6 right-6 z-[200] animate-toast-in">
+  <div class="fixed bottom-6 right-6 z-[200] animate-toast-in" role="status" data-testid="editor-toast">
     <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">
       {formatToast}
     </div>

@@ -89,6 +89,11 @@ export function startAutoSync({ onResult, intervalMs } = {}) {
   void runSyncRound();
 }
 
+/** Whether a sync round also sends this device's changes, as chosen in Settings. */
+export function uploadsChanges() {
+  return policy.upload;
+}
+
 /** The person's choices changed in Settings. A running timer takes the new interval at once. */
 export function setAutoSyncPolicy({ minutes, upload } = {}) {
   policy = {

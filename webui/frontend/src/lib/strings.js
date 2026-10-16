@@ -796,16 +796,18 @@ const enText = {
     noteNotFound(target) {
       return `Note "${target}" not found.`;
     },
-    conflictResolveHint: 'All parts at once:',
-    conflictKeepOurs: 'Keep this device’s',
-    conflictKeepTheirs: 'Keep the other device’s',
+    conflictResolveHint: 'Keep the whole note as on:',
+    conflictKeepSide: (name) => `Keep ${name}`,
     conflictKeepBoth: 'Keep both',
-    conflictKeepAllOurs: 'This device everywhere',
-    conflictKeepAllTheirs: 'Other device everywhere',
+    conflictThisDevice: 'this device',
+    conflictWholeKept: 'The other version stays in the note’s history.',
+    conflictWholeKeptDone: 'The other version is in the note’s history.',
     conflictApply: 'Apply',
     conflictChosen: (done, total) => `Chosen: ${done} of ${total}${done && done < total ? ' — the rest stay in conflict' : ''}`,
     conflictRegionLabel: 'Conflicting part',
-    conflictResolved: 'Conflict resolved in this note.',
+    conflictResolvedSent: 'Conflict resolved and sent to your other devices.',
+    conflictResolvedLater: 'Conflict resolved. It reaches your other devices on the next sync.',
+    conflictResolvedManual: 'Conflict resolved. It reaches your other devices when you press “Back up notes”.',
     conflictPartlyResolved: (left) => `Saved. ${left} ${left === 1 ? 'part still waits' : 'parts still wait'} for a choice.`,
     conflictFailed: (message) => `Could not apply the choice: ${message}`,
     conflictSaving: 'Applying your choice…',
@@ -816,7 +818,7 @@ const enText = {
     conflictOurs: 'This device',
     conflictTheirs: 'Other device',
     conflictTitle: 'This note changed on two devices',
-    conflictHint: 'Pick a version for each part below and apply: the note opens in the editor again. Until then it is read-only, so the merge markers are not damaged.',
+    conflictHint: 'Keep one version for the whole note, or pick for each part below and apply. Changed words are highlighted. Until the conflict is resolved the note is read-only.',
     conflictCount(count) {
       return `${count} conflict${count === 1 ? '' : 's'} in this note`;
     },
@@ -1742,16 +1744,18 @@ const ruText = {
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
     },
-    conflictResolveHint: 'Для всех частей сразу:',
-    conflictKeepOurs: 'Оставить с этого',
-    conflictKeepTheirs: 'Оставить с другого',
+    conflictResolveHint: 'Оставить всю заметку как на:',
+    conflictKeepSide: (name) => `Оставить: ${name}`,
     conflictKeepBoth: 'Оставить обе',
-    conflictKeepAllOurs: 'С этого устройства везде',
-    conflictKeepAllTheirs: 'С другого устройства везде',
+    conflictThisDevice: 'это устройство',
+    conflictWholeKept: 'Другая версия останется в истории заметки.',
+    conflictWholeKeptDone: 'Другая версия осталась в истории заметки.',
     conflictApply: 'Применить',
     conflictChosen: (done, total) => `Выбрано: ${done} из ${total}${done && done < total ? ' — остальные части останутся конфликтными' : ''}`,
     conflictRegionLabel: 'Конфликтная часть',
-    conflictResolved: 'Конфликт в этой заметке разрешён.',
+    conflictResolvedSent: 'Конфликт разобран и отправлен на другие устройства.',
+    conflictResolvedLater: 'Конфликт разобран. На другие устройства он уйдёт при следующей синхронизации.',
+    conflictResolvedManual: 'Конфликт разобран. На другие устройства он уйдёт, когда вы нажмёте «Резервная копия».',
     conflictPartlyResolved: (left) => `Сохранено. Ещё ${left} ${left % 10 === 1 && left % 100 !== 11 ? 'часть ждёт' : 'части ждут'} выбора.`,
     conflictFailed: (message) => `Не удалось применить выбор: ${message}`,
     conflictSaving: 'Применяем ваш выбор…',
@@ -1759,7 +1763,7 @@ const ruText = {
     conflictOurs: 'Это устройство',
     conflictTheirs: 'Другое устройство',
     conflictTitle: 'Заметку изменили на двух устройствах',
-    conflictHint: 'Выберите версию для каждой части ниже и примените — заметка снова откроется в редакторе. До этого она только для чтения, чтобы не повредить маркеры слияния.',
+    conflictHint: 'Оставьте одну версию на всю заметку или выберите для каждой части ниже и примените. Изменённые слова подсвечены. Пока конфликт не разобран, заметка только для чтения.',
     conflictCount(count) {
       const mod10 = count % 10;
       const mod100 = count % 100;

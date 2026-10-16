@@ -205,6 +205,22 @@ function readConflictStage(filePath, stage) {
   }
 }
 
+/**
+ * Who wrote each side of a conflicted note, and when: the last commit that touched it on this device
+ * (HEAD) and on the other one (MERGE_HEAD). Every device commits under its own name, so the author is
+ * the device. Shown as "Phone, today 14:35" instead of "the other version".
+ */
+function conflictSide(ref, safePath) {
+  try {
+    const line = gitExec(['log', '-1', '--format=%an%x09%aI', ref, '--', safePath]);
+    if (!line) return null;
+    const [device, date] = line.split('\t');
+    return { device: device && device !== 'Monos' ? device : null, date: date || null };
+  } catch {
+    return null;
+  }
+}
+
 function isProbablyBinary(buffer) {
   return Buffer.isBuffer(buffer) && buffer.includes(0);
 }
@@ -1022,6 +1038,7 @@ export function registerGitRoutes(app) {
           theirsExists: Boolean(theirsBuffer),
           binary,
           raw: binary ? '[Binary file]' : '',
+          sides: { ours: conflictSide('HEAD', safePath), theirs: conflictSide('MERGE_HEAD', safePath) },
         };
       });
       res.json(details);

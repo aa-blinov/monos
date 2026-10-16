@@ -27,3 +27,30 @@ test('выбор для одной части запоминается, «При
   await fireEvent.click(both);
   expect(both.getAttribute('aria-pressed')).toBe('false');
 });
+
+test('версии названы устройствами, изменённые слова подсвечены, одна версия на всю заметку применяется сразу', async () => {
+  locale.set('ru');
+  const sides = { ours: { device: 'Ноутбук', date: new Date().toISOString() }, theirs: { device: 'Телефон', date: new Date().toISOString() } };
+  const twoParts = '<<<<<<< HEAD\nВыезд: суббота, 9:00.\n=======\nВыезд: пятница, 6:30.\n>>>>>>> origin/master\n\nСередина.\n\n<<<<<<< HEAD\n- плед\n=======\n- термос\n>>>>>>> origin/master\n';
+  const { component, container } = render(ConflictNoteView, { content: twoParts, sides });
+  const resolve = vi.fn();
+  component.$on('resolve', resolve);
+
+  expect(screen.getAllByRole('button', { name: 'Оставить: Телефон' })).toHaveLength(2);
+  expect(screen.getAllByTestId('conflict-ours-label')[0].textContent).toMatch(/Ноутбук — это устройство/);
+  expect(screen.getAllByText(/^Сегодня, \d\d:\d\d$/).length).toBeGreaterThan(0);
+  const marks = [...container.querySelectorAll('mark')].map((mark) => mark.textContent);
+  expect(marks).toContain('суббота, 9:00.');
+  expect(marks).toContain('пятница, 6:30.');
+  expect(marks).not.toContain('Выезд:');
+
+  await fireEvent.click(screen.getByTestId('conflict-whole-theirs'));
+  expect(resolve.mock.calls[0][0].detail).toEqual({ choices: { 0: 'theirs', 1: 'theirs' }, whole: true });
+});
+
+test('без сведений об устройствах версии называются по-простому', () => {
+  locale.set('ru');
+  render(ConflictNoteView, { content });
+  expect(screen.getByRole('button', { name: 'Оставить: Это устройство' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Оставить: Другое устройство' })).toBeTruthy();
+});

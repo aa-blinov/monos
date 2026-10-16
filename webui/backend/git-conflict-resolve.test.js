@@ -25,10 +25,10 @@ test.before(async () => {
   git(['add', '-A']); git(['commit', '-qm', 'base']);
   git(['checkout', '-qb', 'other']);
   write('Выезд: пятница, 7:00.\n\n- зарядку\n- термос\n- документы\n');
-  git(['commit', '-qam', 'other']);
+  git(['-c', 'user.name=Телефон', 'commit', '-qam', 'other']);
   git(['checkout', '-q', 'master']);
   write('Выезд: суббота.\n\n- зарядку\n- плед\n- документы\n');
-  git(['commit', '-qam', 'mine']);
+  git(['-c', 'user.name=Ноутбук', 'commit', '-qam', 'mine']);
   try { git(['merge', 'other']); } catch { /* conflict expected */ }
   const started = await startServer({ port: 0 });
   base = `http://127.0.0.1:${started.port}`;
@@ -48,6 +48,13 @@ test('список конфликтов называет заметку по-р�
   assert.equal(list[0].path, NOTE);
   assert.match(list[0].ours, /суббота/);
   assert.match(list[0].theirs, /7:00/);
+});
+
+test('у каждой версии есть устройство и время', async () => {
+  const [item] = await (await fetch(`${base}/api/git/conflicts`)).json();
+  assert.equal(item.sides.ours.device, 'Ноутбук');
+  assert.equal(item.sides.theirs.device, 'Телефон');
+  assert.ok(!Number.isNaN(Date.parse(item.sides.theirs.date)));
 });
 
 test('частичный разбор сохраняет выбор, но заметка остаётся в конфликте', async () => {

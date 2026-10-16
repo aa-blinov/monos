@@ -21,9 +21,23 @@
   import { createEventDispatcher } from 'svelte';
   import { splitByConflicts } from '../lib/conflict-markers.js';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
-  import { localizedText } from '../lib/strings.js';
+  import { locale, localizedText } from '../lib/strings.js';
+  import { relativeDay } from '../lib/date-format.js';
+  import { wordDiff } from '../lib/word-diff.js';
 
   export let content = '';
+  /**
+   * Who wrote each side and when, from the server: `{ ours: { device, date }, theirs: { device, date } }`.
+   * Either may be missing (markers left in a note with no conflict in git); the generic names stand in.
+   */
+  export let sides = null;
+
+  // A side is named by its device, as Obsidian names a conflict copy: "Phone" means more than "the other version".
+  $: oursName = sides?.ours?.device || $localizedText.editor.conflictOurs;
+  $: theirsName = sides?.theirs?.device || $localizedText.editor.conflictTheirs;
+  $: dayWords = { today: $localizedText.app.board.today, yesterday: $localizedText.app.board.yesterday };
+  $: oursWhen = sides?.ours?.date ? relativeDay(sides.ours.date, $locale, dayWords) : '';
+  $: theirsWhen = sides?.theirs?.date ? relativeDay(sides.theirs.date, $locale, dayWords) : '';
 
   const dispatch = createEventDispatcher();
 
@@ -37,6 +51,8 @@
     conflictNo: segment.type === 'conflict'
       ? splitByConflicts(content).slice(0, at).filter((x) => x.type === 'conflict').length
       : -1,
+    // The words that differ between the two sides, marked in both columns.
+    diff: segment.type === 'conflict' ? wordDiff(segment.value.ours, segment.value.theirs) : null,
   }));
   $: conflictCount = segments.filter((segment) => segment.type === 'conflict').length;
   $: pending = Object.keys(choices).length;
@@ -57,10 +73,11 @@
   /** Whether a side's text stays after the choice made for this part. */
   const keeps = (choice, side) => !choice || choice === side || choice === 'both';
 
-  function applyAll(choice) {
-    const next = {};
-    for (let i = 0; i < conflictCount; i += 1) next[i] = choice;
-    choices = next;
+  // One version for the whole note is applied at once: the simple case takes one click, not one per part.
+  function keepWhole(choice) {
+    const all = {};
+    for (let i = 0; i < conflictCount; i += 1) all[i] = choice;
+    dispatch('resolve', { choices: all, whole: true });
   }
 
   function apply() {
@@ -77,27 +94,22 @@
       <div class="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          on:click={() => applyAll('ours')}
-          class="text-xs uppercase tracking-widest font-bold transition hover:opacity-70"
+          data-testid="conflict-whole-ours"
+          on:click={() => keepWhole('ours')}
+          class="text-xs font-bold text-[var(--text-primary)] transition hover:opacity-70"
         >
-          {$localizedText.editor.conflictKeepAllOurs}
+          {oursName}
         </button>
         <button
           type="button"
-          on:click={() => applyAll('theirs')}
-          class="text-xs uppercase tracking-widest font-bold transition hover:opacity-70"
+          data-testid="conflict-whole-theirs"
+          on:click={() => keepWhole('theirs')}
+          class="text-xs font-bold text-[var(--blue)] transition hover:opacity-70"
         >
-          {$localizedText.editor.conflictKeepAllTheirs}
-        </button>
-        <button
-          type="button"
-          on:click={apply}
-          disabled={pending === 0}
-          class="text-xs uppercase tracking-widest font-bold text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
-        >
-          {$localizedText.editor.conflictApply}
+          {theirsName}
         </button>
       </div>
+      <p class="basis-full text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.editor.conflictWholeKept}</p>
     </div>
   {/if}
 
@@ -117,7 +129,7 @@
               on:click={() => choose(segment.conflictNo, 'ours')}
               class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'ours' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'ours' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
             >
-              {$localizedText.editor.conflictKeepOurs}
+              {$localizedText.editor.conflictKeepSide(oursName)}
             </button>
             <button
               type="button"
@@ -125,7 +137,7 @@
               on:click={() => choose(segment.conflictNo, 'theirs')}
               class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'theirs' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'theirs' ? 'font-bold text-[var(--blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
             >
-              {$localizedText.editor.conflictKeepTheirs}
+              {$localizedText.editor.conflictKeepSide(theirsName)}
             </button>
             <button
               type="button"
@@ -140,7 +152,8 @@
 
         <div class="grid gap-px bg-[var(--border-subtle)]" class:sm:grid-cols-3={hasBase} class:sm:grid-cols-2={!hasBase}>
           {#if hasBase}
-            <div class="bg-[var(--bg-primary)] p-4">
+            <!-- On a phone the two versions come first; where they started from is context, read after. -->
+            <div class="order-last bg-[var(--bg-primary)] p-4 sm:order-none">
               <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 {$localizedText.editor.conflictBase}
               </p>
@@ -148,19 +161,23 @@
             </div>
           {/if}
 
-          <div class="bg-[var(--bg-primary)] p-4 transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'ours')}>
-            <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--text-primary)]">
-              {$localizedText.editor.conflictOurs}
+          <!-- The dropped side dims its text, not its cell: a see-through cell lets the grid lines show through. -->
+          <div class="bg-[var(--bg-primary)] p-4" data-testid="conflict-ours-cell"><div class="transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'ours')}>
+            <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--text-primary)]" data-testid="conflict-ours-label">
+              {oursName}{#if sides?.ours?.device}<span class="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">{' — '}{$localizedText.editor.conflictThisDevice}</span>{/if}
             </p>
-            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{segment.value.ours || '—'}</pre>
-          </div>
+            {#if oursWhen}<p class="-mt-1 mb-2 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{oursWhen}</p>{/if}
+            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.ours as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}—{/each}</pre>
+          </div></div>
 
-          <div class="bg-[var(--bg-primary)] p-4 transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'theirs')}>
-            <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--blue)]">
-              {$localizedText.editor.conflictTheirs}
+          <!-- The dropped side dims its text, not its cell: a see-through cell lets the grid lines show through. -->
+          <div class="bg-[var(--bg-primary)] p-4" data-testid="conflict-theirs-cell"><div class="transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'theirs')}>
+            <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--blue)]" data-testid="conflict-theirs-label">
+              {theirsName}
             </p>
-            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{segment.value.theirs || '—'}</pre>
-          </div>
+            {#if theirsWhen}<p class="-mt-1 mb-2 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{theirsWhen}</p>{/if}
+            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.theirs as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}—{/each}</pre>
+          </div></div>
         </div>
       </section>
     {/if}
