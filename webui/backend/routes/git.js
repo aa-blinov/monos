@@ -275,6 +275,37 @@ function conflictSide(ref, safePath) {
   }
 }
 
+/**
+ * The latest change to a note made on another device: who and when. A conflict the editor writes itself
+ * (a sync changed the note while it was being edited) has no git sides; this names the other one all the
+ * same, as "Phone, today 14:35". Null when git has no such change, or this is not a repository.
+ *
+ * @param {string} notePath path inside the notes folder, with or without `notes/`
+ */
+export function lastChangeFromAnotherDevice(notePath) {
+  if (!isGitRepo()) return null;
+  try {
+    const gitPath = assertSafeGitPath(String(notePath || '').replace(/^notes\//, ''));
+    const self = storedDeviceName();
+    const lines = gitExec(['log', '-n', '50', '--no-merges', '--format=%an%x09%aI', 'HEAD', '--', gitPath]).split('\n').filter(Boolean);
+    for (const line of lines) {
+      const [device, date] = line.split('\t');
+      if (device && device !== self && device !== 'Monos') return { device, date: date || null };
+    }
+  } catch {
+    // no history for this path
+  }
+  return null;
+}
+
+/** Both sides of a conflict the editor wrote: this device, now; the other, from the history. */
+export function sidesOfWrittenConflict(notePath, modified) {
+  return {
+    ours: { device: storedDeviceName() || null, date: modified || null },
+    theirs: lastChangeFromAnotherDevice(notePath),
+  };
+}
+
 function isProbablyBinary(buffer) {
   return Buffer.isBuffer(buffer) && buffer.includes(0);
 }
@@ -1175,7 +1206,9 @@ export function registerGitRoutes(app) {
         };
       });
       for (const filePath of notesWithMarkers()) {
-        details.push({ path: filePath, markers: true, ours: '', theirs: '', oursExists: true, theirsExists: true, binary: false, raw: '', sides: null });
+        let modified = null;
+        try { modified = fs.statSync(path.join(NOTES_DIR, filePath)).mtime.toISOString(); } catch { /* gone meanwhile */ }
+        details.push({ path: filePath, markers: true, ours: '', theirs: '', oursExists: true, theirsExists: true, binary: false, raw: '', sides: sidesOfWrittenConflict(filePath, modified) });
       }
       res.json(details);
     } catch (error) {

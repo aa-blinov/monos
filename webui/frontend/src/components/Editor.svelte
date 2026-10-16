@@ -833,7 +833,12 @@
       return await saveFileContent(filePath, text, baseFor(filePath));
     } catch (error) {
       if (error?.status !== 409 || !error.body?.changed) throw error;
-      const merged = mergeThreeWay(content, text, error.body.content, { ours: 'this device', theirs: 'synced' });
+      // The marker lines carry the device names too, so the file itself says whose each side is.
+      const sides = error.body.sides || null;
+      const merged = mergeThreeWay(content, text, error.body.content, {
+        ours: sides?.ours?.device || 'this device',
+        theirs: sides?.theirs?.device || 'synced',
+      });
       const saved = await saveFileContent(filePath, merged.text, error.body.version);
       if (loadedFilePath === filePath) {
         content = merged.text;
@@ -841,8 +846,9 @@
         editedContent = editedContent === text ? merged.text : editedContent;
         diskVersion = saved?.version || '';
         conflictCount = summarizeConflicts(content).count;
-        if (conflictCount > 0) void loadConflictSides(filePath);
-        showToast(conflictCount > 0 ? $localizedText.editor.syncedWhileOpenConflict : $localizedText.editor.syncedWhileOpenMerged, 7000);
+        if (conflictCount > 0) conflictSides = sides;
+        const other = sides?.theirs?.device || '';
+        showToast(conflictCount > 0 ? $localizedText.editor.syncedWhileOpenConflict(other) : $localizedText.editor.syncedWhileOpenMerged(other), 7000);
       }
       void refreshConflicts();
       return saved;

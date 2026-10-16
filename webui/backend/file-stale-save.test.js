@@ -51,3 +51,21 @@ test('сохранение без версии не проверяется (ст
   const response = await save('Перезаписано.\n');
   assert.equal(response.status, 200);
 });
+
+test('отказ называет устройство, которое изменило заметку', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const notes = path.join(tempRoot, 'notes');
+  const git = (args) => execFileSync('git', args, { cwd: notes, encoding: 'utf-8' });
+  git(['init', '-q', '-b', 'master']);
+  await fetch(`${base}/api/device`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Ноутбук' }) });
+  git(['add', '-A']); git(['-c', 'user.name=Ноутбук', '-c', 'user.email=n@x', 'commit', '-qm', 'mine']);
+  const loaded = await (await fetch(url())).json();
+  fs.writeFileSync(notePath, 'Правка с телефона.\n', 'utf-8');
+  git(['-c', 'user.name=Телефон', '-c', 'user.email=t@x', 'commit', '-qam', 'theirs']);
+  const response = await save('Моя правка.\n', loaded.version);
+  assert.equal(response.status, 409);
+  const { sides } = await response.json();
+  assert.equal(sides.ours.device, 'Ноутбук');
+  assert.equal(sides.theirs.device, 'Телефон');
+  assert.ok(!Number.isNaN(Date.parse(sides.theirs.date)));
+});

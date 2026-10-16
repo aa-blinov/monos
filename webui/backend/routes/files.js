@@ -12,6 +12,7 @@ import { planLinkUpdate, refreshNotesAfterRename, rewriteNoteFile } from '../lin
 import { normalizePropertyKey, normalizePropertyType, normalizePropertyValue, parseStoredProperties, readProperties } from '../properties.js';
 import { isLockedNote, moveSession, readWithSession, sealWithSession, sessionFor } from '../note-lock.js';
 import { requireQueryPath, requireBodyFields, requireStringField } from './validate.js';
+import { sidesOfWrittenConflict } from './git.js';
 
 /**
  * Moves the index rows of a note or folder, and of everything inside a folder, to their new
@@ -60,7 +61,9 @@ function refuseStaleSave(req, res, fullPath, filePath) {
   const current = noteTextForEdit(fullPath, filePath).text;
   const version = textVersion(current);
   if (version === base) return false;
-  res.status(409).json({ detail: 'The note changed on disk', changed: true, content: current, version });
+  // Who changed it, so the two sides of a conflict can be named ("Phone, today 14:35"), not just "the other".
+  const sides = sidesOfWrittenConflict(filePath, new Date().toISOString());
+  res.status(409).json({ detail: 'The note changed on disk', changed: true, content: current, version, sides });
   return true;
 }
 
