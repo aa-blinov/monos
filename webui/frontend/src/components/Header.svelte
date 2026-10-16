@@ -180,9 +180,10 @@
   </TooltipIconButton>
   {:else if noteOpen}
     <div class="flex-1"></div>
+    <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
     <TooltipIconButton
       on:click={() => editorAction.set('delete')}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--red)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] focus-visible:text-[var(--red)]"
       label={$localizedText.editor.moveToTrash}
       tooltip={$localizedText.editor.moveToTrash}
       tooltipAlign="end"

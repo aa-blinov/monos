@@ -390,6 +390,15 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 
 **Phone bottom bar.** Below `sm` each note action is a 44px column, icon over one short word (`editor.footerShort`), so nothing is a bare icon on a device without tooltips. Six fit at 360px; pinning moves into the ⋯ menu there.
 
+### Cards and the note header
+
+- **Card text** is the note's words, not its Markdown (`lib/card-excerpt.js`): no code, table rules, task boxes or callout markers. After a heading, a list item or a table row the next line follows ` · `, so a list reads `milk · bread · coffee`; running sentences join with a space.
+- **Card date** is the day, relative: `Today, 07:54`, `Yesterday, 18:10`, `12 Oct`, `3 Mar 2025`. The word for what the date is (modified, opened) and the exact moment live in the tooltip, not on every card.
+- **Note header** carries one date, `Modified …`; the creation date is its tooltip. Items are set apart by ` · `, and each says what it counts: `30 words · 1 min read · 1 of 3 tasks`.
+- **Toggles keep their name.** Pin stays "Pin" and shows the pinned state by being pressed (filled pin, `--bg-secondary`), never by turning into "Unpin".
+- **Destructive icons are quiet at rest.** The trash in the note header is `--text-secondary` and turns `--red` on hover or focus.
+- **Locking a note** is an action, so it lives in the note's ⋯ menu ("Password protection…"), not among its properties.
+
 ### Note content
 
 The editor renders Markdown constructs that a CommonMark parser does not know, and it writes them back unchanged:

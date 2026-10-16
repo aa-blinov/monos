@@ -27,3 +27,18 @@ test('Ctrl/⌘+N открывает создание заметки откуда
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.locator('input[placeholder="Note Title"]').or(page.getByRole('dialog').getByRole('textbox')).first()).toBeFocused();
 });
+
+test('защита паролем открывается из меню «⋯», а не из свойств', async ({ page }) => {
+  await prepareMonos(page);
+  const title = uniqueTitle('Lock Menu');
+  await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: 'Секрет' } });
+  await openNote(page, title);
+
+  await page.getByTestId('property-properties-button').click();
+  await expect(page.locator('[data-panel="properties"]')).not.toContainText('Lock');
+  await page.keyboard.press('Escape');
+
+  await page.getByTestId('editor-more').click();
+  await page.getByTestId('menu-lock').click();
+  await expect(page.locator('[data-panel="lock"]')).toBeVisible();
+});

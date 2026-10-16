@@ -1,10 +1,10 @@
 <script>
+  import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop } from 'lucide-svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { loadFileContent, setItemColorRequest } from '../lib/editor-api.js';
-  import { stripFrontmatter } from '../lib/preview-html.js';
   import { localizedText } from '../lib/strings.js';
   import { boardColumns, boardGroupByColor, activeTheme } from '../stores.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
@@ -79,13 +79,7 @@
   }
 
   function cardExcerptFromContent(content) {
-    return stripFrontmatter(content)
-      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
-      .replace(/\[\[([^\]]+)\]\]/g, '$1')
-      .replace(/[#*_`>~-]+/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 320);
+    return cardExcerpt(content);
   }
 
   function hasRealExcerpt(note) {
@@ -203,11 +197,14 @@
       label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltip={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltipAlign="end"
+      aria-pressed={$boardGroupByColor}
       on:click={() => $boardGroupByColor = !$boardGroupByColor}
     >
       <Palette size="14" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
     {#if !mobile}
+      <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
+      <!-- The grid icon names the group, so the numbers need no "columns" after each. -->
       <span class="flex h-7 w-7 items-center justify-center text-[var(--text-tertiary)]" aria-hidden="true">
         <LayoutGrid size="14" strokeWidth="1.7" />
       </span>
@@ -217,10 +214,10 @@
           label={$localizedText.app.board.columns(columnCount)}
           tooltip={$localizedText.app.board.columns(columnCount)}
           tooltipAlign="end"
+          aria-pressed={$boardColumns === String(columnCount)}
           on:click={() => $boardColumns = String(columnCount)}
         >
           {columnCount}
-          <span class="ml-1 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em]">{$localizedText.app.board.columnsShort}</span>
         </TooltipIconButton>
       {/each}
     {/if}

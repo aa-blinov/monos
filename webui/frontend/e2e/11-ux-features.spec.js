@@ -26,13 +26,13 @@ test('word count + reading time отображаются в status bar', async (
   const title = uniqueTitle('Word Count Note');
   await createBlankNote(page, title);
   // 200 слов → reading time считается по фактическому содержимому (включая
-  // любые префиксные элементы). Проверяем что формат "X words, Y min read" появился.
+  // любые префиксные элементы). Проверяем что формат "X words · Y min read" появился.
   const longText = Array(200).fill('word').join(' ');
   await fillEditor(page, longText);
   // status bar находится в EditorHeader — ищем в toolbar
   const statusBar = page.locator('span.tabular-nums').first();
   await expect(statusBar).toBeVisible({ timeout: 5_000 });
-  await expect(statusBar).toHaveText(/\d+ words?, \d+ min read/);
+  await expect(statusBar).toHaveText(/\d+ words? · \d+ min read/);
 });
 
 test('outline panel появляется в редакторе с заголовками', async ({ page }) => {

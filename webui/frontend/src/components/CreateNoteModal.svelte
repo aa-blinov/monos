@@ -168,7 +168,7 @@
             on:click={() => titleInput?.focus()}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
-            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.blankNoteHint}</span>
+            <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.blankNoteHint}</span>
           </button>
           <button
             type="button"
@@ -177,7 +177,7 @@
             disabled={isCreating}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
-            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.todayNoteHint}</span>
+            <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.todayNoteHint}</span>
           </button>
           <button
             type="button"
@@ -185,7 +185,7 @@
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
-            <span class="mt-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.fromTemplateHint}</span>
+            <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.fromTemplateHint}</span>
           </button>
         </div>
       </section>

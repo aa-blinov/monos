@@ -29,3 +29,14 @@ test('no colons in the stamp, because file names cannot hold them', () => {
   assert.doesNotMatch(localeStamp(day, 'ru'), /:/);
   assert.doesNotMatch(localeStamp(day, 'en'), /:/);
 });
+
+test('relativeDay: сегодня и вчера словами, в этом году без года, раньше — с годом', async () => {
+  const { relativeDay } = await import('./date-format.js');
+  const words = { today: 'Сегодня', yesterday: 'Вчера' };
+  const now = new Date(2026, 9, 16, 12, 0);
+  assert.equal(relativeDay(new Date(2026, 9, 16, 7, 54), 'ru', words, now), 'Сегодня, 07:54');
+  assert.equal(relativeDay(new Date(2026, 9, 15, 18, 10), 'ru', words, now), 'Вчера, 18:10');
+  assert.match(relativeDay(new Date(2026, 9, 12, 9, 0), 'ru', words, now), /^12 окт\.?$/);
+  assert.match(relativeDay(new Date(2025, 2, 3), 'ru', words, now), /^3 мар\.? 2025/);
+  assert.equal(relativeDay('', 'ru', words, now), '');
+});

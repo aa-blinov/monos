@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
+  import { cardExcerpt } from '../lib/card-excerpt.js';
+  import { relativeDay } from '../lib/date-format.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
   export let note;
@@ -19,40 +21,13 @@
   }
 
   function excerptText(value) {
-    const text = String(value || '')
-      .replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
-      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
-      .replace(/\[\[([^\]]+)\]\]/g, '$1')
-      // table separator rows, then the pipes of table rows, then checkboxes
-      .replace(/^[ \t]*\|?[ \t]*:?-+:?(?:[ \t]*\|[ \t]*:?-+:?)*[ \t]*\|?[ \t]*$/gm, ' ')
-      .replace(/\|/g, ' ')
-      .replace(/\[[ xX]\]/g, '')
-      .replace(/[#*_`>~-]+/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    return /^last opened:/i.test(text) ? '' : text;
+    return cardExcerpt(value);
   }
 
   function dateLocale(currentLocale = 'en') {
     if (currentLocale === 'ru') return 'ru-RU';
     if (currentLocale === 'en') return 'en-US';
     return currentLocale || 'en-US';
-  }
-
-  function formatOpenedDate(value, currentLocale = 'en', short = false) {
-    const date = value ? new Date(value) : null;
-    if (!date || Number.isNaN(date.getTime())) return '';
-    const options = short
-      ? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
-      : { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Intl.DateTimeFormat(dateLocale(currentLocale), options).format(date);
-  }
-
-  function cardDateLabel(value, label, currentLocale = 'en', short = false) {
-    const formattedDate = formatOpenedDate(value, currentLocale, short);
-    if (!formattedDate) return '';
-    return short ? formattedDate : `${label} ${formattedDate}`;
   }
 
   function cardDateTime(value) {
@@ -88,9 +63,10 @@
   $: visibleName = String(note?.name || '');
   $: cardDateValue = note?.modified || note?.lastOpened;
   $: cardDatePrefix = note?.modified ? $localizedText.app.board.modified : $localizedText.app.board.opened;
-  $: openedDate = cardDateLabel(cardDateValue, cardDatePrefix, $locale, compact);
+  // The card shows the day; the tooltip says what the date is and gives the exact moment.
+  $: openedDate = relativeDay(cardDateValue, $locale, { today: $localizedText.app.board.today, yesterday: $localizedText.app.board.yesterday });
   $: openedDateTime = cardDateTime(cardDateValue);
-  $: openedDateTitle = cardDateTitle(cardDateValue, $locale);
+  $: openedDateTitle = cardDateValue ? `${cardDatePrefix} ${cardDateTitle(cardDateValue, $locale)}` : '';
   $: cardStyle = `--note-accent: ${accent}; --note-tint: color-mix(in srgb, ${accent} 13%, transparent); --note-glow: color-mix(in srgb, ${accent} 18%, transparent);`;
   $: cardClass = compact
     ? 'note-card group relative flex min-h-36 w-full flex-col overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 pb-3 pt-3 text-left shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/40'

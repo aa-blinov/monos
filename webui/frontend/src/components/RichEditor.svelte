@@ -956,6 +956,8 @@
   :global(.ProseMirror table) { border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-subtle); border-radius: var(--radius); overflow: hidden; }
   :global(.ProseMirror th), :global(.ProseMirror td) { border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
   :global(.ProseMirror tr > :last-child) { border-right: 0; }
+  /* A cell holds a paragraph; its block margins would make every row twice as tall as its text. */
+  :global(.ProseMirror td > p), :global(.ProseMirror th > p) { margin: 0; }
   :global(.ProseMirror table > :last-child > tr:last-child > *) { border-bottom: 0; }
   /* A wiki link reads as a link; one that leads nowhere is drawn dashed and quieter, like a draft. */
   :global(.ProseMirror .wiki-link) { color: var(--text-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }

@@ -49,7 +49,7 @@
   import { taskProgress as taskProgressOf } from '../lib/task-progress.js';
   import { resolveRegion, summarizeConflicts } from '../lib/conflict-markers.js';
   import ConflictNoteView from './ConflictNoteView.svelte';
-  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import { CalendarDays, ChevronLeft, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -969,7 +969,7 @@
     const { words, readingMinutes } = wordStats(editedContent);
     wordCharStats = words === 0
       ? $localizedText.editorHeader.stats.empty
-      : `${$localizedText.editorHeader.stats.words(words)}, ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
+      : `${$localizedText.editorHeader.stats.words(words)} · ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
   }
 
   $: taskProgress = taskProgressOf(editedContent);
@@ -1296,7 +1296,6 @@
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.properties.title}</p>
                 <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => loadFile()} />
-                <NoteLock filePath={loadedFilePath} locked={Boolean(fileInfo?.locked)} unlocked={Boolean(fileInfo?.unlocked)} on:changed={() => loadFile()} />
               </div>
             {/if}
           </div>
@@ -1381,12 +1380,13 @@
           type="button"
           data-testid="property-pin"
           aria-pressed={pinnedNow}
-          aria-label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          aria-label={$localizedText.editor.pinDo}
+          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {pinnedNow ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
           on:click={togglePinned}
         >
           <Pin size="14" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />
-          <span class="hidden sm:inline">{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}</span>
+          <!-- A toggle keeps its name; being pinned shows as the pressed state and the filled pin. -->
+          <span class="hidden sm:inline">{$localizedText.editor.pinDo}</span>
         </button>
       </div>
 
@@ -1462,7 +1462,8 @@
             </div>
           {/if}
         </div>
-        <div class="relative" data-footer-more>
+        <!-- The ⋯ button also anchors the password panel: locking a note is an action on the note, not one of its fields. -->
+        <div class="relative" data-footer-more data-panel-anchor="lock">
           <TooltipIconButton
             type="button"
             data-testid="editor-more"
@@ -1481,6 +1482,9 @@
               <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
                 <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
               </button>
+              <button type="button" role="menuitem" data-testid="menu-lock" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { propertyTriggers.lock = document.querySelector('[data-testid="editor-more"]'); togglePropertyPanel('lock'); }}>
+                <Lock size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.lockMenu}
+              </button>
               <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { focusMode = !focusMode; footerMoreOpen = false; }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>
@@ -1490,6 +1494,11 @@
               <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
                 <Palette size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.noteColor}
               </button>
+            </div>
+          {/if}
+          {#if propertyPanel === 'lock'}
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.lock.title} data-testid="property-panel" data-panel="lock" class="{panelClass} sm:left-auto sm:right-0 sm:!w-96">
+              <NoteLock filePath={loadedFilePath} locked={Boolean(fileInfo?.locked)} unlocked={Boolean(fileInfo?.unlocked)} on:changed={() => loadFile()} />
             </div>
           {/if}
         </div>

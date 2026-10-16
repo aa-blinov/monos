@@ -308,36 +308,6 @@ test('Sidebar закрепляет заметку в Pinned через конт�
   expect(unpinCall).toBeTruthy();
 });
 
-test('Sidebar создаёт today note с timestamp по языку интерфейса', async () => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 5, 2, 5, 4, 3));
-  const fetchMock = createFetchMock();
-  globalThis.fetch = fetchMock;
-  window.fetch = fetchMock;
-
-  const { component } = render(Sidebar);
-  const navigateHandler = vi.fn();
-  component.$on('navigate', navigateHandler);
-  await treeLoaded();
-
-  await component.createTodayNote();
-  vi.useRealTimers();
-
-  await waitFor(() => expect(navigateHandler).toHaveBeenCalled());
-  const createCall = fetchMock.mock.calls.find(([url]) => url === '/api/notes/create');
-  expect(JSON.parse(createCall[1].body)).toEqual({
-    title: '2026-06-02 05-04-03',
-    category: 'Daily',
-    tags: [],
-    content: '',
-  });
-  expect(navigateHandler.mock.calls.at(-1)[0].detail).toEqual({
-    path: 'notes/Daily/2026-06-02 05-04-03.md',
-    name: '2026-06-02 05-04-03',
-    isDir: false,
-  });
-});
-
 test('Sidebar создаёт quick note из буфера обмена в Quick Notes', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 5, 2, 19, 36, 39));

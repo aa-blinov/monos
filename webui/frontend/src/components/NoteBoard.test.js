@@ -153,7 +153,8 @@ test('NoteBoard показывает много тегов перед датой
   expect(text).toContain('#smoke');
   expect(text).toContain('+5');
   expect(text).not.toContain('#review');
-  expect(text.indexOf('+5')).toBeLessThan(text.indexOf(uiText.app.board.opened));
+  const date = card.querySelector('time').textContent.trim();
+  expect(text.indexOf('+5')).toBeLessThan(text.indexOf(date));
 });
 
 test('NoteBoard показывает путь под названием без имени файла', () => {
@@ -192,7 +193,10 @@ test('NoteBoard показывает дату открытия на мобиль
   const text = card.textContent.replace(/\s+/g, ' ');
   expect(text).toContain('Daily');
   expect(text).not.toContain('Daily/13-06-26-13-16-01.md');
-  expect(text).toContain('06/13');
+  // The card shows the day; what the date means and the exact moment are in the tooltip.
+  const time = card.querySelector('time');
+  expect(time.textContent.trim()).toMatch(/Jun 13|13 Jun/);
+  expect(time.getAttribute('title')).toMatch(new RegExp(`^${uiText.app.board.opened} `));
 });
 
 test('NoteBoard показывает дату открытия в русском формате день-месяц', () => {
@@ -210,7 +214,7 @@ test('NoteBoard показывает дату открытия в русском
 
   const card = screen.getByRole('button', { name: /13-06-26-13-16-01/ });
   const text = card.textContent.replace(/\s+/g, ' ');
-  expect(text).toContain('13.06');
+  expect(card.querySelector('time').textContent.trim()).toMatch(/^13 июн/);
   expect(text).not.toContain('06/13');
 });
 
@@ -220,7 +224,10 @@ test('NoteBoard показывает дату изменения, если он�
   });
 
   const card = screen.getByRole('button', { name: /Alpha/ });
-  expect(card.textContent).toContain(uiText.app.board.modified);
+  const time = card.querySelector('time');
+  expect(time.getAttribute('title')).toMatch(new RegExp(`^${uiText.app.board.modified} `));
+  // The word is not repeated on every card: the board is ordered by change, so the date speaks for itself.
+  expect(card.textContent).not.toContain(uiText.app.board.modified);
   expect(card.textContent).not.toContain(uiText.app.board.opened);
 });
 

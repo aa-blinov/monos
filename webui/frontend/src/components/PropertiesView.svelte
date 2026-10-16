@@ -83,7 +83,10 @@
 <section class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="properties-view">
   <div class="mx-auto max-w-6xl space-y-5">
     <header class="space-y-2">
-      <h1 class="text-xl font-bold text-[var(--text-primary)]">{$localizedText.properties.tableTitle}</h1>
+      <div class="mb-5">
+        <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.properties.tableTitle}</h1>
+        <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.properties.hint}</p>
+      </div>
       <input
         type="search"
         bind:value={query}

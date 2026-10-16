@@ -47,8 +47,10 @@ export function noteCardPayload(entry) {
   return {
     path: entry.path,
     name: entry.title?.trim() || entry.name.replace('.md', ''),
+    // The opening of the note with its line breaks: the card turns lists and headings into readable
+    // text, and it needs the lines to know where one item ends.
     excerpt: entry.content
-      ? stripFrontmatter(entry.content).replace(/\s+/g, ' ').trim().slice(0, 180)
+      ? stripFrontmatter(entry.content).trim().slice(0, 600)
       : '',
     color: entry.color || null,
     category: entry.category || '',

@@ -32,3 +32,27 @@ export function localeMonth(date = new Date(), locale = 'en') {
 export function localeStamp(date = new Date(), locale = 'en') {
   return `${localeDate(date, locale)} ${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
 }
+
+const intlLocale = (locale) => (locale === 'ru' ? 'ru-RU' : locale === 'en' ? 'en-US' : locale || 'en-US');
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/**
+ * A short date for a card: "Today, 07:54", "Yesterday, 18:10", "12 Oct" within the year, "3 Mar 2025"
+ * before it. The exact moment goes into the card's tooltip; on the card the day is what matters.
+ *
+ * @param {Date|string|number} value
+ * @param {string} locale the interface language
+ * @param {{ today: string, yesterday: string }} words
+ * @param {Date} [now]
+ */
+export function relativeDay(value, locale, words, now = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '';
+  const lang = intlLocale(locale);
+  const time = new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(date);
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return `${words.today}, ${time}`;
+  if (days === 1) return `${words.yesterday}, ${time}`;
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat(lang, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+}
