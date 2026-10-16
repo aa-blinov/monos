@@ -11,6 +11,10 @@
   let className = '';
   export { className as class };
 
+  // A label ("Trash") reads as a small capital tag; a sentence explaining something wraps inside the box
+  // in ordinary case, or it runs past its own background.
+  $: sentence = String(tooltip || '').length > 32;
+
   const TOOLTIP_GAP = 8;
   const VIEWPORT_MARGIN = 12;
 
@@ -45,7 +49,12 @@
     tooltipStyle = `left: ${Math.round(clamp(left, VIEWPORT_MARGIN, maxLeft))}px; top: ${Math.round(clamp(top, VIEWPORT_MARGIN, maxTop))}px;`;
   }
 
-  async function showTooltip() {
+  // The pointer passing over a button on its way elsewhere should not set off a tooltip: it waits a moment.
+  // Keyboard focus shows it at once — that is someone asking what the button is.
+  const HOVER_DELAY = 450;
+  let hoverTimer = null;
+
+  async function reveal() {
     if (!tooltip) return;
     if (typeof window !== 'undefined' && window.innerWidth < 640) return;
     tooltipVisible = true;
@@ -53,7 +62,18 @@
     placeTooltip();
   }
 
+  function showTooltip(event) {
+    if (!tooltip) return;
+    clearTimeout(hoverTimer);
+    if (event?.type === 'focus' || event?.type === 'focusin') {
+      void reveal();
+      return;
+    }
+    hoverTimer = setTimeout(() => { void reveal(); }, HOVER_DELAY);
+  }
+
   function hideTooltip() {
+    clearTimeout(hoverTimer);
     tooltipVisible = false;
   }
 </script>
@@ -91,7 +111,7 @@
     <span
       bind:this={tooltipEl}
       role="tooltip"
-      class="pointer-events-none fixed z-[120] max-w-xs whitespace-nowrap rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] shadow-lg shadow-black/10"
+      class="pointer-events-none fixed z-[120] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-primary)] shadow-lg shadow-black/10 {sentence ? 'w-max max-w-xs whitespace-normal text-xs font-normal normal-case tracking-normal leading-relaxed' : 'whitespace-nowrap text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.14em]'}"
       style={tooltipStyle}
     >
       {tooltip}
