@@ -1,13 +1,12 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { searchQuery, searchResults, isSearching, editorAction } from '../stores.js';
+  import { searchQuery, searchResults, isSearching } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Bookmark, Clipboard, Search, ArrowLeft, X, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Bookmark, Clipboard, Search, ArrowLeft, X, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
-  export let noteOpen = false;
   export let showBack = false;
   export let showSearch = true;
   export let sidebarOpen = false;
@@ -178,18 +177,6 @@
     <Clipboard class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     <span class="hidden text-xs uppercase tracking-widest lg:inline">{$localizedText.header.quickNote}</span>
   </TooltipIconButton>
-  {:else if noteOpen}
-    <div class="flex-1"></div>
-    <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
-    <TooltipIconButton
-      on:click={() => editorAction.set('delete')}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] focus-visible:text-[var(--red)]"
-      label={$localizedText.editor.moveToTrash}
-      tooltip={$localizedText.editor.moveToTrash}
-      tooltipAlign="end"
-    >
-      <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
-    </TooltipIconButton>
   {:else}
     <div class="flex-1"></div>
   {/if}

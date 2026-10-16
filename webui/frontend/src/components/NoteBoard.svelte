@@ -1,7 +1,7 @@
 <script>
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
-  import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop } from 'lucide-svelte';
+  import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop, Plus } from 'lucide-svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { loadFileContent, setItemColorRequest } from '../lib/editor-api.js';
@@ -241,13 +241,16 @@
       {/if}
       <div class={gridClass} role="list">
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
+          <!-- An invitation, not a note: a dashed outline that steps forward on hover, so the first slot
+               does not weigh like a blank card. -->
           <button
             type="button"
-            class="{mobile ? 'h-36 rounded-ui px-3 py-3' : 'h-48 rounded-ui px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-center shadow-sm shadow-black/[0.03] transition hover:border-[var(--text-secondary)]/45 hover:bg-[var(--bg-secondary)]/45"
+            class="{mobile ? 'h-36 px-3 py-3' : 'h-48 px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-ui border border-dashed border-[var(--border-subtle)] bg-transparent text-center text-[var(--text-tertiary)] transition hover:border-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)]/40 hover:text-[var(--text-primary)] focus-visible:border-[var(--text-tertiary)] focus-visible:text-[var(--text-primary)]"
             on:click={createNote}
           >
-            <span class="block font-serif text-sm font-semibold tracking-tight text-[var(--text-primary)] transition group-hover:text-[var(--text-primary)] sm:text-base">
-              {$localizedText.app.homeActions.newNote}
+            <Plus size="20" strokeWidth="1.7" aria-hidden="true" />
+            <span class="block text-xs uppercase tracking-[0.16em]">
+              {$localizedText.app.homeActions.newNote.replace(/^\+\s*/, '')}
             </span>
           </button>
         {/if}

@@ -750,17 +750,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
 <Router>
   <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">
-    <Header
-      bind:this={headerComponent}
-      on:toggleSidebar={toggleSidebar}
-      on:goHome={goHome}
-      on:createQuickNote={createQuickNoteFromHeader}
-      noteOpen={isNoteOpen}
-      showBack={showHeaderBack}
-      showSearch={isDashboardRoute}
-      sidebarOpen={$sidebarOpen}
-      on:saveSearch={openSavedSearchPanel}
-    />
 
     <CommandPalette
       open={$commandPaletteOpen}
@@ -834,6 +823,22 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         {/if}
       </div>
 
+      <!-- The sidebar runs the full height on every page; the bar above the content belongs to the content
+           column, so opening a note (which brings its own header) does not shift the tree. -->
+      <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <!-- A note brings its own header (back, sidebar, trash beside the folder path); the app bar is for the rest. -->
+        {#if !isNoteOpen}
+        <Header
+          bind:this={headerComponent}
+          on:toggleSidebar={toggleSidebar}
+          on:goHome={goHome}
+          on:createQuickNote={createQuickNoteFromHeader}
+          showBack={showHeaderBack}
+          showSearch={isDashboardRoute}
+          sidebarOpen={$sidebarOpen}
+          on:saveSearch={openSavedSearchPanel}
+        />
+        {/if}
       <main class="flex-1 overflow-hidden relative">
         {#if activeSearchQuery}
           <SearchResults
@@ -847,7 +852,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} />
@@ -953,6 +958,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         </Route>
         {/if}
       </main>
+      </div>
     </div>
   </div>
 

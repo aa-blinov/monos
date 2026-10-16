@@ -236,7 +236,7 @@ test('NoteBoard показывает псевдо-карточку создан�
   const createNote = vi.fn();
   component.$on('createNote', createNote);
 
-  const createCard = screen.getByRole('button', { name: /\+ New note/ });
+  const createCard = screen.getByRole('button', { name: /^(\+ )?New note$/ });
   const alphaCard = screen.getByRole('button', { name: /Alpha/ });
   expect(createCard.compareDocumentPosition(alphaCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 

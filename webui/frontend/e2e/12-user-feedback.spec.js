@@ -58,7 +58,7 @@ test('занятое название не перезаписывает суще
   await expect.poll(() => fileContent(page, notePath)).toContain('Original text that must stay.');
 
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i }).click();
   await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
 
@@ -176,7 +176,7 @@ test('поиск без результатов предлагает очисти
   await page.getByRole('button', { name: 'Clear search' }).click();
 
   await expect(search).toHaveValue('');
-  await expect(page.locator('main').getByRole('button', { name: /^\+\s*New note$/i })).toBeVisible();
+  await expect(page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i })).toBeVisible();
 });
 
 test('Enter после заголовка со ссылкой [[…]] начинает обычный абзац', async ({ page }) => {
@@ -202,7 +202,7 @@ test('занятое название предлагает создать коп
   await fillEditor(page, 'Original text.');
 
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i }).click();
   await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
   await expect(page.getByRole('alert')).toContainText(/already exists/i);
@@ -220,7 +220,7 @@ test('занятое название предлагает открыть сущ
   await expect.poll(() => fileContent(page, notePath)).toContain('Existing text.');
 
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i }).click();
   await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
   await expect(page.getByRole('alert')).toContainText(/already exists/i);

@@ -1,7 +1,9 @@
 <script>
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
   import { openPrintView } from '../lib/print.js';
-  import { History } from 'lucide-svelte';
+  import { ArrowLeft, History, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-svelte';
+  import TooltipIconButton from './TooltipIconButton.svelte';
+  import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
 
   export let editedTitle = '';
   export let currentFile = null;
@@ -12,6 +14,11 @@
   export let onOpenHistory = () => {};
   export let outlineOpen = false;
   export let onToggleOutline = () => {};
+  export let onBack = () => {};
+  export let onDelete = () => {};
+
+  $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
+  const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] lg:h-9 lg:w-9';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   const formatDateTime = (value) => {
@@ -43,24 +50,47 @@
     : [];
 </script>
 
-<div class="relative isolate overflow-hidden px-4 lg:px-12 pt-3 pb-2 lg:pt-5 lg:pb-3 space-y-2 lg:space-y-3">
-  <!-- The note's colour, set by the editor: the same tint and glow its card has on the board. -->
-  <span class="pointer-events-none absolute inset-0 -z-10 bg-[var(--note-header-tint,transparent)]" aria-hidden="true"></span>
-  <span class="pointer-events-none absolute -right-16 -top-24 -z-10 h-56 w-56 rounded-full bg-[var(--note-header-glow,transparent)] blur-3xl" aria-hidden="true"></span>
-  <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12">
-    <div class="flex-1 min-w-0">
-      {#if breadcrumbParts.length > 0}
-        <div class="mb-1.5 flex min-w-0 flex-wrap items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-          {#each breadcrumbParts as part, index}
-            {#if index > 0}
-              <span class="opacity-40">/</span>
-            {/if}
-            <span class="max-w-[12rem] truncate">
-              {part.name}
-            </span>
-          {/each}
-        </div>
+<!-- The note's own header is the only bar above it: back, the sidebar and the trash share a row with the
+     folder path, so the text starts high and the note's colour covers one block, not two. -->
+<header class="relative isolate overflow-hidden px-2 pb-2 pt-1 lg:px-12 lg:pb-3 lg:pt-3 space-y-1 lg:space-y-2">
+  <!-- The note's colour, set by the editor: the same tint and glow its card has on the board. `!mt-0`: the
+       header's vertical spacing must not push these layers down from its top edge. -->
+  <span class="pointer-events-none absolute inset-0 -z-10 !mt-0 bg-[var(--note-header-tint,transparent)]" aria-hidden="true"></span>
+  <!-- A radial gradient rather than a blurred circle: in a short, wide header a blurred circle is cut by the
+       edges and shows a band; the gradient fades out on its own. -->
+  <span class="pointer-events-none absolute inset-0 -z-10 !mt-0" style="background: radial-gradient(ellipse 45% 160% at 100% 0%, var(--note-header-glow, transparent), transparent 70%);" aria-hidden="true"></span>
+  <div class="flex min-w-0 items-center gap-1 lg:-ml-10">
+    <TooltipIconButton on:click={onBack} class={navButtonClass} label={$localizedText.header.back} tooltip={$localizedText.header.back} tooltipAlign="start">
+      <ArrowLeft class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+    </TooltipIconButton>
+    <TooltipIconButton on:click={toggleSidebar} class={navButtonClass} label={sidebarToggleLabel} tooltip={sidebarToggleLabel} tooltipAlign="start">
+      {#if $sidebarOpen}
+        <PanelLeftClose class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+      {:else}
+        <PanelLeftOpen class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
       {/if}
+    </TooltipIconButton>
+    <div class="ml-2 flex min-w-0 flex-1 items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+      {#each breadcrumbParts as part, index}
+        {#if index > 0}
+          <span class="opacity-40">/</span>
+        {/if}
+        <span class="max-w-[12rem] truncate">{part.name}</span>
+      {/each}
+    </div>
+    <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
+    <TooltipIconButton
+      on:click={onDelete}
+      class="{navButtonClass} hover:!bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:!text-[var(--red)] focus-visible:text-[var(--red)]"
+      label={$localizedText.editor.moveToTrash}
+      tooltip={$localizedText.editor.moveToTrash}
+      tooltipAlign="end"
+    >
+      <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+    </TooltipIconButton>
+  </div>
+  <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12 px-2 lg:px-0">
+    <div class="flex-1 min-w-0">
       <input
         type="text"
         bind:value={editedTitle}
@@ -68,17 +98,15 @@
         class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />
       {#if fileInfo}
-        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
-          <!-- One date on the line; when the note was made is in the tooltip. Items are set apart by a middle dot. -->
+        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-6 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
+          <!-- One date on the line; when the note was made is in the tooltip. Items are set apart by even space, not by dots. -->
           <p class="text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
           {#if wordCharStats}
-            <span class="hidden text-[var(--text-tertiary)] sm:inline" aria-hidden="true">·</span>
             <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
           {/if}
           {#if taskProgress && taskProgress.total > 0}
-            <span class="hidden text-[var(--text-tertiary)] sm:inline" aria-hidden="true">·</span>
             <span
               class="hidden items-center gap-2 text-[var(--text-tertiary)] sm:inline-flex"
               data-testid="task-progress"
@@ -105,13 +133,14 @@
               </span>
             </span>
           {/if}
+          <!-- Actions on the note read like the bottom bar's, in sentence case; capitals are kept for labels. -->
           <span class="ml-auto flex items-center gap-4">
             <button
               type="button"
               aria-expanded={outlineOpen}
               data-testid="outline-toggle"
               on:click={onToggleOutline}
-              class="-my-4 py-4 uppercase tracking-[0.12em] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="-my-4 py-4 text-xs transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             >
               {$localizedText.editor.outline}
             </button>
@@ -119,7 +148,7 @@
               <button
                 type="button"
                 on:click={onOpenHistory}
-                class="-my-4 inline-flex items-center gap-1.5 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
+                class="-my-4 inline-flex items-center gap-1.5 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
               >
                 <History size="12" strokeWidth="1.7" aria-hidden="true" />
                 {$localizedText.editorHeader.historyButton}
@@ -128,7 +157,7 @@
             <button
               type="button"
               on:click={browserPrint}
-              class="-my-4 py-4 uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
+              class="-my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
             >
               {$localizedText.editorHeader.print}
             </button>
@@ -137,4 +166,4 @@
       {/if}
     </div>
   </div>
-</div>
+</header>

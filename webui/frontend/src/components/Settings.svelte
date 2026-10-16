@@ -678,17 +678,24 @@
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <!-- Each theme shows itself: its light and dark page with text and an accent, small enough for one row. -->
+      <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
         {#each Object.entries(themes) as [key, t]}
           <button
+            type="button"
+            aria-pressed={$activeTheme === key}
             on:click={() => { $activeTheme = key; saveSettings(); }}
-            class="rounded-ui p-4 border text-left transition-colors text-sm {$activeTheme === key ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-primary)]'}"
+            class="rounded-ui border p-1.5 text-left transition-colors {$activeTheme === key ? 'border-[var(--text-primary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]'}"
           >
-            <div class="flex gap-1.5 mb-2">
-              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.light['--bg-primary']}"></span>
-              <span class="w-4 h-4 rounded-full border border-[var(--border-subtle)]" style="background: {t.dark['--bg-primary']}"></span>
-            </div>
-            <span class="text-xs">{$activeTheme === key ? '● ' : ''}{t.name}</span>
+            <span class="flex h-12 overflow-hidden rounded-ui" aria-hidden="true">
+              {#each [t.light, t.dark] as palette}
+                <span class="flex flex-1 items-end justify-between gap-1 px-2 pb-1.5" style="background: {palette['--bg-primary']}; color: {palette['--text-primary']};">
+                  <span class="text-sm font-bold leading-none">Aa</span>
+                  <span class="mb-0.5 h-1 w-3 rounded-ui" style="background: {palette['--yellow'] || palette['--orange'] || palette['--text-secondary']};"></span>
+                </span>
+              {/each}
+            </span>
+            <span class="mt-1.5 block truncate px-0.5 text-xs {$activeTheme === key ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}">{t.name}</span>
           </button>
         {/each}
       </div>
