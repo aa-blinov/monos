@@ -53,6 +53,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `wiki-link-decorations.test.js` | Positions across marks, code and inline nodes; found, ambiguous and missing answers; folder and heading in a new note's name |
 | `card-excerpt.js` | `cardExcerpt(markdown)` — the words a note card shows: Markdown removed, list items and headings set apart by ` · ` |
 | `card-excerpt.test.js` | Lists, headings, tables, code, callouts, links and long text |
+| `git-conflicts.js` | `conflictedNotes`, `refreshConflicts`, `conflictNotePath` — the notes in a sync conflict, marked on the board, in the tree and in the sidebar |
+| `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
 | `trash-undo.test.js` | Name and pin remembered, a newer notice wins, undo restores and re-pins |
 | `qr-code.js` | `qrPath(text)` — a QR code as one SVG path with its quiet zone, made locally for the phone-access address |

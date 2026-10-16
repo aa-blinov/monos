@@ -130,6 +130,28 @@ export function summarizeConflicts(text) {
  * @param {'ours'|'theirs'|'both'} choice
  * @returns {string}
  */
+const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/;
+
+/**
+ * The text that takes a region's place. A region ends with the newline after its closing marker; the
+ * replacement gives that newline back, or the paragraph after the conflict would run into it. "Both"
+ * keeps the two versions as separate paragraphs (a blank line between), except list items, which stay
+ * one list.
+ */
+function regionReplacement(source, region, choice) {
+  let replacement;
+  if (choice === 'ours') replacement = region.ours;
+  else if (choice === 'theirs') replacement = region.theirs;
+  else {
+    const sides = [region.ours, region.theirs].filter(Boolean);
+    const listy = sides.length === 2 && sides.every((side) => LIST_ITEM.test(side));
+    replacement = sides.join(listy ? '\n' : '\n\n');
+  }
+  const consumedNewline = source[region.end - 1] === '\n';
+  if (replacement && consumedNewline && !replacement.endsWith('\n')) replacement += '\n';
+  return replacement;
+}
+
 export function resolveConflictMarkers(text, choice) {
   const source = String(text || '');
   const regions = parseConflictRegions(source);
@@ -138,11 +160,7 @@ export function resolveConflictMarkers(text, choice) {
   let result = source;
   // Right to left, so earlier offsets stay valid as we splice.
   for (const region of regions.slice().reverse()) {
-    let replacement;
-    if (choice === 'ours') replacement = region.ours;
-    else if (choice === 'theirs') replacement = region.theirs;
-    else replacement = [region.ours, region.theirs].filter(Boolean).join('\n');
-    result = result.slice(0, region.start) + replacement + result.slice(region.end);
+    result = result.slice(0, region.start) + regionReplacement(result, region, choice) + result.slice(region.end);
   }
   return result;
 }
@@ -192,11 +210,5 @@ export function resolveRegion(text, index, choice) {
   const region = regions[index];
   if (!region) return source;
 
-  const replacement = choice === 'ours'
-    ? region.ours
-    : choice === 'theirs'
-      ? region.theirs
-      : [region.ours, region.theirs].filter(Boolean).join('\n');
-
-  return source.slice(0, region.start) + replacement + source.slice(region.end);
+  return source.slice(0, region.start) + regionReplacement(source, region, choice) + source.slice(region.end);
 }

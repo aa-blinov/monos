@@ -212,12 +212,17 @@ apiTest('создание заметки с занятым именем не п�
 });
 
 apiTest('токен GitHub передаётся git через окружение, а не через аргументы', () => {
-  assert.equal(gitEnv('').GIT_CONFIG_COUNT, undefined);
+  // Without a token git still gets core.quotepath=false, so non-ASCII names come back readable.
+  const bare = gitEnv('');
+  assert.equal(bare.GIT_CONFIG_COUNT, '1');
+  assert.equal(bare.GIT_CONFIG_KEY_0, 'core.quotepath');
+  assert.equal(bare.GIT_CONFIG_VALUE_0, 'false');
 
   const env = gitEnv('ghp_example');
-  assert.equal(env.GIT_CONFIG_COUNT, '1');
-  assert.equal(env.GIT_CONFIG_KEY_0, 'http.https://github.com/.extraheader');
-  const header = env.GIT_CONFIG_VALUE_0.replace(/^AUTHORIZATION: basic /, '');
+  assert.equal(env.GIT_CONFIG_COUNT, '2');
+  assert.equal(env.GIT_CONFIG_KEY_1, 'http.https://github.com/.extraheader');
+  assert.ok(!Object.values(env).some((value) => value === 'ghp_example'), 'the token never travels as a plain value');
+  const header = env.GIT_CONFIG_VALUE_1.replace(/^AUTHORIZATION: basic /, '');
   assert.equal(Buffer.from(header, 'base64').toString(), 'x-access-token:ghp_example');
 });
 

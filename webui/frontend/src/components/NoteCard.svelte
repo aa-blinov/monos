@@ -3,6 +3,7 @@
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { relativeDay } from '../lib/date-format.js';
+  import { conflictedNotes } from '../lib/git-conflicts.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
   export let note;
@@ -52,6 +53,7 @@
     dispatch('context', { note, x: event.clientX, y: event.clientY });
   }
 
+  $: inConflict = Boolean(note?.path) && $conflictedNotes.has(note.path);
   $: accent = note?.color || 'var(--border-subtle)';
   $: tags = Array.isArray(note?.tags) ? note.tags : [];
   $: compactTags = tags.slice(0, 2);
@@ -149,6 +151,10 @@
         {/if}
       {/if}
       </span>
+      {#if inConflict}
+        <!-- A note that changed on two devices says so on the board, not only once it is opened. -->
+        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>
+      {/if}
       {#if openedDate}
         <time
           class="min-h-4 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]"

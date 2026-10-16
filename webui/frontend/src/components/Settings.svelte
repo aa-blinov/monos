@@ -30,6 +30,8 @@
   import { localeDate } from '../lib/date-format.js';
   import appPackage from '../../../../package.json';
   import { qrPath } from '../lib/qr-code.js';
+  import { relativeDay } from '../lib/date-format.js';
+  import { refreshConflicts } from '../lib/git-conflicts.js';
 
   const dispatch = createEventDispatcher();
 
@@ -578,6 +580,8 @@
           conflictDetails = [];
           showConflictResolver = false;
         }
+        // The board and the tree mark conflicted notes from the same answer.
+        void refreshConflicts();
       }
     } catch (e) { console.error(e); }
     finally { isCheckingStatus = false; }
@@ -1024,11 +1028,12 @@
               <div class="flex items-center gap-2.5">
                 <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
                 <span class="font-medium">{gitStatus.current_branch}</span>
-                <span class="text-[var(--text-secondary)]">({gitStatus.status})</span>
+                <span class="text-[var(--text-secondary)]">· {$localizedText.settings[gitStatus.status] || gitStatus.status}</span>
               </div>
               {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
+              {#if gitStatus.status === 'conflict'}<div class="text-xs text-[var(--red)]">{$localizedText.settings.conflictStatus}</div>{/if}
+              {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(relativeDay(gitStatus.last_sync, $locale, { today: $localizedText.app.board.today, yesterday: $localizedText.app.board.yesterday }))}</div>{/if}
             </div>
             <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}

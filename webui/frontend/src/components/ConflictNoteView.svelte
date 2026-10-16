@@ -42,16 +42,20 @@
   $: pending = Object.keys(choices).length;
   $: hasBase = segments.some((s) => s.type === 'conflict' && s.value.base);
 
+  // Picking a side records it; picking the same side again takes the choice back. (The old version
+  // recorded the choice and then removed it in the next line, so a single part could never be applied.)
   function choose(index, choice) {
-    choices = { ...choices, [index]: choice };
-    // Re-derive from the untouched source so switching a choice replaces rather
-    // than stacks.
     if (choices[index] === choice) {
       const next = { ...choices };
       delete next[index];
       choices = next;
+      return;
     }
+    choices = { ...choices, [index]: choice };
   }
+
+  /** Whether a side's text stays after the choice made for this part. */
+  const keeps = (choice, side) => !choice || choice === side || choice === 'both';
 
   function applyAll(choice) {
     const next = {};
@@ -109,22 +113,25 @@
           <div class="ml-auto flex flex-wrap items-center gap-3">
             <button
               type="button"
+              aria-pressed={choices[segment.conflictNo] === 'ours'}
               on:click={() => choose(segment.conflictNo, 'ours')}
-              class="text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'ours' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'ours' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'ours' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
             >
               {$localizedText.editor.conflictKeepOurs}
             </button>
             <button
               type="button"
+              aria-pressed={choices[segment.conflictNo] === 'theirs'}
               on:click={() => choose(segment.conflictNo, 'theirs')}
-              class="text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'theirs' ? 'font-bold text-[var(--blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'theirs' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'theirs' ? 'font-bold text-[var(--blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
             >
               {$localizedText.editor.conflictKeepTheirs}
             </button>
             <button
               type="button"
+              aria-pressed={choices[segment.conflictNo] === 'both'}
               on:click={() => choose(segment.conflictNo, 'both')}
-              class="text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'both' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'both' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'both' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
             >
               {$localizedText.editor.conflictKeepBoth}
             </button>
@@ -141,14 +148,14 @@
             </div>
           {/if}
 
-          <div class="bg-[var(--bg-primary)] p-4" class:opacity-50={choices[segment.conflictNo] && choices[segment.conflictNo] !== 'ours'}>
+          <div class="bg-[var(--bg-primary)] p-4 transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'ours')}>
             <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--text-primary)]">
               {$localizedText.editor.conflictOurs}
             </p>
             <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{segment.value.ours || '—'}</pre>
           </div>
 
-          <div class="bg-[var(--bg-primary)] p-4" class:opacity-50={choices[segment.conflictNo] && choices[segment.conflictNo] !== 'theirs'}>
+          <div class="bg-[var(--bg-primary)] p-4 transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'theirs')}>
             <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--blue)]">
               {$localizedText.editor.conflictTheirs}
             </p>
@@ -158,6 +165,21 @@
       </section>
     {/if}
   {/each}
+
+  {#if conflictCount > 0}
+    <!-- Apply sits after the last part too: the choices are made down here, not in the bar above. -->
+    <div class="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 pt-1" data-testid="conflict-apply-bar">
+      <p class="mr-auto text-xs text-[var(--text-secondary)]">{$localizedText.editor.conflictChosen(pending, conflictCount)}</p>
+      <button
+        type="button"
+        on:click={apply}
+        disabled={pending === 0}
+        class="text-xs uppercase tracking-widest font-bold text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
+      >
+        {$localizedText.editor.conflictApply}
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -169,6 +191,8 @@
   .prose-plain :global(p) { margin: 0 0 0.7rem; line-height: 1.65; }
   .prose-plain :global(ul),
   .prose-plain :global(ol) { margin: 0 0 0.7rem; padding-left: 1.4em; }
+  .prose-plain :global(ul) { list-style: disc; }
+  .prose-plain :global(ol) { list-style: decimal; }
   .prose-plain :global(li) { margin-bottom: 0.2rem; line-height: 1.6; }
   .prose-plain :global(code) { background: var(--bg-secondary); padding: 0.05em 0.3em; border-radius: var(--radius); font-size: 0.9em; }
   .prose-plain :global(pre) { background: var(--bg-secondary); padding: 0.8rem; border-radius: var(--radius); overflow-x: auto; margin: 0 0 0.7rem; }

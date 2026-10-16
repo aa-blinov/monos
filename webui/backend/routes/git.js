@@ -14,16 +14,21 @@ export function buildGithubRemoteUrl(repo) {
 
 // The token travels in the environment, not in `git -c` arguments: `ps` shows
 // every process's arguments to all local users. GIT_CONFIG_COUNT needs git 2.31+.
+// core.quotepath=false: without it git prints a name outside ASCII as an escaped, quoted string
+// ("\320\237…" for «План.md»), so a note with a Russian name could not be found by its path, its
+// conflict could not be opened, and the list of sent files was unreadable.
 export function gitEnv(token) {
-  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
-  if (!token) return env;
-  const credentials = Buffer.from(`x-access-token:${token}`).toString('base64');
-  return {
-    ...env,
-    GIT_CONFIG_COUNT: '1',
-    GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
-    GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${credentials}`,
-  };
+  const config = [['core.quotepath', 'false']];
+  if (token) {
+    const credentials = Buffer.from(`x-access-token:${token}`).toString('base64');
+    config.push(['http.https://github.com/.extraheader', `AUTHORIZATION: basic ${credentials}`]);
+  }
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_CONFIG_COUNT: String(config.length) };
+  config.forEach(([key, value], index) => {
+    env[`GIT_CONFIG_KEY_${index}`] = key;
+    env[`GIT_CONFIG_VALUE_${index}`] = value;
+  });
+  return env;
 }
 
 function gitExec(args, options = {}) {
@@ -115,6 +120,30 @@ async function readStoredGitToken() {
   } catch {
     return '';
   }
+}
+
+const MARKER_LINE = /^(?:<{7}|>{7})(?: |$)|^={7}$/m;
+
+/**
+ * Unstage the staged notes whose text still holds merge markers and return their paths. The file on
+ * disk is left as it is, so the note can still be resolved in place.
+ */
+function holdBackNotesWithMarkers() {
+  const staged = gitExec(['diff', '--cached', '--name-only', '-z']).split('\0').filter((name) => name.endsWith('.md'));
+  const held = staged.filter((name) => {
+    try {
+      return hasConflictMarkers(fs.readFileSync(path.join(NOTES_DIR, name), 'utf8'));
+    } catch {
+      return false;
+    }
+  });
+  if (held.length) gitExec(['reset', '-q', '--', ...held]);
+  return held;
+}
+
+/** Whether a text still holds merge markers. */
+export function hasConflictMarkers(text) {
+  return MARKER_LINE.test(String(text || ''));
 }
 
 function commitStagedChanges(message) {
@@ -524,6 +553,7 @@ export function registerGitRoutes(app) {
           } catch (error) {
             const errorText = error.stderr || error.message || '';
             if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
+              indexAllFiles();
               return res.json({ message: 'Conflicts detected during setup', conflicts: true });
             }
             throw error;
@@ -535,6 +565,9 @@ export function registerGitRoutes(app) {
 
       gitExec(['push', '-u', 'origin', branch], { token: authToken });
 
+      // The notes that came down with the repository are on disk now; index them, or a second device
+      // shows an empty board until the app restarts.
+      indexAllFiles();
       res.json({ message: `Connected to ${repo}/${branch}`, conflicts: false });
     } catch (error) {
       res.status(500).json({ detail: error.message || String(error) });
@@ -682,12 +715,26 @@ export function registerGitRoutes(app) {
 
       const stages = getConflictStages(safePath);
       if (!stages.has(1) && !stages.has(2) && !stages.has(3)) {
+        // Markers left in the text by an earlier merge, with nothing unmerged in git: the choice is an
+        // ordinary edit of the file, and the next sync sends it.
+        if (hasConflictMarkers(fs.readFileSync(absolute, 'utf8'))) {
+          fs.writeFileSync(absolute, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+          indexAllFiles();
+          return res.json({ message: 'Markers resolved', resolved: !hasConflictMarkers(content), remaining: [] });
+        }
         return res.status(409).json({ detail: 'This note has no unresolved conflict' });
       }
 
       // Keep a copy of everything involved before the working tree is rewritten.
       archiveConflictVersions(safePath, stages);
       fs.writeFileSync(absolute, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+
+      // Some parts are still undecided: keep what was chosen, but leave the note in conflict. Marking it
+      // resolved would commit the remaining markers and send them to the other devices as text.
+      if (hasConflictMarkers(content)) {
+        indexAllFiles();
+        return res.json({ message: 'Partially resolved', resolved: false, remaining: listUnmergedFiles() });
+      }
       gitExec(['add', '--', safePath]);
 
       let mergeCommitted = false;
@@ -701,7 +748,7 @@ export function registerGitRoutes(app) {
       }
 
       indexAllFiles();
-      res.json({ message: 'Conflict resolved', mergeCommitted, remaining: listUnmergedFiles() });
+      res.json({ message: 'Conflict resolved', resolved: true, mergeCommitted, remaining: listUnmergedFiles() });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
@@ -766,6 +813,8 @@ export function registerGitRoutes(app) {
       const { device_name: deviceName, branch } = readGitSettings();
 
       gitExec(['add', '-A']);
+      // A note that still holds merge markers is never sent: they would reach the other devices as text.
+      const held = holdBackNotesWithMarkers();
       // Naming the device in the message is what makes a shared history
       // readable: "Auto-sync from Monos" on both devices gives you no way to
       // tell whose edit a commit was.
@@ -804,6 +853,7 @@ export function registerGitRoutes(app) {
         // What this device added. With two devices the other one's commits show
         // up as `pulled`, which is the number people actually look for.
         pushed: pushedFiles,
+        held,
         pulled: arrivedCommits(headBeforePull, branch),
         inSync: after.ahead === 0 && after.behind === 0,
         device: deviceName || null,

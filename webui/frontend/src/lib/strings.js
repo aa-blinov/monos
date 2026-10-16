@@ -171,6 +171,8 @@ const enText = {
       opened: 'Opened',
       modified: 'Modified',
       today: 'Today',
+      conflict: 'Conflict',
+      conflictHint: 'This note changed on two devices. Open it to pick a version.',
       yesterday: 'Yesterday',
       columns(count) {
         return `${count} columns`;
@@ -347,7 +349,7 @@ const enText = {
     },
     dropToRoot: 'Drop to root',
     syncWithGit: 'Back up notes',
-    conflictsWaiting: 'Conflicts need review in Settings',
+    conflictNotice: (count) => `Conflict in ${count} ${count === 1 ? 'note' : 'notes'} — open`,
     quickNoteFromClipboard: 'Create note from clipboard',
     saveBeforeSync: 'Save the current note before syncing',
     waitForSaveBeforeSync: 'Wait until the current note finishes saving before syncing.',
@@ -721,18 +723,19 @@ const enText = {
     autoFormatOnSave: 'Auto-format on save',
     statusAndSync: 'Status & Sync',
     checking: 'Checking...',
-    clean: 'clean',
-    dirty: 'dirty',
+    clean: 'in sync',
+    dirty: 'unsent changes',
     conflict: 'conflict',
     ahead(count) {
-      return `↑ ${count} ahead of remote`;
+      return `↑ ${count} ${count === 1 ? 'change waits' : 'changes wait'} to be sent to GitHub`;
     },
     behind(count) {
-      return `↓ ${count} behind remote — pull recommended`;
+      return `↓ ${count} ${count === 1 ? 'change' : 'changes'} from other devices ${count === 1 ? 'waits' : 'wait'} to be received`;
     },
     lastSync(value) {
       return `Last sync: ${value}`;
     },
+    conflictStatus: 'A note changed on two devices. Open it and pick a version for each part.',
     syncNow: 'Sync Now',
     syncing: 'Syncing...',
     notInitialized: 'Not initialized. Authenticate and select a repository above.',
@@ -800,8 +803,11 @@ const enText = {
     conflictKeepAllOurs: 'This device everywhere',
     conflictKeepAllTheirs: 'Other device everywhere',
     conflictApply: 'Apply',
+    conflictChosen: (done, total) => `Chosen: ${done} of ${total}${done && done < total ? ' — the rest stay in conflict' : ''}`,
     conflictRegionLabel: 'Conflicting part',
     conflictResolved: 'Conflict resolved in this note.',
+    conflictPartlyResolved: (left) => `Saved. ${left} ${left === 1 ? 'part still waits' : 'parts still wait'} for a choice.`,
+    conflictFailed: (message) => `Could not apply the choice: ${message}`,
     conflictSaving: 'Applying your choice…',
     conflictRegion(index, total) {
       return total === 1 ? 'Conflicting part' : `Conflicting part ${index} of ${total}`;
@@ -1082,6 +1088,8 @@ const ruText = {
       opened: 'Открыта',
       modified: 'Изменена',
       today: 'Сегодня',
+      conflict: 'Конфликт',
+      conflictHint: 'Заметку изменили на двух устройствах. Откройте её, чтобы выбрать версию.',
       yesterday: 'Вчера',
       columns(count) {
         return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
@@ -1266,7 +1274,10 @@ const ruText = {
     },
     dropToRoot: 'Переместить в корень',
     syncWithGit: 'Резервная копия',
-    conflictsWaiting: 'Конфликты — разобрать в настройках',
+    conflictNotice: (count) => {
+      const one = count % 10 === 1 && count % 100 !== 11;
+      return `Конфликт в ${count} ${one ? 'заметке' : 'заметках'} — открыть`;
+    },
     quickNoteFromClipboard: 'Создать заметку из буфера обмена',
     saveBeforeSync: 'Сохраните текущую заметку перед синхронизацией',
     waitForSaveBeforeSync: 'Дождитесь сохранения текущей заметки перед синхронизацией.',
@@ -1653,15 +1664,20 @@ const ruText = {
     autoFormatOnSave: 'Автоформатирование при сохранении',
     statusAndSync: 'Статус и синхронизация',
     checking: 'Проверка...',
-    clean: 'чисто',
+    clean: 'всё синхронизировано',
     dirty: 'есть изменения',
     conflict: 'конфликт',
     ahead(count) {
-      return `↑ на ${count} впереди remote`;
+      const one = count % 10 === 1 && count % 100 !== 11;
+      const few = count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14);
+      return `↑ ${count} ${one ? 'изменение ждёт' : few ? 'изменения ждут' : 'изменений ждут'} отправки на GitHub`;
     },
     behind(count) {
-      return `↓ на ${count} позади remote — рекомендуется pull`;
+      const one = count % 10 === 1 && count % 100 !== 11;
+      const few = count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14);
+      return `↓ ${count} ${one ? 'изменение' : few ? 'изменения' : 'изменений'} с других устройств ${one ? 'ждёт' : 'ждут'} получения`;
     },
+    conflictStatus: 'Заметку изменили на двух устройствах. Откройте её и выберите версию для каждой части.',
     lastSync(value) {
       return `Последняя синхронизация: ${value}`;
     },
@@ -1733,8 +1749,11 @@ const ruText = {
     conflictKeepAllOurs: 'С этого устройства везде',
     conflictKeepAllTheirs: 'С другого устройства везде',
     conflictApply: 'Применить',
+    conflictChosen: (done, total) => `Выбрано: ${done} из ${total}${done && done < total ? ' — остальные части останутся конфликтными' : ''}`,
     conflictRegionLabel: 'Конфликтная часть',
     conflictResolved: 'Конфликт в этой заметке разрешён.',
+    conflictPartlyResolved: (left) => `Сохранено. Ещё ${left} ${left % 10 === 1 && left % 100 !== 11 ? 'часть ждёт' : 'части ждут'} выбора.`,
+    conflictFailed: (message) => `Не удалось применить выбор: ${message}`,
     conflictSaving: 'Применяем ваш выбор…',
     conflictBase: 'Исходник (от него отталкивались оба)',
     conflictOurs: 'Это устройство',

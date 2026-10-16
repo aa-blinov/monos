@@ -139,3 +139,16 @@ test('разрешение последнего региона снимает в
   assert.match(out, /Моя версия/);
   assert.match(out, /\bB\b/);
 });
+
+test('разрешение конфликта не съедает пустую строку перед следующим абзацем', () => {
+  const text = 'Начало.\n\n<<<<<<< HEAD\nМоя.\n||||||| base\nБыло.\n=======\nЧужая.\n>>>>>>> origin/master\n\nВзять: термос.';
+  assert.equal(resolveRegion(text, 0, 'ours'), 'Начало.\n\nМоя.\n\nВзять: термос.');
+  assert.equal(resolveRegion(text, 0, 'theirs'), 'Начало.\n\nЧужая.\n\nВзять: термос.');
+  assert.equal(resolveRegion(text, 0, 'both'), 'Начало.\n\nМоя.\n\nЧужая.\n\nВзять: термос.');
+  assert.equal(resolveConflictMarkers(text, 'ours'), 'Начало.\n\nМоя.\n\nВзять: термос.');
+});
+
+test('«обе» для пунктов списка оставляет один список', () => {
+  const text = '<<<<<<< HEAD\n- молоко\n=======\n- хлеб\n>>>>>>> origin/master\n- кофе';
+  assert.equal(resolveRegion(text, 0, 'both'), '- молоко\n- хлеб\n- кофе');
+});
