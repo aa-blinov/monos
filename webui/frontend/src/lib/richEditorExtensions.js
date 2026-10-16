@@ -8,7 +8,7 @@ import { defaultMarkdownSerializer } from 'prosemirror-markdown';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { Callouts, InlineMath, MathBlock, MermaidBlock, NoteEmbed, PdfEmbed, WikiLinks } from './richEditorExtras.js';
+import { Callouts, ExternalLinks, InlineMath, MathBlock, MermaidBlock, NoteEmbed, PdfEmbed, WikiLinks } from './richEditorExtras.js';
 import { SoftBreak } from './soft-break.js';
 import { EditableParagraph } from './blank-line.js';
 import { Markdown } from 'tiptap-markdown';
@@ -103,6 +103,7 @@ export function createRichEditorExtensions(placeholder, {
     PdfEmbed.configure({ resolveSrc: resolveImageSrc }),
     Callouts,
     WikiLinks.configure({ onActivate: onWikiLinkActivate }),
+    ExternalLinks,
     SoftBreak,
     Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
   ];

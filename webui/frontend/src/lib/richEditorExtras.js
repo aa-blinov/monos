@@ -19,7 +19,7 @@ import katex from 'katex';
 import { get } from 'svelte/store';
 import { localizedText } from './strings.js';
 import { calloutMarker, calloutTone } from './callouts.js';
-import { collectWikiLinks, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from './wiki-link-decorations.js';
+import { collectBareUrls, collectWikiLinks, isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from './wiki-link-decorations.js';
 
 let mermaidPromise = null;
 
@@ -714,6 +714,64 @@ export const WikiLinks = Extension.create({
           },
           destroy: () => { if (timer) clearTimeout(timer); },
         };
+      },
+    })];
+  },
+});
+
+export const externalLinksKey = new PluginKey('externalLinks');
+
+/** The web address at a position: a Markdown link around it, or a plain address typed in the text. */
+export function externalLinkAt(state, pos) {
+  const $pos = state.doc.resolve(Math.max(0, Math.min(pos, state.doc.content.size)));
+  const linkMark = [...$pos.marks(), ...($pos.nodeAfter?.marks || [])].find((mark) => mark.type.name === 'link');
+  if (linkMark?.attrs?.href) return { href: linkMark.attrs.href };
+  const bare = externalLinksKey.getState(state)?.urls.find((url) => pos >= url.from && pos <= url.to);
+  return bare ? { href: bare.href, from: bare.from, to: bare.to } : null;
+}
+
+/**
+ * Web addresses open from the editor. A plain `https://…` in the text is drawn as a link (a decoration:
+ * the file keeps the address as typed), and it and any Markdown link open in the browser on
+ * Ctrl/⌘+click or Ctrl/⌘+Enter. A plain click only places the caret, so the text stays editable.
+ */
+export const ExternalLinks = Extension.create({
+  name: 'externalLinks',
+
+  addOptions() {
+    return {
+      onOpen: (href) => { window.open(href, '_blank', 'noopener,noreferrer'); },
+    };
+  },
+
+  addProseMirrorPlugins() {
+    const options = this.options;
+    const open = (state, pos) => {
+      const link = externalLinkAt(state, pos);
+      if (!link || !isOpenableUrl(link.href)) return false;
+      options.onOpen(link.href);
+      return true;
+    };
+    return [new Plugin({
+      key: externalLinksKey,
+      state: {
+        init: (_, state) => ({ urls: collectBareUrls(state.doc) }),
+        apply: (tr, value, _old, newState) => (tr.docChanged ? { urls: collectBareUrls(newState.doc) } : value),
+      },
+      props: {
+        decorations(state) {
+          const { urls } = externalLinksKey.getState(state);
+          if (!urls.length) return null;
+          return DecorationSet.create(state.doc, urls.map((url) => Decoration.inline(url.from, url.to, { class: 'external-link' })));
+        },
+        handleClick(view, pos, event) {
+          if (!(event.metaKey || event.ctrlKey)) return false;
+          return open(view.state, pos);
+        },
+        handleKeyDown(view, event) {
+          if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey) || !view.state.selection.empty) return false;
+          return open(view.state, view.state.selection.from);
+        },
       },
     })];
   },

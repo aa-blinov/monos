@@ -14,6 +14,8 @@
   export let title = '';
   export let label = '';
   export let placeholder = '';
+  /** What the main button does; a dialog that inserts says so instead of a generic “Confirm”. */
+  export let submitLabel = '';
 
   const dispatch = createEventDispatcher();
 
@@ -77,7 +79,7 @@
         class={getModalButtonClass('primary', { disabled: !canSubmit, extraClass: 'py-2' })}
         disabled={!canSubmit}
       >
-        {$localizedText.modal.confirm}
+        {submitLabel || $localizedText.modal.confirm}
       </button>
     </div>
   </form>

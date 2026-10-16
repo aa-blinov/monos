@@ -54,3 +54,35 @@ export function wikiLinkStatus(answer) {
   if (answer?.path) return { kind: 'found', path: answer.path, name: answer.name || answer.path };
   return { kind: 'missing' };
 }
+
+// A web address in running text. Trailing punctuation belongs to the sentence, not to the address.
+const BARE_URL = /\bhttps?:\/\/[^\s<>"'«»]+/g;
+const TRAILING = /[.,;:!?)\]}»"'…]+$/;
+
+/** Only addresses a browser should open: http, https and mail. */
+export function isOpenableUrl(href) {
+  return /^(https?:|mailto:)/i.test(String(href || '').trim());
+}
+
+/**
+ * Web addresses typed as plain text, with their positions. Code is skipped, and so is text that is
+ * already a Markdown link: that link opens on its own.
+ *
+ * @returns {Array<{ from: number, to: number, href: string }>}
+ */
+export function collectBareUrls(doc) {
+  const found = [];
+  doc.descendants((node, pos) => {
+    if (node.type.spec.code) return false;
+    if (!node.isText) return true;
+    if (node.marks.some((mark) => mark.type.spec.code || mark.type.name === 'link')) return false;
+    for (const match of node.text.matchAll(BARE_URL)) {
+      const href = match[0].replace(TRAILING, '');
+      if (href.length < 'http://x'.length) continue;
+      const from = pos + match.index;
+      found.push({ from, to: from + href.length, href });
+    }
+    return false;
+  });
+  return found;
+}
