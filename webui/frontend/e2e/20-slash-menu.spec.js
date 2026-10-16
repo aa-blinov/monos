@@ -51,20 +51,20 @@ test('меню команд встаёт под знаком «/», пункты
   expect(geometry.optionTextLeft - geometry.optionLeft).toBeLessThanOrEqual(14);
 
   const selected = () => page.locator('[role="option"][aria-selected="true"]');
-  await expect(selected()).toHaveText('Heading 1');
+  await expect(selected()).toHaveAccessibleName('Heading 1');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
-  await expect(selected()).toHaveText('Bullet list');
+  await expect(selected()).toHaveAccessibleName('Bullet list');
   await page.keyboard.press('ArrowUp');
-  await expect(selected()).toHaveText('Heading 2');
+  await expect(selected()).toHaveAccessibleName('Heading 2');
 
   await page.keyboard.press('ArrowUp');
-  await expect(selected()).toHaveText('Heading 1');
+  await expect(selected()).toHaveAccessibleName('Heading 1');
   // Up from the first item wraps to the last one, and down from the last wraps back.
   await page.keyboard.press('ArrowUp');
-  await expect(selected()).toHaveText('Divider');
+  await expect(selected()).toHaveAccessibleName('Divider');
   await page.keyboard.press('ArrowDown');
-  await expect(selected()).toHaveText('Heading 1');
+  await expect(selected()).toHaveAccessibleName('Heading 1');
 
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
@@ -99,7 +99,7 @@ test('у нижнего края меню открывается над стро
   await page.keyboard.type('/');
   await expect(listbox).toBeVisible();
   await page.keyboard.press('ArrowUp');
-  await expect(page.locator('[role="option"][aria-selected="true"]')).toHaveText('Divider');
+  await expect(page.locator('[role="option"][aria-selected="true"]')).toHaveAccessibleName('Divider');
   await page.keyboard.press('Enter');
   await expect(listbox).toHaveCount(0);
   await expect(page.locator('.ProseMirror hr')).toHaveCount(1);

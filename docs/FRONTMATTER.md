@@ -16,7 +16,7 @@ category: Work
 
 ### `title`
 
-Human-readable note title.
+Human-readable note title. In Monos the title is the file's name: editing the title above a note and leaving the field (or pressing Enter) renames the file, keeps `title:` the same, and rewrites the `[[links]]` to the note. A name that is taken or that a file cannot hold is refused and the title goes back. A note whose `title:` differs from its file name, as imported notes can, keeps both until its title is edited in Monos.
 
 ```yaml
 title: Reading List

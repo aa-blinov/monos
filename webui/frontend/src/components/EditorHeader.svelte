@@ -15,6 +15,20 @@
   export let outlineOpen = false;
   export let onToggleOutline = () => {};
   export let onBack = () => {};
+  /** The text below is scrolled: the title rides in the top row and the rest folds away. */
+  export let compact = false;
+  let titleFocused = false;
+  $: folded = compact && !titleFocused;
+  export let onTitleInput = () => {};
+  export let onCommitTitle = () => {};
+  export let onFinishTitle = () => {};
+
+  function titleKeydown(event) {
+    if (event.key !== 'Enter' || event.isComposing) return;
+    event.preventDefault();
+    event.currentTarget.blur();
+    onFinishTitle();
+  }
   export let onDelete = () => {};
 
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
@@ -70,14 +84,18 @@
         <PanelLeftOpen class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
       {/if}
     </TooltipIconButton>
-    <div class="ml-2 flex min-w-0 flex-1 items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-      {#each breadcrumbParts as part, index}
-        {#if index > 0}
-          <span class="opacity-40">/</span>
-        {/if}
-        <span class="max-w-[12rem] truncate">{part.name}</span>
-      {/each}
-    </div>
+    {#if folded}
+      <p class="ml-2 min-w-0 flex-1 truncate font-serif text-sm font-medium tracking-tight text-[var(--text-primary)]" data-testid="header-compact-title">{editedTitle}</p>
+    {:else}
+      <div class="ml-2 flex min-w-0 flex-1 items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+        {#each breadcrumbParts as part, index}
+          {#if index > 0}
+            <span class="opacity-40">/</span>
+          {/if}
+          <span class="max-w-[12rem] truncate">{part.name}</span>
+        {/each}
+      </div>
+    {/if}
     <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
     <TooltipIconButton
       on:click={onDelete}
@@ -89,11 +107,16 @@
       <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
   </div>
-  <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12 px-2 lg:px-0">
+  <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12 px-2 lg:px-0" class:hidden={folded}>
     <div class="flex-1 min-w-0">
       <input
         type="text"
         bind:value={editedTitle}
+        on:input={onTitleInput}
+        on:focus={() => { titleFocused = true; }}
+        on:blur={() => { titleFocused = false; onCommitTitle(); }}
+        on:keydown={titleKeydown}
+        aria-label={$localizedText.editorHeader.noteTitle}
         placeholder={$localizedText.editorHeader.noteTitle}
         class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />

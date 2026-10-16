@@ -100,6 +100,13 @@
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.loading}</p>
   {:else if !tracked}
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.notSynced}</p>
+    <!-- Not a dead end: the way to get a history is one click away. -->
+    <button
+      type="button"
+      data-testid="history-open-sync"
+      class="mt-4 inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
+      on:click={() => dispatch('openSettings')}
+    >{$localizedText.history.setUpSync}</button>
   {:else if !revisions.length}
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.empty}</p>
   {:else}

@@ -680,6 +680,20 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (sidebarComponent) sidebarComponent.loadTree();
   }
 
+  // A note renamed from its title: the tree shows the new name and the address follows the file.
+  async function handleNoteRenamed(event) {
+    const note = event.detail;
+    if (!note?.path) return;
+    const nextPath = `/notes/${normalizeNotePath(note.path)}`;
+    setRoutePath(nextPath);
+    navigate(nextPath, { replace: true });
+    if (sidebarComponent) {
+      await sidebarComponent.loadTree();
+      sidebarComponent.setSelected?.(note.path);
+    }
+    dashboardNeedsRefresh = true;
+  }
+
   function handleNoteSaved(eventOrDetail) {
     const detail = eventOrDetail?.detail || eventOrDetail || {};
     if (detail.savedAt && detail.savedAt === lastSeenNoteSaveAt) return;
@@ -852,7 +866,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} />

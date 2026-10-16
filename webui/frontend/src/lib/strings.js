@@ -838,6 +838,9 @@ const enText = {
     richMode: 'Rich editor',
     due: 'Due date',
     dueClear: 'Clear due date',
+    dueQuick: { 0: 'Today', 1: 'Tomorrow', 7: 'In a week' },
+    dueCalendar: 'Calendar',
+    tagSuggestions: 'Already used',
     dueToday: 'today',
     dueTomorrow: 'tomorrow',
     dueOverdue(days) {
@@ -853,6 +856,7 @@ const enText = {
     title: 'Note history',
     loading: 'Reading history…',
     notSynced: 'This note is not in a git repository yet, so there is no history to show. Sync once and its versions will appear here.',
+    setUpSync: 'Set up sync',
     empty: 'No earlier versions recorded.',
     pickRevision: 'Pick a version on the left to see what changed.',
     diffTitle: 'Differences against the current note',
@@ -929,7 +933,7 @@ const enText = {
     insertImage: 'Insert image',
     imagePrompt: 'Image URL:',
     slashMenuLabel: 'Slash commands',
-    slashHint: 'Type / for commands',
+    slashHint: 'Commands',
     wikiLink: {
       label: 'Link to a note',
       open: (name) => `Open “${name}”`,
@@ -1764,6 +1768,9 @@ const ruText = {
     richMode: 'Визуальный редактор',
     due: 'Срок',
     dueClear: 'Убрать срок',
+    dueQuick: { 0: 'Сегодня', 1: 'Завтра', 7: 'Через неделю' },
+    dueCalendar: 'Календарь',
+    tagSuggestions: 'Уже есть',
     dueToday: 'сегодня',
     dueTomorrow: 'завтра',
     dueOverdue(days) {
@@ -1787,6 +1794,7 @@ const ruText = {
     title: 'История заметки',
     loading: 'Читаем историю…',
     notSynced: 'Заметки ещё нет в git-репозитории, поэтому истории пока нет. Синхронизируйте один раз — и версии появятся здесь.',
+    setUpSync: 'Настроить синхронизацию',
     empty: 'Более ранних версий нет.',
     pickRevision: 'Выберите версию слева, чтобы увидеть изменения.',
     diffTitle: 'Отличия от текущей заметки',
@@ -1869,7 +1877,7 @@ const ruText = {
     insertImage: 'Вставить изображение',
     imagePrompt: 'URL изображения:',
     slashMenuLabel: 'Slash-команды',
-    slashHint: 'Введите / для команд',
+    slashHint: 'Команды',
     wikiLink: {
       label: 'Ссылка на заметку',
       open: (name) => `Открыть «${name}»`,

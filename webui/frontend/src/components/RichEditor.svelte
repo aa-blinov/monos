@@ -100,15 +100,17 @@
   }));
 
   const slashCommands = [
-    { id: 'heading1', run: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-    { id: 'heading2', run: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-    { id: 'bulletList', run: () => editor.chain().focus().toggleBulletList().run() },
-    { id: 'numberedList', run: () => editor.chain().focus().toggleOrderedList().run() },
-    { id: 'checklist', run: () => editor.chain().focus().toggleTaskList().run() },
-    { id: 'blockquote', run: () => editor.chain().focus().toggleBlockquote().run() },
-    { id: 'codeBlock', run: () => editor.chain().focus().toggleCodeBlock().run() },
-    { id: 'table', run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-    { id: 'horizontalRule', run: () => editor.chain().focus().setHorizontalRule().run() },
+    // `markdown`: what typed at the start of a line makes the same block, shown beside the item so the menu
+    // also teaches the shortcut. A table has none.
+    { id: 'heading1', markdown: '#', run: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+    { id: 'heading2', markdown: '##', run: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+    { id: 'bulletList', markdown: '-', run: () => editor.chain().focus().toggleBulletList().run() },
+    { id: 'numberedList', markdown: '1.', run: () => editor.chain().focus().toggleOrderedList().run() },
+    { id: 'checklist', markdown: '[ ]', run: () => editor.chain().focus().toggleTaskList().run() },
+    { id: 'blockquote', markdown: '>', run: () => editor.chain().focus().toggleBlockquote().run() },
+    { id: 'codeBlock', markdown: '```', run: () => editor.chain().focus().toggleCodeBlock().run() },
+    { id: 'table', markdown: '', run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+    { id: 'horizontalRule', markdown: '---', run: () => editor.chain().focus().setHorizontalRule().run() },
   ];
 
   function normalizeWikiLinkMarkdown(markdown) {
@@ -451,6 +453,7 @@
 
     const contextKey = `${context.from}:${context.to}:${context.query}`;
     wikiSuggestionRange = context;
+    tick().then(placeWikiMenu);
     const requestId = ++wikiSuggestionRequestId;
     try {
       const params = new URLSearchParams({
@@ -522,32 +525,51 @@
     placeSlashMenu();
   }
 
-  function placeSlashMenu() {
-    if (!editor || !surfaceEl) return;
+  // A menu that belongs to what is being typed opens under it: left edge at the trigger (`/` or `[[`),
+  // top just below the caret line, or above it when the bottom of the editor has no room.
+  function menuPositionAt(anchorPos, menuEl, fallbackWidth) {
+    if (!editor || !surfaceEl) return null;
     const surface = surfaceEl.getBoundingClientRect();
     const edge = 8;
     const gap = 6;
-    const menuWidth = slashMenuEl?.offsetWidth || 256;
-    const menuHeight = slashMenuEl?.offsetHeight || 0;
-    let slash;
+    const menuWidth = menuEl?.offsetWidth || fallbackWidth;
+    const menuHeight = menuEl?.offsetHeight || 0;
+    let anchor;
     let caret;
     try {
       const { from } = editor.state.selection;
-      slash = editor.view.coordsAtPos(Math.max(0, from - 1));
+      anchor = editor.view.coordsAtPos(Math.max(0, Math.min(anchorPos, from)));
       caret = editor.view.coordsAtPos(from);
     } catch {
       // No layout to measure (a detached or hidden editor): the menu keeps its last place.
-      return;
+      return null;
     }
-    const left = slash.left - surface.left;
+    const left = anchor.left - surface.left;
     const below = caret.bottom - surface.top + gap;
     const above = caret.top - surface.top - menuHeight - gap;
     const fitsBelow = below + menuHeight <= surface.height - edge;
     const top = fitsBelow || above < edge ? below : above;
-    slashMenuPosition = {
+    return {
       left: Math.min(Math.max(edge, left), Math.max(edge, surface.width - menuWidth - edge)),
       top: Math.min(Math.max(edge, top), Math.max(edge, surface.height - menuHeight - edge)),
     };
+  }
+
+  function placeSlashMenu() {
+    if (!editor) return;
+    const position = menuPositionAt(editor.state.selection.from - 1, slashMenuEl, 256);
+    if (position) slashMenuPosition = position;
+  }
+
+  let wikiMenuEl;
+  // Measured again once the list is drawn: its height decides whether it fits below the line.
+  $: if (wikiSuggestionsOpen && wikiSuggestions) tick().then(placeWikiMenu);
+  let wikiMenuPosition = { left: 16, top: 56 };
+  function placeWikiMenu() {
+    if (!editor || !wikiSuggestionRange) return;
+    // The list starts under the `[[` that opened it.
+    const position = menuPositionAt(wikiSuggestionRange.from - 2, wikiMenuEl, 448);
+    if (position) wikiMenuPosition = position;
   }
 
   function executeSlashCommand(command) {
@@ -716,7 +738,7 @@
   />
 {/if}
 
-<svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} on:resize={() => { if (slashMenuOpen) placeSlashMenu(); }} />
+<svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} on:resize={() => { if (slashMenuOpen) placeSlashMenu(); if (wikiSuggestionsOpen) placeWikiMenu(); }} />
 <div class="flex flex-col flex-1 min-h-0">
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
   <div class="relative flex items-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
@@ -867,11 +889,12 @@
           type="button"
           role="option"
           aria-selected={activeSlashIndex === index}
-          class="flex w-full rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] {activeSlashIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
+          class="flex w-full items-center justify-between gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] {activeSlashIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"
           on:mouseenter={() => activeSlashIndex = index}
           on:click={() => executeSlashCommand(slashCommand)}
         >
-          {$localizedText.richEditor.slashCommands[slashCommand.id]}
+          <span>{$localizedText.richEditor.slashCommands[slashCommand.id]}</span>
+          {#if slashCommand.markdown}<kbd aria-hidden="true" class="shrink-0 font-mono text-xs text-[var(--text-tertiary)]">{slashCommand.markdown}</kbd>{/if}
         </button>
       {/each}
     </div>
@@ -881,7 +904,7 @@
     aria-multiline="true"
     tabindex="-1"
     data-testid="rich-editor-input"
-    on:scroll={() => { if (slashMenuOpen) placeSlashMenu(); }}
+    on:scroll={(event) => { if (slashMenuOpen) placeSlashMenu(); if (wikiSuggestionsOpen) placeWikiMenu(); dispatch('scrolled', { top: event.currentTarget.scrollTop, room: event.currentTarget.scrollHeight - event.currentTarget.clientHeight }); }}
     on:keydown|capture={handleEditorKeydown}
     on:keyup|capture={(event) => { handleEditorKeyup(event); if (wikiSuggestionsOpen && shouldRefreshWikiSuggestions(event)) refreshWikiSuggestionsAfterDomUpdate(); }}
     on:input|capture={refreshWikiSuggestionsAfterDomUpdate}
@@ -914,7 +937,9 @@
   ></div>
   {#if wikiSuggestionsOpen}
     <div
-      class="absolute left-4 right-4 top-14 z-20 max-h-56 overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-2xl shadow-black/15 sm:right-auto sm:w-[min(32rem,calc(100%-2rem))] lg:left-12 lg:top-20 lg:w-[min(34rem,calc(100%-6rem))]"
+      bind:this={wikiMenuEl}
+      class="absolute z-20 max-h-56 w-[min(28rem,calc(100%-1rem))] overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-2xl shadow-black/15"
+      style="left: {wikiMenuPosition.left}px; top: {wikiMenuPosition.top}px"
       role="listbox"
       aria-label={$localizedText.sourceEditor.wikiSuggestions}
       tabindex="-1"
