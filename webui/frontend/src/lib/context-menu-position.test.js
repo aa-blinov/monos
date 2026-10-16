@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeContextMenuPosition } from './context-menu-position.js';
+import { availableMenuHeight, computeContextMenuPosition } from './context-menu-position.js';
 
 test('оставляет координаты как есть, когда меню помещается', () => {
   const result = computeContextMenuPosition({
@@ -98,4 +98,11 @@ test('воспроизводит баг из скриншота: ПКМ вниз
   assert.equal(result.flippedY, true);
   assert.equal(result.y, 350);
   assert.equal(result.x, 250);
+});
+
+test('availableMenuHeight: меню доходит до низа окна с отступом и не становится крошечным', () => {
+  assert.equal(availableMenuHeight({ top: 200, viewportHeight: 800 }), 592);
+  assert.equal(availableMenuHeight({ top: 200, viewportHeight: 800, margin: 0 }), 600);
+  assert.equal(availableMenuHeight({ top: 450, viewportHeight: 480 }), 120);
+  assert.equal(availableMenuHeight({ top: 450, viewportHeight: 480, minHeight: 60 }), 60);
 });

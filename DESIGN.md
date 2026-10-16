@@ -351,6 +351,7 @@ Field underlines have zero radius by definition; they are a single border line.
 - **Primary** (`getModalButtonClass('primary')`): `--text-primary`, `font-bold`, `text-sm`, `uppercase`, `tracking-widest`, `flex-1`, `py-2`. Hover is `opacity-70`; disabled is `opacity-30` with `cursor-not-allowed`.
 - **Secondary:** identical geometry with `--text-secondary` and `font-normal`; hover shifts the color to `--text-primary`.
 - **Minimal** (`.btn-minimal`): inline, `px-4 py-2 text-sm font-medium`, same opacity treatment.
+- **Text action** (in page sections such as Settings and Templates): `inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold`, hover `opacity-60`, disabled `opacity-30`. No frame and no fill; neighbours sit `gap-x-6` apart so two actions never read as one phrase. A frame is kept only by a toggle among options (`aria-pressed`), where it marks the chosen one.
 - **Icon buttons** (`TooltipIconButton`): `rounded-ui` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. The radius is the same at 28px. Always paired with a tooltip except below `640px`.
 
 ### Chips
@@ -392,6 +393,7 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 - **Task lists.** A list where every item carries `- [ ]` / `- [x]` becomes a `taskList`. A **mixed** list is split into consecutive runs so plain bullets keep their bullets and tasks keep their checkboxes; the order is preserved and the Markdown round-trips byte-for-byte.
 - **Formulas.** `$…$` inline and `$$…$$` as a block, rendered by KaTeX. `$5 and $10` stays text — the marker is only read when a non-space follows the opening `$`.
 - **Diagrams.** A ```mermaid fence becomes a rendered diagram, coloured from the live CSS variables so it follows the active theme. A diagram that fails to parse shows its source in `--red` rather than disappearing.
+- **Wiki links.** `[[Note]]` stays text in the file and is drawn as a link: underlined at 40% of `--text-primary`, dashed and `--text-secondary` when no note answers. With the caret in a link, a small bar under it (the one radius, `shadow-xl`) opens the note, creates a missing one, or lists the notes that share the name. Clicking only places the caret, so the link text stays editable; Ctrl/⌘+click and Ctrl/⌘+Enter open it at once.
 - **The raw mode** is the same note as plain Markdown, toggled from the editor toolbar, for when the rich editor rebuilds something differently than intended. Because a note is a file in git, seeing the exact bytes matters.
 
 ## Do's and Don'ts

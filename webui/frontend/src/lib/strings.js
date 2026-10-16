@@ -777,6 +777,7 @@ const enText = {
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
+    linkedNoteFailed: 'Could not create the linked note',
     retry: 'Retry',
     noteNotFound(target) {
       return `Note "${target}" not found.`;
@@ -920,6 +921,13 @@ const enText = {
     imagePrompt: 'Image URL:',
     slashMenuLabel: 'Slash commands',
     slashHint: 'Type / for commands',
+    wikiLink: {
+      label: 'Link to a note',
+      open: (name) => `Open “${name}”`,
+      create: (name) => `Create note “${name}”`,
+      ambiguous: 'Several notes have this name',
+      shortcut: 'Ctrl+Enter',
+    },
     pdfOpen: 'Open PDF',
     slashCommands: {
       heading1: 'Heading 1',
@@ -1682,6 +1690,7 @@ const ruText = {
     saving: 'Сохранение…',
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',
+    linkedNoteFailed: 'Не удалось создать заметку по ссылке',
     retry: 'Повторить',
     noteNotFound(target) {
       return `Заметка "${target}" не найдена.`;
@@ -1845,6 +1854,13 @@ const ruText = {
     imagePrompt: 'URL изображения:',
     slashMenuLabel: 'Slash-команды',
     slashHint: 'Введите / для команд',
+    wikiLink: {
+      label: 'Ссылка на заметку',
+      open: (name) => `Открыть «${name}»`,
+      create: (name) => `Создать заметку «${name}»`,
+      ambiguous: 'С этим названием несколько заметок',
+      shortcut: 'Ctrl+Enter',
+    },
     pdfOpen: 'Открыть PDF',
     slashCommands: {
       heading1: 'Заголовок 1',

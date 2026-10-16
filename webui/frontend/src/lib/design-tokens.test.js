@@ -217,6 +217,24 @@ test('a bordered rectangle has the one radius', () => {
   assert.deepEqual(offenders, [], `рамка без радиуса: ${offenders.join(' | ')}`);
 });
 
+test('a text button has no frame and no fill', () => {
+  // DESIGN.md: the button is uppercase text. A frame or a fill around it makes a second kind of button.
+  const offenders = [];
+  for (const file of files) {
+    if (!file.endsWith('.svelte')) continue;
+    for (const m of read(file).matchAll(/<button\b(?:[^>"]|"[^"]*")*?class="([^"]*)"/g)) {
+      const tokens = m[1].split(/\s+/);
+      if (!tokens.includes('uppercase')) continue;
+      // A toggle among options (aria-pressed) shows its chosen state with a frame; that is a choice, not an action.
+      if (/aria-pressed=/.test(m[0])) continue;
+      const framed = tokens.some((t) => /^(?:[a-z]+:)?border$/.test(t));
+      const filled = tokens.some((t) => /^bg-\[var\(--(?:bg-secondary|text-primary)\)\]$/.test(t));
+      if (framed || filled) offenders.push(`${path.basename(file)}: ${m[1].trim().slice(0, 60)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `кнопка в рамке или с заливкой: ${offenders.join(' | ')}`);
+});
+
 test('icon stroke width is one value everywhere', () => {
   const offenders = [];
   for (const file of files) {

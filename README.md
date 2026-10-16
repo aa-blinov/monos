@@ -14,7 +14,7 @@ It combines Markdown files, wiki-style links, a clean dashboard inspired by Goog
 - **Desktop-ready**: packaged with Electron for Windows and macOS.
 - **Private by default**: user notes are runtime data, not repository content.
 - **Markdown plus rich editing**: write naturally, keep portable text files.
-- **Wiki links and backlinks**: connect ideas with `[[Note title]]`.
+- **Wiki links and backlinks**: connect ideas with `[[Note title]]`; links open from the editor, and a link to a note that does not exist yet creates it.
 - **Board view**: scan recent notes in a compact, card-based dashboard.
 - **Search that understands content**: search titles, tags, and note bodies.
 - **Git sync**: optional repository-backed backup and synchronization.

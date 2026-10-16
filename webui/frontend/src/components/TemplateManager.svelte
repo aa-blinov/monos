@@ -147,7 +147,7 @@
           </div>
           <button
             type="button"
-            class="inline-flex h-9 items-center gap-2 rounded-ui border border-[var(--border-subtle)] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+            class="inline-flex h-9 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:opacity-60"
             on:click={openNewTemplate}
           >
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
@@ -187,7 +187,7 @@
                 <div class="mt-4 flex justify-end">
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center whitespace-nowrap rounded-ui border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                    class="inline-flex h-8 items-center whitespace-nowrap text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60"
                     on:click={() => templateRequest.set(template.id)}
                   >
                     {$localizedText.templates.createNote}
@@ -243,7 +243,7 @@
                       {#if !template.hidden}
                         <button
                           type="button"
-                          class="inline-flex h-8 items-center whitespace-nowrap rounded-ui border border-[var(--border-subtle)] px-3 text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]"
+                          class="inline-flex h-8 items-center whitespace-nowrap text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60"
                           on:click={() => templateRequest.set(template.id)}
                         >
                           {$localizedText.templates.createNote}

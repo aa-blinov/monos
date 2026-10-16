@@ -751,12 +751,12 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div class="min-w-0">
           <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
-          <div class="flex flex-wrap gap-3">
+          <div class="flex flex-wrap gap-x-6 gap-y-2">
           <button
             type="button"
             on:click={printAllNotes}
             disabled={isExporting || isImporting}
-            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
           >
             {$localizedText.settings.printAllNotes}
           </button>
@@ -764,7 +764,7 @@
             type="button"
             on:click={exportNotes}
             disabled={isExporting}
-            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
           >
             {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
           </button>
@@ -788,7 +788,7 @@
               type="button"
               on:click={openArchivePicker}
               disabled={isImporting}
-              class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+              class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
             >
               {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
             </button>
@@ -953,7 +953,7 @@
           type="button"
           on:click={setupGitRepo}
           disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
-          class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+          class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
         >
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
         </button>
@@ -1018,7 +1018,7 @@
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
               {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(gitStatus.last_sync)}</div>{/if}
             </div>
-            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30">
+            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
             </button>
           </div>
@@ -1118,7 +1118,7 @@
             </div>
           {/each}
         </div>
-        <button on:click={openConflictResolver} class="px-4 py-2 rounded-ui text-xs font-bold uppercase tracking-widest bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-secondary)] transition">
+        <button on:click={openConflictResolver} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
           {$localizedText.settings.resolveConflicts}
         </button>
       </section>
@@ -1357,7 +1357,7 @@
             type="button"
             on:click={revealClipperToken}
             disabled={showClipperToken}
-            class="rounded-ui text-xs uppercase tracking-widest font-bold px-5 py-2.5 border border-[var(--border-subtle)] hover:border-[var(--text-primary)] transition disabled:opacity-30"
+            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
           >
             {$localizedText.settings.clipperShowToken}
           </button>

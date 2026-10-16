@@ -68,3 +68,48 @@ export function findWikiLinks(text) {
   }
   return results;
 }
+
+// `\u0001` stands for text a link cannot cross: inline code, an image, a formula. A `!` before the
+// brackets makes an embed, which is drawn as a block of its own and is not a link.
+const WIKI_LINK_SPAN = /(!?)\[\[([^[\]\n\u0001]+)\]\]/g;
+
+/**
+ * Every wiki link in a line of text with its place: `start` is the first `[`, `end` is just past
+ * the last `]`. Embeds (`![[…]]`) and links with an empty target are left out.
+ *
+ * @param {string} text
+ * @returns {Array<{ start: number, end: number, target: string, alias: string|null }>}
+ */
+export function wikiLinkSpans(text) {
+  if (typeof text !== 'string' || !text.includes('[[')) return [];
+  const spans = [];
+  for (const match of text.matchAll(WIKI_LINK_SPAN)) {
+    if (match[1]) continue;
+    const inner = match[2];
+    const pipe = inner.indexOf('|');
+    const target = (pipe === -1 ? inner : inner.slice(0, pipe)).trim();
+    if (!target) continue;
+    const alias = pipe === -1 ? null : inner.slice(pipe + 1).trim() || null;
+    const start = match.index + match[1].length;
+    spans.push({ start, end: match.index + match[0].length, target, alias });
+  }
+  return spans;
+}
+
+/**
+ * Where a new note for a link that leads nowhere goes: `[[Projects/Plan#Steps]]` makes the note
+ * `Plan` in the folder `Projects`. A `#` that follows a space belongs to the name (`Issue #42`);
+ * one glued to a word starts a heading.
+ *
+ * @param {string} target
+ * @returns {{ title: string, category: string }}
+ */
+export function newNoteForWikiLink(target) {
+  let name = String(target || '').trim();
+  const heading = name.match(/^(.*?\S)#(.+)$/);
+  if (heading) name = heading[1];
+  const slash = name.lastIndexOf('/');
+  const title = (slash === -1 ? name : name.slice(slash + 1)).trim();
+  const category = slash === -1 ? '' : name.slice(0, slash).split('/').map((part) => part.trim()).filter(Boolean).join('/');
+  return { title, category };
+}
