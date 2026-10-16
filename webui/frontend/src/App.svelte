@@ -579,13 +579,18 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     savedSearchPanelOpen = false;
     showDashboard({ closeSidebar: true });
     searchQuery.set(query);
+    // The header searches as you type; a query put in from here has to be run, or the board shows
+    // "nothing found" for notes that are there.
+    void runSearch(query);
   }
 
   /** Клик по тегу в панели ведёт в поиск по нему — панель это вход, а не тупик. */
   function searchByTag(event) {
     tagPanelOpen = false;
     showDashboard({ closeSidebar: true });
-    searchQuery.set(`#${event.detail.tag}`);
+    const query = `#${event.detail.tag}`;
+    searchQuery.set(query);
+    void runSearch(query);
   }
 
   function createQuickNoteFromHeader() {
