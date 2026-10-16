@@ -34,10 +34,10 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { loadShellSettings } from './lib/shell-settings.js';
   import { runSearch } from './lib/search-results.js';
   import { createNoteRequest, renameItemRequest } from './lib/sidebar-api.js';
-  import { announceNoteLinksUpdated, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
+  import { announceNoteLinksUpdated, announceNotesPulled, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
-  import { refreshConflicts } from './lib/git-conflicts.js';
+  import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -98,7 +98,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   let savedQuickNote = null;
   let quickNoteIssue = '';
   let syncError = '';
-  let gitConfigured = false;
   if (!$urlSearchQuery) urlSearchQuery.set(searchParamFromUrl().trim());
   if ($urlSearchQuery) $searchQuery = $urlSearchQuery;
 
@@ -243,7 +242,10 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (!result) return;
     autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
     void refreshConflicts();
-    if (result.received > 0) void loadHomeRecentNotes();
+    if (result.received > 0) {
+      void loadHomeRecentNotes();
+      announceNotesPulled();
+    }
   }
 
   onMount(() => {
@@ -264,9 +266,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     void loadTemplateSettings();
     // Pull on launch and every few minutes. Uploads stay manual; a stale device
     // is the main source of conflicts on a second machine.
-    // Only when a remote is configured: without one, every launch would fire a
-    // request that can only answer 400. The local `gitConfigured` flag is never
-    // assigned here (the sidebar keeps its own), so ask the backend once.
+    // Whether a repository is connected comes from refreshConflicts() above, which reads the git status.
     setBusyCheck(() => {
       const state = get(editorState);
       return Boolean(state?.saving || state?.dirty);
@@ -821,7 +821,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:syncError={(e) => { syncError = e.detail; if (isMobile) setSidebarOpen(false); }}
           mobile={isMobile}
           autoPullState={autoPullState}
-          {gitConfigured}
+          gitConfigured={$gitConnected}
         />
         {#if !isMobile && $sidebarOpen}
           <span class="pointer-events-none absolute inset-y-0 right-0 z-10 w-px bg-[var(--border-subtle)]"></span>

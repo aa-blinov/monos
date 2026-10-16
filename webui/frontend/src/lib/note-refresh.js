@@ -5,6 +5,12 @@
  */
 export const FLUSH_OPEN_NOTE_EVENT = 'monos:flush-open-note';
 export const NOTE_LINKS_UPDATED_EVENT = 'monos:note-links-updated';
+export const NOTES_PULLED_EVENT = 'monos:notes-pulled';
+
+/** A sync brought changes from another device: the open note reads its file again if it has no unsaved edits. */
+export function announceNotesPulled() {
+  window.dispatchEvent(new CustomEvent(NOTES_PULLED_EVENT));
+}
 
 /** Asks the open note to save its pending edits. Resolves once they are on disk. */
 export async function flushOpenNote() {

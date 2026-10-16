@@ -82,3 +82,21 @@ test('маркеры, оставшиеся в тексте без конфлик
   assert.equal(body.resolved, true);
   assert.equal(fs.readFileSync(path.join(notesDir, NOTE), 'utf-8'), 'А\n\nБ\n');
 });
+
+test('заметка с метками в тексте без конфликта в git тоже считается конфликтом', async () => {
+  fs.writeFileSync(path.join(notesDir, 'Черновик.md'), 'Начало.\n<<<<<<< this device\nА\n=======\nБ\n>>>>>>> synced\n', 'utf-8');
+  const status = await (await fetch(`${base}/api/git/status`)).json();
+  assert.equal(status.status, 'conflict');
+  const list = await (await fetch(`${base}/api/git/conflicts`)).json();
+  assert.ok(list.some((item) => item.path === 'Черновик.md' && item.markers));
+  fs.rmSync(path.join(notesDir, 'Черновик.md'));
+  const after = await (await fetch(`${base}/api/git/status`)).json();
+  assert.notEqual(after.status, 'conflict');
+});
+
+test('сторона конфликтного файла отдаётся как есть, для показа картинок', async () => {
+  write('<<<<<<< x\n');
+  const response = await fetch(`${base}/api/git/conflict-file?path=${encodeURIComponent(`notes/${NOTE}`)}&side=theirs`);
+  // The note's own conflict is resolved by now, so there is no stage to read.
+  assert.equal(response.status, 404);
+});

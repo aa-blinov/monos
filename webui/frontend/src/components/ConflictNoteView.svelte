@@ -24,6 +24,7 @@
   import { locale, localizedText } from '../lib/strings.js';
   import { relativeDay } from '../lib/date-format.js';
   import { wordDiff } from '../lib/word-diff.js';
+  import { describeProperties, frontmatterEnd, mergeProperties } from '../lib/conflict-properties.js';
 
   export let content = '';
   /**
@@ -44,16 +45,50 @@
   // Per-region choices accumulate until the user applies them.
   let choices = {};
 
-  $: segments = splitByConflicts(content).map((segment, at) => ({
-    ...segment,
-    // Which conflict number this is, so per-region choices map to the region
-    // index that resolveRegion() expects.
-    conflictNo: segment.type === 'conflict'
-      ? splitByConflicts(content).slice(0, at).filter((x) => x.type === 'conflict').length
-      : -1,
-    // The words that differ between the two sides, marked in both columns.
-    diff: segment.type === 'conflict' ? wordDiff(segment.value.ours, segment.value.theirs) : null,
-  }));
+  // The properties block at the top is YAML: its plain lines are not shown, and a part inside it is shown
+  // as named values ("Tags: дом") rather than raw `tags: ["дом"]`.
+  $: propsEnd = frontmatterEnd(content);
+  $: propertyNames = $localizedText.editor.conflictPropertyNames;
+  $: dateFormat = new Intl.DateTimeFormat($locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  $: describe = (text) => describeProperties(text, propertyNames, {
+    yes: $localizedText.editor.conflictYes,
+    no: $localizedText.editor.conflictNo,
+    // A due date reads as a date: "20 Oct 2026", not 2026-10-20.
+    date: (iso) => dateFormat.format(new Date(`${iso}T12:00:00`)),
+  });
+  $: segments = buildSegments(content, propsEnd, describe);
+
+  function buildSegments(text, end, show) {
+    const out = [];
+    let cursor = 0;
+    let conflictNo = 0;
+    for (const segment of splitByConflicts(text)) {
+      if (segment.type === 'text') {
+        const start = cursor;
+        cursor += segment.value.length;
+        if (cursor <= end) continue;
+        out.push({ ...segment, value: start < end ? segment.value.slice(end - start) : segment.value });
+        continue;
+      }
+      const region = segment.value;
+      cursor = region.end;
+      const property = region.start < end;
+      const shown = property
+        ? { ours: show(region.ours), theirs: show(region.theirs), base: region.base ? show(region.base) : '' }
+        : region;
+      out.push({
+        ...segment,
+        conflictNo: conflictNo++,
+        property,
+        shown,
+        // "Both" for properties merges by key; two values for one plain key cannot both stay.
+        canKeepBoth: !property || mergeProperties(region.ours, region.theirs) !== null,
+        // The words that differ between the two sides, marked in both columns.
+        diff: wordDiff(shown.ours, shown.theirs),
+      });
+    }
+    return out;
+  }
   $: conflictCount = segments.filter((segment) => segment.type === 'conflict').length;
   $: pending = Object.keys(choices).length;
   $: hasBase = segments.some((s) => s.type === 'conflict' && s.value.base);
@@ -72,6 +107,17 @@
 
   /** Whether a side's text stays after the choice made for this part. */
   const keeps = (choice, side) => !choice || choice === side || choice === 'both';
+  // (A part written by hand keeps neither side as it was: both dim.)
+
+  // "Write my own": a part neither version gets right (the day from one, the time from the other) is written
+  // by hand, starting from this device's text.
+  let customTexts = {};
+  function chooseCustom(segment) {
+    if (customTexts[segment.conflictNo] === undefined) {
+      customTexts = { ...customTexts, [segment.conflictNo]: segment.value.ours };
+    }
+    choose(segment.conflictNo, 'custom');
+  }
 
   // One version for the whole note is applied at once: the simple case takes one click, not one per part.
   function keepWhole(choice) {
@@ -81,34 +127,38 @@
   }
 
   function apply() {
-    dispatch('resolve', { choices });
+    const out = {};
+    for (const [index, choice] of Object.entries(choices)) {
+      out[index] = choice === 'custom' ? { custom: customTexts[index] ?? '' } : choice;
+    }
+    dispatch('resolve', { choices: out });
   }
 </script>
 
 <div class="space-y-4">
   {#if conflictCount > 0}
-    <div class="rounded-ui flex flex-wrap items-center gap-x-6 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
-      <p class="mr-auto text-xs leading-relaxed text-[var(--text-secondary)]">
+    <!-- The most common choice, so it reads as one: "Keep the whole note as on: PHONE  LAPTOP", the names
+         underlined as links are, right next to the words they finish. -->
+    <div class="rounded-ui flex flex-wrap items-baseline gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+      <p class="text-xs leading-relaxed text-[var(--text-secondary)]">
         {$localizedText.editor.conflictResolveHint}
       </p>
-      <div class="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          data-testid="conflict-whole-ours"
-          on:click={() => keepWhole('ours')}
-          class="text-xs font-bold text-[var(--text-primary)] transition hover:opacity-70"
-        >
-          {oursName}
-        </button>
-        <button
-          type="button"
-          data-testid="conflict-whole-theirs"
-          on:click={() => keepWhole('theirs')}
-          class="text-xs font-bold text-[var(--blue)] transition hover:opacity-70"
-        >
-          {theirsName}
-        </button>
-      </div>
+      <button
+        type="button"
+        data-testid="conflict-whole-ours"
+        on:click={() => keepWhole('ours')}
+        class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] underline decoration-[var(--border-strong,var(--border-subtle))] decoration-1 underline-offset-4 transition hover:decoration-current"
+      >
+        {oursName}
+      </button>
+      <button
+        type="button"
+        data-testid="conflict-whole-theirs"
+        on:click={() => keepWhole('theirs')}
+        class="text-xs font-bold uppercase tracking-widest text-[var(--blue)] underline decoration-[color-mix(in_srgb,var(--blue)_40%,transparent)] decoration-1 underline-offset-4 transition hover:decoration-current"
+      >
+        {theirsName}
+      </button>
       <p class="basis-full text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.editor.conflictWholeKept}</p>
     </div>
   {/if}
@@ -120,7 +170,7 @@
       <section class="rounded-ui border border-[color-mix(in_srgb,var(--red)_30%,transparent)]">
         <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)] px-4 py-2">
           <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--red)]">
-            {$localizedText.editor.conflictRegionLabel}
+            {segment.property ? $localizedText.editor.conflictPropertiesLabel : $localizedText.editor.conflictRegionLabel}
           </p>
           <div class="ml-auto flex flex-wrap items-center gap-3">
             <button
@@ -139,6 +189,7 @@
             >
               {$localizedText.editor.conflictKeepSide(theirsName)}
             </button>
+            {#if segment.canKeepBoth}
             <button
               type="button"
               aria-pressed={choices[segment.conflictNo] === 'both'}
@@ -147,6 +198,17 @@
             >
               {$localizedText.editor.conflictKeepBoth}
             </button>
+            {/if}
+            {#if !segment.property}
+            <button
+              type="button"
+              aria-pressed={choices[segment.conflictNo] === 'custom'}
+              on:click={() => chooseCustom(segment)}
+              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'custom' ? 'bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+            >
+              {$localizedText.editor.conflictWriteOwn}
+            </button>
+            {/if}
           </div>
         </header>
 
@@ -157,7 +219,7 @@
               <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 {$localizedText.editor.conflictBase}
               </p>
-              <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-tertiary)]">{segment.value.base || '—'}</pre>
+              <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-tertiary)]">{segment.shown.base || '—'}</pre>
             </div>
           {/if}
 
@@ -179,6 +241,20 @@
             <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.theirs as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}—{/each}</pre>
           </div></div>
         </div>
+        {#if choices[segment.conflictNo] === 'custom'}
+          <div class="border-t border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4">
+            <label class="mb-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-secondary)]" for="conflict-own-{segment.conflictNo}">
+              {$localizedText.editor.conflictOwnLabel}
+            </label>
+            <textarea
+              id="conflict-own-{segment.conflictNo}"
+              data-testid="conflict-own-text"
+              bind:value={customTexts[segment.conflictNo]}
+              rows={Math.min(12, Math.max(3, String(customTexts[segment.conflictNo] || '').split('\n').length + 1))}
+              class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 p-3 font-mono text-xs leading-relaxed text-[var(--text-primary)] outline-none focus:border-[var(--text-tertiary)]"
+            ></textarea>
+          </div>
+        {/if}
       </section>
     {/if}
   {/each}

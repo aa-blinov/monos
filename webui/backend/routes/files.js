@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../database.js';
@@ -43,6 +44,26 @@ function noteTextForEdit(fullPath, filePath) {
   return { text: readWithSession(stored, session), session };
 }
 
+/** A short fingerprint of a note's text. The editor sends back the one it started from with every save. */
+export function textVersion(text) {
+  return crypto.createHash('sha1').update(String(text ?? ''), 'utf8').digest('hex').slice(0, 16);
+}
+
+/**
+ * A save that started from text the file no longer holds — a sync brought another device's edit while the
+ * note was open — is refused with the text on disk, so the editor can combine the two instead of writing
+ * over the other device's edit. A save without a base version is not checked.
+ */
+function refuseStaleSave(req, res, fullPath, filePath) {
+  const base = req.body?.base_version;
+  if (typeof base !== 'string' || !base || !fs.existsSync(fullPath)) return false;
+  const current = noteTextForEdit(fullPath, filePath).text;
+  const version = textVersion(current);
+  if (version === base) return false;
+  res.status(409).json({ detail: 'The note changed on disk', changed: true, content: current, version });
+  return true;
+}
+
 // Writes an edited note back: sealed again when it is locked, plain otherwise. Returns what the file holds.
 function storeNoteText(fullPath, text, session) {
   const stored = session ? sealWithSession(text, session) : text;
@@ -68,7 +89,7 @@ export function registerFileRoutes(app) {
         content = readWithSession(stored, session);
       }
       getDb().prepare('UPDATE notes_index SET last_opened = ? WHERE path = ?').run(nowISO(), filePath);
-      res.json({ content });
+      res.json({ content, version: textVersion(content) });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }
@@ -89,9 +110,10 @@ export function registerFileRoutes(app) {
       const locked = fs.existsSync(fullPath) && isLockedNote(readTextFile(fullPath));
       const session = locked ? sessionFor(filePath) : null;
       if (locked && !session) return res.status(423).json({ detail: 'This note is locked', locked: true });
+      if (refuseStaleSave(req, res, fullPath, filePath)) return;
       indexFile(fullPath, storeNoteText(fullPath, content, session));
       const updated = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath);
-      res.json({ message: 'Saved', modified: updated?.modified_at || fs.statSync(fullPath).mtime.toISOString() });
+      res.json({ message: 'Saved', modified: updated?.modified_at || fs.statSync(fullPath).mtime.toISOString(), version: textVersion(content) });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }
@@ -267,6 +289,7 @@ export function registerFileRoutes(app) {
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
       const editable = noteTextForEdit(fullPath, filePath);
+      if (refuseStaleSave(req, res, fullPath, filePath)) return;
       const originalContent = typeof content === 'string'
         ? content
         : editable.text;
@@ -287,6 +310,7 @@ export function registerFileRoutes(app) {
         category: updated?.category || '',
         tags: JSON.parse(updated?.tags || '[]'),
         content: nextContent,
+        version: textVersion(nextContent),
       });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });

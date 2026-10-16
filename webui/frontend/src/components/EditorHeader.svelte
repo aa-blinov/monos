@@ -16,6 +16,8 @@
   export let onToggleOutline = () => {};
   /** False while the note is in a sync conflict: there is no outline to show then. */
   export let outlineAvailable = true;
+  /** The note is in a sync conflict: renaming it would move a file git is still merging. */
+  export let titleLocked = false;
   export let onBack = () => {};
   /** The text below is scrolled: the title rides in the top row and the rest folds away. */
   export let compact = false;
@@ -123,6 +125,8 @@
         on:focus={() => { titleFocused = true; }}
         on:blur={() => { titleFocused = false; onCommitTitle(); }}
         on:keydown={titleKeydown}
+        readonly={titleLocked}
+        title={titleLocked ? $localizedText.editor.conflictPropertiesLocked : undefined}
         aria-label={$localizedText.editorHeader.noteTitle}
         placeholder={$localizedText.editorHeader.noteTitle}
         class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"

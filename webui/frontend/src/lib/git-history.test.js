@@ -1,6 +1,6 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest } from './git-history.js';
+import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle } from './git-history.js';
 
 const realFetch = globalThis.fetch;
 
@@ -40,4 +40,14 @@ test('восстановление версии отправляет POST с п�
 test('ошибка сервера становится исключением с текстом detail', async () => {
   stubFetch({ detail: 'Нет истории' }, 404);
   await assert.rejects(noteHistoryRequest('notes/A.md'), /Нет истории/);
+});
+
+test('заголовки версий на языке интерфейса', () => {
+  const words = { synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена', resolved: 'Разобран конфликт', merged: 'Объединены правки' };
+  assert.equal(revisionTitle('Auto-sync from Ноутбук', words), 'Синхронизация');
+  assert.equal(revisionTitle('Auto-sync from Monos (pending pull)', words), 'Правки перед синхронизацией');
+  assert.equal(revisionTitle('Init from Телефон', words), 'Подключена');
+  assert.equal(revisionTitle('Resolve conflict in Покупки.md', words), 'Разобран конфликт');
+  assert.equal(revisionTitle("Merge branch 'master' of https://github.com/x/y", words), 'Объединены правки');
+  assert.equal(revisionTitle('Своё сообщение', words), 'Своё сообщение');
 });

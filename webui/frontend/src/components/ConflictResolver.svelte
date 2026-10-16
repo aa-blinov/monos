@@ -10,6 +10,11 @@
   const dispatch = createEventDispatcher();
 
   $: current = conflicts[currentIndex] || null;
+  // An image is chosen by looking at it: both versions are shown as pictures.
+  $: isImage = /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(current?.path || '');
+  const versionUrl = (item, side) => `/api/git/conflict-file?path=${encodeURIComponent(item.path)}&side=${side}`;
+  $: oursLabel = current?.sides?.ours?.device ? `${current.sides.ours.device} — ${$localizedText.editor.conflictThisDevice}` : $localizedText.settings.conflictOurs;
+  $: theirsLabel = current?.sides?.theirs?.device || $localizedText.settings.conflictTheirs;
   $: hasMore = currentIndex < conflicts.length - 1;
   $: remaining = conflicts.length - currentIndex - 1;
 
@@ -48,7 +53,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-secondary)]/50 border-b border-[var(--border-subtle)]">
-          <span class="text-xs font-bold uppercase tracking-widest text-[var(--green)]">{$localizedText.settings.conflictOurs}</span>
+          <span class="text-xs font-bold uppercase tracking-widest text-[var(--green)]">{oursLabel}</span>
           <button
             on:click={chooseOurs}
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--green)]/10 text-[var(--green)] hover:bg-[var(--green)]/20 transition"
@@ -57,12 +62,16 @@
             {$localizedText.settings.keepLocal}
           </button>
         </div>
-        <pre class="p-4 text-xs leading-relaxed font-mono overflow-x-auto max-h-80 overflow-y-auto text-[var(--text-primary)]">{current.ours || $localizedText.settings.empty}</pre>
+        {#if isImage && current.oursExists !== false}
+          <img src={versionUrl(current, 'ours')} alt={oursLabel} class="block max-h-80 w-full object-contain p-4" data-testid="conflict-image-ours" />
+        {:else}
+          <pre class="p-4 text-xs leading-relaxed font-mono overflow-x-auto max-h-80 overflow-y-auto text-[var(--text-primary)]">{current.ours || $localizedText.settings.empty}</pre>
+        {/if}
       </div>
 
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-secondary)]/50 border-b border-[var(--border-subtle)]">
-          <span class="text-xs font-bold uppercase tracking-widest text-[var(--blue)]">{$localizedText.settings.conflictTheirs}</span>
+          <span class="text-xs font-bold uppercase tracking-widest text-[var(--blue)]">{theirsLabel}</span>
           <button
             on:click={chooseTheirs}
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--blue)]/10 text-[var(--blue)] hover:bg-[var(--blue)]/20 transition"
@@ -71,7 +80,11 @@
             <ChevronRight size="14" strokeWidth="1.7" />
           </button>
         </div>
-        <pre class="p-4 text-xs leading-relaxed font-mono overflow-x-auto max-h-80 overflow-y-auto text-[var(--text-primary)]">{current.theirs || $localizedText.settings.empty}</pre>
+        {#if isImage && current.theirsExists !== false}
+          <img src={versionUrl(current, 'theirs')} alt={theirsLabel} class="block max-h-80 w-full object-contain p-4" data-testid="conflict-image-theirs" />
+        {:else}
+          <pre class="p-4 text-xs leading-relaxed font-mono overflow-x-auto max-h-80 overflow-y-auto text-[var(--text-primary)]">{current.theirs || $localizedText.settings.empty}</pre>
+        {/if}
       </div>
     </div>
 

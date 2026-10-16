@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { get } from 'svelte/store';
-import { conflictNotePath, conflictedNotes, refreshConflicts } from './git-conflicts.js';
+import { conflictNotePath, conflictedNotes, gitConnected, refreshConflicts } from './git-conflicts.js';
 
 const answer = (data) => ({ ok: true, async json() { return data; } });
 
@@ -23,4 +23,11 @@ test('refreshConflicts: конфликтные заметки при стату�
   conflictedNotes.set(new Set(['notes/x.md']));
   await refreshConflicts(async () => { throw new Error('offline'); });
   assert.equal(get(conflictedNotes).size, 0);
+});
+
+test('gitConnected следует за статусом: кнопка синхронизации видна только при подключённом репозитории', async () => {
+  await refreshConflicts(async () => answer({ initialized: true, status: 'clean' }));
+  assert.equal(get(gitConnected), true);
+  await refreshConflicts(async () => answer({ initialized: false }));
+  assert.equal(get(gitConnected), false);
 });

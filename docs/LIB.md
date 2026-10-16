@@ -55,7 +55,11 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `card-excerpt.test.js` | Lists, headings, tables, code, callouts, links and long text |
 | `word-diff.js` | `wordDiff` — the words that differ between the two versions of a conflicting part, marked in both columns |
 | `word-diff.test.js` | Changed words only, text rebuilt byte for byte, empty side, long passages left unmarked |
-| `git-conflicts.js` | `conflictedNotes`, `refreshConflicts`, `conflictNotePath` — the notes in a sync conflict, marked on the board, in the tree and in the sidebar |
+| `conflict-properties.js` | `frontmatterEnd`, `propertyEntries`, `mergeProperties`, `describeProperties` — a conflict inside the properties block: shown as named values, "both" merges by key |
+| `conflict-properties.test.js` | Block end with markers inside, readable values, tag union, two dates refused |
+| `three-way-merge.js` | `mergeThreeWay` — combines an open note's edit with what a sync wrote under it; overlapping parts become conflict markers |
+| `three-way-merge.test.js` | Separate edits merge, same edit taken once, overlapping edits give a readable conflict |
+| `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
 | `trash-undo.test.js` | Name and pin remembered, a newer notice wins, undo restores and re-pins |

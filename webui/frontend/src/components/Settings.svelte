@@ -1,10 +1,12 @@
 <script>
+  import { announceNotesPulled } from '../lib/note-refresh.js';
+  import { get } from 'svelte/store';
   import { createEventDispatcher, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { shortcutLabel } from '../lib/shortcut-label.js';
   import Checkbox from './Checkbox.svelte';
-  import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy } from '../lib/git-sync.js';
+  import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
@@ -31,7 +33,7 @@
   import appPackage from '../../../../package.json';
   import { qrPath } from '../lib/qr-code.js';
   import { relativeDay } from '../lib/date-format.js';
-  import { refreshConflicts } from '../lib/git-conflicts.js';
+  import { conflictNotePath, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
 
   const dispatch = createEventDispatcher();
 
@@ -86,6 +88,7 @@
   let gitConflicts = [];
   let conflictDetails = [];
   let showConflictResolver = false;
+  $: fileConflictDetails = conflictDetails.filter((item) => !String(item.path).endsWith('.md'));
   let conflictIndex = 0;
   let isLoadingRepos = false;
   let isLoadingBranches = false;
@@ -512,7 +515,10 @@
     try {
       const r = await fetch('/api/git/sync', { method: 'POST' });
       const data = await r.json();
-      if (r.ok) await checkGitStatus();
+      if (r.ok) {
+        await checkGitStatus();
+        announceNotesPulled();
+      }
       if (data.conflicts === true) await loadConflicts();
     } catch (e) { console.error(e); }
     finally { isSyncing = false; }
@@ -613,12 +619,23 @@
       });
       conflictDetails = conflictDetails.filter(c => c.path !== filePath);
       gitConflicts = gitConflicts.filter(p => p !== filePath);
-      if (conflictIndex >= conflictDetails.length) conflictIndex = Math.max(0, conflictDetails.length - 1);
-      if (conflictDetails.length === 0) {
+      const left = conflictDetails.filter((item) => !String(item.path).endsWith('.md')).length;
+      if (conflictIndex >= left) conflictIndex = Math.max(0, left - 1);
+      void refreshConflicts();
+      if (left === 0) {
         showConflictResolver = false;
         await checkGitStatus();
+        // Resolved is half done until the other devices have it: send it now when sync uploads on its own.
+        if (uploadsChanges() && gitStatus?.status !== 'conflict') await handleSync();
       }
     } catch (e) { console.error(e); }
+  }
+
+  // Reached from the sidebar's "conflict in N files" link: the list is what the person came for.
+  function revealWhenAsked(node) {
+    if (!get(revealConflicts)) return;
+    revealConflicts.set(false);
+    requestAnimationFrame(() => node.scrollIntoView({ block: 'center', behavior: 'smooth' }));
   }
 
   function openConflictResolver() {
@@ -1148,18 +1165,29 @@
 
     <!-- Conflicts -->
     {#if gitConflicts.length > 0}
-      <section class="space-y-4 pt-2">
+      <section class="space-y-4 pt-2" use:revealWhenAsked>
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.conflicts(gitConflicts.length)}</h2>
         <div class="border rounded-ui border border-[var(--border-subtle)] p-4 space-y-2 max-h-48 overflow-y-auto">
+          <!-- A note is resolved in the note, part by part; only other files take a whole side here. -->
           {#each gitConflicts as conflict}
-            <div class="flex items-center justify-between py-1 text-sm border-b border-[var(--border-subtle)] last:border-0">
+            <div class="flex items-center justify-between gap-4 py-1 text-sm border-b border-[var(--border-subtle)] last:border-0">
               <span class="truncate font-mono text-xs">{getConflictLabel(conflict)}</span>
+              {#if String(conflict).endsWith('.md')}
+                <button
+                  type="button"
+                  data-testid="settings-open-conflict"
+                  on:click={() => dispatch('navigate', { path: conflictNotePath(conflict), name: String(conflict).split('/').pop(), isDir: false })}
+                  class="shrink-0 text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
+                >{$localizedText.settings.openConflictNote}</button>
+              {/if}
             </div>
           {/each}
         </div>
-        <button on:click={openConflictResolver} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
-          {$localizedText.settings.resolveConflicts}
-        </button>
+        {#if fileConflictDetails.length > 0}
+          <button on:click={openConflictResolver} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
+            {$localizedText.settings.resolveFileConflicts}
+          </button>
+        {/if}
       </section>
     {/if}
 
@@ -1428,9 +1456,9 @@
   </div>
 </div>
 
-{#if showConflictResolver && conflictDetails.length > 0}
+{#if showConflictResolver && fileConflictDetails.length > 0}
   <ConflictResolver
-    conflicts={conflictDetails}
+    conflicts={fileConflictDetails}
     currentIndex={conflictIndex}
     on:resolve={handleConflictResolve}
     on:done={() => { showConflictResolver = false; }}

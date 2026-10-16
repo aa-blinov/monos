@@ -4,7 +4,7 @@
   import FileTree from './FileTree.svelte';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
-  import { conflictedNotes, refreshConflicts } from '../lib/git-conflicts.js';
+  import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
   import { get as getRequest } from '../lib/api/client.js';
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
@@ -50,7 +50,7 @@
     checkGitStatus,
   } from '../lib/sidebar-api.js';
   import { bulkTagRequest, duplicateNoteRequest, loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
-  import { announceNoteLinksUpdated, flushOpenNote } from '../lib/note-refresh.js';
+  import { announceNoteLinksUpdated, announceNotesPulled, flushOpenNote } from '../lib/note-refresh.js';
   import {
     convertImageToWebp,
     imageNameFor,
@@ -893,9 +893,14 @@
     if (paths?.length) deleteItems(paths);
   }
 
+  // A note is resolved in the note itself; a file that is not a note (an attachment) in Settings.
   function openFirstConflict() {
     const [path] = [...$conflictedNotes].sort();
-    if (!path) return;
+    if (!path) {
+      revealConflicts.set(true);
+      dispatch('openSettings');
+      return;
+    }
     dispatch('navigate', { path, name: path.split('/').pop(), isDir: false });
   }
 
@@ -990,6 +995,7 @@
       await syncRequest();
       await loadTree();
       void refreshConflicts();
+      announceNotesPulled();
       await loadDirectories();
       gitConfigured = true;
     } catch (e) {
@@ -1224,7 +1230,7 @@
         {selectedNoteCount > 0 ? $localizedText.sidebar.selectedNotes(selectedNoteCount) : $localizedText.sidebar.notes(tree ? totalNotes : 0)}
       </span>
       <div class="flex flex-col gap-0.5">
-        {#if $conflictedNotes.size > 0}
+        {#if $conflictedNotes.size + $conflictedFiles.size > 0}
           <!-- A conflict is resolved inside its note: this opens the first one. -->
           <button
             type="button"
@@ -1233,7 +1239,7 @@
             class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--red)] transition-colors hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
           >
             <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" aria-hidden="true"></span>
-            <span class="truncate">{$localizedText.sidebar.conflictNotice($conflictedNotes.size)}</span>
+            <span class="truncate">{$conflictedNotes.size > 0 ? $localizedText.sidebar.conflictNotice($conflictedNotes.size) : $localizedText.sidebar.conflictFilesNotice($conflictedFiles.size)}</span>
           </button>
         {/if}
         {#if gitConfigured}
