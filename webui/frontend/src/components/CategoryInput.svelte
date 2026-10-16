@@ -117,11 +117,13 @@
     class="h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
   />
   {#if showList}
+    <!-- The list is part of the panel it sits in, not a second popup over it: the panel opens upward from
+         the bottom bar, so a list hanging below it would cover the bar. -->
     <ul
       id={listId}
       role="listbox"
       aria-label={listLabel}
-      class="absolute left-0 top-full z-30 mt-1 max-h-56 w-max min-w-full overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+      class="mt-1 max-h-48 w-full overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1"
     >
       {#each options as item, index (item.name)}
         <li

@@ -35,7 +35,7 @@
     setItemColorRequest,
     uploadAttachment,
   } from '../lib/editor-api.js';
-  import { createNoteRequest } from '../lib/sidebar-api.js';
+  import { createNoteRequest, loadTagsRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import {
     convertImageToWebp,
@@ -233,6 +233,32 @@
     applyDue('');
   }
 
+  // A due date is usually today, tomorrow or a week out: one click instead of typing a date.
+  // The calendar is the system's own date picker; the text field stays for any other date.
+  const DUE_QUICK_DAYS = [0, 1, 7];
+  let dueDateInput;
+  function isoDayFromToday(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+  function setDueIso(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    dueInvalid = false;
+    applyDue(iso);
+    dueText = formatDueInput(iso, $locale);
+  }
+  function openDueCalendar() {
+    if (!dueDateInput) return;
+    try {
+      dueDateInput.showPicker();
+    } catch {
+      dueDateInput.focus();
+      dueDateInput.click();
+    }
+  }
+
   // Окошко свойств открыто одно. Ввод, который ещё не принят (тег, срок), принимается
   // при закрытии, а не пропадает вместе с окошком.
   function togglePropertyPanel(panel) {
@@ -370,6 +396,64 @@
   function openLinkedNote(item) {
     if (!item?.path) return;
     dispatch('navigate', { path: item.path, name: item.name, isDir: false });
+  }
+
+  // The title is the file's name. Editing it and leaving the field (or pressing Enter) renames the file,
+  // and the server rewrites the links to it. A note whose frontmatter title differs from its file name,
+  // as imported notes can, keeps both until its title is edited here.
+  let titleTouched = false;
+  // Reading down a long note folds the big title and the stats into the top row; scrolling back up
+  // unfolds them. The toolbar stays where it is.
+  // Hysteresis: folding makes the text area taller, which can pull the scroll back a little; unfolding
+  // only near the very top keeps the header from flickering at the threshold. A note that barely
+  // scrolls is never folded.
+  const HEADER_FOLD_AFTER = 48;
+  const HEADER_UNFOLD_BEFORE = 8;
+  const HEADER_FOLD_MIN_ROOM = 240;
+  let headerCompact = false;
+  function updateHeaderCompact({ top, room }) {
+    if (!headerCompact && top > HEADER_FOLD_AFTER && room > HEADER_FOLD_MIN_ROOM) headerCompact = true;
+    else if (headerCompact && top < HEADER_UNFOLD_BEFORE) headerCompact = false;
+  }
+  $: if (currentFile?.path) headerCompact = false;
+  const fileBaseName = (path) => String(path || '').split('/').pop().replace(/\.md$/i, '');
+
+  async function commitTitle() {
+    if (!titleTouched || !currentFile?.path || currentFile.isDir) return;
+    titleTouched = false;
+    const filePath = currentFile.path;
+    const currentName = fileBaseName(filePath);
+    const next = editedTitle.trim();
+    if (!next) {
+      editedTitle = currentName;
+      return;
+    }
+    if (next === currentName) return;
+    const problem = fileNameProblem(next);
+    if (problem) {
+      saveMessage = $localizedText.sidebar.nameProblem(problem);
+      editedTitle = currentName;
+      return;
+    }
+    try {
+      // The frontmatter title follows the name first, so the card and search do not keep the old one.
+      editedTitle = next;
+      await saveMetadataFields();
+      await flushPendingEdits();
+      const data = await renameItemRequest(filePath, `${next}.md`);
+      announceNoteLinksUpdated(data);
+      dispatch('renamed', { path: data.path, name: data.name, isDir: false });
+    } catch (error) {
+      saveMessage = error?.status === 409
+        ? $localizedText.sidebar.errors.duplicateNote
+        : $localizedText.sidebar.errors.rename(error?.message || String(error));
+      editedTitle = currentName;
+    }
+  }
+
+  function finishTitle() {
+    // Enter moves on to the text, as in a document: the title is done.
+    richEditor?.focusStart?.();
   }
 
   // A link that leads nowhere creates its note, as Obsidian does: in the folder the link names, or at the top.
@@ -775,6 +859,32 @@
     void saveMetadataFields();
   }
 
+  // Tags already in use, offered under the field so a tag is picked rather than remembered (and typed
+  // the same way every time). Loaded when the panel opens; filtered by what is being typed.
+  let knownTags = [];
+  async function loadKnownTags() {
+    try {
+      const tags = await loadTagsRequest();
+      knownTags = (Array.isArray(tags) ? tags : []).map((tag) => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean);
+    } catch {
+      knownTags = [];
+    }
+  }
+  $: if (propertyPanel === 'tags') void loadKnownTags();
+  $: tagQuery = tagDraft.split(',').pop().trim().toLowerCase();
+  $: offeredTags = knownTags
+    .filter((tag) => !editableTags.includes(tag) && (!tagQuery || tag.toLowerCase().includes(tagQuery)))
+    .slice(0, 12);
+
+  function addTag(tag) {
+    if (!tag || editableTags.includes(tag)) return;
+    const parts = tagDraft.split(',');
+    parts.pop();
+    tagDraft = parts.join(',');
+    editableTags = [...editableTags, tag];
+    void saveMetadataFields();
+  }
+
   function removeTag(tag) {
     editableTags = editableTags.filter((item) => item !== tag);
     void saveMetadataFields();
@@ -1048,7 +1158,11 @@
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
+    compact={headerCompact}
     onBack={() => dispatch('goHome')}
+    onTitleInput={() => { titleTouched = true; }}
+    onCommitTitle={commitTitle}
+    onFinishTitle={finishTitle}
     onDelete={() => void deleteFile()}
   />
 
@@ -1058,6 +1172,7 @@
         this={historyModal.default}
         notePath={(historyNote.path || '').replace(/^notes\//, '')}
         on:close={() => { showHistory = false; }}
+        on:openSettings={() => { showHistory = false; dispatch('openSettings'); }}
         on:restored={async () => { if (loadedFilePath) await loadFile(); }}
       />
     {/await}
@@ -1110,6 +1225,7 @@
           onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceFrontmatterBody(editedContent, md); ignoreRichUpdate = false; }}
           on:imageClick={openImageRename}
           on:openNote={(event) => openLinkedNote(event.detail)}
+          on:scrolled={(event) => updateHeaderCompact(event.detail)}
           on:createLinkedNote={(event) => createLinkedNote(event.detail)}
         />
         {/if}
@@ -1207,6 +1323,18 @@
                 placeholder={editableTags.length ? '' : $localizedText.editor.propertyTagsEmpty}
                 class="mt-2 h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
               />
+              {#if offeredTags.length}
+                <div class="mt-2 flex flex-wrap gap-1.5" aria-label={$localizedText.editor.tagSuggestions} role="group" data-testid="tag-suggestions">
+                  {#each offeredTags as tag (tag)}
+                    <button
+                      type="button"
+                      class="rounded-ui border border-dashed border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      on:mousedown|preventDefault
+                      on:click={() => addTag(tag)}
+                    >#{tag}</button>
+                  {/each}
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -1253,7 +1381,7 @@
                       class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       on:click={clearDue}
                     >
-                      <X size="12" aria-hidden="true" />
+                      <X size="12" strokeWidth="1.7" aria-hidden="true" />
                     </button>
                   {/if}
                 </div>
@@ -1270,6 +1398,34 @@
                     {dueLabelOf}
                   </span>
                 {/if}
+              </div>
+              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                {#each DUE_QUICK_DAYS as days}
+                  <button
+                    type="button"
+                    data-testid="due-quick"
+                    aria-pressed={dueDate === isoDayFromToday(days)}
+                    class="rounded-ui border px-2 py-1 text-xs transition {dueDate === isoDayFromToday(days) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+                    on:click={() => setDueIso(isoDayFromToday(days))}
+                  >{$localizedText.editor.dueQuick[days]}</button>
+                {/each}
+                <span class="relative">
+                  <button
+                    type="button"
+                    data-testid="due-calendar"
+                    class="inline-flex items-center gap-1.5 rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    on:click={openDueCalendar}
+                  ><CalendarDays size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.dueCalendar}</button>
+                  <input
+                    type="date"
+                    bind:this={dueDateInput}
+                    value={dueDate || ''}
+                    tabindex="-1"
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                    on:change={(event) => setDueIso(event.currentTarget.value)}
+                  />
+                </span>
               </div>
               {#if dueInvalid}
                 <p role="alert" class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--red)]">{$localizedText.editor.dueInvalid}</p>

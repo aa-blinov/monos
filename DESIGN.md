@@ -403,6 +403,8 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 - **Note header actions** (Outline, History, Print) are sentence case like the bottom bar's; capitals stay with labels and dialog buttons.
 - **The new-note card** on the board is an invitation, not a note: a dashed outline with a plus, quiet until hovered, so the first slot does not weigh like a blank card.
 - **Theme choices** show themselves: each is a small preview of its light and dark page with text and an accent, six in a row; the chosen one is pressed and framed.
+- **Inside a note, menus open at what is being typed.** The `/` commands and the `[[` suggestions start under their trigger and flip above the line at the bottom of the editor; the commands show the Markdown that makes each block. A panel's own list (folders) is part of the panel, never a second popup over the bottom bar. Due dates offer Today, Tomorrow, In a week and the system calendar; tags offer the ones already in use.
+- **A long note folds its header** while reading down: the title moves into the top row beside back and the trash, the stats fold away, the toolbar stays. It unfolds near the top (with hysteresis, so it never flickers at the threshold).
 - **Outline** has one control, "Outline" in the note header, on every screen: on a wide window it shows or hides the column (hiding is remembered), on a narrow one it opens the panel over the note. The column comes up by itself only from three headings on; a shorter note shows its headings in the text already.
 
 ### Note content
