@@ -47,7 +47,7 @@ export function uniqueTitle(prefix) {
 
 export async function createBlankNote(page, title) {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: /^\+\s*New note$/i }).click();
+  await page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i }).click();
   await page.getByLabel('Name', { exact: true }).fill(title);
   await page.getByRole('button', { name: /^Create$/ }).click();
   await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue(title);

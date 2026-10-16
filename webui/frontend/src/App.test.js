@@ -228,14 +228,14 @@ test('App возвращается на главную по клику на ло
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   await tick();
   await fireEvent.click(screen.getByText('sidebar navigate'));
   await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
 
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
-  expect(screen.getByText(uiText.app.homeActions.newNote)).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy();
 });
 
 test('App сохраняет scroll дашборда при возврате кнопкой назад из заметки', async () => {
@@ -243,7 +243,7 @@ test('App сохраняет scroll дашборда при возврате к�
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   const boardScroll = document.querySelector('[data-board-scroll]');
   boardScroll.scrollTop = 420;
   await fireEvent.scroll(boardScroll);
@@ -262,7 +262,7 @@ test('App обновляет дашборд после фонового сохр
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   const boardScroll = document.querySelector('[data-board-scroll]');
   boardScroll.scrollTop = 420;
   await fireEvent.scroll(boardScroll);
@@ -287,7 +287,7 @@ test('App показывает дашборд на главной даже пр�
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   expect(screen.queryByText(uiText.app.emptyMobile)).toBeNull();
   expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();
   expect(screen.queryByRole('heading', { name: uiText.app.board.title })).toBeNull();
@@ -301,7 +301,7 @@ test('App скрывает заголовок dashboard на tablet ширине
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   expect(screen.queryByRole('heading', { name: uiText.app.board.title })).toBeNull();
   expect(screen.queryByText(uiText.app.board.hint)).toBeNull();
 });
@@ -400,11 +400,10 @@ test('App открывает создание заметки из карточк
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
-  expect(screen.getByText(uiText.app.homeActions.newNote)).toBeTruthy();
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   expect(screen.queryByText(uiText.app.homeActions.today)).toBeNull();
 
-  await fireEvent.click(screen.getByRole('button', { name: /\+ New note/ }));
+  await fireEvent.click(screen.getByRole('button', { name: /^(\+ )?New note$/ }));
   await waitFor(() => expect(screen.getByLabelText(uiText.sidebar.modals.title)).toBeTruthy());
 });
 
@@ -444,8 +443,8 @@ test('App создаёт today note из центрального действи
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy());
-  await fireEvent.click(screen.getByRole('button', { name: /\+ New note/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
+  await fireEvent.click(screen.getByRole('button', { name: /^(\+ )?New note$/ }));
   await waitFor(() => expect(screen.getByText(uiText.sidebar.modals.todayNote)).toBeTruthy());
   await fireEvent.click(screen.getByText(uiText.sidebar.modals.todayNote));
 
@@ -541,7 +540,7 @@ test('App показывает пустое состояние доски, ко�
 
   await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
   expect(screen.getByText(uiText.app.emptyDesktop)).toBeTruthy();
-  expect(screen.getByRole('button', { name: /\+ New note/ })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy();
   // "Continue" is deliberately absent here: this state only renders when there
   // are no notes at all, so there is nothing to continue into.
   expect(screen.queryByRole('button', { name: uiText.app.homeActions.continueWork })).toBeNull();

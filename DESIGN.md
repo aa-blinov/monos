@@ -394,11 +394,15 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 
 - **Card text** is the note's words, not its Markdown (`lib/card-excerpt.js`): no code, table rules, task boxes or callout markers. After a heading, a list item or a table row the next line follows ` · `, so a list reads `milk · bread · coffee`; running sentences join with a space.
 - **Card date** is the day, relative: `Today, 07:54`, `Yesterday, 18:10`, `12 Oct`, `3 Mar 2025`. The word for what the date is (modified, opened) and the exact moment live in the tooltip, not on every card.
-- **Note header** carries one date, `Modified …`; the creation date is its tooltip. Items are set apart by ` · `, and each says what it counts: `30 words · 1 min read · 1 of 3 tasks`.
+- **Note header** carries one date, `Modified …`; the creation date is its tooltip. Items are set apart by even space (`gap-x-6`), not by dots, and each says what it counts: `30 words, 1 min read` and `1 of 3 tasks` beside its bar.
 - **Toggles keep their name.** Pin stays "Pin" and shows the pinned state by being pressed (filled pin, `--bg-secondary`), never by turning into "Unpin".
 - **Destructive icons are quiet at rest.** The trash in the note header is `--text-secondary` and turns `--red` on hover or focus.
 - **Locking a note** is an action, so it lives in the note's ⋯ menu ("Password protection…"), not among its properties.
 - **A note's colour in the editor** is the header only: the same 13% tint and 18% blurred glow as its card, behind the title. The page the text is written on, the toolbar and the bottom bar stay the theme's own, so the colour never sits under every line. Focus mode drops it.
+- **One bar above a note.** The sidebar runs the full height on every page and the app bar belongs to the content column. A note brings its own header instead: back, the sidebar toggle and the trash share a row with the folder path, so the text starts high and the note's colour covers one block. The colour layers are a tint and a radial gradient (not a blurred circle, which a short header cuts into a band).
+- **Note header actions** (Outline, History, Print) are sentence case like the bottom bar's; capitals stay with labels and dialog buttons.
+- **The new-note card** on the board is an invitation, not a note: a dashed outline with a plus, quiet until hovered, so the first slot does not weigh like a blank card.
+- **Theme choices** show themselves: each is a small preview of its light and dark page with text and an accent, six in a row; the chosen one is pressed and framed.
 - **Outline** has one control, "Outline" in the note header, on every screen: on a wide window it shows or hides the column (hiding is remembered), on a narrow one it opens the panel over the note. The column comes up by itself only from three headings on; a shorter note shows its headings in the text already.
 
 ### Note content

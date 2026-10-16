@@ -983,7 +983,7 @@
     const { words, readingMinutes } = wordStats(editedContent);
     wordCharStats = words === 0
       ? $localizedText.editorHeader.stats.empty
-      : `${$localizedText.editorHeader.stats.words(words)} · ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
+      : `${$localizedText.editorHeader.stats.words(words)}, ${$localizedText.editorHeader.stats.readingMinutes(readingMinutes)}`;
   }
 
   $: taskProgress = taskProgressOf(editedContent);
@@ -1048,6 +1048,8 @@
     onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
+    onBack={() => dispatch('goHome')}
+    onDelete={() => void deleteFile()}
   />
 
   {#if showHistory && historyNote?.path}

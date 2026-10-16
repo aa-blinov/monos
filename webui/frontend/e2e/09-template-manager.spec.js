@@ -40,7 +40,7 @@ test('template manager creates custom templates and hides library templates', as
   await expect(page.getByRole('button', { name: 'Show template' }).first()).toBeVisible();
 
   await page.goto('/');
-  await page.getByText('+ New note').click();
+  await page.getByRole('button', { name: /^(\+ )?New note$/ }).first().click();
   await page.getByRole('button', { name: 'Note from template' }).click();
   await expect(page.getByRole('button', { name: new RegExp(templateTitle) })).toBeVisible();
 });
