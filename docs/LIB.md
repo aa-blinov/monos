@@ -47,8 +47,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `note-format.test.js` | Edge cases: missing fields, mixed case extension, fallback behavior |
 | `preview-html.js` | Renders a sanitized HTML preview of a markdown source; consumed by the Template Library and editor preview pane |
 | `markdown-editor-content.js` | TipTap-friendly serialization of the editor's content |
-| `wiki-links.js` | `parseWikiLink`, `findWikiLinks`, `replaceWikiLinks` for `[[Note Title]]` syntax |
+| `wiki-links.js` | `parseWikiLink`, `findWikiLinks`, `replaceWikiLinks`, `wikiLinkSpans`, `newNoteForWikiLink` for `[[Note Title]]` syntax |
 | `wiki-links.test.js` | Multiple links per line, deduplication, malformed input, trailing punctuation |
+| `wiki-link-decorations.js` | `collectWikiLinks(doc)`, `wikiLinkAt`, `wikiLinkStatus` — wiki links of an editor document with positions (code skipped) and what each one leads to; drives the `WikiLinks` editor extension |
+| `wiki-link-decorations.test.js` | Positions across marks, code and inline nodes; found, ambiguous and missing answers; folder and heading in a new note's name |
 | `note-refresh.js` | `flushOpenNote` and `announceNoteLinksUpdated`: window events that save the open note before a rename and reload it when the server rewrote its links |
 | `note-refresh.test.js` | Flush waits for every listener's save; announce stays silent when no links changed |
 | `local-graph.js` | `layoutLocalGraph` places the note in the centre of a small canvas, its neighbours on a ring and the links between them; `truncateLabel` shortens titles to fit |
@@ -115,7 +117,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `tree-icons.js` | Named lucide icons used by the tree and sidebar, exported as one `Icon` object (no namespace import, so unused icons are tree-shaken) |
 | `tree-icons.test.js` | Every imported icon is exported by `lucide-svelte` |
 | `sidebar-api.js` | Wrappers for the sidebar's HTTP endpoints (see also API wrappers above) |
-| `context-menu-position.js` | `computeContextMenuPosition(rect, menuSize, viewport)` — keeps the right-click menu inside the viewport |
+| `context-menu-position.js` | `computeContextMenuPosition(rect, menuSize, viewport)` — keeps the right-click menu inside the viewport; `availableMenuHeight` and the `fitMenuHeight` action keep a dropdown above the window's bottom edge |
 | `context-menu-position.test.js` | Bottom overflow, left overflow, exact fit |
 | `dashboard.js` | `buildDashboardSections(notes, opts)` — what cards appear on the home view, in what order, with what grouping |
 | `dashboard.test.js` | Empty notes, mixed categories, color grouping on/off |

@@ -160,11 +160,16 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     }
   }
 
+  // The wide window remembers whether its sidebar was open; a narrow window always starts with it closed,
+  // because there the sidebar covers the note.
+  let desktopSidebarOpen = true;
+  $: if (!isMobile) desktopSidebarOpen = $sidebarOpen;
+
   function updateMobileState() {
     const wasMobile = isMobile;
     isMobile = window.innerWidth < 1024;
     if (isMobile && $sidebarOpen) setSidebarOpen(false);
-    if (wasMobile && !isMobile) setSidebarOpen(false);
+    if (wasMobile && !isMobile) setSidebarOpen(desktopSidebarOpen);
     // Fit the width to the window without saving it: only the person's own resize is remembered.
     if (!isMobile) sidebarWidth.set(clampSidebarWidth($sidebarWidth));
   }
@@ -241,10 +246,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       replaceUnknownRouteWithLastKnown();
     }
     if (routePath === '/') $noteView = 'board';
-    if ($noteView === 'board' && routePath.startsWith('/notes/')) {
-      setRoutePath('/');
-      navigate('/');
-    }
+    // A link to a note opens that note, also in a fresh window or from another device, where the
+    // remembered view is still the board.
+    if (routePath.startsWith('/notes/')) $noteView = 'list';
     void loadHomeRecentNotes();
     void applyShellSettings();
     void loadTemplateSettings();

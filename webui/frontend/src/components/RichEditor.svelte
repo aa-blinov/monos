@@ -17,13 +17,18 @@
   import { scrollBehavior } from '../lib/motion.js';
   import { firstImageFileFromDataTransfer, firstPdfFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
+  import { fitMenuHeight } from '../lib/context-menu-position.js';
   import { localizedText } from '../lib/strings.js';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    Maximize2, WrapText, Type, MoreHorizontal
+    Maximize2, WrapText, Type, MoreHorizontal, ArrowUpRight, FilePlus
   } from 'lucide-svelte';
+  import { wikiLinksKey } from '../lib/richEditorExtras.js';
+  import { wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
+  import { newNoteForWikiLink } from '../lib/wiki-links.js';
+  import { resolveWikiLink } from '../lib/editor-api.js';
 
   // Everyday formatting stays in the toolbar; the rest sits behind "More tools".
   let moreOpen = false;
@@ -140,6 +145,7 @@
       extensions: createRichEditorExtensions(placeholder || $localizedText.richEditor.beginWriting, {
         resolveImageSrc,
         resolveImagePath,
+        onWikiLinkActivate: ({ target }) => activateWikiLink(target),
       }),
       content: markdownToEditorContent(content),
       editable,
@@ -154,6 +160,9 @@
         updateActive(ed);
       },
       onSelectionUpdate: ({ editor: ed }) => updateActive(ed),
+      onTransaction: () => updateWikiLinkHere(),
+      onFocus: () => updateWikiLinkHere(),
+      onBlur: () => updateWikiLinkHere(),
       editorProps: {
         attributes: { 'aria-label': $localizedText.richEditor.bodyLabel },
         // Dictation, an IME commit or a tool can insert a whole line in one text event,
@@ -178,11 +187,85 @@
 
   function applyEditorContent(nextContent) {
     if (!editor) return;
+    // Another note: what its links lead to is looked up afresh.
+    editor.storage.wikiLinks?.statuses.clear();
     editor
       .chain()
       .setMeta('addToHistory', false)
       .setContent(markdownToEditorContent(nextContent), { emitUpdate: false })
       .run();
+  }
+
+  // The link the caret is in. While the editor has focus a small bar under it opens the note, offers to
+  // create a missing one, or lists the notes that share the name. Clicking a link only places the caret,
+  // so its text stays editable; Ctrl/⌘+click and Ctrl/⌘+Enter open it at once.
+  let wikiLinkHere = null;
+  let wikiBarPosition = { left: 0, top: 0 };
+
+  function wikiStatusOf(target) {
+    return editor?.storage.wikiLinks?.statuses.get(wikiLinkKey(target)) || { kind: 'pending' };
+  }
+
+  function updateWikiLinkHere() {
+    if (!editor || !editable || !editor.view.hasFocus() || !editor.state.selection.empty) {
+      wikiLinkHere = null;
+      return;
+    }
+    const state = wikiLinksKey.getState(editor.state);
+    const link = state ? wikiLinkAt(state.links, editor.state.selection.from) : null;
+    if (!link) {
+      wikiLinkHere = null;
+      return;
+    }
+    wikiLinkHere = { ...link, status: wikiStatusOf(link.target) };
+    placeWikiBar(link);
+  }
+
+  function placeWikiBar(link) {
+    if (!surfaceEl) return;
+    try {
+      const surface = surfaceEl.getBoundingClientRect();
+      const start = editor.view.coordsAtPos(link.from);
+      const end = editor.view.coordsAtPos(link.to);
+      // The bar is 18rem wide, or the surface less a margin on each side when that is narrower.
+      const barWidth = Math.min(288, surface.width - 16);
+      wikiBarPosition = {
+        left: Math.max(8, Math.min(start.left - surface.left, surface.width - barWidth - 8)),
+        top: Math.max(start.bottom, end.bottom) - surface.top + 6,
+      };
+    } catch {
+      // No layout to measure: the bar keeps its last place.
+    }
+  }
+
+  async function activateWikiLink(target) {
+    let status = wikiStatusOf(target);
+    if (status.kind === 'pending' || status.kind === 'unknown') {
+      try {
+        status = wikiLinkStatus(await resolveWikiLink(target));
+      } catch {
+        return;
+      }
+    }
+    if (status.kind === 'found') {
+      openWikiNote(status);
+    } else if (status.kind === 'missing') {
+      createWikiNote(target);
+    } else if (status.kind === 'ambiguous') {
+      // Several notes answer: the caret goes into the link, and the bar under it lists them.
+      const link = wikiLinksKey.getState(editor.state).links.find((item) => wikiLinkKey(item.target) === wikiLinkKey(target));
+      if (link) editor.chain().focus().setTextSelection(link.from + 2).run();
+    }
+  }
+
+  function openWikiNote(note) {
+    wikiLinkHere = null;
+    dispatch('openNote', { path: note.path, name: note.name });
+  }
+
+  function createWikiNote(target) {
+    wikiLinkHere = null;
+    dispatch('createLinkedNote', { target, ...newNoteForWikiLink(target) });
   }
 
   function updateActive(ed) {
@@ -388,6 +471,9 @@
     }
   }
 
+  // Suggestions open while a link is being typed (the input event). Moving the caret, by click or by
+  // arrow keys, only updates or closes a list that is already open: placing the caret in a finished link
+  // shows the bar that opens it, not a list of other notes.
   function shouldRefreshWikiSuggestions(event) {
     if (!wikiSuggestionsOpen) return true;
     return !['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'Tab'].includes(event.key);
@@ -672,7 +758,7 @@
     </button>
 
     {#if moreOpen}
-      <div class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
+      <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
         <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleStrike'))}>
           <Strikethrough size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.strikethrough}
         </button>
@@ -736,6 +822,37 @@
     class="relative flex flex-col flex-1 min-h-0 overflow-hidden"
     data-testid="rich-editor-surface"
   >
+  {#if wikiLinkHere && !wikiSuggestionsOpen && !slashMenuOpen && ['found', 'missing', 'ambiguous'].includes(wikiLinkHere.status.kind)}
+    <div
+      class="absolute z-20 w-72 max-w-[calc(100%-1rem)] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 text-left shadow-xl shadow-black/15"
+      style="left: {wikiBarPosition.left}px; top: {wikiBarPosition.top}px"
+      role="group"
+      aria-label={$localizedText.richEditor.wikiLink.label}
+      data-testid="wiki-link-bar"
+    >
+      {#if wikiLinkHere.status.kind === 'found'}
+        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => openWikiNote(wikiLinkHere.status)}>
+          <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
+          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.open(wikiLinkHere.status.name)}</span>
+          <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
+        </button>
+      {:else if wikiLinkHere.status.kind === 'missing'}
+        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => createWikiNote(wikiLinkHere.target)}>
+          <FilePlus size="16" strokeWidth="1.7" aria-hidden="true" />
+          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.create(newNoteForWikiLink(wikiLinkHere.target).title)}</span>
+          <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
+        </button>
+      {:else}
+        <p class="px-2.5 py-1.5 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.richEditor.wikiLink.ambiguous}</p>
+        {#each wikiLinkHere.status.matches as match}
+          <button type="button" on:mousedown|preventDefault class="flex w-full flex-col items-start rounded-ui px-2.5 py-1.5 text-left hover:bg-[var(--bg-secondary)]" on:click={() => openWikiNote(match)}>
+            <span class="max-w-full truncate text-sm">{match.name}</span>
+            <span class="max-w-full truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{match.path.startsWith('notes/') ? match.path.slice(6) : match.path}</span>
+          </button>
+        {/each}
+      {/if}
+    </div>
+  {/if}
   {#if slashMenuOpen}
     <div
       bind:this={slashMenuEl}
@@ -766,13 +883,13 @@
     data-testid="rich-editor-input"
     on:scroll={() => { if (slashMenuOpen) placeSlashMenu(); }}
     on:keydown|capture={handleEditorKeydown}
-    on:keyup|capture={(event) => { handleEditorKeyup(event); if (shouldRefreshWikiSuggestions(event)) refreshWikiSuggestionsAfterDomUpdate(); }}
+    on:keyup|capture={(event) => { handleEditorKeyup(event); if (wikiSuggestionsOpen && shouldRefreshWikiSuggestions(event)) refreshWikiSuggestionsAfterDomUpdate(); }}
     on:input|capture={refreshWikiSuggestionsAfterDomUpdate}
     on:paste|capture={handlePaste}
     on:dragover|capture={handleDragOver}
     on:dragleave={() => isImageDragging = false}
     on:drop|capture={handleDrop}
-    on:click={(event) => { handleClick(event); refreshWikiSuggestionsAfterDomUpdate(); }}
+    on:click={(event) => { handleClick(event); if (wikiSuggestionsOpen) refreshWikiSuggestionsAfterDomUpdate(); }}
     class="min-h-0 h-full flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 py-4 lg:py-10 cursor-text touch-pan-y
       {isImageDragging ? 'ring-1 ring-inset ring-[var(--text-secondary)]/35' : ''}
       [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:max-w-[var(--content-width,56rem)] [&_.ProseMirror]:mx-auto [&_.ProseMirror_p]:my-2
@@ -840,6 +957,10 @@
   :global(.ProseMirror th), :global(.ProseMirror td) { border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
   :global(.ProseMirror tr > :last-child) { border-right: 0; }
   :global(.ProseMirror table > :last-child > tr:last-child > *) { border-bottom: 0; }
+  /* A wiki link reads as a link; one that leads nowhere is drawn dashed and quieter, like a draft. */
+  :global(.ProseMirror .wiki-link) { color: var(--text-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  :global(.ProseMirror .wiki-link-missing) { color: var(--text-secondary); text-decoration-style: dashed; }
+  :global(.ProseMirror .wiki-link-ambiguous) { text-decoration-style: double; }
   /* flow-root keeps the paragraphs' margins inside the editor: a collapsed margin would stick out past min-height and show a scrollbar on a short note. */
   :global(.ProseMirror) { --editor-caret: color-mix(in srgb, var(--text-primary) 82%, var(--yellow) 18%); display: flow-root; min-height: 100%; outline: none; caret-color: var(--editor-caret); }
   :global(.ProseMirror ::selection) { background: color-mix(in srgb, var(--editor-caret) 18%, transparent); color: var(--text-primary); }

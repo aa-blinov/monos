@@ -35,6 +35,7 @@
     setItemColorRequest,
     uploadAttachment,
   } from '../lib/editor-api.js';
+  import { createNoteRequest } from '../lib/sidebar-api.js';
   import {
     convertImageToWebp,
     defaultImageName,
@@ -353,6 +354,19 @@
   function openLinkedNote(item) {
     if (!item?.path) return;
     dispatch('navigate', { path: item.path, name: item.name, isDir: false });
+  }
+
+  // A link that leads nowhere creates its note, as Obsidian does: in the folder the link names, or at the top.
+  // A note of that name made meanwhile is opened instead of a copy.
+  async function createLinkedNote({ title, category }) {
+    if (!title) return;
+    try {
+      const note = await createNoteRequest({ title, category, tags: [], content: '', openIfExists: true });
+      openLinkedNote({ path: note.path, name: note.name || title });
+    } catch (error) {
+      console.error('Failed to create the linked note:', error);
+      saveMessage = $localizedText.editor.linkedNoteFailed;
+    }
   }
 
   // Mentions and the local graph are read next to the backlinks. A failed read leaves them empty.
@@ -1073,6 +1087,8 @@
           resolveImagePath={resolveEditorImagePath}
           onUpdate={(md) => { ignoreRichUpdate = true; editedContent = replaceFrontmatterBody(editedContent, md); ignoreRichUpdate = false; }}
           on:imageClick={openImageRename}
+          on:openNote={(event) => openLinkedNote(event.detail)}
+          on:createLinkedNote={(event) => createLinkedNote(event.detail)}
         />
         {/if}
       </div>
@@ -1374,6 +1390,7 @@
               <div class="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  aria-pressed={currentNoteColor === ''}
                   class="flex h-8 shrink-0 items-center rounded-ui border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
                   disabled={isColorSaving}
                   on:click={() => setNoteColor('')}
@@ -1387,6 +1404,7 @@
                     style="background: {color};"
                     disabled={isColorSaving}
                     aria-label={$localizedText.app.board.applyColor(color)}
+                    aria-pressed={currentNoteColor === color}
                     on:click={() => setNoteColor(color)}
                   ></button>
                 {/each}

@@ -19,6 +19,7 @@ import katex from 'katex';
 import { get } from 'svelte/store';
 import { localizedText } from './strings.js';
 import { calloutMarker, calloutTone } from './callouts.js';
+import { collectWikiLinks, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from './wiki-link-decorations.js';
 
 let mermaidPromise = null;
 
@@ -600,5 +601,120 @@ export const PdfEmbed = Node.create({
         },
       },
     };
+  },
+});
+
+export const wikiLinksKey = new PluginKey('wikiLinks');
+const RESOLVE_DELAY = 250;
+
+/**
+ * Wiki links drawn as links. The text stays `[[Target]]` in the document and in the file; this is a
+ * decoration over it, so editing the link is ordinary typing. Each target is looked up once per note:
+ * a link to a note that does not exist is drawn apart, and one that names several notes says so.
+ *
+ * `onActivate({ target, status })` runs on ⌘/Ctrl+click and on ⌘/Ctrl+Enter inside a link.
+ */
+export const WikiLinks = Extension.create({
+  name: 'wikiLinks',
+
+  addOptions() {
+    return {
+      resolve: async (target) => {
+        const { resolveWikiLink } = await import('./editor-api.js');
+        return resolveWikiLink(target);
+      },
+      onActivate: null,
+    };
+  },
+
+  addStorage() {
+    return { statuses: new Map() };
+  },
+
+  addCommands() {
+    return {
+      // Forget what the links led to: another note opened, or a note was created for a link.
+      refreshWikiLinks: () => ({ tr, dispatch }) => {
+        this.storage.statuses.clear();
+        if (dispatch) tr.setMeta(wikiLinksKey, 'refresh');
+        return true;
+      },
+    };
+  },
+
+  addProseMirrorPlugins() {
+    const { statuses } = this.storage;
+    const options = this.options;
+    const statusOf = (target) => statuses.get(wikiLinkKey(target)) || { kind: 'pending' };
+    const activate = (view, pos) => {
+      const link = wikiLinkAt(wikiLinksKey.getState(view.state).links, pos);
+      if (!link || typeof options.onActivate !== 'function') return false;
+      options.onActivate({ target: link.target, status: statusOf(link.target) });
+      return true;
+    };
+
+    return [new Plugin({
+      key: wikiLinksKey,
+      state: {
+        init: (_, state) => ({ links: collectWikiLinks(state.doc) }),
+        apply(tr, value, _old, newState) {
+          if (tr.docChanged) return { links: collectWikiLinks(newState.doc) };
+          // A new object makes the decorations draw again with the answers that arrived.
+          return tr.getMeta(wikiLinksKey) ? { links: value.links } : value;
+        },
+      },
+      props: {
+        decorations(state) {
+          const { links } = wikiLinksKey.getState(state);
+          if (!links.length) return null;
+          return DecorationSet.create(state.doc, links.map((link) => Decoration.inline(link.from, link.to, {
+            class: `wiki-link wiki-link-${statusOf(link.target).kind}`,
+            'data-wiki-target': link.target,
+          })));
+        },
+        handleClick(view, pos, event) {
+          if (!(event.metaKey || event.ctrlKey)) return false;
+          return activate(view, pos);
+        },
+        handleKeyDown(view, event) {
+          if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey) || !view.state.selection.empty) return false;
+          return activate(view, view.state.selection.from);
+        },
+      },
+      view(view) {
+        let timer = null;
+        const lookUp = () => {
+          timer = null;
+          const wanted = new Map();
+          for (const link of wikiLinksKey.getState(view.state).links) {
+            const key = wikiLinkKey(link.target);
+            if (!statuses.has(key) && !wanted.has(key)) wanted.set(key, link.target);
+          }
+          if (!wanted.size) return;
+          for (const key of wanted.keys()) statuses.set(key, { kind: 'pending' });
+          Promise.all([...wanted].map(async ([key, target]) => {
+            try {
+              statuses.set(key, wikiLinkStatus(await options.resolve(target)));
+            } catch {
+              // Offline or the server is busy: the link stays plain and is looked up with the next note.
+              statuses.set(key, { kind: 'unknown' });
+            }
+          })).then(() => {
+            if (!view.isDestroyed) view.dispatch(view.state.tr.setMeta(wikiLinksKey, 'resolved'));
+          });
+        };
+        const schedule = () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(lookUp, RESOLVE_DELAY);
+        };
+        schedule();
+        return {
+          update: (_view, previous) => {
+            if (wikiLinksKey.getState(view.state) !== wikiLinksKey.getState(previous)) schedule();
+          },
+          destroy: () => { if (timer) clearTimeout(timer); },
+        };
+      },
+    })];
   },
 });

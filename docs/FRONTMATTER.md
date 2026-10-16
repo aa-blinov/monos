@@ -85,6 +85,8 @@ Link to another note by its title or its file name:
 See [[Project Ideas]] for related thoughts.
 ```
 
+In the editor a link is underlined; one that leads to no note is dashed. Clicking a link places the caret in it, so its text stays editable, and a bar under it opens the note or, for a link that leads nowhere, creates it (in the folder the link names, `[[Projects/Plan]]`, or at the top). Ctrl+click (⌘-click on macOS) or Ctrl+Enter opens the link at once. When several notes share the name, the bar lists them to choose from. The file keeps the link exactly as written.
+
 Monos indexes wiki links and displays backlinks in the editor. Renaming a note rewrites the `[[old name]]` links to it in other notes, and links inside code are left alone. Renaming an image attachment updates its image references in the same way. Moving a note to another folder does not affect its links, because they match names rather than paths. If another note still has the old name, the links stay as they are, so they never switch to a different note.
 
 A link can point at a heading, `[[Name#Heading]]`, and it counts as a link to `Name`: it shows in the backlinks, and renaming `Name` keeps the heading. A name with `#` in it, such as `Issue #42`, still resolves by its full name.

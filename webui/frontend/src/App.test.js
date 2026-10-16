@@ -488,6 +488,43 @@ test('App позволяет менять ширину сайдбара на des
   expect(localStorage.getItem('sidebarWidth')).toBe('304');
 });
 
+test('App открывает заметку по прямой ссылке, даже если запомнена доска', async () => {
+  noteView.set('board');
+  window.history.pushState({}, '', '/notes/Alpha.md');
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(get(noteView)).toBe('list'));
+  expect(window.location.pathname).toBe('/notes/Alpha.md');
+}, 20000);
+
+test('App на широком окне возвращает сайдбар, если приложение открылось на узком', async () => {
+  let width = 800;
+  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => width });
+  try {
+    const { default: App } = await import('./App.svelte');
+    render(App);
+    await waitFor(() => expect(screen.getByText('toggle sidebar')).toBeTruthy());
+    expect(screen.queryByText('sidebar open')).toBeNull();
+
+    width = 1300;
+    window.dispatchEvent(new Event('resize'));
+    await waitFor(() => expect(screen.getByText('sidebar open')).toBeTruthy());
+
+    // A sidebar the person closed on the wide window stays closed after a narrow spell.
+    await fireEvent.click(screen.getByText('toggle sidebar'));
+    await waitFor(() => expect(screen.queryByText('sidebar open')).toBeNull());
+    width = 800;
+    window.dispatchEvent(new Event('resize'));
+    width = 1300;
+    window.dispatchEvent(new Event('resize'));
+    await tick();
+    expect(screen.queryByText('sidebar open')).toBeNull();
+  } finally {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => 1300 });
+  }
+}, 20000);
+
 test('App показывает пустое состояние доски, когда заметок ещё нет', async () => {
   const emptyFetch = vi.fn(async (url) => {
     if (url.endsWith('/api/notes/recent?limit=36&offset=0&sort=modified')) return jsonResponse([]);

@@ -21,6 +21,12 @@
   let duplicatePath = '';
   let titleInput;
 
+  // The title field takes the caret when the dialog opens. An action rather than `autofocus`: the
+  // attribute is ignored when the dialog is added to an already loaded page.
+  function focusOnOpen(node) {
+    node.focus();
+  }
+
   $: if (open) {
     newNoteCategory = category;
   } else {
@@ -197,7 +203,7 @@
             if (e.key === 'Enter' && !blockedName) submitCreateNote();
             if (e.key === 'Escape') onClose();
           }}
-          autofocus
+          use:focusOnOpen
         />
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
         {#if titleProblem && titleProblem !== 'empty'}
