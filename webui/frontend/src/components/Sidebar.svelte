@@ -1242,13 +1242,15 @@
             <span class="truncate">{$conflictedNotes.size > 0 ? $localizedText.sidebar.conflictNotice($conflictedNotes.size) : $localizedText.sidebar.conflictFilesNotice($conflictedFiles.size)}</span>
           </button>
         {/if}
+        <!-- These rows show their names, so they carry no tooltip that repeats it; only a row whose name needs
+             explaining (the notes table) has one. -->
         {#if gitConfigured}
           <TooltipIconButton
             on:click={handleSync}
             disabled={isSyncing || $editorState.saving || $editorState.dirty}
             class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30"
             label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
-            tooltip={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
+            tooltip=""
             tooltipAlign="end"
           >
             {#if isSyncing}
@@ -1265,7 +1267,7 @@
           on:click={() => dispatch('openTemplatesManager')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.templates}
-          tooltip={$localizedText.sidebar.templates}
+          tooltip=""
           tooltipAlign="end"
         >
           <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
@@ -1277,7 +1279,7 @@
             on:click={() => dispatch('openSavedSearches')}
             class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             label={$localizedText.savedSearches.title}
-            tooltip={$localizedText.savedSearches.title}
+            tooltip=""
             tooltipAlign="end"
           >
             <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
@@ -1290,7 +1292,7 @@
             on:click={() => dispatch('openTags')}
             class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             label={$localizedText.tags.title}
-            tooltip={$localizedText.tags.title}
+            tooltip=""
             tooltipAlign="end"
           >
             <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
@@ -1303,8 +1305,8 @@
             on:click={() => dispatch('openProperties')}
             class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             label={$localizedText.properties.sidebar}
-            tooltip={$localizedText.properties.hint}
-            tooltipAlign="end"
+            tooltip={$localizedText.properties.tableTooltip}
+            tooltipAlign="start"
           >
             <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
             <span class="truncate">{$localizedText.properties.sidebar}</span>
@@ -1314,7 +1316,7 @@
           on:click={() => dispatch('openTrash')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.trash}
-          tooltip={$localizedText.sidebar.trash}
+          tooltip=""
           tooltipAlign="end"
         >
           <Icon.Trash2 class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
@@ -1324,7 +1326,7 @@
           on:click={() => dispatch('openSettings')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.settings}
-          tooltip={$localizedText.sidebar.settings}
+          tooltip=""
           tooltipAlign="end"
         >
           <Icon.Settings class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />

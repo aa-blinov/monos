@@ -352,7 +352,7 @@ Field underlines have zero radius by definition; they are a single border line.
 - **Secondary:** identical geometry with `--text-secondary` and `font-normal`; hover shifts the color to `--text-primary`.
 - **Minimal** (`.btn-minimal`): inline, `px-4 py-2 text-sm font-medium`, same opacity treatment.
 - **Text action** (in page sections such as Settings and Templates): `inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold`, hover `opacity-60`, disabled `opacity-30`. No frame and no fill; neighbours sit `gap-x-6` apart so two actions never read as one phrase. A frame is kept only by a toggle among options (`aria-pressed`), where it marks the chosen one.
-- **Icon buttons** (`TooltipIconButton`): `rounded-ui` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. The radius is the same at 28px. Always paired with a tooltip except below `640px`.
+- **Icon buttons** (`TooltipIconButton`): `rounded-ui` (6px), 36px, 1px `--border-subtle` border, `--text-secondary`; hover darkens border and text. The radius is the same at 28px. Always paired with a tooltip except below `640px`. A tooltip that names a thing ("Trash") is a small capital tag on one line; one that explains (over 32 characters) is ordinary sentence case and wraps inside its box at `max-w-xs`, whatever case the surrounding block uses. A tooltip waits 450 ms under the pointer (keyboard focus shows it at once), and a row that already shows its name has none.
 
 ### Chips
 
