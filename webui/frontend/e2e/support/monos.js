@@ -55,7 +55,14 @@ export async function createBlankNote(page, title) {
 
 export async function openNote(page, name) {
   await page.goto('/');
-  await page.getByRole('button', { name: new RegExp(name, 'i') }).first().click();
+  // The card whose name starts with the title: another note's excerpt may quote the title too
+  // ("See [[Rename Me]]"), and that card can come first on the board.
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const any = page.getByRole('button', { name: new RegExp(escaped, 'i') });
+  await any.first().waitFor();
+  const exact = page.getByRole('button', { name: new RegExp(`^\\s*${escaped}`, 'i') });
+  const target = (await exact.count()) > 0 ? exact : any;
+  await target.first().click();
   await expect(page.locator('input[placeholder="Note Title"]')).toHaveValue(new RegExp(name, 'i'));
 }
 
