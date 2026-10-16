@@ -28,7 +28,7 @@ import { get } from 'svelte/store';
 import { pickAndImport } from './lib/backup.js';
 import { focusNoteBody } from './stores.js';
 import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
-  import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
+  import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, clampSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
   import { loadShellSettings } from './lib/shell-settings.js';
@@ -165,7 +165,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     isMobile = window.innerWidth < 1024;
     if (isMobile && $sidebarOpen) setSidebarOpen(false);
     if (wasMobile && !isMobile) setSidebarOpen(false);
-    if (!isMobile) setSidebarWidth($sidebarWidth);
+    // Fit the width to the window without saving it: only the person's own resize is remembered.
+    if (!isMobile) sidebarWidth.set(clampSidebarWidth($sidebarWidth));
   }
 
   function handleKeydown(e) {

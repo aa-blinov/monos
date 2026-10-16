@@ -121,7 +121,7 @@ components:
 
 Monos looks like a desk under warm light. Notes are cards laid out on it — each one with its own tint, its own label, its own place in the stack. Nothing is "UI" pretending to be paper; the paper is warm because the palette is warm, and the layout is orderly because a desk is orderly. The system borrows the calm of a printed page rather than the energy of a tool.
 
-The reading is quiet and typographic. Every note title, tag, date, and control is set in the same monospace face, because a card index is sorted by legibility, not by personality. The monospace discipline is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library.
+The reading is quiet and typographic. Every note title, tag, date, and control is set in one face at a time — JetBrains Mono unless the person picks another from the font library — because a card index is sorted by legibility, not by personality. The default monospace is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library. The font library lets a person trade that voice for their own reading comfort; the discipline that survives the trade is one face per screen.
 
 Density is moderate and deliberate. Metadata shrinks to `11px` with wide tracking so it whispers; titles sit at `18–24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
 
@@ -130,7 +130,7 @@ Anti-reference, confirmed: **never "designer-made."** The system must not look s
 **Key Characteristics:**
 
 - Warm paper and ink, never pure white and never pure black
-- One typeface — monospace — everywhere, without exception
+- One face at a time: JetBrains Mono by default, or the one the person chose from the font library; code always stays in JetBrains Mono
 - Metadata whispers at 11px with wide uppercase tracking; its labels step up to 12px
 - Flat at rest, lifted only in motion
 - Note color arrives as a tint and a soft glow, never as a border
@@ -272,11 +272,13 @@ another checks that this document's radius table matches the enforced scale.
 
 ## Typography
 
-**Display / Headline / Title / Body / Label Font:** JetBrains Mono (with `ui-monospace, monospace`)
+**Display / Headline / Title / Body / Label Font:** JetBrains Mono (with `ui-monospace, monospace`) — the default, and the face every screen is designed and checked in.
 
-There is no second face. `lib/fonts.js` offers 12 alternatives to the user, but the default is JetBrains Mono and **the utility classes `.font-serif`, `.font-sans`, and `.font-mono` all resolve to it**. That collapse is deliberate: swapping the family changes every string in the app at once, by design, or nothing changes at all.
+**The font library.** Settings → Typography offers twelve families from `lib/fonts.js`: monospace (JetBrains Mono, Fira Code), sans (Inter, Roboto, Fira Sans, IBM Plex Sans, PT Sans, Noto Sans) and serif (Source Serif 4, Georgia, PT Serif, IBM Plex Serif). The choice is the person's, stored in the `fontFamily` store and applied as `--font-family` on the root. `body`, `h1`–`h3`, `.font-serif` and `.font-sans` all read `var(--font-family, 'JetBrains Mono', ui-monospace, monospace)`, so a choice changes every string in the interface at once. `.font-mono` does not follow it: code blocks, inline code and other fixed-width text stay in JetBrains Mono, whatever face the rest of the app uses.
 
-**Character:** A card index in a typewriter hand. Even spacing makes columns of metadata align without effort, and the uniform stroke means no element can shout through typeface alone — hierarchy has to come from size and weight.
+Only JetBrains Mono ships with the app (`public/fonts`, Latin and Cyrillic). The other families are used when the system has them; otherwise each one falls back to its own category's stack (`system-ui, sans-serif`, `ui-serif, Georgia, serif`, `ui-monospace, monospace`). A face that is not installed must never break the layout, only change the letterforms.
+
+**Character (default face):** A card index in a typewriter hand. Even spacing makes columns of metadata align without effort, and the uniform stroke means no element can shout through typeface alone — hierarchy has to come from size and weight.
 
 ### Hierarchy
 
@@ -290,7 +292,7 @@ There is no second face. `lib/fonts.js` offers 12 alternatives to the user, but 
 
 ### Named Rules
 
-**The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for — serif, sans, mono — resolves to the same monospace stack, so a stray class can never introduce a second voice.
+**The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for — serif, sans — resolves to the one face the person chose (JetBrains Mono by default), so a stray class can never introduce a second voice. The only fixed exception is `.font-mono` for code.
 
 **The Scale Is Small.** The working range is `11px`–`30px`. `text-xs` and `text-sm` carry the interface; `--text-whisper` (11px) carries metadata and `--text-whisper-lg` (12px) its labels. No arbitrary pixel sizes. `text-3xl` is page titles and `text-2xl` is modal titles; nothing in between them is allowed to grow.
 
@@ -396,7 +398,8 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 
 ### Do:
 
-- **Do** read every color through `var(--token)` and every family through the monospace stack.
+- **Do** read every color through `var(--token)` and every family through `var(--font-family)`; use `.font-mono` only for code.
+- **Do** check a new screen in JetBrains Mono and in one sans and one serif from the library: hierarchy must hold in all three, through size and weight alone.
 - **Do** keep surfaces flat at rest and let hover supply the lift — a 0.5px rise with `shadow-xl` is the system's only standard "this is alive" signal.
 - **Do** set metadata uppercase at `9–10px` with `0.1–0.16em` tracking, at or below `--text-secondary` opacity.
 - **Do** express a note's color as a 13% tint plus an 18% blurred glow.
@@ -405,7 +408,7 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 
 ### Don't:
 
-- **Don't** introduce a second typeface. `.font-serif` and `.font-sans` resolve to the mono stack on purpose; overriding that collapses the system's central idea.
+- **Don't** hard-code a font family in a component. A literal family bypasses the person's choice and puts a second face on screen; add a family to `lib/fonts.js` instead, with a fallback stack of its own category.
 - **Don't** introduce filled, bordered, or pill-shaped buttons. Text-only uppercase is the button, and a filled CTA would be the single most "designer-made" thing this app could do.
 - **Don't** draw a square control as a circle. A round close button on a rounded card reads as two design systems at once, because the eye compares corner curvature before it reads anything.
 - **Don't** let one surface change its radius per breakpoint. Density changes size and padding; the shape stays.

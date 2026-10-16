@@ -617,11 +617,6 @@
     showConflictResolver = true;
   }
 
-  /** Reload the Git status. The page calls it on open; tests call it because onMount does not run under vitest. */
-  export function refreshGitStatus() {
-    return checkGitStatus();
-  }
-
   function initSettingsPage() {
     loadSettings();
     checkGitStatus();

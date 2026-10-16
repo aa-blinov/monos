@@ -19,6 +19,9 @@ function contentSecurityPolicy() {
 
 export default defineConfig({
   plugins: [svelte(), contentSecurityPolicy()],
+  // Under vitest, Svelte would resolve to its server build, where onMount never runs.
+  // Components in jsdom must get the browser build, as they do in the app.
+  resolve: process.env.VITEST ? { conditions: ["browser"] } : undefined,
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.js"],

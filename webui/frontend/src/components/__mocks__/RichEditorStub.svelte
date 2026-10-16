@@ -6,6 +6,8 @@
   export let placeholder = '';
   export let notePath = '';
   export let onImageFile = null;
+  export let onDocumentFile = null;
+  export let editable = true;
   export let resolveImageSrc = (src) => src;
   export let resolveImagePath = () => '';
 
@@ -16,6 +18,8 @@
   $: if (content !== currentContent) currentContent = content;
   $: Boolean(notePath);
   $: Boolean(onImageFile);
+  $: Boolean(onDocumentFile);
+  $: Boolean(editable);
   $: imageMatch = currentContent.match(/!\[[^\]]*]\(([^)]+)\)/);
   $: imageSource = imageMatch?.[1] || '';
   $: attachmentPath = imageSource ? (resolveImagePath(imageSource) || imageSource) : '';

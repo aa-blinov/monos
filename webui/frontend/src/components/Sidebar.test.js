@@ -9,6 +9,13 @@ import { editorState } from '../stores.js';
 
 async function flushPromises() { await tick(); await tick(); }
 
+// The sidebar loads the tree when it mounts; a test acts only after that load has landed.
+async function treeLoaded() {
+  await waitFor(() => expect(globalThis.fetch.mock.calls.some(([url]) => String(url).startsWith('/api/tree'))).toBe(true));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await tick();
+}
+
 function jsonResponse(data, ok = true) {
   return {
     ok,
@@ -204,7 +211,7 @@ test('Sidebar загружает дерево и открывает заметк
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await waitFor(() => expect(screen.getByText(uiText.sidebar.knowledgeTree)).toBeTruthy());
   expect(screen.getByText(uiText.sidebar.knowledgeTree)).toBeTruthy();
@@ -225,7 +232,7 @@ test('Sidebar загружает дерево и открывает заметк
 
 test('Sidebar диспатчит openCreateNote при клике на + New', async () => {
   const { component } = render(Sidebar);
-  await component.loadTree();
+  await treeLoaded();
   const handler = vi.fn();
   component.$on('openCreateNote', handler);
 
@@ -242,7 +249,7 @@ test('Sidebar передает выбранную вложенную папку 
   const { component } = render(Sidebar);
   const handler = vi.fn();
   component.$on('openCreateNote', handler);
-  await component.loadTree();
+  await treeLoaded();
 
   await fireEvent.click(screen.getByText('Work'));
   const nestedButton = await waitFor(() => screen.getByText('Nested').closest('button'));
@@ -262,7 +269,7 @@ test('Sidebar закрепляет заметку в Pinned через конт�
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await fireEvent.click(screen.getByText('Work'));
   await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
@@ -300,7 +307,7 @@ test('Sidebar закрепляет заметку в Pinned через конт�
 });
 
 test('Sidebar создаёт today note с timestamp по языку интерфейса', async () => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 5, 2, 5, 4, 3));
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
@@ -309,7 +316,7 @@ test('Sidebar создаёт today note с timestamp по языку интер�
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await component.createTodayNote();
   vi.useRealTimers();
@@ -330,7 +337,7 @@ test('Sidebar создаёт today note с timestamp по языку интер�
 });
 
 test('Sidebar создаёт quick note из буфера обмена в Quick Notes', async () => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 5, 2, 19, 36, 39));
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
@@ -345,7 +352,7 @@ test('Sidebar создаёт quick note из буфера обмена в Quick 
   const { component } = render(Sidebar);
   const savedHandler = vi.fn();
   component.$on('quickNoteSaved', savedHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await component.createQuickNoteFromClipboard();
   vi.useRealTimers();
@@ -366,7 +373,7 @@ test('Sidebar создаёт quick note из буфера обмена в Quick 
 });
 
 test('Sidebar создаёт quick note из изображения в буфере обмена', async () => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 5, 2, 19, 36, 39));
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
@@ -385,7 +392,7 @@ test('Sidebar создаёт quick note из изображения в буфе�
   const { component } = render(Sidebar);
   const savedHandler = vi.fn();
   component.$on('quickNoteSaved', savedHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await component.createQuickNoteFromClipboard();
   vi.useRealTimers();
@@ -405,7 +412,7 @@ test('Sidebar создаёт quick note из изображения в буфе�
 });
 
 test('Sidebar создаёт quick note из base64 image data URL в тексте буфера обмена', async () => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 5, 2, 19, 36, 39));
   const fetchMock = createFetchMock();
   globalThis.fetch = fetchMock;
@@ -420,7 +427,7 @@ test('Sidebar создаёт quick note из base64 image data URL в текст
   const { component } = render(Sidebar);
   const savedHandler = vi.fn();
   component.$on('quickNoteSaved', savedHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await component.createQuickNoteFromClipboard();
   vi.useRealTimers();
@@ -453,7 +460,7 @@ test('Sidebar показывает подсказку, если quick note не�
   const { component } = render(Sidebar);
   const issueHandler = vi.fn();
   component.$on('quickNoteIssue', issueHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await component.createQuickNoteFromClipboard();
 
@@ -478,7 +485,7 @@ test('Sidebar не дублирует quick note action из navbar', async () =
   window.fetch = fetchMock;
 
   const { component } = render(Sidebar);
-  await component.loadTree();
+  await treeLoaded();
 
   expect(screen.queryByRole('button', { name: uiText.sidebar.quickNoteFromClipboard })).toBeNull();
 });
@@ -490,7 +497,7 @@ test('Sidebar после sync заново загружает дерево и д
   window.fetch = fetchMock;
 
   const { component } = render(Sidebar, { gitConfigured: true });
-  await component.loadTree();
+  await treeLoaded();
   await tick();
 
   await waitFor(() => expect(screen.getByText((_, node) => node?.textContent === uiText.sidebar.notes(1))).toBeTruthy());
@@ -515,7 +522,7 @@ test('Sidebar блокирует sync при несохранённой теку
   editorState.set({ path: 'notes/Work/Alpha.md', dirty: true, saving: false });
 
   const { component } = render(Sidebar, { gitConfigured: true });
-  await component.loadTree();
+  await treeLoaded();
   await tick();
 
   const syncButton = await waitFor(() => screen.getByRole('button', { name: uiText.sidebar.saveBeforeSync }));
@@ -533,7 +540,7 @@ test('Sidebar после rename открытой заметки навигиру
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
   component.setSelected('notes/Work/Alpha.md');
 
   await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
@@ -556,7 +563,7 @@ test('Sidebar после удаления открытой заметки сбр
   const { component } = render(Sidebar);
   const deletedHandler = vi.fn();
   component.$on('fileDeleted', deletedHandler);
-  await component.loadTree();
+  await treeLoaded();
   component.setSelected('notes/Work/Alpha.md');
 
   await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
@@ -579,7 +586,7 @@ test('Sidebar после перемещения заметки открывае�
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   await fireEvent.click(screen.getByText('Work').closest('button'));
   const alphaButton = await waitFor(() => screen.getByText('Alpha').closest('button'));
@@ -610,7 +617,7 @@ test('Sidebar при открытии заметки не пересоздаёт
   const { component } = render(Sidebar);
   const navigateHandler = vi.fn();
   component.$on('navigate', navigateHandler);
-  await component.loadTree();
+  await treeLoaded();
 
   // Раскрываем папку: первое раскрытие дерево действительно пересоздаёт.
   await fireEvent.click(screen.getByText('Work').closest('button'));
