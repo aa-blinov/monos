@@ -41,7 +41,7 @@
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import {
     convertImageToWebp,
-    defaultImageName,
+    imageNameFor,
     displayImageSrc,
     replaceMarkdownImagePath,
     resolveMarkdownImagePath,
@@ -572,7 +572,7 @@
     const filePath = visibleFile?.path || currentFile?.path;
     if (!filePath) return null;
     try {
-      const converted = await convertImageToWebp(file, { name: defaultImageName() });
+      const converted = await convertImageToWebp(file, { name: imageNameFor(file) });
       const uploaded = await uploadAttachment(filePath, converted, converted.name);
       return uploaded;
     } catch (error) {
@@ -1213,22 +1213,25 @@
     <div class="flex-1 flex min-w-0 min-h-0">
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
         {#if conflictCount > 0}
-          <div class="rounded-ui mb-4 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-            <p class="text-sm font-bold text-[var(--red)]">{$localizedText.editor.conflictTitle}</p>
-            <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-              {$localizedText.editor.conflictHint}
-            </p>
-            <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">
-              {$localizedText.editor.conflictCount(conflictCount)}
-            </p>
-            {#if conflictNotice}
-              <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-primary)]">{conflictNotice}</p>
-            {/if}
+          <!-- The conflict sits in the same column as the text: the banner says what happened and the parts
+               below are where it is resolved, right here. -->
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
+            <div class="mx-auto max-w-[var(--content-width,56rem)] space-y-4">
+              <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
+                <p class="text-sm font-bold text-[var(--red)]">{$localizedText.editor.conflictTitle}</p>
+                <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {$localizedText.editor.conflictHint}
+                </p>
+                <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">
+                  {$localizedText.editor.conflictCount(conflictCount)}
+                </p>
+                {#if conflictNotice}
+                  <p class="mt-1 text-[length:var(--text-whisper)] text-[var(--text-primary)]">{conflictNotice}</p>
+                {/if}
+              </div>
+              <ConflictNoteView content={editedContent} on:resolve={applyConflictResolution} />
+            </div>
           </div>
-        {/if}
-
-        {#if conflictCount > 0}
-          <ConflictNoteView content={editedContent} on:resolve={applyConflictResolution} />
         {:else if rawMode}
           <textarea
             data-testid="raw-source"

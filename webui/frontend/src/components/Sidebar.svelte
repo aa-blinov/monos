@@ -52,7 +52,7 @@
   import { announceNoteLinksUpdated, flushOpenNote } from '../lib/note-refresh.js';
   import {
     convertImageToWebp,
-    defaultImageName,
+    imageNameFor,
     firstImageFileFromClipboard,
     firstImageFileFromText,
     markdownImage,
@@ -696,7 +696,7 @@
       content: '',
     });
 
-    const converted = await convertImageToWebp(file, { name: defaultImageName() });
+    const converted = await convertImageToWebp(file, { name: imageNameFor(file) });
     const uploaded = await uploadAttachment(data.path, converted, converted.name);
     const created = await loadFileContent(data.path);
     const nextContent = `${created.content.trim()}\n\n${markdownImage(uploaded.name, uploaded.relativePath)}\n`;

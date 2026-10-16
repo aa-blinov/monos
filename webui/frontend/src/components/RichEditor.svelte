@@ -15,7 +15,7 @@
   import { shortcutLabel } from '../lib/shortcut-label.js';
   import { findHeadingPos } from '../lib/outline.js';
   import { scrollBehavior } from '../lib/motion.js';
-  import { firstImageFileFromDataTransfer, firstPdfFileFromDataTransfer, imageDisplayName } from '../lib/attachments.js';
+  import { firstImageFileFromDataTransfer, firstPdfFileFromDataTransfer, imageDisplayName, markdownLinkPath } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { fitMenuHeight } from '../lib/context-menu-position.js';
   import { localizedText } from '../lib/strings.js';
@@ -353,7 +353,8 @@
       type: 'paragraph',
       content: [{
         type: 'image',
-        attrs: { src: image.relativePath, alt: imageDisplayName(image.name) },
+        // Spaces escaped: a Markdown link must not hold them, or other editors and GitHub will not show the picture.
+        attrs: { src: markdownLinkPath(image.relativePath), alt: imageDisplayName(image.name) },
       }],
     }).run();
     return true;

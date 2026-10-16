@@ -189,7 +189,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | Module | Purpose |
 |--------|---------|
 | `icons.js` | List of available `lucide-svelte` icon names for the icon picker |
-| `attachments.js` | Helpers for the editor's attachment model (sort, dedupe, find by name) |
+| `attachments.js` | Helpers for the editor's attachment model (sort, dedupe, find by name); `imageNameFor` keeps a picture's own name unless it is a generic one, `markdownLinkPath` escapes spaces and parentheses for a Markdown link |
 
 ## Adding a New Module
 

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   attachmentTimestamp,
   defaultImageName,
+  imageNameFor,
+  markdownLinkPath,
   isImageFile,
   firstImageFileFromFileList,
   firstImageFileFromDataTransfer,
@@ -64,4 +66,18 @@ test('imageDisplayName убирает путь и расширение', () => {
   assert.equal(imageDisplayName('photo.jpeg'), 'photo');
   // пустой ввод → 'image' (дефолт в самой функции)
   assert.equal(imageDisplayName(''), 'image');
+});
+
+test('imageNameFor: осмысленное имя остаётся, безликое заменяется датой, всегда .webp', () => {
+  assert.equal(imageNameFor({ name: 'Снимок экрана 2026-10-16 в 10.58.png' }, fixedDate), 'Снимок экрана 2026-10-16 в 10.58.webp');
+  assert.equal(imageNameFor({ name: 'image.png' }, fixedDate), 'image-20260115-143045.webp');
+  assert.equal(imageNameFor({ name: 'IMG_1234.JPG' }, fixedDate), 'IMG_1234.webp');
+  assert.equal(imageNameFor({ name: 'blob' }, fixedDate), 'image-20260115-143045.webp');
+  assert.equal(imageNameFor({ name: 'схема: вход/выход?.png' }, fixedDate), 'схема вход выход.webp');
+  assert.equal(imageNameFor({}, fixedDate), 'image-20260115-143045.webp');
+});
+
+test('markdownLinkPath экранирует пробелы и скобки, кириллицу оставляет читаемой', () => {
+  assert.equal(markdownLinkPath('_attachments/Снимок экрана (1).webp'), '_attachments/Снимок%20экрана%20%281%29.webp');
+  assert.equal(decodeURI(markdownLinkPath('_attachments/Снимок экрана.webp')), '_attachments/Снимок экрана.webp');
 });
