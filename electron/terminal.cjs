@@ -83,7 +83,7 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
       send('terminal:exit', id, exitCode);
     });
     sessions.set(id, session);
-    return { id, cwd: path.basename(cwd), shell: path.basename(file) };
+    return { id, cwd: path.basename(cwd), root: cwd, shell: path.basename(file) };
   });
 
   ipcMain.on('terminal:write', (event, id, data) => {

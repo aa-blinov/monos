@@ -66,6 +66,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `notes-events.test.js` | Change events reach the app, malformed ones are ignored, no EventSource is harmless |
 | `agent-review.js` | `agentReview`, `agentTouched`, `agentReviewOpen`, `refreshAgentReview`, `ensureAgentCheckpoint`, `agentDiff`, `keepAgentChanges`, `revertAgentChanges` — what the agent changed, waiting for review |
 | `agent-review.test.js` | Review list and note marks, keep and revert send their paths, a server error leaves an empty list |
+| `terminal-links.js` | `findNoteLinks`, `notePathsOf` — note paths in terminal output (spaces and any letters), matched against the notes that exist, made clickable |
+| `terminal-links.test.js` | Paths with spaces, the longest match, quoted, `./` and absolute paths; non-notes and word fragments ignored |
 | `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |

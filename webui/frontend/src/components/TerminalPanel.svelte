@@ -1,25 +1,30 @@
 <script>
   /**
-   * The agent terminal: a real shell of this device, opened in its notes folder, docked under the note.
+   * The agent terminal: real shells of this device, opened in its notes folder, docked under the note.
    * Run an agent here (claude, codex…) and its edits show in the notes above as it makes them (the backend
-   * watches the folder). Hiding the panel keeps the shell running, so an agent can go on working.
+   * watches the folder). Hiding the panel keeps the shells running, so an agent can go on working.
+   *
+   * Several tabs, each its own shell; ⌘F searches the visible one; a note path in the output opens the note.
    */
   import { onDestroy, onMount, tick } from 'svelte';
   import { Terminal } from '@xterm/xterm';
   import { FitAddon } from '@xterm/addon-fit';
   import { WebLinksAddon } from '@xterm/addon-web-links';
+  import { SearchAddon } from '@xterm/addon-search';
   import '@xterm/xterm/css/xterm.css';
-  import { RotateCcw, X } from 'lucide-svelte';
+  import { Bot, ChevronDown, ChevronUp, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Bot } from 'lucide-svelte';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
+  import { findNoteLinks, notePathsOf } from '../lib/terminal-links.js';
+  import { NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import {
     agentLabel,
     agentRequest,
     clampTerminalHeight,
     DEFAULT_AGENT_COMMAND,
+    noteLinkRequest,
     noteQuestion,
     shellInForeground,
     terminalBridge,
@@ -28,20 +33,25 @@
   } from '../lib/terminal.js';
 
   const HEIGHT_KEY = 'monos.terminalHeight';
+  const MAX_TABS = 6;
 
-  let host;
-  let term = null;
-  let fit = null;
-  let sessionId = null;
-  let starting = false;
-  let exited = false;
+  /** @type {Array<{ key: number, sessionId: number|null, term: any, fit: any, search: any, host: HTMLElement|null, exited: boolean, starting: boolean, title: string, firstOutput: Promise<void>|null, resolveFirst: (() => void)|null }>} */
+  let tabs = [];
+  let activeKey = null;
+  let nextKey = 1;
   let folder = '';
+  let root = '';
   let agentCommand = DEFAULT_AGENT_COMMAND;
   // Whether the notes folder has the files that tell an agent how to work in it (AGENTS.md, CLAUDE.md).
   let rulesMissing = false;
-  let firstOutput = null;
+  let knownNotes = new Set();
+  let searchOpen = false;
+  let searchQuery = '';
+  let searchInput;
   let height = clampTerminalHeight(readHeight(), typeof window === 'undefined' ? 900 : window.innerHeight);
   const unsubscribe = [];
+
+  $: active = tabs.find((tab) => tab.key === activeKey) || null;
 
   function readHeight() {
     try { return Number(localStorage.getItem(HEIGHT_KEY)); } catch { return NaN; }
@@ -52,88 +62,176 @@
     return terminalTheme((name) => style.getPropertyValue(name));
   }
 
-  function fitNow() {
-    if (!term || !fit || !host?.offsetWidth) return;
-    try { fit.fit(); } catch { /* hidden */ }
+  function fitTab(tab) {
+    if (!tab?.term || !tab.fit || !tab.host?.offsetWidth) return;
+    try { tab.fit.fit(); } catch { /* hidden */ }
   }
 
-  async function startSession() {
-    if (!term || starting) return;
-    starting = true;
-    exited = false;
-    try {
-      firstOutput = new Promise((resolve) => { resolveFirstOutput = resolve; });
-      const session = await terminalBridge.create({ cols: term.cols, rows: term.rows });
-      sessionId = session.id;
-      folder = session.cwd;
-      // From here on, files changed outside Monos are compared with how they are now.
-      void ensureAgentCheckpoint().then(refreshAgentReview);
-    } catch (error) {
-      term.writeln(`\r\n${$localizedText.terminal.startFailed}: ${error?.message || error}`);
-      exited = true;
-    } finally {
-      starting = false;
-    }
+  async function loadKnownNotes() {
+    try { knownNotes = notePathsOf(await (await fetch('/api/tree')).json()); } catch { /* links stay as they were */ }
   }
 
-  function restart() {
-    if (sessionId !== null && !exited) terminalBridge.kill(sessionId);
-    sessionId = null;
-    term?.reset();
-    void startSession();
-  }
-
-  onMount(() => {
-    if (!terminalBridge) return;
-    term = new Terminal({
+  // The xterm for a tab, created when its element is in the page.
+  function mountTerm(host, tab) {
+    tab.host = host;
+    const term = new Terminal({
       fontFamily: '"JetBrains Mono", ui-monospace, monospace',
       fontSize: 13,
       lineHeight: 1.2,
       cursorBlink: true,
       scrollback: 10000,
-      allowProposedApi: false,
+      allowProposedApi: true,
       theme: themeNow(),
     });
-    fit = new FitAddon();
-    term.loadAddon(fit);
-    // Links in the output open in the system browser (the window refuses to navigate away).
+    tab.fit = new FitAddon();
+    tab.search = new SearchAddon();
+    term.loadAddon(tab.fit);
+    term.loadAddon(tab.search);
+    // Web links open in the system browser (the window refuses to navigate away).
     term.loadAddon(new WebLinksAddon((_event, url) => window.open(url, '_blank', 'noopener')));
+    // Note paths open the note.
+    term.registerLinkProvider({
+      provideLinks(y, callback) {
+        const line = term.buffer.active.getLine(y - 1)?.translateToString(true) || '';
+        const links = findNoteLinks(line, knownNotes, root).map((link) => ({
+          range: { start: { x: link.start + 1, y }, end: { x: link.end, y } },
+          text: line.slice(link.start, link.end),
+          decorations: { underline: true, pointerCursor: true },
+          activate: () => noteLinkRequest.set({ path: link.path, at: Date.now() }),
+        }));
+        callback(links.length ? links : undefined);
+      },
+    });
+    // ⌘F / Ctrl+F searches the terminal instead of reaching the shell.
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type === 'keydown' && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
+        void openSearch();
+        return false;
+      }
+      return true;
+    });
     term.open(host);
     term.onData((data) => {
-      if (sessionId !== null && !exited) terminalBridge.write(sessionId, data);
+      if (tab.sessionId !== null && !tab.exited) terminalBridge.write(tab.sessionId, data);
     });
     term.onResize(({ cols, rows }) => {
-      if (sessionId !== null && !exited) terminalBridge.resize(sessionId, cols, rows);
+      if (tab.sessionId !== null && !tab.exited) terminalBridge.resize(tab.sessionId, cols, rows);
     });
-    unsubscribe.push(terminalBridge.onData((id, data) => {
-      if (id !== sessionId) return;
-      term.write(data);
-      resolveFirstOutput?.();
-      resolveFirstOutput = null;
-    }));
-    unsubscribe.push(terminalBridge.onExit((id, code) => {
-      if (id !== sessionId) return;
-      exited = true;
-      term.writeln(`\r\n${$localizedText.terminal.exited(code)}`);
-    }));
-    const observer = new ResizeObserver(() => fitNow());
+    tab.term = term;
+    const observer = new ResizeObserver(() => fitTab(tab));
     observer.observe(host);
-    unsubscribe.push(() => observer.disconnect());
-    // The theme sets its colours on the page; the terminal takes them once they are there.
-    const retheme = () => setTimeout(() => { if (term) term.options.theme = themeNow(); }, 0);
-    unsubscribe.push(activeTheme.subscribe(retheme), themeMode.subscribe(retheme));
-  });
-
-  // The shell starts the first time the panel opens, and the keyboard goes to it whenever it opens.
-  $: if ($terminalOpen && term) {
     tick().then(() => {
-      fitNow();
-      if (sessionId === null && !starting && !exited) void startSession();
-      term.focus();
+      fitTab(tab);
+      void startSession(tab);
+      if (tab.key === activeKey) term.focus();
     });
+    return { destroy: () => observer.disconnect() };
   }
 
-  let resolveFirstOutput = null;
+  async function startSession(tab) {
+    if (!tab.term || tab.starting) return;
+    tab.starting = true;
+    tab.exited = false;
+    try {
+      tab.firstOutput = new Promise((resolve) => { tab.resolveFirst = resolve; });
+      const session = await terminalBridge.create({ cols: tab.term.cols, rows: tab.term.rows });
+      tab.sessionId = session.id;
+      folder = session.cwd;
+      root = session.root || '';
+      // From here on, files changed outside Monos are compared with how they are now.
+      void ensureAgentCheckpoint().then(refreshAgentReview);
+    } catch (error) {
+      tab.term.writeln(`\r\n${$localizedText.terminal.startFailed}: ${error?.message || error}`);
+      tab.exited = true;
+    } finally {
+      tab.starting = false;
+      tabs = tabs;
+    }
+  }
+
+  function newTab() {
+    if (tabs.length >= MAX_TABS) return null;
+    const tab = { key: nextKey++, sessionId: null, term: null, fit: null, search: null, host: null, exited: false, starting: false, title: '', firstOutput: null, resolveFirst: null };
+    tabs = [...tabs, tab];
+    activeKey = tab.key;
+    return tab;
+  }
+
+  async function activate(key) {
+    activeKey = key;
+    await tick();
+    const tab = tabs.find((item) => item.key === key);
+    fitTab(tab);
+    tab?.term?.focus();
+  }
+
+  function closeTab(key) {
+    const tab = tabs.find((item) => item.key === key);
+    if (!tab) return;
+    if (tab.sessionId !== null && !tab.exited) terminalBridge.kill(tab.sessionId);
+    tab.term?.dispose();
+    const index = tabs.indexOf(tab);
+    tabs = tabs.filter((item) => item !== tab);
+    if (activeKey === key) {
+      const next = tabs[Math.min(index, tabs.length - 1)];
+      if (next) void activate(next.key);
+      else {
+        activeKey = null;
+        terminalOpen.set(false);
+      }
+    }
+  }
+
+  function restart() {
+    const tab = active;
+    if (!tab?.term) return;
+    if (tab.sessionId !== null && !tab.exited) terminalBridge.kill(tab.sessionId);
+    tab.sessionId = null;
+    tab.title = '';
+    tab.term.reset();
+    void startSession(tab);
+  }
+
+  // The first time the panel opens there is no tab yet; opening it again shows the tabs that are running.
+  $: if ($terminalOpen && terminalBridge) {
+    if (!tabs.length) newTab();
+    else tick().then(() => { fitTab(active); active?.term?.focus(); });
+  }
+
+  async function openSearch() {
+    searchOpen = true;
+    await tick();
+    searchInput?.focus();
+    searchInput?.select();
+  }
+
+  function closeSearch() {
+    searchOpen = false;
+    active?.search?.clearDecorations();
+    active?.term?.focus();
+  }
+
+  const searchOptions = () => {
+    const style = getComputedStyle(document.documentElement);
+    const mark = style.getPropertyValue('--yellow').trim() || '#d79921';
+    return { caseSensitive: false, decorations: { matchBackground: `${mark}55`, activeMatchBackground: `${mark}aa`, matchOverviewRuler: mark, activeMatchColorOverviewRuler: mark } };
+  };
+
+  function findNext(backwards = false) {
+    if (!active?.search || !searchQuery) return;
+    if (backwards) active.search.findPrevious(searchQuery, searchOptions());
+    else active.search.findNext(searchQuery, searchOptions());
+  }
+
+  function searchKeydown(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      findNext(event.shiftKey);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSearch();
+    }
+  }
 
   async function loadAgentSettings() {
     try {
@@ -147,7 +245,10 @@
       rulesMissing = false;
     }
   }
-  $: if ($terminalOpen) void loadAgentSettings();
+  $: if ($terminalOpen) {
+    void loadAgentSettings();
+    void loadKnownNotes();
+  }
 
   async function createRules() {
     try {
@@ -157,40 +258,74 @@
   }
 
   /**
-   * "Start the agent" and "Ask the agent about this note". With the shell in front the agent is started (with
-   * the question, the cursor left inside it); with the agent already running, the words go into its input.
+   * "Start the agent" and "Ask the agent about this note", in the tab on screen. With the shell in front the
+   * agent is started (with the question, the cursor left inside it); with the agent already running, the
+   * words go into its input.
    */
   async function handleAgentRequest(request) {
-    if (!request || !term) return;
+    if (!request) return;
     agentRequest.set(null);
     terminalOpen.set(true);
     await tick();
-    fitNow();
-    if (sessionId === null || exited) {
-      sessionId = null;
-      exited = false;
-      await startSession();
+    let tab = active || newTab();
+    await tick();
+    // A brand-new tab mounts its xterm and starts its shell first.
+    for (let i = 0; i < 50 && (!tab.term || tab.sessionId === null) && !tab.exited; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      tab = tabs.find((item) => item.key === tab.key) || tab;
     }
+    if (tab.sessionId === null || tab.exited) return;
     // A fresh shell reads its profile first; what is typed before its prompt would be lost.
-    await Promise.race([firstOutput, new Promise((resolve) => setTimeout(resolve, 1500))]);
+    await Promise.race([tab.firstOutput, new Promise((resolve) => setTimeout(resolve, 1500))]);
     await new Promise((resolve) => setTimeout(resolve, 150));
     await loadAgentSettings();
-    const inShell = shellInForeground(await terminalBridge.process(sessionId));
+    const inShell = shellInForeground(await terminalBridge.process(tab.sessionId));
     if (request.kind === 'launch') {
-      if (inShell) terminalBridge.write(sessionId, `${agentCommand}\r`);
+      if (inShell) terminalBridge.write(tab.sessionId, `${agentCommand}\r`);
     } else {
       const question = noteQuestion(request.notePath, $localizedText.terminal.aboutNote);
-      if (inShell) terminalBridge.write(sessionId, `${question.commandLine(agentCommand)}\x1b[D`);
-      else terminalBridge.write(sessionId, question.prompt);
+      if (inShell) terminalBridge.write(tab.sessionId, `${question.commandLine(agentCommand)}\x1b[D`);
+      else terminalBridge.write(tab.sessionId, question.prompt);
     }
-    term.focus();
+    if (inShell) {
+      tab.title = agentLabel(agentCommand);
+      tabs = tabs;
+    }
+    tab.term.focus();
   }
-  $: if ($agentRequest && term) void handleAgentRequest($agentRequest);
+  $: if ($agentRequest) void handleAgentRequest($agentRequest);
+
+  onMount(() => {
+    if (!terminalBridge) return;
+    unsubscribe.push(terminalBridge.onData((id, data) => {
+      const tab = tabs.find((item) => item.sessionId === id);
+      if (!tab) return;
+      tab.term.write(data);
+      tab.resolveFirst?.();
+      tab.resolveFirst = null;
+    }));
+    unsubscribe.push(terminalBridge.onExit((id, code) => {
+      const tab = tabs.find((item) => item.sessionId === id);
+      if (!tab) return;
+      tab.exited = true;
+      tab.term.writeln(`\r\n${$localizedText.terminal.exited(code)}`);
+      tabs = tabs;
+    }));
+    // The theme sets its colours on the page; the terminals take them once they are there.
+    const retheme = () => setTimeout(() => tabs.forEach((tab) => { if (tab.term) tab.term.options.theme = themeNow(); }), 0);
+    unsubscribe.push(activeTheme.subscribe(retheme), themeMode.subscribe(retheme));
+    // Notes created or renamed (by the agent, too) become clickable in the output.
+    const reloadNotes = () => { void loadKnownNotes(); };
+    window.addEventListener(NOTES_PULLED_EVENT, reloadNotes);
+    unsubscribe.push(() => window.removeEventListener(NOTES_PULLED_EVENT, reloadNotes));
+  });
 
   onDestroy(() => {
     unsubscribe.forEach((stop) => stop());
-    if (sessionId !== null && !exited) terminalBridge?.kill(sessionId);
-    term?.dispose();
+    tabs.forEach((tab) => {
+      if (tab.sessionId !== null && !tab.exited) terminalBridge?.kill(tab.sessionId);
+      tab.term?.dispose();
+    });
   });
 
   // Dragging the top edge sets the height; double-click returns it to the default.
@@ -203,7 +338,7 @@
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       try { localStorage.setItem(HEIGHT_KEY, String(height)); } catch { /* private window */ }
-      fitNow();
+      fitTab(active);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -213,6 +348,8 @@
     height = clampTerminalHeight(undefined, window.innerHeight);
     try { localStorage.removeItem(HEIGHT_KEY); } catch { /* private window */ }
   }
+
+  const iconButton = 'h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
 </script>
 
 {#if terminalBridge}
@@ -230,49 +367,94 @@
       on:dblclick={resetHeight}
       title={$localizedText.terminal.resize}
     ></div>
-    <header class="flex h-8 shrink-0 items-center gap-3 px-3 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+    <header class="flex h-8 shrink-0 items-center gap-2 px-3 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
       <span class="font-bold text-[var(--text-secondary)]">{$localizedText.terminal.title}</span>
-      {#if folder}<span class="truncate normal-case tracking-normal">{folder}</span>{/if}
+      <!-- Tabs: each its own shell. -->
+      <div class="flex min-w-0 items-center gap-1" role="tablist" aria-label={$localizedText.terminal.tabs}>
+        {#each tabs as tab, index (tab.key)}
+          <div class="group flex items-center rounded-ui {tab.key === activeKey ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'hover:bg-[var(--bg-secondary)]/60'}">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab.key === activeKey}
+              data-testid="terminal-tab"
+              on:click={() => activate(tab.key)}
+              class="max-w-[10rem] truncate px-2 py-1 normal-case tracking-normal {tab.exited ? 'line-through opacity-60' : ''}"
+            >{tab.title || `${folder || $localizedText.terminal.tab} ${index + 1}`}</button>
+            <button
+              type="button"
+              aria-label={$localizedText.terminal.closeTab}
+              title={$localizedText.terminal.closeTab}
+              data-testid="terminal-tab-close"
+              on:click={() => closeTab(tab.key)}
+              class="mr-1 rounded-ui p-0.5 opacity-0 transition hover:text-[var(--text-primary)] focus-visible:opacity-100 group-hover:opacity-100 {tab.key === activeKey ? 'opacity-60' : ''}"
+            ><X size="12" strokeWidth="1.7" aria-hidden="true" /></button>
+          </div>
+        {/each}
+        {#if tabs.length < MAX_TABS}
+          <TooltipIconButton class={iconButton} label={$localizedText.terminal.newTab} tooltip={$localizedText.terminal.newTab} on:click={() => newTab()}>
+            <Plus size="14" strokeWidth="1.7" aria-hidden="true" />
+          </TooltipIconButton>
+        {/if}
+      </div>
       {#if rulesMissing}
-        <button type="button" data-testid="agent-rules-create" on:click={createRules} class="normal-case tracking-normal text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:text-[var(--text-primary)]" title={$localizedText.terminal.rulesHint}>{$localizedText.terminal.rulesCreate}</button>
+        <button type="button" data-testid="agent-rules-create" on:click={createRules} class="hidden truncate normal-case tracking-normal text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:text-[var(--text-primary)] lg:inline" title={$localizedText.terminal.rulesHint}>{$localizedText.terminal.rulesCreate}</button>
       {/if}
-      <span class="ml-auto hidden normal-case tracking-normal sm:inline">{$localizedText.terminal.shortcut}</span>
+      <span class="ml-auto"></span>
       {#if $agentReview.changes?.length}
         <button
           type="button"
           data-testid="agent-review-open"
           on:click={() => agentReviewOpen.set(true)}
-          class="inline-flex h-7 items-center rounded-ui px-2 font-bold normal-case tracking-normal text-[var(--blue)] transition hover:bg-[var(--bg-secondary)]"
+          class="inline-flex h-7 shrink-0 items-center rounded-ui px-2 font-bold normal-case tracking-normal text-[var(--blue)] transition hover:bg-[var(--bg-secondary)]"
         >{$localizedText.agentReview.button($agentReview.changes.length)}</button>
       {/if}
       <button
         type="button"
         data-testid="agent-launch"
         on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}
-        class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 font-bold text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
+        class="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-ui px-2 font-bold text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
       >
         <Bot size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
       </button>
-      <TooltipIconButton
-        class="h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-        label={$localizedText.terminal.restart}
-        tooltip={$localizedText.terminal.restart}
-        tooltipAlign="end"
-        on:click={restart}
-      >
+      <TooltipIconButton class={iconButton} label={$localizedText.terminal.search} tooltip={$localizedText.terminal.search} tooltipAlign="end" on:click={openSearch}>
+        <Search size="14" strokeWidth="1.7" aria-hidden="true" />
+      </TooltipIconButton>
+      <TooltipIconButton class={iconButton} label={$localizedText.terminal.restart} tooltip={$localizedText.terminal.restart} tooltipAlign="end" on:click={restart}>
         <RotateCcw size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>
-      <TooltipIconButton
-        class="h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-        label={$localizedText.terminal.hide}
-        tooltip={$localizedText.terminal.hide}
-        tooltipAlign="end"
-        on:click={() => terminalOpen.set(false)}
-      >
+      <TooltipIconButton class={iconButton} label={$localizedText.terminal.hide} tooltip={$localizedText.terminal.hide} tooltipAlign="end" on:click={() => terminalOpen.set(false)}>
         <X size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>
     </header>
-    <div class="min-h-0 flex-1 px-3 pb-2" bind:this={host} data-testid="terminal-host"></div>
+    {#if searchOpen}
+      <!-- Search in the visible tab: Enter for the next match, Shift+Enter for the one before, Esc to close. -->
+      <div class="absolute right-3 top-9 z-20 flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 py-1 shadow-lg" data-testid="terminal-search">
+        <input
+          bind:this={searchInput}
+          bind:value={searchQuery}
+          on:input={() => findNext()}
+          on:keydown={searchKeydown}
+          placeholder={$localizedText.terminal.searchPlaceholder}
+          aria-label={$localizedText.terminal.search}
+          class="w-48 bg-transparent text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
+        />
+        <button type="button" class="rounded-ui p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.terminal.searchPrevious} on:click={() => findNext(true)}><ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <button type="button" class="rounded-ui p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.terminal.searchNext} on:click={() => findNext()}><ChevronDown size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <button type="button" class="rounded-ui p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.terminal.searchClose} on:click={closeSearch}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+      </div>
+    {/if}
+    <div class="relative min-h-0 flex-1">
+      {#each tabs as tab (tab.key)}
+        <div
+          class="absolute inset-0 px-3 pb-2"
+          class:invisible={tab.key !== activeKey}
+          data-testid="terminal-host"
+          data-active={tab.key === activeKey}
+          use:mountTerm={tab}
+        ></div>
+      {/each}
+    </div>
   </section>
 {/if}
 

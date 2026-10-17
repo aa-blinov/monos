@@ -73,3 +73,22 @@ test('принятое уходит отдельным коммитом, жду�
   assert.equal(git(['show', 'origin/master:Список.md']), 'Молоко.', 'правка, ждущая ревью, не уходит');
   assert.match(git(['-c', 'core.quotepath=false', 'status', '--porcelain']), /Список\.md/);
 });
+
+test('если ждущий проверки файл изменили и на другом устройстве, синхронизация останавливается и называет его', async () => {
+  // Another device changes Список.md and pushes.
+  const other = path.join(tempRoot, 'other');
+  git(['clone', '-q', remote, other], tempRoot);
+  fs.writeFileSync(path.join(other, 'Список.md'), 'Молоко.\nЧай.\n', 'utf-8');
+  git(['-c', 'user.name=Телефон', '-c', 'user.email=t@x', 'commit', '-qam', 'there'], other);
+  git(['push', '-q'], other);
+  const response = await fetch(`${base}/api/git/sync`, { method: 'POST' });
+  assert.equal(response.status, 409);
+  const body = await response.json();
+  assert.equal(body.reason, 'agent-review');
+  assert.deepEqual(body.files, ['Список.md']);
+  // Once it is reviewed, the sync goes through.
+  await post('/api/agent/review/revert', { paths: ['notes/Список.md'] });
+  const after = await fetch(`${base}/api/git/sync`, { method: 'POST' });
+  assert.equal(after.status, 200);
+  assert.equal(fs.readFileSync(note('Список.md'), 'utf-8'), 'Молоко.\nЧай.\n');
+});

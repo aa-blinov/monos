@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { get } from 'svelte/store';
-import { agentReview, agentTouched, keepAgentChanges, refreshAgentReview, revertAgentChanges } from './agent-review.js';
+import { agentReview, agentTouched, keepAgentChanges, refreshAgentReview, revertAgentChanges, syncBlockedByReview } from './agent-review.js';
 
 const answer = (body, ok = true) => ({ ok, status: ok ? 200 : 500, json: async () => body });
 
@@ -29,4 +29,11 @@ test('оставить и откатить отправляют пути и об
   globalThis.fetch = async () => answer({ detail: 'boom' }, false);
   await refreshAgentReview();
   assert.deepEqual(get(agentReview), { changes: [] });
+});
+
+test('проверенный файл больше не держит синхронизацию', async () => {
+  syncBlockedByReview.set(['План.md', 'Список.md']);
+  globalThis.fetch = async () => answer({ changes: [{ path: 'notes/Список.md', status: 'modified' }] });
+  await keepAgentChanges(['notes/План.md']);
+  assert.deepEqual(get(syncBlockedByReview), ['Список.md']);
 });

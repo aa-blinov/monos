@@ -183,6 +183,30 @@ function stageForSync(deviceName) {
 }
 
 /**
+ * Files the agent changed here that wait for review and that another device changed too. Git would refuse to
+ * pull over them ("local changes would be overwritten") with nothing a person can act on; the sync stops before
+ * that and names them, so they are kept or reverted first. Empty when nothing waits or the remote cannot be read.
+ */
+function reviewBlocksPull(token) {
+  const pending = pendingReview();
+  if (!pending.length) return [];
+  try {
+    gitExec(['fetch', '-q'], { token });
+    const incoming = gitExec(['diff', '--name-only', 'HEAD...@{u}']).split('\n').filter(Boolean);
+    return incoming.filter((file) => pending.includes(file));
+  } catch {
+    return [];
+  }
+}
+
+const reviewBlockedAnswer = (files, extra = {}) => ({
+  detail: 'Agent edits wait for review in files that changed on another device too',
+  reason: 'agent-review',
+  files,
+  ...extra,
+});
+
+/**
  * Notes whose text holds merge markers without a conflict in git: held back from a sync, left by an older
  * version, or written by the editor when a sync changed an open note in the place it was being edited.
  * They are conflicts to the person all the same, so the board and the sidebar mark them.
@@ -1040,6 +1064,9 @@ export function registerGitRoutes(app) {
         if (hasStagedChanges()) commitStagedChanges('Auto-sync from Monos (pending pull)');
       }
 
+      const blocked = reviewBlocksPull(authToken);
+      if (blocked.length) return res.status(409).json(reviewBlockedAnswer(blocked, { dirtied }));
+
       const headBefore = currentHead();
       let message = 'Already up to date.';
       try {
@@ -1092,6 +1119,9 @@ export function registerGitRoutes(app) {
       const committed = hasStagedChanges();
       if (committed) commitStagedChanges(`Auto-sync from ${deviceName || 'Monos'}`);
       const pushedFiles = committed ? changedFilesSinceHead() : [];
+
+      const blocked = reviewBlocksPull(authToken);
+      if (blocked.length) return res.status(409).json(reviewBlockedAnswer(blocked, { committed }));
 
       const headBeforePull = currentHead();
       let result = 'Synced';

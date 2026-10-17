@@ -55,7 +55,15 @@ export async function runSyncRound() {
     // 400 means "no git repo configured" — an ordinary state, not a failure.
     if (response.status === 400) return null;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) return { ok: false, detail: data.detail };
+    if (!response.ok) {
+      // Stopped on purpose: the agent's edits waiting for review changed on another device too.
+      if (data.reason === 'agent-review') {
+        const result = { ok: false, reviewBlocked: Array.isArray(data.files) ? data.files : [] };
+        onRoundResult?.(result);
+        return result;
+      }
+      return { ok: false, detail: data.detail };
+    }
     if (data.skipped) return null;
     // The pull route counts the commits that arrived as `received`, the sync route as `pulled`.
     const result = { ok: true, ...data, received: data.received ?? data.pulled ?? 0 };
