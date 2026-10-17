@@ -357,6 +357,8 @@ Two choices in Settings are independent of each other:
 
 A round is skipped while a note is unsaved or saving, and it is answered 400 and skipped while no remote is configured. Git tasks run one at a time (`runGitTask` in `routes/git.js`), so an automatic round and the Sync button never hold the index together.
 
+**The network never blocks the app.** The backend runs inside the desktop app's main process, so a synchronous git call that waits on GitHub would freeze the window, the terminal and every request for the whole round trip — seconds, on every sync. `fetch`, `pull` and `push` therefore go through `gitExecAsync`; only quick local git work (status, add, commit, rev-parse, a few milliseconds each) stays on the synchronous `gitExec`. A sync re-reads every note into the index only when its pull brought something in. `git-sync-nonblocking.test.js` holds this with a remote that sleeps for 1.5 s.
+
 Download never needs the person: a device that went stale catches up by itself. Upload is either automatic (the choices above) or manual with the Sync button. Conflicts are shown the same way in both cases.
 
 ### Before anything is pushed: what GitHub will actually allow
