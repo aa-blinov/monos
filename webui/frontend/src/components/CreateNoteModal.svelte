@@ -164,7 +164,7 @@
         <div class="grid gap-2 sm:grid-cols-3">
           <button
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--text-primary)] bg-[var(--bg-secondary)]/45 p-4 text-left transition hover:border-[var(--text-primary)]"
+            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
             on:click={() => titleInput?.focus()}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
@@ -172,7 +172,7 @@
           </button>
           <button
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45 disabled:opacity-40"
+            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
             on:click={createToday}
             disabled={isCreating}
           >
@@ -181,7 +181,7 @@
           </button>
           <button
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-secondary)]/45"
+            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>

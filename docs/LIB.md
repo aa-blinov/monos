@@ -141,6 +141,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `sidebar-utils.test.js` | Tree shape edge cases |
 | `sidebar-pinned.js` | `pinnedNotes` store + `pinNote` / `unpinNote` / `updatePinnedPath` actions |
 | `sidebar-pinned.test.js` | Pin/unpin flow, reordering, stale-path repair after rename |
+| `tooltip.js` | `installTooltips(document)`, `tooltipClass`, `placeTooltip`, `hintOf` — the app's one tooltip: every `title=`/`data-tooltip` shows in the TooltipIconButton look after the same delay, beside or under its element, kept on screen |
+| `tooltip.test.js` | Label vs sentence look, placement below/above/right and inside the window, where the hint comes from |
 | `tree-icons.js` | Named lucide icons used by the tree and sidebar, exported as one `Icon` object (no namespace import, so unused icons are tree-shaken) |
 | `tree-icons.test.js` | Every imported icon is exported by `lucide-svelte` |
 | `sidebar-api.js` | Wrappers for the sidebar's HTTP endpoints (see also API wrappers above) |

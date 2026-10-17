@@ -380,7 +380,7 @@
       <!-- Tabs: each its own shell. -->
       <div class="flex min-w-0 items-center gap-1" role="tablist" aria-label={$localizedText.terminal.tabs}>
         {#each tabs as tab, index (tab.key)}
-          <div class="group flex items-center rounded-ui {tab.key === activeKey ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'hover:bg-[var(--bg-secondary)]/60'}">
+          <div class="group flex items-center rounded-ui {tab.key === activeKey ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]'}">
             <button
               type="button"
               role="tab"

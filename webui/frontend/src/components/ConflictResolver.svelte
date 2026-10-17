@@ -52,11 +52,11 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-secondary)]/50 border-b border-[var(--border-subtle)]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] border-b border-[var(--border-subtle)]">
           <span class="text-xs font-bold uppercase tracking-widest text-[var(--green)]">{oursLabel}</span>
           <button
             on:click={chooseOurs}
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--green)]/10 text-[var(--green)] hover:bg-[var(--green)]/20 transition"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)] hover:bg-[color-mix(in_srgb,var(--green)_20%,transparent)] transition"
           >
             <ChevronLeft size="14" strokeWidth="1.7" />
             {$localizedText.settings.keepLocal}
@@ -70,11 +70,11 @@
       </div>
 
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-secondary)]/50 border-b border-[var(--border-subtle)]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] border-b border-[var(--border-subtle)]">
           <span class="text-xs font-bold uppercase tracking-widest text-[var(--blue)]">{theirsLabel}</span>
           <button
             on:click={chooseTheirs}
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[var(--blue)]/10 text-[var(--blue)] hover:bg-[var(--blue)]/20 transition"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[color-mix(in_srgb,var(--blue)_10%,transparent)] text-[var(--blue)] hover:bg-[color-mix(in_srgb,var(--blue)_20%,transparent)] transition"
           >
             {$localizedText.settings.keepRemote}
             <ChevronRight size="14" strokeWidth="1.7" />

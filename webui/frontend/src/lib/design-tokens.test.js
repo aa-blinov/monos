@@ -326,3 +326,13 @@ test('окна и карточки делят один радиус', () => {
     );
   }
 });
+// Tailwind 3 cannot put an opacity on a colour it only knows as var(--x): `hover:bg-[var(--bg-secondary)]/60`
+// produces no CSS at all, so the hover silently did nothing. Mix the colour instead:
+// `hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]`.
+test('no opacity modifier on a var() colour — Tailwind drops the class', () => {
+  const offenders = [];
+  for (const file of files) {
+    for (const match of read(file).matchAll(/\[var\(--[\w-]+\)\]\/\d+/g)) offenders.push(`${path.relative(SRC, file)}: ${match[0]}`);
+  }
+  assert.deepEqual(offenders, []);
+});

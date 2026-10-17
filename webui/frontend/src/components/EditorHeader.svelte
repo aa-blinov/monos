@@ -38,7 +38,7 @@
   export let onDelete = () => {};
 
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
-  const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] lg:h-9 lg:w-9';
+  const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-9 lg:w-9';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   const formatDateTime = (value) => {
@@ -103,7 +103,7 @@
       </div>
     {/if}
     {#if focusMode}
-      <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
+      <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
     {/if}
     <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
     <TooltipIconButton

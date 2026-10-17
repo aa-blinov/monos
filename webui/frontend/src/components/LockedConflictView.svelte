@@ -93,7 +93,7 @@
   {/if}
 
   {#if !opened || opened.unreadable.length}
-    <div class="rounded-ui flex flex-wrap items-baseline gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+    <div class="rounded-ui flex flex-wrap items-baseline gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
       {#if opened?.unreadable.length}
         <p class="basis-full text-xs leading-relaxed text-[var(--text-secondary)]" data-testid="locked-conflict-unreadable">
           {text.lockedConflictUnreadable(opened.unreadable.includes('theirs') ? theirsName : oursName)}
@@ -106,7 +106,7 @@
     </div>
   {:else if merged && merged.conflicts === 0}
     <!-- The two devices changed different parts: both edits fit together, nothing to choose. -->
-    <div class="rounded-ui flex flex-wrap items-center gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+    <div class="rounded-ui flex flex-wrap items-center gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
       <p class="mr-auto text-xs text-[var(--text-secondary)]">{text.lockedConflictMergeable}</p>
       <button type="button" data-testid="locked-conflict-merge" disabled={busy} on:click={() => dispatch('resolveText', { content: merged.text })} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70 disabled:opacity-30">{text.lockedConflictMerge}</button>
     </div>

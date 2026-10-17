@@ -191,7 +191,7 @@
 
 {#if !query.trim()}
 <div class="mb-4 flex justify-end">
-  <div class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)]/65 p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
+  <div class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
     <TooltipIconButton
       class="h-7 min-w-8 rounded-ui px-2 transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
       label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
@@ -245,7 +245,7 @@
                does not weigh like a blank card. -->
           <button
             type="button"
-            class="{mobile ? 'h-36 px-3 py-3' : 'h-48 px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-ui border border-dashed border-[var(--border-subtle)] bg-transparent text-center text-[var(--text-tertiary)] transition hover:border-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)]/40 hover:text-[var(--text-primary)] focus-visible:border-[var(--text-tertiary)] focus-visible:text-[var(--text-primary)]"
+            class="{mobile ? 'h-36 px-3 py-3' : 'h-48 px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-ui border border-dashed border-[var(--border-subtle)] bg-transparent text-center text-[var(--text-tertiary)] transition hover:border-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] hover:text-[var(--text-primary)] focus-visible:border-[var(--text-tertiary)] focus-visible:text-[var(--text-primary)]"
             on:click={createNote}
           >
             <Plus size="20" strokeWidth="1.7" aria-hidden="true" />

@@ -170,7 +170,7 @@
                 <button
                   type="button"
                   data-testid="saved-search-run"
-                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[var(--bg-secondary)]/60"
+                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]"
                   on:click={() => { dispatch('run', entry); open = false; }}
                 >
                   <Bookmark size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
@@ -183,7 +183,7 @@
                   type="button"
                   data-testid="saved-search-rename"
                   aria-label={$localizedText.savedSearches.rename(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--text-primary)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--text-primary)]"
                   on:click={() => startRename(entry)}
                 >
                   <Pencil size="12" strokeWidth="1.7" aria-hidden="true" />
@@ -192,7 +192,7 @@
                   type="button"
                   data-testid="saved-search-delete"
                   aria-label={$localizedText.savedSearches.remove(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--red)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--red)]"
                   on:click={() => remove(entry)}
                 >
                   <Trash2 size="12" strokeWidth="1.7" aria-hidden="true" />

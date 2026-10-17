@@ -21,7 +21,7 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div
-  class="fixed inset-0 bg-black/20 dark:bg-[var(--bg-tertiary)]/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden"
+  class="fixed inset-0 bg-black/20 dark:bg-[color-mix(in_srgb,var(--bg-tertiary)_50%,transparent)] backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden"
   role="dialog"
   aria-modal="true"
 >
@@ -48,7 +48,7 @@
     {/if}
     <TooltipIconButton
       type="button"
-      class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-ui border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)]/50 hover:text-[var(--text-primary)]"
+      class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-ui border border-[var(--border-subtle)] text-[var(--text-secondary)] transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:text-[var(--text-primary)]"
       label={$localizedText.modal.close}
       tooltip={$localizedText.modal.close}
       tooltipAlign="end"

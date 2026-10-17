@@ -141,7 +141,7 @@
   {#if conflictCount > 0}
     <!-- The most common choice, so it reads as one: "Keep the whole note as on: PHONE  LAPTOP", the names
          underlined as links are, right next to the words they finish. -->
-    <div class="rounded-ui flex flex-wrap items-baseline gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+    <div class="rounded-ui flex flex-wrap items-baseline gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
       <p class="text-xs leading-relaxed text-[var(--text-secondary)]">
         {$localizedText.editor.conflictResolveHint}
       </p>
@@ -253,7 +253,7 @@
               data-testid="conflict-own-text"
               bind:value={customTexts[segment.conflictNo]}
               rows={Math.min(12, Math.max(3, String(customTexts[segment.conflictNo] || '').split('\n').length + 1))}
-              class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 p-3 font-mono text-xs leading-relaxed text-[var(--text-primary)] outline-none focus:border-[var(--text-tertiary)]"
+              class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] p-3 font-mono text-xs leading-relaxed text-[var(--text-primary)] outline-none focus:border-[var(--text-tertiary)]"
             ></textarea>
           </div>
         {/if}

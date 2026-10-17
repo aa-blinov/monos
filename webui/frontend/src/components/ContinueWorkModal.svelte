@@ -22,7 +22,7 @@
       {#each notes.slice(0, 6) as note (note.path)}
         <button
           type="button"
-          class="w-full rounded-ui border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/45"
+          class="w-full rounded-ui border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
           on:click={() => onOpenNote(note)}
         >
           <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>

@@ -64,7 +64,7 @@
     <div class="mx-auto max-w-5xl">
       <h1 class="font-serif text-3xl tracking-tight">{$localizedText.help.title}</h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.help.subtitle}</p>
-      <label class="mt-5 flex h-10 items-center gap-2 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 px-3 focus-within:border-[var(--text-tertiary)]">
+      <label class="mt-5 flex h-10 items-center gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] px-3 focus-within:border-[var(--text-tertiary)]">
         <Search size="16" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
         <input
           bind:this={searchField}
@@ -108,7 +108,7 @@
             <ul class="space-y-2" data-testid="help-results">
               {#each results as result (`${result.sectionId}/${result.itemId}`)}
                 <li>
-                  <button type="button" class="w-full rounded-ui border border-[var(--border-subtle)] px-4 py-3 text-left transition hover:bg-[var(--bg-secondary)]/50" on:click={() => go(result.sectionId, result.itemId)}>
+                  <button type="button" class="w-full rounded-ui border border-[var(--border-subtle)] px-4 py-3 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]" on:click={() => go(result.sectionId, result.itemId)}>
                     <span class="block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{result.sectionTitle}</span>
                     <span class="mt-0.5 block text-sm font-bold text-[var(--text-primary)]">{@html highlight(result.title)}</span>
                     <span class="mt-1 block text-xs leading-relaxed text-[var(--text-secondary)]">{@html highlight(result.excerpt)}</span>
