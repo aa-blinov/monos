@@ -54,3 +54,10 @@ test('ничего не сохранено — высота по умолчан�
   assert.equal(storedTerminalHeight('420'), 420);
   assert.equal(clampTerminalHeight(storedTerminalHeight(null), 900), 405);
 });
+
+test('OpenCode среди агентов в настройках, и его команда узнаётся по названию', async () => {
+  const { AGENT_PRESETS, agentLabel } = await import('./terminal.js');
+  assert.ok(AGENT_PRESETS.some((preset) => preset.id === 'opencode' && preset.command === 'opencode'));
+  assert.equal(agentLabel('opencode'), 'OpenCode');
+  assert.equal(agentLabel(' claude '), 'Claude Code');
+});

@@ -81,6 +81,7 @@ export const AGENT_PRESETS = [
   { id: 'claude', label: 'Claude Code', command: 'claude' },
   { id: 'codex', label: 'Codex', command: 'codex' },
   { id: 'gemini', label: 'Gemini CLI', command: 'gemini' },
+  { id: 'opencode', label: 'OpenCode', command: 'opencode' },
 ];
 export const DEFAULT_AGENT_COMMAND = 'claude';
 
