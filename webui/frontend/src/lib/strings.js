@@ -369,6 +369,9 @@ const enText = {
       rename: 'Rename',
       delete: 'Delete',
       deleteSelected: 'Delete Selected',
+      addTag: 'Add a tag',
+      tagSelected: (count) => `Tag ${count} notes`,
+      duplicate: 'Duplicate',
     },
     modals: {
       renameTitle(kind) {
@@ -1357,6 +1360,14 @@ const ruText = {
       rename: 'Переименовать',
       delete: 'Удалить',
       deleteSelected: 'Удалить выбранные',
+      addTag: 'Добавить тег',
+      tagSelected: (count) => {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `Тег для ${count} заметки`;
+        return `Тег для ${count} заметок`;
+      },
+      duplicate: 'Дублировать',
     },
     modals: {
       renameTitle(kind) {

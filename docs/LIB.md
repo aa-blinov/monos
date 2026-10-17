@@ -59,6 +59,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `conflict-properties.test.js` | Block end with markers inside, readable values, tag union, two dates refused |
 | `three-way-merge.js` | `mergeThreeWay` — combines an open note's edit with what a sync wrote under it; overlapping parts become conflict markers |
 | `three-way-merge.test.js` | Separate edits merge, same edit taken once, overlapping edits give a readable conflict |
+| `strings-coverage.test.js` | Every `$localizedText` key a component asks for exists in every language: a missing one renders as "undefined" |
 | `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |

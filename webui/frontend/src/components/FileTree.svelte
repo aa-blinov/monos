@@ -112,7 +112,8 @@
       y: rect.bottom,
       path: node.path,
       name: node.name,
-      isDir: node.is_dir
+      isDir: node.is_dir,
+      byKeyboard: true,
     });
   }
 
