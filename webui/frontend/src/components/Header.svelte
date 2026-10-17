@@ -1,9 +1,10 @@
 <script>
+  import { terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { createEventDispatcher } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { searchQuery, searchResults, isSearching } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { Bookmark, Clipboard, Search, ArrowLeft, X, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Bookmark, Clipboard, Search, ArrowLeft, X, PanelLeftClose, PanelLeftOpen, TerminalSquare } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -177,6 +178,19 @@
     <Clipboard class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     <span class="hidden text-xs uppercase tracking-widest lg:inline">{$localizedText.header.quickNote}</span>
   </TooltipIconButton>
+  {#if terminalBridge}
+    <!-- The terminal from the board as well (⌘J). Desktop app only. -->
+    <TooltipIconButton
+      data-testid="header-terminal"
+      on:click={toggleTerminal}
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center transition-opacity hover:opacity-60 {$terminalOpen ? 'text-[var(--text-primary)]' : ''}"
+      label={$localizedText.terminal.toggleHint}
+      tooltip={$localizedText.terminal.toggleHint}
+      tooltipAlign="end"
+    >
+      <TerminalSquare class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+    </TooltipIconButton>
+  {/if}
   {:else}
     <div class="flex-1"></div>
   {/if}

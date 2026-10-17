@@ -237,7 +237,7 @@ const enText = {
   },
   header: {
     search: 'Search',
-    searchHint: 'Search. Operators: body:word — inside the note, path:folder — inside a folder, tag:word — by tag, updated:2026-10 — changed since, -word — exclude. Values with spaces go in quotes.',
+    searchHint: 'Search. Operators: body:word — inside the note, path:folder — inside a folder, tag:word — by tag, updated:2026-10 — changed that month, -tag:word — exclude (a minus works before any operator). Values with spaces go in quotes.',
     closeSearch: 'Close search',
     toggleSidebar: 'Toggle Sidebar',
     quickNote: 'Note from clipboard',
@@ -320,6 +320,7 @@ const enText = {
     today: 'Today',
     templates: 'Templates',
     more: 'More',
+    help: 'Help',
     templatesHint: 'Notes from proven patterns',
     templateLibrary: 'Templates',
     templateLibrarySubtitle: 'Pick a starting structure for your note — fields and sections come from the template.',
@@ -918,6 +919,17 @@ const enText = {
     save: 'Continue',
     failed: 'Could not save the name. Try again.',
   },
+  help: {
+    title: 'Help',
+    subtitle: 'How Monos works, topic by topic, and answers to common questions. Search finds a topic by any of its words.',
+    searchPlaceholder: 'Search the help, e.g. "conflict" or "template"',
+    clear: 'Clear the search',
+    sections: 'Sections',
+    found: (count) => (count === 1 ? '1 topic found' : `${count} topics found`),
+    nothing: 'Nothing found. Try other words, or look through the sections.',
+    paletteLabel: 'Open help',
+    paletteDetail: 'How to use Monos, with answers to common questions',
+  },
   agentReview: {
     title: 'Agent changes',
     subtitle: (count) => `${count} ${count === 1 ? 'file waits' : 'files wait'} for your review`,
@@ -956,6 +968,7 @@ const enText = {
     openDetail: 'A shell in the notes folder, for an agent such as Claude Code or Codex',
     launch: (name) => `Start ${name}`,
     tabs: 'Terminal tabs',
+    toggleHint: 'Terminal for the agent (⌘J)',
     menu: 'More',
     searchMenu: 'Search the output',
     tab: 'Shell',
@@ -1270,7 +1283,7 @@ const ruText = {
   },
   header: {
     search: 'Поиск',
-    searchHint: 'Поиск. Операторы: body:слово — внутри заметки, path:папка — внутри папки, tag:слово — по тегу, updated:2026-10 — изменена с, -слово — исключить. Значения с пробелами — в кавычках.',
+    searchHint: 'Поиск. Операторы: body:слово — внутри заметки, path:папка — внутри папки, tag:слово — по тегу, updated:2026-10 — изменена в этом месяце, -tag:слово — исключить (минус ставится перед любым оператором). Значения с пробелами — в кавычках.',
     closeSearch: 'Закрыть поиск',
     toggleSidebar: 'Показать или скрыть боковую панель',
     quickNote: 'Заметка из буфера',
@@ -1354,6 +1367,7 @@ const ruText = {
     today: 'Сегодня',
     templates: 'Шаблоны',
     more: 'Ещё',
+    help: 'Справка',
     templatesHint: 'Заметки из готовых структур',
     templateLibrary: 'Шаблоны',
     templateLibrarySubtitle: 'Выберите структуру для заметки — поля и секции подставятся из шаблона.',
@@ -2004,6 +2018,21 @@ const ruText = {
     save: 'Продолжить',
     failed: 'Не удалось сохранить имя. Попробуйте ещё раз.',
   },
+  help: {
+    title: 'Справка',
+    subtitle: 'Как устроен Monos — по темам, и ответы на частые вопросы. Поиск находит тему по любому её слову.',
+    searchPlaceholder: 'Поиск по справке, например «конфликт» или «шаблон»',
+    clear: 'Очистить поиск',
+    sections: 'Разделы',
+    found: (count) => {
+      const one = count % 10 === 1 && count % 100 !== 11;
+      const few = [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100);
+      return `Найдено: ${count} ${one ? 'тема' : few ? 'темы' : 'тем'}`;
+    },
+    nothing: 'Ничего не нашлось. Попробуйте другие слова или посмотрите разделы.',
+    paletteLabel: 'Открыть справку',
+    paletteDetail: 'Как пользоваться Monos, с ответами на частые вопросы',
+  },
   agentReview: {
     title: 'Изменения агента',
     subtitle: (count) => {
@@ -2046,6 +2075,7 @@ const ruText = {
     openDetail: 'Оболочка в папке заметок — для агента вроде Claude Code или Codex',
     launch: (name) => `Запустить ${name}`,
     tabs: 'Вкладки терминала',
+    toggleHint: 'Терминал для агента (⌘J)',
     menu: 'Ещё',
     searchMenu: 'Найти в выводе',
     tab: 'Оболочка',

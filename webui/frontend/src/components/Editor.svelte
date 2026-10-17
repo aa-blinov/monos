@@ -16,7 +16,7 @@
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
   import { markPinned } from '../lib/sidebar-pinned.js';
-  import { askAgentAboutNote, terminalBridge } from '../lib/terminal.js';
+  import { askAgentAboutNote, terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
@@ -58,7 +58,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot, TerminalSquare } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -1970,6 +1970,20 @@
 
         <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
+        <!-- The terminal next to the note it works on (⌘J does the same). Desktop app only. -->
+        {#if terminalBridge}
+          <button
+            type="button"
+            data-testid="footer-terminal"
+            aria-pressed={$terminalOpen}
+            title={$localizedText.terminal.toggleHint}
+            on:click={toggleTerminal}
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:hidden hover:bg-[var(--bg-secondary)]/60 hover:text-[var(--text-primary)] {$terminalOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          >
+            <TerminalSquare size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span>{$localizedText.terminal.open}</span>
+          </button>
+        {/if}
         <div class="relative" data-panel-anchor="export">
           <button
             type="button"

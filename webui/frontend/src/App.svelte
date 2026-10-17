@@ -142,6 +142,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       || pathname === '/trash'
       || pathname === '/templates'
       || pathname === '/properties'
+      || pathname === '/help'
       || pathname.startsWith('/notes/');
   }
 
@@ -580,6 +581,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     clearSearch();
     navigate('/settings');
   }
+  function openHelp() {
+    setRoutePath('/help');
+    clearSearch();
+    navigate('/help');
+  }
   function openTrash() {
     setRoutePath('/trash');
     clearSearch();
@@ -787,6 +793,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openTemplates') openTemplatesManager();
     if (event.detail === 'openTags') openTagPanel();
     if (event.detail === 'openTrash') openTrash();
+    if (event.detail === 'openHelp') openHelp();
     if (event.detail === 'openTerminal') toggleTerminal();
     if (event.detail === 'launchAgent') launchAgent();
     if (event.detail === 'openSavedSearches') openSavedSearchPanel();
@@ -876,6 +883,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
+          on:openHelp={openHelp}
           on:openTerminal={toggleTerminal}
           on:openTags={openTagPanel}
           on:openProperties={openPropertiesView}
@@ -941,6 +949,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} />
+        </Route>
+        <Route path="/help">
+          <!-- Loaded when opened: a long text no other page needs. -->
+          {#await import('./components/HelpView.svelte') then helpModule}
+            <svelte:component this={helpModule.default} />
+          {/await}
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />

@@ -175,6 +175,13 @@
         detail: $localizedText.commandPalette.commandDetails.openProperties,
       },
       {
+        id: 'openHelp',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.help.paletteLabel,
+        detail: $localizedText.help.paletteDetail,
+      },
+      {
         id: 'openTrash',
         type: 'command',
         section: 'commands',
