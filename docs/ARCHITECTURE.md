@@ -23,6 +23,27 @@ User data directory
   .data/notes.db   rebuildable SQLite cache
 ```
 
+## Device Model
+
+Each device runs its own Monos over its own notes folder and syncs only through the user's GitHub repository (see Git Sync Across Two Devices). Nothing connects to another device's Monos, except the optional Wi-Fi view of this computer's notes (`lan-access.js`), which serves notes and never the terminal.
+
+The agent terminal is local to the desktop app:
+
+```text
+Electron main process
+  node-pty: one shell per terminal, working directory = this device's notes folder
+  ipcMain: terminal:create / write / resize / kill; output and exit sent to the window
+preload (contextBridge)
+  window.monosTerminal: the only way the page reaches a shell
+Svelte frontend
+  TerminalPanel: xterm.js in the theme's colours, bottom dock, ⌘J / Ctrl+`
+Express backend
+  notes-folder watcher: files changed by the agent (or anything else) are reindexed
+  and announced to the page over /api/events, so the board, the tree and an open note follow
+```
+
+The shell is never reachable over HTTP: the backend has no terminal route, and a browser or phone client has no `window.monosTerminal`.
+
 ## Runtime Modes
 
 ### Desktop Mode
