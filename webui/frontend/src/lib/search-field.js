@@ -8,4 +8,8 @@ export const SEARCH_INPUT_CLASS = 'w-full rounded-ui border border-[var(--border
 
 export const SEARCH_ICON_CLASS = 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]';
 
-export const SEARCH_CLEAR_CLASS = 'absolute top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]';
+/** A small button that belongs to a search box: clear, previous, next. */
+export const SEARCH_BUTTON_CLASS = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]';
+
+/** The × inside the box, on its right edge. */
+export const SEARCH_CLEAR_CLASS = `absolute top-1/2 -translate-y-1/2 ${SEARCH_BUTTON_CLASS}`;

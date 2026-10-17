@@ -7,6 +7,8 @@
   import { matchesNoteFilters, parseQuickSwitcherQuery, rankQuickSwitcherResults } from '../lib/quick-switcher.js';
   import { locale, localizedText } from '../lib/strings.js';
   import { shortcutLabel } from '../lib/shortcut-label.js';
+  import { SEARCH_ICON_CLASS, SEARCH_INPUT_CLASS } from '../lib/search-field.js';
+  import { Search } from 'lucide-svelte';
 
   export let open = false;
   export let mode = 'commands';
@@ -406,20 +408,24 @@
           </div>
         </div>
 
-        <input
-          bind:this={inputEl}
-          bind:value={query}
-          on:keydown={handleKeydown}
-          role="combobox"
-          aria-expanded="true"
-          aria-controls="command-palette-results"
-          aria-autocomplete="list"
-          aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
-          placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
-          class="w-full bg-transparent py-1.5 text-xl font-serif outline-none placeholder:text-[var(--text-tertiary)]"
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <!-- The board's search look, so a search box reads the same everywhere. -->
+        <div class="relative">
+          <Search size="16" strokeWidth="1.7" class={SEARCH_ICON_CLASS} aria-hidden="true" />
+          <input
+            bind:this={inputEl}
+            bind:value={query}
+            on:keydown={handleKeydown}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-results"
+            aria-autocomplete="list"
+            aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
+            placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
+            class="h-11 lg:h-10 {SEARCH_INPUT_CLASS} pr-3"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
       </div>
 
       <div id="command-palette-results" role="listbox" class="max-h-[55vh] overflow-y-auto py-2">
