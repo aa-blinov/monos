@@ -62,3 +62,61 @@ export function clampTerminalHeight(value, viewportHeight) {
   if (!Number.isFinite(height)) return Math.min(320, max);
   return Math.min(max, Math.max(140, Math.round(height)));
 }
+
+/** The agents offered in Settings; any other command can be typed as "Other". */
+export const AGENT_PRESETS = [
+  { id: 'claude', label: 'Claude Code', command: 'claude' },
+  { id: 'codex', label: 'Codex', command: 'codex' },
+  { id: 'gemini', label: 'Gemini CLI', command: 'gemini' },
+];
+export const DEFAULT_AGENT_COMMAND = 'claude';
+
+export function agentLabel(command) {
+  const preset = AGENT_PRESETS.find((item) => item.command === String(command || '').trim());
+  return preset ? preset.label : String(command || '').trim() || 'Claude Code';
+}
+
+/** A request for the terminal panel: start the agent, or ask it about a note. */
+export const agentRequest = writable(null);
+
+export function launchAgent() {
+  if (!terminalBridge) return;
+  agentRequest.set({ kind: 'launch', at: Date.now() });
+}
+
+export function askAgentAboutNote(notePath) {
+  if (!terminalBridge || !notePath) return;
+  agentRequest.set({ kind: 'ask', notePath, at: Date.now() });
+}
+
+const SHELLS = new Set(['zsh', 'bash', 'sh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh', 'powershell', 'powershell.exe', 'pwsh.exe', 'cmd', 'cmd.exe']);
+
+/** Whether the shell itself is in the foreground (and not a program started in it, such as the agent). */
+export function shellInForeground(info) {
+  if (!info?.process) return true;
+  const name = String(info.process).toLowerCase();
+  return name === String(info.shell || '').toLowerCase() || SHELLS.has(name) || SHELLS.has(name.replace(/^-/, ''));
+}
+
+/** Text in double quotes for a POSIX shell: `"`, `\`, `$` and backquote are escaped. */
+export function shellDoubleQuote(text) {
+  return `"${String(text).replace(/(["\\$`])/g, '\\$1')}"`;
+}
+
+/**
+ * What "Ask the agent about this note" types. The note is named by its path inside the notes folder (the
+ * terminal's working directory), in words every agent understands; the person writes the question after it.
+ *
+ * @param {string} notePath app path, `notes/Work/Plan.md`
+ * @param {(path: string) => string} sentence the localized lead-in, given the path
+ * @returns {{ prompt: string, commandLine: (command: string) => string }}
+ */
+export function noteQuestion(notePath, sentence) {
+  const relative = String(notePath || '').replace(/^notes\//, '');
+  const prompt = sentence(relative);
+  return {
+    prompt,
+    // The cursor is left before the closing quote (one step left), inside the question.
+    commandLine: (command) => `${command} ${shellDoubleQuote(prompt)}`,
+  };
+}

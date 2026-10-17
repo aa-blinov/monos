@@ -13,7 +13,18 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { clampTerminalHeight, terminalBridge, terminalOpen, terminalTheme } from '../lib/terminal.js';
+  import { Bot } from 'lucide-svelte';
+  import {
+    agentLabel,
+    agentRequest,
+    clampTerminalHeight,
+    DEFAULT_AGENT_COMMAND,
+    noteQuestion,
+    shellInForeground,
+    terminalBridge,
+    terminalOpen,
+    terminalTheme,
+  } from '../lib/terminal.js';
 
   const HEIGHT_KEY = 'monos.terminalHeight';
 
@@ -24,6 +35,10 @@
   let starting = false;
   let exited = false;
   let folder = '';
+  let agentCommand = DEFAULT_AGENT_COMMAND;
+  // Whether the notes folder has the files that tell an agent how to work in it (AGENTS.md, CLAUDE.md).
+  let rulesMissing = false;
+  let firstOutput = null;
   let height = clampTerminalHeight(readHeight(), typeof window === 'undefined' ? 900 : window.innerHeight);
   const unsubscribe = [];
 
@@ -46,6 +61,7 @@
     starting = true;
     exited = false;
     try {
+      firstOutput = new Promise((resolve) => { resolveFirstOutput = resolve; });
       const session = await terminalBridge.create({ cols: term.cols, rows: term.rows });
       sessionId = session.id;
       folder = session.cwd;
@@ -86,7 +102,12 @@
     term.onResize(({ cols, rows }) => {
       if (sessionId !== null && !exited) terminalBridge.resize(sessionId, cols, rows);
     });
-    unsubscribe.push(terminalBridge.onData((id, data) => { if (id === sessionId) term.write(data); }));
+    unsubscribe.push(terminalBridge.onData((id, data) => {
+      if (id !== sessionId) return;
+      term.write(data);
+      resolveFirstOutput?.();
+      resolveFirstOutput = null;
+    }));
     unsubscribe.push(terminalBridge.onExit((id, code) => {
       if (id !== sessionId) return;
       exited = true;
@@ -108,6 +129,60 @@
       term.focus();
     });
   }
+
+  let resolveFirstOutput = null;
+
+  async function loadAgentSettings() {
+    try {
+      const settings = await (await fetch('/api/settings')).json();
+      agentCommand = String(settings?.agent_command || '').trim() || DEFAULT_AGENT_COMMAND;
+    } catch { /* the default stays */ }
+    try {
+      const rules = await (await fetch('/api/agent/rules')).json();
+      rulesMissing = !rules?.['AGENTS.md'] && !rules?.['CLAUDE.md'];
+    } catch {
+      rulesMissing = false;
+    }
+  }
+  $: if ($terminalOpen) void loadAgentSettings();
+
+  async function createRules() {
+    try {
+      await fetch('/api/agent/rules', { method: 'POST' });
+      rulesMissing = false;
+    } catch { /* stays offered */ }
+  }
+
+  /**
+   * "Start the agent" and "Ask the agent about this note". With the shell in front the agent is started (with
+   * the question, the cursor left inside it); with the agent already running, the words go into its input.
+   */
+  async function handleAgentRequest(request) {
+    if (!request || !term) return;
+    agentRequest.set(null);
+    terminalOpen.set(true);
+    await tick();
+    fitNow();
+    if (sessionId === null || exited) {
+      sessionId = null;
+      exited = false;
+      await startSession();
+    }
+    // A fresh shell reads its profile first; what is typed before its prompt would be lost.
+    await Promise.race([firstOutput, new Promise((resolve) => setTimeout(resolve, 1500))]);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await loadAgentSettings();
+    const inShell = shellInForeground(await terminalBridge.process(sessionId));
+    if (request.kind === 'launch') {
+      if (inShell) terminalBridge.write(sessionId, `${agentCommand}\r`);
+    } else {
+      const question = noteQuestion(request.notePath, $localizedText.terminal.aboutNote);
+      if (inShell) terminalBridge.write(sessionId, `${question.commandLine(agentCommand)}\x1b[D`);
+      else terminalBridge.write(sessionId, question.prompt);
+    }
+    term.focus();
+  }
+  $: if ($agentRequest && term) void handleAgentRequest($agentRequest);
 
   onDestroy(() => {
     unsubscribe.forEach((stop) => stop());
@@ -155,7 +230,18 @@
     <header class="flex h-8 shrink-0 items-center gap-3 px-3 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
       <span class="font-bold text-[var(--text-secondary)]">{$localizedText.terminal.title}</span>
       {#if folder}<span class="truncate normal-case tracking-normal">{folder}</span>{/if}
+      {#if rulesMissing}
+        <button type="button" data-testid="agent-rules-create" on:click={createRules} class="normal-case tracking-normal text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:text-[var(--text-primary)]" title={$localizedText.terminal.rulesHint}>{$localizedText.terminal.rulesCreate}</button>
+      {/if}
       <span class="ml-auto hidden normal-case tracking-normal sm:inline">{$localizedText.terminal.shortcut}</span>
+      <button
+        type="button"
+        data-testid="agent-launch"
+        on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}
+        class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 font-bold text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
+      >
+        <Bot size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
+      </button>
       <TooltipIconButton
         class="h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
         label={$localizedText.terminal.restart}

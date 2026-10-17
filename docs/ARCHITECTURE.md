@@ -44,6 +44,8 @@ Express backend
 
 The shell is never reachable over HTTP: the backend has no terminal route, and a browser or phone client has no `window.monosTerminal`.
 
+The agent is the command chosen in Settings → Agent (`agent_command`: `claude`, `codex`, `gemini` or any other). "Start the agent" types it into the shell; "Ask the agent about this note" types the command with a question that names the note's path, leaving the cursor inside it, or, when the agent already runs in the foreground (`terminal:process`), types the question into the agent. `agent-rules.js` writes `AGENTS.md` (the rules: frontmatter, links, attachments, locked notes, no history rewrites) and `CLAUDE.md` / `GEMINI.md` (which import it) at the top of the notes folder, on request and never over a file that is there; the index skips them, so they are not notes.
+
 ## Runtime Modes
 
 ### Desktop Mode

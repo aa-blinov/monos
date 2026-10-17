@@ -20,3 +20,26 @@ test('высота панели в разумных пределах', () => {
   assert.equal(clampTerminalHeight(5000, 900), 720);
   assert.equal(clampTerminalHeight(400, 900), 400);
 });
+
+import { agentLabel, noteQuestion, shellDoubleQuote, shellInForeground } from './terminal.js';
+
+test('оболочка или программа на переднем плане', () => {
+  assert.equal(shellInForeground({ process: 'zsh', shell: 'zsh' }), true);
+  assert.equal(shellInForeground({ process: '-zsh', shell: 'zsh' }), true);
+  assert.equal(shellInForeground({ process: 'claude', shell: 'zsh' }), false);
+  assert.equal(shellInForeground({ process: 'node', shell: 'bash' }), false);
+  assert.equal(shellInForeground(null), true);
+});
+
+test('вопрос о заметке: путь внутри папки, кавычки и спецсимволы экранированы', () => {
+  const question = noteQuestion('notes/Работа/План "Q4" $5.md', (p) => `Заметка: ${p}. `);
+  assert.equal(question.prompt, 'Заметка: Работа/План "Q4" $5.md. ');
+  assert.equal(question.commandLine('claude'), 'claude "Заметка: Работа/План \\"Q4\\" \\$5.md. "');
+  assert.equal(shellDoubleQuote('a`b\\c'), '"a\\`b\\\\c"');
+});
+
+test('название агента по команде', () => {
+  assert.equal(agentLabel('codex'), 'Codex');
+  assert.equal(agentLabel('aider --model x'), 'aider --model x');
+  assert.equal(agentLabel(''), 'Claude Code');
+});
