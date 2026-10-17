@@ -358,3 +358,20 @@ test('no middle-dot separators in the interface text', () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+// The same rule for the Russian text: no long or short dash as a separator (a colon, a comma or a full stop
+// does that job), checked on every string and help topic of the Russian interface.
+test('no dashes in the Russian interface text', async () => {
+  const { translations } = await import('./strings.js');
+  const { helpSections } = await import('./help-content.js');
+  const found = [];
+  const walk = (value, key) => {
+    if (typeof value === 'string') { if (/[\u2014\u2013]/.test(value)) found.push(key); }
+    else if (typeof value === 'function') { if (/[\u2014\u2013]/.test(String(value))) found.push(key); }
+    else if (Array.isArray(value)) value.forEach((item, index) => walk(item, `${key}[${index}]`));
+    else if (value && typeof value === 'object') for (const [name, item] of Object.entries(value)) walk(item, `${key}.${name}`);
+  };
+  walk(translations.ru, 'ru');
+  walk(helpSections('ru'), 'help');
+  assert.deepEqual(found, []);
+});
