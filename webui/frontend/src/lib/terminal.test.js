@@ -61,3 +61,17 @@ test('OpenCode среди агентов в настройках, и его ко
   assert.equal(agentLabel('opencode'), 'OpenCode');
   assert.equal(agentLabel(' claude '), 'Claude Code');
 });
+
+// Each agent is given its first question the way its own documentation says: Claude Code, Codex and Gemini CLI
+// take it as the argument; OpenCode's argument is a folder, so its question goes after --prompt.
+test('вопрос агенту набирается так, как принимает каждый агент', async () => {
+  const { noteQuestion } = await import('./terminal.js');
+  const line = (command) => noteQuestion('notes/Work/План.md', (path) => `Про заметку ${path}: `).commandLine(command);
+  assert.equal(line('claude'), 'claude "Про заметку Work/План.md: "');
+  assert.equal(line('codex'), 'codex "Про заметку Work/План.md: "');
+  assert.equal(line('gemini'), 'gemini "Про заметку Work/План.md: "');
+  assert.equal(line('opencode'), 'opencode --prompt "Про заметку Work/План.md: "');
+  assert.equal(line('/opt/homebrew/bin/opencode --model x/y'), '/opt/homebrew/bin/opencode --model x/y --prompt "Про заметку Work/План.md: "');
+  assert.equal(line('opencode --prompt'), 'opencode --prompt "Про заметку Work/План.md: "', 'a flag already there is not doubled');
+  assert.equal(line('my-opencode-wrapper'), 'my-opencode-wrapper "Про заметку Work/План.md: "', 'only the opencode command itself');
+});

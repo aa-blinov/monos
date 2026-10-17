@@ -131,6 +131,17 @@ export function noteQuestion(notePath, sentence) {
   return {
     prompt,
     // The cursor is left before the closing quote (one step left), inside the question.
-    commandLine: (command) => `${command} ${shellDoubleQuote(prompt)}`,
+    commandLine: (command) => `${command}${promptFlag(command)} ${shellDoubleQuote(prompt)}`,
   };
+}
+
+/**
+ * How an agent is given its first question. Claude Code, Codex and Gemini CLI take it as the argument
+ * (`claude "…"`, in a terminal that opens the interactive session); OpenCode's argument is a folder, and the
+ * question goes after `--prompt`. Found in the command's words, so `/opt/bin/opencode --model x` is known too.
+ */
+function promptFlag(command) {
+  const words = String(command || '');
+  if (/(^|[\s/\\])opencode(?:\.(?:exe|cmd))?(?=\s|$)/i.test(words) && !/(^|\s)--prompt(\s|=|$)/.test(words)) return ' --prompt';
+  return '';
 }
