@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execFileSync } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
@@ -34,6 +34,17 @@ export function gitEnv(token) {
   return env;
 }
 
+function toGitError(error) {
+  const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
+  const stdout = typeof error.stdout === 'string' ? error.stdout.trim() : error.stdout?.toString?.().trim();
+  const message = [stderr, stdout].filter(Boolean).join('\n') || 'Git command failed';
+  const gitError = new Error(message);
+  gitError.status = error.status ?? error.code;
+  gitError.stderr = stderr || '';
+  gitError.stdout = stdout || '';
+  return gitError;
+}
+
 function gitExec(args, options = {}) {
   const cwd = typeof options === 'string' ? options : options.cwd || NOTES_DIR;
   const token = typeof options === 'string' ? '' : options.token || '';
@@ -46,15 +57,27 @@ function gitExec(args, options = {}) {
       env: gitEnv(token),
     }).trim();
   } catch (error) {
-    const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
-    const stdout = typeof error.stdout === 'string' ? error.stdout.trim() : error.stdout?.toString?.().trim();
-    const message = [stderr, stdout].filter(Boolean).join('\n') || 'Git command failed';
-    const gitError = new Error(message);
-    gitError.status = error.status;
-    gitError.stderr = stderr || '';
-    gitError.stdout = stdout || '';
-    throw gitError;
+    throw toGitError(error);
   }
+}
+
+/**
+ * The same as gitExec for work that waits on the network (fetch, pull, push). The backend runs inside the app's
+ * main process, so a synchronous git call there freezes the window, the terminal and every request for as long as
+ * GitHub takes to answer — seconds, on every sync. Anything quick and local stays on gitExec.
+ */
+function gitExecAsync(args, options = {}) {
+  const cwd = options.cwd || NOTES_DIR;
+  return new Promise((resolve, reject) => {
+    execFile('git', args, { cwd, encoding: 'utf-8', timeout: 120000, maxBuffer: 64 * 1024 * 1024, env: gitEnv(options.token || '') }, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        return reject(toGitError(error));
+      }
+      resolve(String(stdout).trim());
+    });
+  });
 }
 
 function gitExecBuffer(args, options = {}) {
@@ -187,11 +210,11 @@ function stageForSync(deviceName) {
  * pull over them ("local changes would be overwritten") with nothing a person can act on; the sync stops before
  * that and names them, so they are kept or reverted first. Empty when nothing waits or the remote cannot be read.
  */
-function reviewBlocksPull(token) {
+async function reviewBlocksPull(token) {
   const pending = pendingReview();
   if (!pending.length) return [];
   try {
-    gitExec(['fetch', '-q'], { token });
+    await gitExecAsync(['fetch', '-q'], { token });
     const incoming = gitExec(['diff', '--name-only', 'HEAD...@{u}']).split('\n').filter(Boolean);
     return incoming.filter((file) => pending.includes(file));
   } catch {
@@ -292,9 +315,9 @@ function isGitRepo() {
   }
 }
 
-function branchExistsOnRemote(branch, token) {
+async function branchExistsOnRemote(branch, token) {
   try {
-    gitExec(['fetch', 'origin', branch], { token });
+    await gitExecAsync(['fetch', 'origin', branch], { token });
     gitExec(['rev-parse', '--verify', `origin/${branch}`]);
     return true;
   } catch {
@@ -769,7 +792,7 @@ export function registerGitRoutes(app) {
       gitExec(['add', '-A']);
       commitStagedChanges(`Init from ${device_name || 'Monos'}`);
 
-      const remoteBranchExists = branchExistsOnRemote(branch, authToken);
+      const remoteBranchExists = await branchExistsOnRemote(branch, authToken);
       if (remoteBranchExists) {
         gitExec(['branch', '--set-upstream-to', `origin/${branch}`, branch]);
         if (hasCommits()) {
@@ -788,7 +811,7 @@ export function registerGitRoutes(app) {
         }
       }
 
-      gitExec(['push', '-u', 'origin', branch], { token: authToken });
+      await gitExecAsync(['push', '-u', 'origin', branch], { token: authToken });
 
       // The notes that came down with the repository are on disk now; index them, or a second device
       // shows an empty board until the app restarts.
@@ -1064,13 +1087,13 @@ export function registerGitRoutes(app) {
         if (hasStagedChanges()) commitStagedChanges('Auto-sync from Monos (pending pull)');
       }
 
-      const blocked = reviewBlocksPull(authToken);
+      const blocked = await reviewBlocksPull(authToken);
       if (blocked.length) return res.status(409).json(reviewBlockedAnswer(blocked, { dirtied }));
 
       const headBefore = currentHead();
       let message = 'Already up to date.';
       try {
-        message = gitExec(['pull', '--no-rebase', '--no-edit'], { token: authToken });
+        message = await gitExecAsync(['pull', '--no-rebase', '--no-edit'], { token: authToken });
       } catch (error) {
         const errorText = error.stderr || error.message || '';
         if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
@@ -1120,13 +1143,13 @@ export function registerGitRoutes(app) {
       if (committed) commitStagedChanges(`Auto-sync from ${deviceName || 'Monos'}`);
       const pushedFiles = committed ? changedFilesSinceHead() : [];
 
-      const blocked = reviewBlocksPull(authToken);
+      const blocked = await reviewBlocksPull(authToken);
       if (blocked.length) return res.status(409).json(reviewBlockedAnswer(blocked, { committed }));
 
       const headBeforePull = currentHead();
       let result = 'Synced';
       try {
-        result = gitExec(['pull', '--no-rebase', '--no-edit'], { token: authToken });
+        result = await gitExecAsync(['pull', '--no-rebase', '--no-edit'], { token: authToken });
       } catch (error) {
         const errorText = error.stderr || error.message || '';
         if (errorText.includes('CONFLICT') || hasUnmergedFiles()) {
@@ -1142,10 +1165,12 @@ export function registerGitRoutes(app) {
         throw error;
       }
 
-      gitExec(['push'], { token: authToken });
+      await gitExecAsync(['push'], { token: authToken });
       const after = divergenceSummary(branch);
 
-      indexAllFiles();
+      // Reading every note again takes a while and blocks the app for it; only a pull that brought something in
+      // changes what the index holds (this device's own edits were indexed as they were saved).
+      if (currentHead() !== headBeforePull) indexAllFiles();
       writeGitSettings({ ...readGitSettings(), last_sync: new Date().toISOString() });
 
       res.json({
