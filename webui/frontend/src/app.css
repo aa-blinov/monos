@@ -301,6 +301,10 @@ input[type="number"]::-webkit-outer-spin-button {
 
 /* Placeholders carry real hints ("Name (optional)", the token format), so they keep
    readable contrast instead of the browser's pale grey. Component classes still win. */
+/* Written as input/textarea::placeholder: Tailwind's preflight sets `input::placeholder` to its own gray-400
+   (a cool blue-grey from no theme here), and a bare ::placeholder lost to it on specificity. */
+input::placeholder,
+textarea::placeholder,
 ::placeholder {
   color: var(--text-tertiary);
   opacity: 1;

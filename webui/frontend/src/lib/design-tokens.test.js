@@ -336,3 +336,10 @@ test('no opacity modifier on a var() colour — Tailwind drops the class', () =>
   }
   assert.deepEqual(offenders, []);
 });
+
+// Tailwind's preflight colours `input::placeholder` gray-400, a blue-grey from no theme here; a bare
+// `::placeholder` loses to it on specificity, so every hint in every field came out the wrong colour.
+test('placeholders take the theme colour, not the preflight grey', () => {
+  const css = read(path.join(SRC, 'app.css'));
+  assert.match(css, /input::placeholder,\s*textarea::placeholder[^{]*\{\s*color:\s*var\(--text-tertiary\)/);
+});
