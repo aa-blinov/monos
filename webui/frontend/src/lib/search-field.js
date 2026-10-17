@@ -4,7 +4,14 @@
  */
 
 // The height (h-11 lg:h-10) is written beside each input, where the field-geometry test reads it.
-export const SEARCH_INPUT_CLASS = 'w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-10 text-sm text-[var(--text-primary)] outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]';
+const SEARCH_SURFACE = 'w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]';
+
+export const SEARCH_INPUT_CLASS = `${SEARCH_SURFACE} pl-10 text-sm`;
+
+/** The same box a size down (h-8), for a bar that shares its row with other small controls: the terminal's find. */
+export const SEARCH_INPUT_COMPACT_CLASS = `${SEARCH_SURFACE} pl-8 text-xs`;
+export const SEARCH_ICON_COMPACT_CLASS = 'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]';
+export const SEARCH_BUTTON_COMPACT_CLASS = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]';
 
 export const SEARCH_ICON_CLASS = 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]';
 

@@ -12,7 +12,7 @@
   import { WebLinksAddon } from '@xterm/addon-web-links';
   import { SearchAddon } from '@xterm/addon-search';
   import '@xterm/xterm/css/xterm.css';
-  import { SEARCH_BUTTON_CLASS, SEARCH_ICON_CLASS, SEARCH_INPUT_CLASS } from '../lib/search-field.js';
+  import { SEARCH_BUTTON_COMPACT_CLASS, SEARCH_ICON_COMPACT_CLASS, SEARCH_INPUT_COMPACT_CLASS } from '../lib/search-field.js';
   import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { activeTheme, themeMode } from '../stores.js';
@@ -24,6 +24,7 @@
     agentLabel,
     agentRequest,
     clampTerminalHeight,
+    storedTerminalHeight,
     DEFAULT_AGENT_COMMAND,
     noteLinkRequest,
     noteQuestion,
@@ -55,7 +56,8 @@
   $: active = tabs.find((tab) => tab.key === activeKey) || null;
 
   function readHeight() {
-    try { return Number(localStorage.getItem(HEIGHT_KEY)); } catch { return NaN; }
+    // Nothing stored is "no height", not 0: Number(null) is 0, which opened every new terminal at the minimum.
+    try { return storedTerminalHeight(localStorage.getItem(HEIGHT_KEY)); } catch { return NaN; }
   }
 
   function themeNow() {
@@ -455,8 +457,8 @@
     {#if searchOpen}
       <!-- Search in the visible tab: Enter for the next match, Shift+Enter for the one before, Esc to close. -->
       <div class="absolute right-3 top-9 z-20 flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-lg" data-testid="terminal-search">
-        <div class="relative w-64">
-        <Search size="16" strokeWidth="1.7" class={SEARCH_ICON_CLASS} aria-hidden="true" />
+        <div class="relative w-56">
+        <Search size="14" strokeWidth="1.7" class={SEARCH_ICON_COMPACT_CLASS} aria-hidden="true" />
         <input
           bind:this={searchInput}
           bind:value={searchQuery}
@@ -464,12 +466,12 @@
           on:keydown={searchKeydown}
           placeholder={$localizedText.terminal.searchPlaceholder}
           aria-label={$localizedText.terminal.search}
-          class="h-11 lg:h-10 {SEARCH_INPUT_CLASS} pr-3"
+          class="h-8 {SEARCH_INPUT_COMPACT_CLASS} pr-2"
         />
         </div>
-        <button type="button" class={SEARCH_BUTTON_CLASS} aria-label={$localizedText.terminal.searchPrevious} on:click={() => findNext(true)}><ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" /></button>
-        <button type="button" class={SEARCH_BUTTON_CLASS} aria-label={$localizedText.terminal.searchNext} on:click={() => findNext()}><ChevronDown size="14" strokeWidth="1.7" aria-hidden="true" /></button>
-        <button type="button" class={SEARCH_BUTTON_CLASS} aria-label={$localizedText.terminal.searchClose} on:click={closeSearch}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchPrevious} on:click={() => findNext(true)}><ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchNext} on:click={() => findNext()}><ChevronDown size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchClose} on:click={closeSearch}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
       </div>
     {/if}
     <div class="relative min-h-0 flex-1">

@@ -17,5 +17,5 @@ test('поля поиска в приложении — одно и то же п
   assert.match(read('Header'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
   assert.match(read('SearchField'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
   assert.match(read('CommandPalette'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
-  assert.match(read('TerminalPanel'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
+  assert.match(read('TerminalPanel'), /h-8 \{SEARCH_INPUT_COMPACT_CLASS\}/);
 });
