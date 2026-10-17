@@ -1,7 +1,7 @@
 <script>
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
@@ -13,6 +13,7 @@
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection } from '../stores.js';
+  import ConnectStatus from './ConnectStatus.svelte';
   import { formFieldClass } from '../lib/form-field.js';
   import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
   import { formatAttachmentSize as humanSize, fetchOrphanAttachments } from '../lib/attachments.js';
@@ -95,6 +96,12 @@
   let isLoadingRepos = false;
   let isLoadingBranches = false;
   let isConnecting = false;
+  // The connection to GitHub, as ConnectStatus shows it beside the button.
+  let connectPhase = 'idle';
+  let connectMessage = '';
+  let connectSeconds = 0;
+  let connectTicker = null;
+  let connectedTarget = { repo: '', branch: '' };
   let isSettingUp = false;
   let isAuthenticated = false;
   let isSyncing = false;
@@ -473,6 +480,7 @@
   }
 
   async function onRepoChange() {
+    if (connectPhase !== 'connecting') connectPhase = 'idle';
     const repoFullName = getSelectedRepoFullName();
     if (repoFullName.includes('/')) settings.git_owner = repoFullName.split('/')[0];
     await saveSettings();
@@ -523,16 +531,35 @@
     if (!settings.git_token || !repoFullName) return;
     isSettingUp = true;
     gitError = '';
+    connectPhase = 'connecting';
+    connectMessage = '';
+    connectSeconds = 0;
+    connectedTarget = { repo: repoFullName, branch: settings.git_branch };
+    clearInterval(connectTicker);
+    connectTicker = setInterval(() => { connectSeconds += 1; }, 1000);
     try {
       await saveSettings();
       const r = await fetch('/api/git/setup', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: settings.git_token, owner: settings.git_owner, repo: repoFullName, branch: settings.git_branch, device_name: settings.device_name })
       });
-      if (r.ok) await checkGitStatus();
-      else gitError = (await r.json()).detail;
-    } catch (e) { console.error(e); }
-    finally { isSettingUp = false; }
+      const answer = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        // The reason is shown where the button is, not only in the box above the form, out of sight.
+        connectPhase = 'error';
+        connectMessage = answer.detail || $localizedText.settings.connectFailed;
+        return;
+      }
+      await checkGitStatus();
+      connectPhase = answer.conflicts ? 'conflicts' : 'done';
+    } catch (e) {
+      console.error(e);
+      connectPhase = 'error';
+      connectMessage = $localizedText.settings.connectFailed;
+    } finally {
+      clearInterval(connectTicker);
+      isSettingUp = false;
+    }
   }
 
   async function handleSync() {
@@ -691,6 +718,7 @@
   }
 
   onMount(initSettingsPage);
+  onDestroy(() => clearInterval(connectTicker));
 </script>
 
 <div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8">
@@ -1028,7 +1056,16 @@
         </div>
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <ConnectStatus
+          phase={connectPhase}
+          repo={connectedTarget.repo}
+          branch={connectedTarget.branch}
+          seconds={connectSeconds}
+          message={connectMessage}
+          connectedRepo={gitStatus?.initialized ? gitStatus.repo : ''}
+          connectedBranch={gitStatus?.branch || ''}
+        />
         <button
           type="button"
           on:click={setupGitRepo}
