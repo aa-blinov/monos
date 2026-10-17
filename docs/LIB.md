@@ -51,7 +51,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `wiki-links.test.js` | Multiple links per line, deduplication, malformed input, trailing punctuation |
 | `wiki-link-decorations.js` | `collectWikiLinks(doc)`, `wikiLinkAt`, `wikiLinkStatus`, `collectBareUrls(doc)`, `isOpenableUrl` — wiki links of an editor document with positions (code skipped) and what each one leads to; drives the `WikiLinks` editor extension |
 | `wiki-link-decorations.test.js` | Positions across marks, code and inline nodes; found, ambiguous and missing answers; folder and heading in a new note's name |
-| `card-excerpt.js` | `cardExcerpt(markdown)` — the words a note card shows: Markdown removed, list items and headings set apart by ` · ` |
+| `card-excerpt.js` | `cardExcerpt(markdown)` — the words a note card shows: Markdown removed, a heading followed by a colon, list items by commas |
 | `card-excerpt.test.js` | Lists, headings, tables, code, callouts, links and long text |
 | `word-diff.js` | `wordDiff` — the words that differ between the two versions of a conflicting part, marked in both columns |
 | `word-diff.test.js` | Changed words only, text rebuilt byte for byte, empty side, long passages left unmarked |

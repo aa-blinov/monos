@@ -122,3 +122,31 @@ test('repo-check перечисляет опасные scopes токена', asy
 test('транспорт репозитория строится из имени', () => {
   assert.equal(git.buildGithubRemoteUrl('owner/repo'), 'https://github.com/owner/repo.git');
 });
+test('repo-check сообщает, может ли токен писать: Contents «Read-only» даёт canPush false', async () => {
+  const before = githubHandler;
+  const reply = (body) => ({ ok: true, status: 200, json: async () => body, headers: new Headers() });
+  globalThis.fetch = async (url) => {
+    const href = String(url);
+    if (href.includes('/repos/owner/read-only')) return reply({ full_name: 'owner/read-only', private: true, permissions: { push: false, pull: true } });
+    if (href.includes('/repos/owner/writable')) return reply({ full_name: 'owner/writable', private: true, permissions: { push: true, pull: true } });
+    if (href.includes('/repos/owner/silent')) return reply({ full_name: 'owner/silent', private: true });
+    return before(url);
+  };
+  try {
+    assert.equal((await (await repoCheck('token=t&repo=owner/read-only')).json()).canPush, false);
+    assert.equal((await (await repoCheck('token=t&repo=owner/writable')).json()).canPush, true);
+    assert.equal((await (await repoCheck('token=t&repo=owner/silent')).json()).canPush, null, 'GitHub did not say: no claim either way');
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
+test('explainGitError узнаёт частые причины отказа GitHub', () => {
+  const failure = (stderr) => Object.assign(new Error(stderr), { stderr });
+  assert.equal(git.explainGitError(failure('remote: Write access to repository not granted.\nfatal: unable to access: The requested URL returned error: 403')).reason, 'token-read-only');
+  assert.equal(git.explainGitError(failure('remote: Permission to owner/repo.git denied to someone.')).reason, 'token-read-only');
+  assert.equal(git.explainGitError(failure('remote: Invalid username or token. Password authentication is not supported')).reason, 'token-rejected');
+  assert.equal(git.explainGitError(failure('remote: Repository not found.\nfatal: repository \'https://github.com/o/r.git/\' not found')).reason, 'repo-not-visible');
+  assert.match(git.explainGitError(failure('The requested URL returned error: 403')).detail, /Read and write/);
+  assert.equal(git.explainGitError(failure('fatal: refusing to merge unrelated histories')), null, 'other failures keep git\'s own words');
+});

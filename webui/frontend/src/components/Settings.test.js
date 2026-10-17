@@ -441,3 +441,34 @@ test('Settings: у подключённой папки в покое видно,
   await waitFor(() => expect(connectStatus().textContent).toContain(uiText.settings.connectedTo('alice/notes', 'main')));
   expect(connectStatus().dataset.phase).toBe('idle');
 });
+
+// A token left at Contents "Read-only" connects and then fails at the first push: the form warns before that,
+// and when GitHub refuses anyway the reason is said in the interface's language.
+test('Settings: токен «только чтение» предупреждается ещё до подключения', async () => {
+  await openConnectForm({
+    fallback: (url) => (url.startsWith('/api/git/repo-check')
+      ? jsonResponse({ repo: 'alice/notes', private: true, safe: true, canPush: false, scopeWarnings: [] })
+      : jsonResponse({}, false)),
+  });
+  const warning = await screen.findByTestId('read-only-token');
+  expect(warning.textContent).toContain(uiText.settings.readOnlyTokenTitle);
+  expect(warning.textContent).toContain('Read-only');
+});
+
+test('Settings: у токена с записью предупреждения нет', async () => {
+  await openConnectForm({
+    fallback: (url) => (url.startsWith('/api/git/repo-check')
+      ? jsonResponse({ repo: 'alice/notes', private: true, safe: true, canPush: true, scopeWarnings: [] })
+      : jsonResponse({}, false)),
+  });
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.connectRepository }).disabled).toBe(false));
+  expect(screen.queryByTestId('read-only-token')).toBeNull();
+});
+
+test('Settings: отказ GitHub в записи объясняется словами интерфейса', async () => {
+  await openConnectForm({ setup: () => jsonResponse({ detail: 'raw git words', reason: 'token-read-only' }, false) });
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.connectRepository }));
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('error'));
+  expect(connectStatus().textContent).toBe(uiText.settings.gitReasons['token-read-only']);
+  expect(connectStatus().textContent).not.toContain('raw git words');
+});

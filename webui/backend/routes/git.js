@@ -34,6 +34,34 @@ export function gitEnv(token) {
   return env;
 }
 
+/**
+ * What a failed git call against GitHub means for the person, when it is one of the common causes. A token made
+ * with Contents left at "Read-only" connects fine and then fails at the first push with a bare 403 from git;
+ * `reason` lets the interface say so in its own language, `detail` is the same in English.
+ * @returns {{ reason: string, detail: string } | null}
+ */
+export function explainGitError(error) {
+  const text = `${error?.stderr || ''}\n${error?.message || ''}`;
+  if (/Write access to repository not granted|Permission to .+ denied|returned error: 403/i.test(text)) {
+    return {
+      reason: 'token-read-only',
+      detail: 'GitHub refused to write: this token can read the repository but not change it. In the token\'s permissions set Contents to "Read and write" (it is "Read-only" by default).',
+    };
+  }
+  if (/Invalid username or token|Authentication failed|returned error: 401|Bad credentials/i.test(text)) {
+    return { reason: 'token-rejected', detail: 'GitHub did not accept the token. It may have expired or been revoked; create a new one.' };
+  }
+  if (/Repository not found|repository '.*' not found|returned error: 404/i.test(text)) {
+    return { reason: 'repo-not-visible', detail: 'GitHub cannot see this repository with this token. Check the name, and that the token\'s repository access includes it.' };
+  }
+  return null;
+}
+
+function gitFailure(res, error) {
+  const explained = explainGitError(error);
+  return res.status(500).json({ detail: explained?.detail || error.message || String(error), ...(explained ? { reason: explained.reason } : {}) });
+}
+
 function toGitError(error) {
   const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : error.stderr?.toString?.().trim();
   const stdout = typeof error.stdout === 'string' ? error.stdout.trim() : error.stdout?.toString?.().trim();
@@ -832,7 +860,7 @@ export function registerGitRoutes(app) {
       indexAllFiles();
       res.json({ message: `Connected to ${repo}/${branch}`, conflicts: false });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -913,6 +941,8 @@ export function registerGitRoutes(app) {
         scopeWarnings: scopeWarnings(scopes),
         // The one thing the caller must not ignore.
         safe: !isPublic,
+        // Whether the token may push. `null` when GitHub did not say; a token left at Contents "Read-only" is false.
+        canPush: data?.permissions && typeof data.permissions.push === 'boolean' ? data.permissions.push : null,
       });
     } catch (error) {
       res.status(500).json({ detail: error.message || 'Could not reach GitHub' });
@@ -1134,6 +1164,7 @@ export function registerGitRoutes(app) {
         inSync: after.ahead === 0 && after.behind === 0,
       });
     } catch (error) {
+      if (explainGitError(error)) return gitFailure(res, error);
       res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
     }
   }));
@@ -1204,7 +1235,7 @@ export function registerGitRoutes(app) {
         device: deviceName || null,
       });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   }
 
