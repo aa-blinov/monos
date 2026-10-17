@@ -190,7 +190,7 @@
       items[(index + 1) % items.length].focus();
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      items[(index - 1 + items.length) % items.length].focus();
+      items[index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length].focus();
     } else if (event.key === 'Escape') {
       event.preventDefault();
       contextMenu.show = false;
@@ -211,8 +211,11 @@
       margin: CONTEXT_MENU_MARGIN,
     });
     contextMenuPos = { x: next.x, y: next.y };
-    // Keyboard users open the menu with the Menu key or Shift+F10; land on its first item.
-    contextMenuEl.querySelector('[role="menuitem"]')?.focus();
+    // Opened from the keyboard (Menu key, Shift+F10), the first item takes the focus. Opened with the mouse,
+    // the menu itself does: a focused first item drew the browser's keyboard ring on it, bright and only
+    // sometimes, depending on whether a key had been pressed before.
+    if (contextMenu.byKeyboard) contextMenuEl.querySelector('[role="menuitem"]')?.focus();
+    else contextMenuEl.focus({ preventScroll: true });
   }
   let isDragOverRoot = false;
   let isSyncing = false;
@@ -782,7 +785,7 @@
   }
 
   function handleRightClick(event) {
-    const { x, y, path, name, isDir } = event.detail;
+    const { x, y, path, name, isDir, byKeyboard = false } = event.detail;
     const selectionPaths = selectedContextPaths(path, isDir);
     if (selectionPaths.length === 0) clearSelectedNotes();
     contextMenu = {
@@ -793,6 +796,7 @@
       targetName: name,
       isDir,
       selectionPaths,
+      byKeyboard,
     };
   }
 
@@ -1343,46 +1347,48 @@
       role="menu"
       tabindex="-1"
       on:keydown={handleContextMenuKeys}
-      class="fixed rounded-ui bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48"
+      class="fixed rounded-ui bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48 outline-none"
       style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
-        <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newNote}</button>
-        <button on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newFolder}</button>
+        <button on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newNote}</button>
+        <button on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newFolder}</button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
       {#if !contextMenu.isDir}
         {#if isPinned(contextMenu.targetPath)}
-          <button on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.unpin}</button>
+          <button on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.unpin}</button>
         {:else}
-          <button on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.pin}</button>
+          <button on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.pin}</button>
         {/if}
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
-      <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.editIcon}</button>
-      <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.rename}</button>
+      <button on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.editIcon}</button>
+      <button on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.rename}</button>
       {#if !contextMenu.isDir}
         <button
           type="button"
           data-testid="bulk-tag"
+          role="menuitem"
           on:click={() => { bulkTagPaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [contextMenu.targetPath]; showBulkTagPrompt = true; bulkTagValue = ''; bulkError = ''; closeContextMenu(); }}
-          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition"
+          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
         >
-          {bulkTagPaths.length > 1
-            ? $localizedText.sidebar.context.tagSelected(bulkTagPaths.length)
+          {contextMenu.selectionPaths?.length > 1
+            ? $localizedText.sidebar.context.tagSelected(contextMenu.selectionPaths.length)
             : $localizedText.sidebar.context.addTag}
         </button>
         <button
           type="button"
           data-testid="duplicate-note"
+          role="menuitem"
           on:click={() => { duplicateTarget = contextMenu.targetPath; closeContextMenu(); duplicateNote(); }}
-          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[var(--border-subtle)] transition"
+          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
         >
           {$localizedText.sidebar.context.duplicate}
         </button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
-      <button on:click={() => handleContextAction('delete')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red)] transition">
+      <button on:click={() => handleContextAction('delete')} role="menuitem" class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red)] transition">
         {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
       </button>
     </div>
