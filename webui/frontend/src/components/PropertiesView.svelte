@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { localizedText, locale } from '../lib/strings.js';
+  import SearchField from './SearchField.svelte';
   import { loadPropertyTableRequest } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import { propertyInputText } from '../lib/properties.js';
@@ -100,14 +101,11 @@
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.properties.tableTitle}</h1>
         <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.properties.tableHint}</p>
       </div>
-      <input
-        type="search"
+      <SearchField
         bind:value={query}
         on:input={onQueryInput}
         placeholder={$localizedText.properties.tableSearch}
-        aria-label={$localizedText.properties.tableSearch}
-        data-testid="properties-query"
-        class="w-full rounded-ui border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm text-[var(--text-primary)]"
+        testid="properties-query"
       />
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.syntaxHint}</p>
     </header>

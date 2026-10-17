@@ -2,6 +2,7 @@
   import { onMount, createEventDispatcher, tick } from 'svelte';
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
+  import SearchField from './SearchField.svelte';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -1555,13 +1556,7 @@
       <div class="min-h-0 flex flex-col overflow-hidden">
         <div class="mb-3">
           <label for="template-search" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.templateSearch}</label>
-          <input
-            id="template-search"
-            type="text"
-            bind:value={templateQuery}
-            placeholder={$localizedText.sidebar.templateSearchPlaceholder}
-            class={formFieldClass()}
-          />
+          <SearchField id="template-search" bind:value={templateQuery} placeholder={$localizedText.sidebar.templateSearchPlaceholder} />
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 space-y-4" data-testid="template-list-scroll">

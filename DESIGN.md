@@ -373,6 +373,8 @@ Field underlines have zero radius by definition; they are a single border line.
 
 ### Inputs / Fields
 
+- **Every search looks like the board's.** One `SearchField` (the header uses the same classes): 40px (44px on a phone), `--bg-secondary`, a hairline border that darkens on focus, a 16px magnifier inside on the left, text-sm with a `--text-secondary` placeholder, and × to clear (Esc clears first, a second Esc closes what holds it). The notes table, templates, the template library, tags and the help all use it. The command palette is a launcher, not a search box, and the terminal's find bar floats over output; both keep their own look.
+
 - **Style:** underline only — transparent background, 1px `--border-subtle` bottom border, no radius, `h-9 text-sm leading-6`. Shared via `formFieldClass()` so `<input>` and `<select>` sit on the same baseline.
 - **Height is declared, never derived:** `h-9`, not `py-* + leading-*`. A derived height silently grew by the 1px border and measured 37px against 36px elsewhere. The base rule in `app.css` sets colour and focus only; it carries no vertical geometry on purpose, and it lives inside `@layer base` so component utilities still apply. Any text field that needs its own height says so with `h-*` or `py-*`.
 - **Focus:** the bottom border shifts to `--text-secondary`. No glow, no outline, no ring. Boxed and pill fields may brighten to `--text-primary` on focus — they are a different object, not a form row.
