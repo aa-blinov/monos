@@ -87,6 +87,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `callouts.js` | `calloutMarker` reads an Obsidian callout marker (`[!warning] Title`) from a quote's first line, `calloutTone` picks its colour family, `unescapeCalloutMarkers` keeps the marker bare when the note is saved |
 | `soft-break.js` | `SoftBreak`, a TipTap node for a single newline inside a paragraph: the editor shows it as a space, and saving writes the newline back |
 | `blank-line.js` | `EditableParagraph` writes an empty line as `&nbsp;` (Obsidian's convention) so it survives a save, and `isBlankLineNode` reads it back as an empty paragraph |
+| `search-field.js` | `SEARCH_INPUT_CLASS`, `SEARCH_ICON_CLASS`, `SEARCH_CLEAR_CLASS` — the board search's look, shared by every search box (`SearchField.svelte` and the header) |
+| `search-field.test.js` | The board look, and every search box in the app built from it |
 | `service-worker.js` | `shouldRegisterServiceWorker` says whether the app registers its install worker (`public/sw.js`): a production build, HTTPS and a browser that supports it |
 | `callouts.test.js` | Marker type and title, plain quotes and link-like brackets not taken for callouts, tone by type, escaped markers restored on save |
 | `richEditorExtensions.js` | TipTap extension set used by the rich editor |

@@ -4,6 +4,7 @@
   import ModalShell from './ModalShell.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import SearchField from './SearchField.svelte';
   import {
     customNoteTemplates,
     deleteCustomTemplate,
@@ -131,12 +132,7 @@
     </div>
 
     <div class="mb-7">
-      <input
-        type="text"
-        bind:value={query}
-        placeholder={$localizedText.templates.searchPlaceholder}
-        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_30%,transparent)] px-4 text-sm outline-none"
-      />
+      <SearchField bind:value={query} placeholder={$localizedText.templates.searchPlaceholder} />
     </div>
 
     <div class="grid gap-4">

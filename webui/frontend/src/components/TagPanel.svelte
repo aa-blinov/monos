@@ -1,11 +1,12 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import ModalShell from './ModalShell.svelte';
+  import SearchField from './SearchField.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { localizedText } from '../lib/strings.js';
   import { deleteTag, filterTagStats, loadTagStats, renameTag } from '../lib/tags.js';
-  import { Hash, Pencil, Search, Trash2, X } from 'lucide-svelte';
+  import { Hash, Pencil, Trash2 } from 'lucide-svelte';
 
   export let open = false;
 
@@ -104,16 +105,7 @@
     on:close={() => open = false}
   >
     <div class="space-y-3">
-      <div class="relative">
-        <Search size="14" strokeWidth="1.7" class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" aria-hidden="true" />
-        <input
-          data-testid="tag-filter"
-          type="text"
-          class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] pl-9 pr-3 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
-          placeholder={$localizedText.tags.filter}
-          bind:value={filter}
-        />
-      </div>
+      <SearchField testid="tag-filter" placeholder={$localizedText.tags.filter} bind:value={filter} />
 
       {#if error}
         <p class="text-sm text-[var(--red)]">{error}</p>

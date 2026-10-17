@@ -4,7 +4,7 @@
    * the topics on the right; the search above finds a topic by any of its words and shows why it matched.
    */
   import { onMount, tick } from 'svelte';
-  import { Search, X } from 'lucide-svelte';
+  import SearchField from './SearchField.svelte';
   import { locale, localizedText } from '../lib/strings.js';
   import { helpSections } from '../lib/help-content.js';
   import { searchHelp } from '../lib/help-search.js';
@@ -64,21 +64,7 @@
     <div class="mx-auto max-w-5xl">
       <h1 class="font-serif text-3xl tracking-tight">{$localizedText.help.title}</h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.help.subtitle}</p>
-      <label class="mt-5 flex h-10 items-center gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] px-3 focus-within:border-[var(--text-tertiary)]">
-        <Search size="16" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
-        <input
-          bind:this={searchField}
-          bind:value={query}
-          type="search"
-          data-testid="help-search"
-          placeholder={$localizedText.help.searchPlaceholder}
-          aria-label={$localizedText.help.searchPlaceholder}
-          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
-        />
-        {#if query}
-          <button type="button" class="rounded-ui p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.help.clear} on:click={() => { query = ''; searchField?.focus(); }}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
-        {/if}
-      </label>
+      <SearchField class="mt-5" bind:value={query} bind:inputEl={searchField} testid="help-search" placeholder={$localizedText.help.searchPlaceholder} />
     </div>
   </div>
 
@@ -150,7 +136,6 @@
   .help-body :global(th),
   .help-body :global(td) { border: 1px solid var(--border-subtle); padding: 0.3rem 0.6rem; text-align: left; color: var(--text-secondary); }
   .help-body :global(th) { color: var(--text-primary); background: var(--bg-secondary); }
-  [data-testid="help-search"]::-webkit-search-cancel-button { display: none; }
   :global(.help-item) { transition: background-color 0.6s ease; }
   :global(.help-item.help-flash) { background: color-mix(in srgb, var(--yellow) 18%, transparent); }
   :global([data-testid="help-results"] mark),
