@@ -1647,7 +1647,7 @@
                   {#each templatePreviewParts.metadata as field}
                     <div class="min-w-0">
                       <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">{field.label}</div>
-                      <div class="mt-1 truncate text-sm text-[var(--text-primary)]" title={field.value}>{field.value || '—'}</div>
+                      <div class="mt-1 truncate text-sm text-[var(--text-primary)]" title={field.value}>{field.value || $localizedText.app.emptyValue}</div>
                     </div>
                   {/each}
                 </div>

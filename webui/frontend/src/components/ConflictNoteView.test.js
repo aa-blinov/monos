@@ -37,7 +37,7 @@ test('версии названы устройствами, изменённые
   component.$on('resolve', resolve);
 
   expect(screen.getAllByRole('button', { name: 'Оставить: Телефон' })).toHaveLength(2);
-  expect(screen.getAllByTestId('conflict-ours-label')[0].textContent).toMatch(/Ноутбук — это устройство/);
+  expect(screen.getAllByTestId('conflict-ours-label')[0].textContent).toMatch(/Ноутбук \(это устройство\)/);
   expect(screen.getAllByText(/^Сегодня, \d\d:\d\d$/).length).toBeGreaterThan(0);
   const marks = [...container.querySelectorAll('mark')].map((mark) => mark.textContent);
   expect(marks).toContain('суббота, 9:00.');

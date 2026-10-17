@@ -133,6 +133,7 @@ const enText = {
       return `Notes not updated: ${count}`;
     },
     closeMenu: 'Close menu',
+    emptyValue: '(empty)',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are ordinary files on your computer. Monos helps you read, write and find them.',
     emptyMobile: 'Your notes are ordinary files on your computer. Tap New note to start.',
@@ -510,7 +511,7 @@ const enText = {
     myTemplates: 'My Templates',
     myTemplatesHint: 'These appear before the built-in templates when creating a note.',
     noCustomTemplates: 'No custom templates yet.',
-    emptyItem: '— empty',
+    emptyItem: '(empty)',
     noDescription: 'No description',
     libraryTitle: 'Library Templates',
     libraryHint: 'Hidden library templates will not appear in the create-from-template flow.',
@@ -1204,6 +1205,7 @@ const ruText = {
       return `Заметок не обновлено: ${count}`;
     },
     closeMenu: 'Закрыть меню',
+    emptyValue: '(пусто)',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Заметки хранятся обычными файлами на вашем компьютере. Monos помогает читать, писать и находить их.',
     emptyMobile: 'Заметки хранятся обычными файлами на вашем компьютере. Нажмите «Новая заметка», чтобы начать.',

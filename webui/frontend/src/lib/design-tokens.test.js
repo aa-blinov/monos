@@ -375,3 +375,18 @@ test('no dashes in the Russian interface text', async () => {
   walk(helpSections('ru'), 'help');
   assert.deepEqual(found, []);
 });
+
+// Component templates too: a dash between a label and its text, or standing alone for "empty", is a separator
+// the interface does without (a colon, a full stop, brackets or a word do the job). Comments are not interface.
+test('no dash separators in component markup', () => {
+  const found = [];
+  for (const file of files) {
+    if (!file.endsWith('.svelte')) continue;
+    const stripped = read(file)
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    stripped.split('\n').forEach((line, index) => { if (/[\u2014\u2013]/.test(line)) found.push(`${path.relative(SRC, file)}:${index + 1}`); });
+  }
+  assert.deepEqual(found, []);
+});

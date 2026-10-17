@@ -1015,7 +1015,7 @@
           <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
           <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
             {#each scopeWarnings as warning}
-              <li><code class="text-[var(--text-primary)]">{warning.scope}</code> — {warning.why}</li>
+              <li><code class="text-[var(--text-primary)]">{warning.scope}</code>: {warning.why}</li>
             {/each}
           </ul>
           <p class="mt-2 text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.tokenScopeHint}</p>
@@ -1293,9 +1293,9 @@
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
         <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span> — {$localizedText.settings.docsStepNewHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span> — {$localizedText.settings.docsStepImportHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span> — {$localizedText.settings.docsStepBackupHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span>. {$localizedText.settings.docsStepNewHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span>. {$localizedText.settings.docsStepImportHint}</span></li>
+          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span>. {$localizedText.settings.docsStepBackupHint}</span></li>
         </ol>
       </div>
 
