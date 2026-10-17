@@ -154,7 +154,7 @@
               {:else}
                 <button
                   type="button"
-                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[var(--bg-secondary)]/60"
+                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]"
                   on:click={() => openTag(entry.tag)}
                 >
                   <Hash size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
@@ -165,7 +165,7 @@
                   type="button"
                   data-testid="tag-rename"
                   aria-label={$localizedText.tags.rename(entry.tag)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--text-primary)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--text-primary)]"
                   on:click={() => startRename(entry.tag)}
                 >
                   <Pencil size="14" strokeWidth="1.7" aria-hidden="true" />
@@ -174,7 +174,7 @@
                   type="button"
                   data-testid="tag-delete"
                   aria-label={$localizedText.tags.drop(entry.tag)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)]/70 hover:text-[var(--red)]"
+                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--red)]"
                   on:click={() => askRemove(entry)}
                 >
                   <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />

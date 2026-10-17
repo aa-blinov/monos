@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { expect, test, vi } from 'vitest';
 import { NOTE_LINK_DRAG_TYPE } from '../lib/drag-data.js';
+import { installTooltips } from '../lib/tooltip.js';
 import FileTree from './FileTree.svelte';
 
 function createDataTransfer() {
@@ -37,7 +38,10 @@ test('FileTree диспатчит navigate для файла', async () => {
   );
 });
 
-test('FileTree показывает tooltip с полным именем файла на hover', async () => {
+test('FileTree: полное имя заметки показывает общая подсказка, справа и только если имя обрезано', async () => {
+  vi.useFakeTimers();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+  const stop = installTooltips(document);
   render(FileTree, {
     node: {
       path: 'notes/Work/Very Long Research Note Name.md',
@@ -45,16 +49,52 @@ test('FileTree показывает tooltip с полным именем фай�
       is_dir: false,
     },
   });
+  const row = screen.getByRole('button', { name: 'Very Long Research Note Name' });
+  expect(row.getAttribute('data-tooltip')).toBe('Very Long Research Note Name');
+  expect(row.getAttribute('data-tooltip-position')).toBe('right');
 
-  await fireEvent.mouseEnter(screen.getByRole('button', { name: 'Very Long Research Note Name' }));
-
-  const tooltip = screen.getByRole('tooltip');
-  expect(tooltip).toBeTruthy();
-  expect(tooltip.textContent).toContain('Very Long Research Note Name');
+  // jsdom has no layout: make the name look cut off.
+  const name = row.querySelector('.truncate');
+  Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 300 });
+  Object.defineProperty(name, 'clientWidth', { configurable: true, value: 120 });
+  await fireEvent.mouseOver(name);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+  await vi.advanceTimersByTimeAsync(500);
+  expect(screen.getByRole('tooltip').textContent).toBe('Very Long Research Note Name');
   expect(screen.queryByText('Work/Very Long Research Note Name.md')).toBeNull();
 
-  await fireEvent.mouseLeave(screen.getByRole('button', { name: 'Very Long Research Note Name' }));
+  await fireEvent.mouseOut(row, { relatedTarget: document.body });
   expect(screen.queryByRole('tooltip')).toBeNull();
+
+  // An uncut name needs no tooltip.
+  Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 100 });
+  await fireEvent.mouseOver(name);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+  stop();
+  vi.useRealTimers();
+});
+
+test('title= на любом элементе показывается общей подсказкой, а системная не всплывает', async () => {
+  vi.useFakeTimers();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+  const stop = installTooltips(document);
+  const button = document.createElement('button');
+  button.title = 'Sync now';
+  document.body.appendChild(button);
+
+  await fireEvent.mouseOver(button);
+  expect(button.hasAttribute('title')).toBe(false);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(screen.getByRole('tooltip').textContent).toBe('Sync now');
+  expect(screen.getByRole('tooltip').className).toContain('uppercase');
+
+  await fireEvent.pointerDown(button);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+  expect(button.getAttribute('title')).toBe('Sync now');
+  button.remove();
+  stop();
+  vi.useRealTimers();
 });
 
 test('FileTree раскрывает папку и пробрасывает navigate от вложенного файла', async () => {

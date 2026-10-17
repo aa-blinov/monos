@@ -697,7 +697,7 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-1">
+        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-1">
           {#each themeModeOptions as option}
             <button
               type="button"
@@ -866,7 +866,7 @@
       {#if storageStatus === 'remote'}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageRemoteOnly}</p>
       {:else if storage}
-        <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
+        <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
         {#if storage.unavailable}
           <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
         {:else if storage.restartRequired}
@@ -945,7 +945,7 @@
       {/if}
 
       {#if scopeWarnings.length}
-        <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+        <div class="rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
           <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
           <ul class="mt-1.5 space-y-1 text-xs leading-relaxed text-[var(--text-secondary)]">
             {#each scopeWarnings as warning}
@@ -1255,7 +1255,7 @@
       <div>
         <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
         {#if notesDir}
-          <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
+          <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
         {/if}
         <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
       </div>
@@ -1448,9 +1448,9 @@
           {#if showClipperToken}
             <div class="min-w-0 flex-1 space-y-1">
               <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>
-              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
+              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]">{window.location.origin}</code>
               <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperTokenLabel}</div>
-              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
+              <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]">{clipperToken}</code>
             </div>
           {/if}
         </div>

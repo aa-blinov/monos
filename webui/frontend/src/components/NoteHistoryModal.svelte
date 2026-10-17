@@ -117,7 +117,7 @@
             <button
               type="button"
               on:click={() => openRevision(revision)}
-              class="w-full border-0 border-b border-[var(--border-subtle)] px-3 py-2.5 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)]/50'}"
+              class="w-full border-0 border-b border-[var(--border-subtle)] px-3 py-2.5 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-primary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]'}"
             >
               <span class="block text-xs font-bold text-[var(--text-primary)]">{revisionTitle(revision.message, $localizedText.history.messages) || $localizedText.history.noMessage}</span>
               <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
@@ -153,7 +153,7 @@
           {#if !selectedContent.changed}
             <p class="mt-2 text-xs text-[var(--text-tertiary)]">{$localizedText.history.unchanged}</p>
           {:else}
-            <pre class="rounded-ui mt-3 max-h-[52vh] overflow-auto border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-3 font-mono text-xs leading-relaxed">{#each selectedContent.diff.split('\n') as line, i}<span class="block {lineClass(line)}">{line || ' '}</span>{/each}</pre>
+            <pre class="rounded-ui mt-3 max-h-[52vh] overflow-auto border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-3 font-mono text-xs leading-relaxed">{#each selectedContent.diff.split('\n') as line, i}<span class="block {lineClass(line)}">{line || ' '}</span>{/each}</pre>
           {/if}
         {/if}
       </div>

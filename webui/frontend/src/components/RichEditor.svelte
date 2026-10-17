@@ -844,6 +844,7 @@
       type="button"
       class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
       aria-label={$localizedText.richEditor.more}
+      title={$localizedText.richEditor.more}
       aria-haspopup="menu"
       aria-expanded={moreOpen}
       on:click={() => moreOpen = !moreOpen}
@@ -994,7 +995,7 @@
     on:drop|capture={handleDrop}
     on:click={(event) => { handleClick(event); if (wikiSuggestionsOpen) refreshWikiSuggestionsAfterDomUpdate(); }}
     class="min-h-0 h-full flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 py-4 lg:py-10 cursor-text touch-pan-y
-      {isImageDragging ? 'ring-1 ring-inset ring-[var(--text-secondary)]/35' : ''}
+      {isImageDragging ? 'ring-1 ring-inset ring-[color-mix(in_srgb,var(--text-secondary)_35%,transparent)]' : ''}
       [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:max-w-[var(--content-width,56rem)] [&_.ProseMirror]:mx-auto [&_.ProseMirror_p]:my-2
       [&_.ProseMirror]:[line-height:var(--line-height,1.625)] [&_.ProseMirror]:[font-size:var(--editor-font-size,16px)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[var(--text-secondary)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-30
       [&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:my-4

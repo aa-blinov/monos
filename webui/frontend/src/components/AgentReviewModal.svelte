@@ -73,7 +73,7 @@
           <button
             type="button"
             on:click={() => select(change.path)}
-            class="flex w-full items-start gap-2 rounded-ui px-2 py-1.5 text-left transition {selected === change.path ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]/60'}"
+            class="flex w-full items-start gap-2 rounded-ui px-2 py-1.5 text-left transition {selected === change.path ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]'}"
             data-testid="agent-review-item"
           >
             <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green)]' : change.status === 'deleted' ? 'text-[var(--red)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>
@@ -98,7 +98,7 @@
         {#if loading}
           <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.agentReview.loading}</p>
         {:else}
-          <pre class="rounded-ui max-h-[52vh] flex-1 overflow-auto border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/25 p-3 font-mono text-xs leading-relaxed" data-testid="agent-review-diff">{#each diff.split('\n') as line}<span class="block {lineClass(line)}">{line.startsWith('@@') ? '⋯' : line || ' '}</span>{/each}</pre>
+          <pre class="rounded-ui max-h-[52vh] flex-1 overflow-auto border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-3 font-mono text-xs leading-relaxed" data-testid="agent-review-diff">{#each diff.split('\n') as line}<span class="block {lineClass(line)}">{line.startsWith('@@') ? '⋯' : line || ' '}</span>{/each}</pre>
         {/if}
       {/if}
       {#if error}<p class="mt-2 text-xs text-[var(--red)]">{error}</p>{/if}

@@ -1127,7 +1127,7 @@
           {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
-            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]/50 transition"
+            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
             {#if pathLabel}
@@ -1173,7 +1173,7 @@
       <div class="space-y-0.5 lg:space-y-1">
         {#if isDragOverRoot}
           <div
-            class="mx-2 rounded-ui border-2 border-dashed border-[var(--text-secondary)]/30 py-3 text-center"
+            class="mx-2 rounded-ui border-2 border-dashed border-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] py-3 text-center"
             role="presentation"
             on:dragover|preventDefault
             on:drop={handleRootDrop}
@@ -1583,7 +1583,7 @@
                   <button
                     type="button"
                     on:click={() => selectTemplate(template)}
-                    class="w-full rounded-ui border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/50'}"
+                    class="w-full rounded-ui border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)]'}"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
@@ -1593,7 +1593,7 @@
                                           </div>
                     <div class="mt-2 flex flex-wrap gap-1">
                       {#each template.tags as tag}
-                        <span class="rounded-ui bg-[var(--bg-secondary)]/60 px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
+                        <span class="rounded-ui bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
                   </button>
@@ -1640,7 +1640,7 @@
           <h3 class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">{$localizedText.sidebar.templatePreview}</h3>
           <div
             style:--template-empty-label={`"${$localizedText.templates.emptyItem}"`}
-            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 text-[var(--text-secondary)]"
+            class="template-preview min-h-0 flex-1 overflow-auto overscroll-contain rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] p-4 text-[var(--text-secondary)]"
             data-testid="template-preview-scroll"
           >
             {#if selectedTemplate}

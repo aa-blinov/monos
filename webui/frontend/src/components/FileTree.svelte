@@ -26,16 +26,10 @@
   export let selectedPath = null;
   export let selectedPaths = new Set();
 
-  const TOOLTIP_OFFSET = 12;
-  const TOOLTIP_MARGIN = 16;
-
   let isExpanded = expanded;
   let _manualToggle = false;
   let isDragging = false;
   let isDragOver = false;
-  let tooltipVisible = false;
-  let tooltipX = 0;
-  let tooltipY = 0;
 
   $: if (!_manualToggle && isExpanded !== expanded) isExpanded = expanded;
   $: if (selectedPath) _manualToggle = false;
@@ -53,23 +47,6 @@
 
   function formatFileName(name = '') {
     return name.replace(/\.md$/i, '');
-  }
-
-  function canShowFileTooltip() {
-    if (node.is_dir || typeof window === 'undefined' || window.innerWidth < 1024) return false;
-    return true;
-  }
-
-  function showFileTooltip(event) {
-    if (!canShowFileTooltip()) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    tooltipX = Math.min(window.innerWidth - TOOLTIP_MARGIN, rect.right + TOOLTIP_OFFSET);
-    tooltipY = Math.min(window.innerHeight - TOOLTIP_MARGIN, Math.max(TOOLTIP_MARGIN, rect.top + rect.height / 2));
-    tooltipVisible = true;
-  }
-
-  function hideFileTooltip() {
-    tooltipVisible = false;
   }
 
   function toggle() {
@@ -119,7 +96,6 @@
   }
 
   function handleDragStart(e) {
-    hideFileTooltip();
     isDragging = true;
     const dragPaths = !node.is_dir && selectedPaths.has(node.path)
       ? [...selectedPaths]
@@ -176,7 +152,7 @@
 
 <div class="group text-sm lg:text-xs">
   <button
-    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-[background-color,border-color,opacity] lg:min-h-7 lg:px-3 lg:py-1.5 {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
+    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-[background-color,border-color,opacity] lg:min-h-7 lg:px-3 lg:py-1.5 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
     class:border-[var(--text-primary)]={node.is_dir && isDragOver}
     class:bg-[var(--border-subtle)]={node.is_dir && isDragOver}
     class:font-semibold={active}
@@ -186,10 +162,9 @@
     on:click={handleSelect}
     on:contextmenu={onRightClick}
     on:keydown={onKeyboardMenu}
-    on:mouseenter={showFileTooltip}
-    on:mouseleave={hideFileTooltip}
-    on:focus={showFileTooltip}
-    on:blur={hideFileTooltip}
+    data-tooltip={fileName}
+    data-tooltip-position="right"
+    data-tooltip-overflow
     draggable={node.path !== 'notes'}
     on:dragstart={handleDragStart}
     on:dragend={handleDragEnd}
@@ -231,19 +206,6 @@
       <span class="sr-only">{$localizedText.app.board.conflict}</span>
     {/if}
   </button>
-
-  {#if tooltipVisible}
-    <div
-      role="tooltip"
-      class="fixed z-[90] pointer-events-none max-w-xs rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-left shadow-lg shadow-black/10"
-      style="left: {tooltipX}px; top: {tooltipY}px; transform: translateY(-50%);"
-    >
-      <span class="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 border-b border-l border-[var(--border-subtle)] bg-[var(--bg-primary)]"></span>
-      <div class="font-serif text-sm leading-snug text-[var(--text-primary)] break-words">
-        {fileName}
-      </div>
-    </div>
-  {/if}
 
   {#if node.is_dir && isExpanded && node.children}
     <div class="ml-2.5 border-l border-[var(--border-subtle)] pl-1.5 lg:ml-3 lg:pl-2">

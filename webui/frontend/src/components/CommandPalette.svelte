@@ -433,7 +433,7 @@
               </div>
             {/if}
             <button
-              class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition {activeIndex === index ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]/70'}"
+              class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition {activeIndex === index ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)]'}"
               role="option"
               aria-selected={activeIndex === index}
               on:mouseenter={() => activeIndex = index}

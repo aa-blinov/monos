@@ -911,7 +911,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
             on:dblclick={resetSidebarWidth}
             on:keydown={handleSidebarResizeKeydown}
           >
-            <span class="absolute inset-y-0 right-0 w-px bg-transparent transition group-hover:bg-[var(--text-secondary)]/30 group-focus:bg-[var(--text-secondary)]/40"></span>
+            <span class="absolute inset-y-0 right-0 w-px bg-transparent transition group-hover:bg-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] group-focus:bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)]"></span>
           </TooltipIconButton>
         {/if}
       </div>

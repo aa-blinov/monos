@@ -139,7 +139,7 @@
         type="button"
         data-testid="save-current-search"
         on:click={() => dispatch('saveSearch', $searchQuery)}
-        class="absolute right-11 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        class="absolute right-11 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]"
         aria-label={$localizedText.savedSearches.save}
         title={$localizedText.savedSearches.save}
       >
@@ -150,7 +150,7 @@
       <button
         type="button"
         on:click={clearSearch}
-        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)]/35 hover:text-[var(--text-primary)]"
+        class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]"
         aria-label={$localizedText.header.closeSearch}
       >
         <X class="h-3.5 w-3.5" aria-hidden="true" />

@@ -32,7 +32,7 @@
       </p>
     {/if}
     {#if detail}
-      <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/35 px-4 py-3">
+      <div class="rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
         <div class="truncate text-sm font-semibold">{detail.name}</div>
         <div class="mt-1 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{detail.path?.replace(/^notes\//, '')}</div>
       </div>

@@ -135,7 +135,7 @@
         type="text"
         bind:value={query}
         placeholder={$localizedText.templates.searchPlaceholder}
-        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 text-sm outline-none"
+        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_30%,transparent)] px-4 text-sm outline-none"
       />
     </div>
 
@@ -289,7 +289,7 @@
           id="template-manager-content"
           bind:value={form.content}
           rows="12"
-          class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-3 font-mono text-xs leading-relaxed outline-none"
+          class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_30%,transparent)] p-3 font-mono text-xs leading-relaxed outline-none"
         ></textarea>
         <p class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.templates.placeholders}</p>
       </div>
