@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, Menu, dialog, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } = require('electron');
+const { registerTerminal } = require('./terminal.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
@@ -26,6 +27,10 @@ let backendServer = null;
 let windowFlushed = false;
 let quitFlushed = false;
 let backendStopped = false;
+let appOrigin = '';
+// The folder the terminal opens in: the notes folder the backend uses (it may be one chosen in Settings).
+let notesDir = '';
+let killTerminals = () => {};
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
@@ -81,6 +86,7 @@ async function startBackend() {
   }
 
   backendModule = await import(pathToFileURL(appPath('webui', 'backend', 'index.js')).href);
+  notesDir = backendModule.NOTES_DIR;
   // The address follows the access setting (this computer only, unless other devices are allowed).
   const started = await backendModule.startServer({ port: 0 });
   process.env.ALLOWED_ORIGINS = `http://127.0.0.1:${started.port}`;
@@ -124,7 +130,7 @@ function focusMainWindow() {
 
 function createWindow(port) {
   const icon = runtimeIconPath();
-  const appOrigin = `http://${APP_HOST}:${port}`;
+  appOrigin = `http://${APP_HOST}:${port}`;
   if (icon && app.dock) app.dock.setIcon(icon);
 
   mainWindow = new BrowserWindow({
@@ -136,7 +142,8 @@ function createWindow(port) {
     autoHideMenuBar: process.platform !== 'darwin',
     show: false,
     backgroundColor: '#282828',
-    webPreferences: { ...SECURE_WEB_PREFERENCES },
+    // The preload gives only this window the terminal bridge; windows it opens (the print view) get none.
+    webPreferences: { ...SECURE_WEB_PREFERENCES, preload: path.join(__dirname, 'preload.cjs') },
   });
 
   if (process.platform !== 'darwin') mainWindow.setMenu(null);
@@ -168,6 +175,8 @@ function createWindow(port) {
     const win = mainWindow;
     void flushPendingEdits(win).finally(() => win?.close());
   });
+  // A closed window's shells end with it.
+  mainWindow.on('closed', () => killTerminals());
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.loadURL(`${appOrigin}/`);
 }
@@ -177,6 +186,12 @@ async function boot() {
     configureApplicationMenu();
     configureSessionPermissions();
     const port = await startBackend();
+    killTerminals = registerTerminal({
+      ipcMain,
+      getWindow: () => mainWindow,
+      getOrigin: () => appOrigin,
+      getCwd: () => notesDir,
+    });
     createWindow(port);
   } catch (error) {
     dialog.showErrorBox('Monos failed to start', error?.stack || error?.message || String(error));

@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { clampTerminalHeight, terminalTheme } from './terminal.js';
+
+test('цвета терминала берутся из темы, недостающие — нейтральные', () => {
+  const vars = { '--bg-primary': '#282828', '--text-primary': '#ebdbb2', '--red': '#fb4934', '--blue': ' #83a598 ' };
+  const theme = terminalTheme((name) => vars[name] || '');
+  assert.equal(theme.background, '#282828');
+  assert.equal(theme.foreground, '#ebdbb2');
+  assert.equal(theme.red, '#fb4934');
+  assert.equal(theme.blue, '#83a598');
+  assert.equal(theme.cursor, '#ebdbb2');
+  assert.match(theme.green, /^#/);
+  assert.equal(theme.selectionBackground, '#ebdbb240');
+});
+
+test('высота панели в разумных пределах', () => {
+  assert.equal(clampTerminalHeight(undefined, 900), 320);
+  assert.equal(clampTerminalHeight(50, 900), 140);
+  assert.equal(clampTerminalHeight(5000, 900), 720);
+  assert.equal(clampTerminalHeight(400, 900), 400);
+});

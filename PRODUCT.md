@@ -96,6 +96,14 @@ A product that syncs to a vendor account, or stores notes in a proprietary datab
 - Current, maintained documentation in `docs/`: `ARCHITECTURE.md`, `STATE.md`, `LIB.md`, `FRONTMATTER.md`, `CONTRIBUTING.md`, `PUBLISHING.md`, kept honest by `docs/docs-freshness.test.js`.
 - **Absent — do not fabricate:** testimonials, customer logos, user numbers, press coverage, performance benchmarks, and pricing claims.
 
+## Device Model and the Agent
+
+Decided by the user on 2026-10-17.
+
+- **Every device is a client with its own copy.** Each computer runs its own Monos over its own notes folder; devices exchange notes only through the user's GitHub repository. There is no Monos server that other devices connect to. A conflict between devices is resolved on the device that meets it (the conflict views), never by a central authority.
+- **Monos is AI-native through a local agent.** A terminal panel inside the desktop app runs the user's own CLI agent (Claude Code, Codex, or any command) in the notes folder of that device, so the notes, the agent and its edits are in one window. The agent is treated as one more author on this device: its edits are files like any other, checkpointed before it runs, reviewable and revertible, and they reach the other devices through the same GitHub sync, with commits that say they came from the agent.
+- **The terminal never leaves the device.** It lives in the desktop app's main process and talks to the page over a private bridge, with no port and no network route. "Phone and other devices" (opening this computer's notes over Wi-Fi) remains a convenience view of the notes only; it never carries the terminal or the agent.
+
 ## Product Principles
 
 1. **The file is the product.** A note must always survive as valid, portable Markdown. Never trade file correctness for index speed, UI convenience, or a nicer preview.

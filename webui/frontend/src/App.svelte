@@ -39,6 +39,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
   import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
+  import { terminalBridge, toggleTerminal } from './lib/terminal.js';
+  import { listenForNoteChanges } from './lib/notes-events.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -192,6 +194,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       openCommandPalette('commands');
       return;
     }
+    // The terminal, as in code editors: ⌘J, or Ctrl+` (the key above Tab). Desktop app only.
+    if (terminalBridge && (((e.metaKey || e.ctrlKey) && key === 'j') || (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')))) {
+      e.preventDefault();
+      toggleTerminal();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && key === 'o') {
       e.preventDefault();
       openCommandPalette('notes');
@@ -219,7 +227,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
    * refreshes the board and raises a badge. Conflicts are surfaced where the
    * user already goes to resolve them, not as a modal out of nowhere.
    */
-  onDestroy(() => stopAutoSync());
+  let stopNoteChanges = () => {};
+  onDestroy(() => {
+    stopAutoSync();
+    stopNoteChanges();
+  });
 
   /**
    * The automatic sync runs from launch with the choices the person made in Settings. A round while Git is not
@@ -283,6 +295,15 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     void loadHomeRecentNotes();
     void refreshConflicts();
     void askDeviceNameOnce();
+    // Files changed outside Monos (an agent in the terminal): the board and the tree follow; the open note
+    // reads its file again by itself (lib/notes-events.js).
+    stopNoteChanges = listenForNoteChanges({
+      onFiles: () => {
+        void loadHomeRecentNotes();
+        void sidebarComponent?.loadTree?.();
+        void refreshConflicts();
+      },
+    });
     void applyShellSettings();
     void loadTemplateSettings();
     // Pull on launch and every few minutes. Uploads stay manual; a stale device
@@ -748,6 +769,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openTemplates') openTemplatesManager();
     if (event.detail === 'openTags') openTagPanel();
     if (event.detail === 'openTrash') openTrash();
+    if (event.detail === 'openTerminal') toggleTerminal();
     if (event.detail === 'openSavedSearches') openSavedSearchPanel();
     if (event.detail === 'openProperties') openPropertiesView();
   }
@@ -835,6 +857,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
+          on:openTerminal={toggleTerminal}
           on:openTags={openTagPanel}
           on:openProperties={openPropertiesView}
           on:openSavedSearches={openSavedSearchPanel}
@@ -1001,6 +1024,14 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         </Route>
         {/if}
       </main>
+      <!-- The agent terminal docks under the content, in the same column as the note: the notes, the agent and its
+           edits in one window. Desktop app only (see lib/terminal.js). -->
+      {#if terminalBridge}
+        <!-- Loaded only here: xterm is a large module a browser or a phone never needs. -->
+        {#await import('./components/TerminalPanel.svelte') then terminalModule}
+          <svelte:component this={terminalModule.default} />
+        {/await}
+      {/if}
       </div>
     </div>
   </div>

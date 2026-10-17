@@ -22,6 +22,7 @@ import { registerPublishRoutes } from './routes/publish.js';
 import { registerLockRoutes } from './routes/locks.js';
 import { registerLanRoutes } from './routes/lan.js';
 import { registerStorageRoutes } from './routes/storage.js';
+import { registerEventRoutes, startNotesWatcher, stopNotesWatcher } from './watcher.js';
 import {
   ACCESS_COOKIE,
   accessCookie,
@@ -174,6 +175,7 @@ export function currentListening() {
 
 registerLanRoutes(app, { listening: currentListening });
 registerStorageRoutes(app);
+registerEventRoutes(app);
 
 function registerFrontendStatic() {
   if (frontendStaticRegistered) return;
@@ -214,6 +216,7 @@ export function startServer({ port = 8000, host } = {}) {
   }
 
   indexAllFiles();
+  startNotesWatcher();
   registerFrontendStatic();
   registerSignalHandlers();
 
@@ -240,6 +243,7 @@ export function stopServer() {
       return;
     }
 
+    stopNotesWatcher();
     const activeServer = server;
     server = null;
     boundHost = null;

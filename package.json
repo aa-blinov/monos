@@ -26,7 +26,8 @@
     "dist:mac": "npm run build:frontend && electron-builder --mac --publish never",
     "dist:mac:arm64": "npm run build:frontend && electron-builder --mac --arm64 --publish never",
     "dist:mac:x64": "npm run build:frontend && electron-builder --mac --x64 --publish never",
-    "dist:linux": "npm run build:frontend && electron-builder --linux --publish never"
+    "dist:linux": "npm run build:frontend && electron-builder --linux --publish never",
+    "postinstall": "node scripts/fix-node-pty.mjs"
   },
   "build": {
     "appId": "app.monos.notes",
@@ -46,7 +47,8 @@
       "!webui/backend/*.test.js"
     ],
     "asarUnpack": [
-      "node_modules/better-sqlite3/**"
+      "node_modules/better-sqlite3/**",
+      "node_modules/node-pty/**"
     ],
     "win": {
       "icon": "build/icon.ico",
@@ -87,7 +89,8 @@
     "isomorphic-git": "^1.38.4",
     "lowlight": "^3.3.0",
     "marked": "^18.0.5",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "electron": "^39.8.10",
@@ -95,5 +98,8 @@
   },
   "overrides": {
     "qs": "6.16.0"
+  },
+  "allowScripts": {
+    "node-pty@1.1.0": true
   }
 }

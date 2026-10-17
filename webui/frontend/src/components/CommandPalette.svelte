@@ -1,4 +1,5 @@
 <script>
+  import { terminalBridge } from '../lib/terminal.js';
   import { createEventDispatcher, tick } from 'svelte';
   import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
@@ -180,6 +181,14 @@
         label: $localizedText.commandPalette.commands.openTrash,
         detail: $localizedText.commandPalette.commandDetails.openTrash,
       },
+      // Only where there is a shell: the desktop app.
+      ...(terminalBridge ? [{
+        id: 'openTerminal',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.terminal.open,
+        detail: $localizedText.terminal.openDetail,
+      }] : []),
       {
         id: 'toggleSidebar',
         type: 'command',

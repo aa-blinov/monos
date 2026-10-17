@@ -5,6 +5,7 @@
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
+  import { terminalBridge } from '../lib/terminal.js';
   import { get as getRequest } from '../lib/api/client.js';
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
@@ -1314,6 +1315,19 @@
           >
             <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
             <span class="truncate">{$localizedText.properties.sidebar}</span>
+          </TooltipIconButton>
+        {/if}
+        {#if terminalBridge}
+          <TooltipIconButton
+            data-testid="open-terminal"
+            on:click={() => dispatch('openTerminal')}
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            label={$localizedText.terminal.open}
+            tooltip={$localizedText.terminal.openDetail}
+            tooltipAlign="start"
+          >
+            <Icon.TerminalSquare class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.terminal.open}</span>
           </TooltipIconButton>
         {/if}
         <TooltipIconButton

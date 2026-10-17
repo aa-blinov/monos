@@ -60,6 +60,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `three-way-merge.js` | `mergeThreeWay` — combines an open note's edit with what a sync wrote under it; overlapping parts become conflict markers |
 | `three-way-merge.test.js` | Separate edits merge, same edit taken once, overlapping edits give a readable conflict |
 | `strings-coverage.test.js` | Every `$localizedText` key a component asks for exists in every language: a missing one renders as "undefined" |
+| `terminal.js` | `terminalBridge`, `terminalOpen`, `toggleTerminal`, `terminalTheme`, `clampTerminalHeight` — the agent terminal: present only in the desktop app, coloured by the theme |
+| `terminal.test.js` | Theme colours with fallbacks, selection colour xterm can parse, panel height limits |
+| `notes-events.js` | `listenForNoteChanges` — files changed outside Monos (an agent) arrive over `/api/events`; the open note rereads, the board and tree refresh |
+| `notes-events.test.js` | Change events reach the app, malformed ones are ignored, no EventSource is harmless |
 | `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
