@@ -6,6 +6,7 @@
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
   import { terminalBridge } from '../lib/terminal.js';
+  import { agentReviewOpen, syncBlockedByReview } from '../lib/agent-review.js';
   import { get as getRequest } from '../lib/api/client.js';
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
@@ -998,13 +999,21 @@
     syncError = '';
     try {
       await syncRequest();
+      syncBlockedByReview.set([]);
       await loadTree();
       void refreshConflicts();
       announceNotesPulled();
       await loadDirectories();
       gitConfigured = true;
     } catch (e) {
-      syncError = e.message || $localizedText.sidebar.errors.syncFailed;
+      if (e?.body?.reason === 'agent-review') {
+        // Not a failure to retry: the agent's edits here wait for review and changed elsewhere too.
+        const files = Array.isArray(e.body.files) ? e.body.files : [];
+        syncBlockedByReview.set(files);
+        syncError = $localizedText.agentReview.syncBlocked(files);
+      } else {
+        syncError = e?.body?.detail || e.message || $localizedText.sidebar.errors.syncFailed;
+      }
       dispatch('syncError', syncError);
     } finally {
       isSyncing = false;
@@ -1235,6 +1244,19 @@
         {selectedNoteCount > 0 ? $localizedText.sidebar.selectedNotes(selectedNoteCount) : $localizedText.sidebar.notes(tree ? totalNotes : 0)}
       </span>
       <div class="flex flex-col gap-0.5">
+        {#if $syncBlockedByReview.length}
+          <!-- The sync waits for the agent's edits to be reviewed (they changed on another device too). -->
+          <button
+            type="button"
+            data-testid="sync-blocked-review"
+            on:click={() => agentReviewOpen.set(true)}
+            class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--blue)] transition-colors hover:bg-[color-mix(in_srgb,var(--blue)_10%,transparent)]"
+            title={$localizedText.agentReview.syncBlocked($syncBlockedByReview)}
+          >
+            <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>
+            <span class="truncate">{$localizedText.agentReview.syncWaits}</span>
+          </button>
+        {/if}
         {#if $conflictedNotes.size + $conflictedFiles.size > 0}
           <!-- A conflict is resolved inside its note: this opens the first one. -->
           <button

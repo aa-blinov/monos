@@ -8,6 +8,9 @@ export const terminalBridge = typeof window !== 'undefined' ? window.monosTermin
 
 export const terminalOpen = writable(false);
 
+/** A note path clicked in the terminal's output (`notes/…`); the app opens it. */
+export const noteLinkRequest = writable(null);
+
 export function toggleTerminal() {
   if (terminalBridge) terminalOpen.update((open) => !open);
 }

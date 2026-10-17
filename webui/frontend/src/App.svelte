@@ -39,9 +39,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
   import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
-  import { launchAgent, terminalBridge, toggleTerminal } from './lib/terminal.js';
+  import { launchAgent, noteLinkRequest, terminalBridge, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
-  import { agentReviewOpen, refreshAgentReview } from './lib/agent-review.js';
+  import { agentReviewOpen, refreshAgentReview, syncBlockedByReview } from './lib/agent-review.js';
   import AgentReviewModal from './components/AgentReviewModal.svelte';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
@@ -230,9 +230,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
    * user already goes to resolve them, not as a modal out of nowhere.
    */
   let stopNoteChanges = () => {};
+  let stopNoteLinks = () => {};
   onDestroy(() => {
     stopAutoSync();
     stopNoteChanges();
+    stopNoteLinks();
   });
 
   /**
@@ -274,6 +276,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
   function handleAutoPullResult(result) {
     if (!result) return;
+    if (result.reviewBlocked) {
+      syncBlockedByReview.set(result.reviewBlocked);
+      void refreshAgentReview();
+      return;
+    }
+    syncBlockedByReview.set([]);
     autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
     void refreshConflicts();
     if (result.received > 0) {
@@ -300,6 +308,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     // Files changed outside Monos (an agent in the terminal): the board and the tree follow; the open note
     // reads its file again by itself (lib/notes-events.js).
     if (terminalBridge) void refreshAgentReview();
+    // A note path clicked in the terminal opens the note.
+    stopNoteLinks = noteLinkRequest.subscribe((request) => {
+      if (!request?.path) return;
+      noteLinkRequest.set(null);
+      handleNavigate({ detail: { path: request.path, name: request.path.split('/').pop(), isDir: false } });
+    });
     stopNoteChanges = listenForNoteChanges({
       onReview: () => { void refreshAgentReview(); },
       onFiles: () => {

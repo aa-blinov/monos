@@ -162,3 +162,17 @@ test('startAutoSync передаёт результат раунда в onResult
     stopAutoSync();
   }
 });
+
+test('раунд, остановленный из-за непроверенных правок агента, сообщает файлы приложению', async () => {
+  setAutoSyncPolicy({ upload: true });
+  const results = [];
+  globalThis.fetch = async () => answer(409, { reason: 'agent-review', files: ['План.md'] });
+  try {
+    startAutoSync({ onResult: (result) => results.push(result), intervalMs: 3_600_000 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(results, [{ ok: false, reviewBlocked: ['План.md'] }]);
+  } finally {
+    stopAutoSync();
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -5,6 +5,12 @@ import { derived, writable } from 'svelte/store';
  * `{ path: 'notes/…', status: 'added' | 'modified' | 'deleted' }`; the board and the tree mark those notes.
  */
 export const agentReview = writable({ changes: [] });
+/**
+ * Files that stop the sync: the agent changed them here, they wait for review, and another device changed
+ * them too. Paths relative to the notes folder, as the backend names them; empty when nothing blocks.
+ */
+export const syncBlockedByReview = writable([]);
+
 /** The review window, opened from the terminal's header. */
 export const agentReviewOpen = writable(false);
 
@@ -36,10 +42,20 @@ export async function agentDiff(path) {
   return (await call(`/api/agent/review/diff?path=${encodeURIComponent(path)}`)).diff || '';
 }
 
+// A file that no longer waits for review no longer holds the sync back.
+function settleBlocked(review) {
+  const waiting = new Set((review.changes || []).map((change) => change.path));
+  syncBlockedByReview.update((files) => files.filter((file) => waiting.has(`notes/${file}`)));
+}
+
 export async function keepAgentChanges(paths) {
-  agentReview.set(await post('/api/agent/review/keep', { paths }));
+  const review = await post('/api/agent/review/keep', { paths });
+  agentReview.set(review);
+  settleBlocked(review);
 }
 
 export async function revertAgentChanges(paths) {
-  agentReview.set(await post('/api/agent/review/revert', { paths }));
+  const review = await post('/api/agent/review/revert', { paths });
+  agentReview.set(review);
+  settleBlocked(review);
 }
