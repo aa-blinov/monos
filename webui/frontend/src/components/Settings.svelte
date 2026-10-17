@@ -3,6 +3,8 @@
   import { get } from 'svelte/store';
   import { createEventDispatcher, onMount } from 'svelte';
   import ConflictResolver from './ConflictResolver.svelte';
+  import AgentSettings from './AgentSettings.svelte';
+  import { terminalBridge } from '../lib/terminal.js';
   import ConfirmModal from './ConfirmModal.svelte';
   import { shortcutLabel } from '../lib/shortcut-label.js';
   import Checkbox from './Checkbox.svelte';
@@ -785,6 +787,10 @@
     </section>
 
     <!-- Language -->
+    {#if terminalBridge}
+      <AgentSettings />
+    {/if}
+
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
       <div>
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.backup}</h2>

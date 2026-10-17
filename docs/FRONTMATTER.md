@@ -36,7 +36,7 @@ Use lowercase words when possible. Prefer a small number of useful tags over lon
 
 ### `category`
 
-Optional grouping label, usually matching the folder where the note lives. In the note's properties it is the Category field; it does not move the file. The field suggests categories that already exist in the notes, and a name typed in a different case reuses the existing spelling.
+Optional grouping label from older versions, usually matching the folder where the note lives. Monos keeps it as written but no longer shows it: a note's folder is where its file is, and the Folder button in the note's bottom bar moves the file.
 
 ```yaml
 category: Projects
@@ -60,7 +60,7 @@ Any other top-level key is a property of the note. Its type comes from how the v
 
 The Properties panel in the editor edits them, and each change is written to the frontmatter line by line: the other lines, their order and the body stay as they were. `title`, `tags`, `category`, `pinned` and `aliases` belong to the app and cannot be used as property names.
 
-Search filters by properties: `prop:status` (the property is there), `prop:status=done`, `prop:priority>=3`, `prop:due<2026-12-01`, and `-prop:status=done` leaves those notes out. The Properties entry in the sidebar opens the notes as a table: choose the columns, sort by any of them, and filter with the same syntax.
+Search filters by properties: `prop:status` (the property is there), `prop:status=done`, `prop:priority>=3`, `prop:due<2026-12-01`, and `-prop:status=done` leaves those notes out. The Notes table entry in the sidebar opens the notes as a table: choose the columns, sort by any of them, and filter with the same syntax.
 
 ## Body
 

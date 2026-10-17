@@ -188,6 +188,12 @@
         section: 'commands',
         label: $localizedText.terminal.open,
         detail: $localizedText.terminal.openDetail,
+      }, {
+        id: 'launchAgent',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.terminal.launchCommand,
+        detail: $localizedText.terminal.launchCommandDetail,
       }] : []),
       {
         id: 'toggleSidebar',

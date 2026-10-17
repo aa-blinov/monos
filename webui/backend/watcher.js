@@ -3,6 +3,7 @@ import path from 'path';
 import { NOTES_DIR } from './config.js';
 import { getDb } from './database.js';
 import { indexAllFiles } from './indexing.js';
+import { isAgentRuleFile } from './agent-rules.js';
 
 // Files in the notes folder change without Monos: an agent in the terminal, another editor, a script.
 // The folder is watched, and a change Monos did not make itself is indexed and announced to the open pages
@@ -54,6 +55,7 @@ export function startNotesWatcher() {
       if (!name) return;
       const relative = String(name).replace(/\\/g, '/');
       if (IGNORED.test(relative) || path.basename(relative).startsWith('.')) return;
+      if (isAgentRuleFile(path.join(NOTES_DIR, relative))) return;
       pending.add(relative);
       clearTimeout(timer);
       timer = setTimeout(flush, SETTLE_MS);

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { isAgentRuleFile } from './agent-rules.js';
 import { getDb } from './database.js';
 import { indexNoteForFts, removeNoteFromFts, ensureFtsSchema } from './fts.js';
 import { parseFrontmatterMetadata } from './search.js';
@@ -219,6 +220,8 @@ export function indexAllFiles() {
         continue;
       }
 
+      // The agent's rule files at the top of the folder (AGENTS.md, CLAUDE.md…) are not notes.
+      if (isAgentRuleFile(fullPath)) continue;
       if (entry.name.endsWith('.md') || entry.name.endsWith('.txt')) {
         indexFile(fullPath, readTextFile(fullPath));
       }

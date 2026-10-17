@@ -39,7 +39,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
   import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
-  import { terminalBridge, toggleTerminal } from './lib/terminal.js';
+  import { launchAgent, terminalBridge, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
@@ -770,6 +770,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openTags') openTagPanel();
     if (event.detail === 'openTrash') openTrash();
     if (event.detail === 'openTerminal') toggleTerminal();
+    if (event.detail === 'launchAgent') launchAgent();
     if (event.detail === 'openSavedSearches') openSavedSearchPanel();
     if (event.detail === 'openProperties') openPropertiesView();
   }

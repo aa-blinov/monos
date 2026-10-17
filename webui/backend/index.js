@@ -23,6 +23,7 @@ import { registerLockRoutes } from './routes/locks.js';
 import { registerLanRoutes } from './routes/lan.js';
 import { registerStorageRoutes } from './routes/storage.js';
 import { registerEventRoutes, startNotesWatcher, stopNotesWatcher } from './watcher.js';
+import { registerAgentRoutes } from './routes/agent.js';
 import {
   ACCESS_COOKIE,
   accessCookie,
@@ -176,6 +177,7 @@ export function currentListening() {
 registerLanRoutes(app, { listening: currentListening });
 registerStorageRoutes(app);
 registerEventRoutes(app);
+registerAgentRoutes(app);
 
 function registerFrontendStatic() {
   if (frontendStaticRegistered) return;

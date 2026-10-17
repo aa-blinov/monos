@@ -65,7 +65,7 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
       cwd: fs.existsSync(cwd) ? cwd : os.homedir(),
       env: shellEnv(),
     });
-    const session = { proc, buffer: '', timer: null };
+    const session = { proc, buffer: '', timer: null, shell: file };
     proc.onData((data) => {
       session.buffer += data;
       if (session.timer) return;
@@ -99,6 +99,19 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
       session.proc.resize(Math.max(20, Math.min(500, cols | 0)), Math.max(5, Math.min(200, rows | 0)));
     } catch {
       // the shell exited between the resize and now
+    }
+  });
+
+  // What runs in the foreground now: the shell, or a program started in it (an agent). The page decides from
+  // this whether to start the agent or to type into the one that is already running.
+  ipcMain.handle('terminal:process', (event, id) => {
+    if (!trusted(event)) return null;
+    const session = sessions.get(id);
+    if (!session) return null;
+    try {
+      return { process: path.basename(String(session.proc.process || '')), shell: path.basename(session.shell) };
+    } catch {
+      return null;
     }
   });
 

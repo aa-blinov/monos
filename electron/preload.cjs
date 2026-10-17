@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('monosTerminal', {
   write: (id, data) => ipcRenderer.send('terminal:write', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('terminal:resize', id, cols, rows),
   kill: (id) => ipcRenderer.send('terminal:kill', id),
+  process: (id) => ipcRenderer.invoke('terminal:process', id),
   onData: (callback) => listen('terminal:data', callback),
   onExit: (callback) => listen('terminal:exit', callback),
 });

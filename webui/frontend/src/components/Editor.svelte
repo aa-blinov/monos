@@ -16,6 +16,7 @@
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
   import { markPinned } from '../lib/sidebar-pinned.js';
+  import { askAgentAboutNote, terminalBridge } from '../lib/terminal.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
@@ -57,7 +58,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -2028,6 +2029,12 @@
               <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
                 <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
               </button>
+              <!-- The agent reads the note from the notes folder; a locked note is sealed there, so it is not offered. -->
+              {#if terminalBridge && loadedFilePath && !fileInfo?.locked}
+                <button type="button" role="menuitem" data-testid="menu-ask-agent" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; askAgentAboutNote(loadedFilePath); }}>
+                  <Bot size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.askAboutNote}
+                </button>
+              {/if}
               <button type="button" role="menuitem" data-testid="menu-lock" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { propertyTriggers.lock = document.querySelector('[data-testid="editor-more"]'); togglePropertyPanel('lock'); }}>
                 <Lock size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.lockMenu}
               </button>
