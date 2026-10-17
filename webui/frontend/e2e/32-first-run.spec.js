@@ -26,8 +26,32 @@ test('Outline показывает заголовок, который тольк
   await expect(page.getByText('No headings yet')).toHaveCount(0, { timeout: 1000 });
 });
 
-test('в настройках первым идёт язык, а не резервные копии', async ({ page }) => {
+test('в настройках первым идёт внешний вид, а в нём язык, а не резервные копии', async ({ page }) => {
   await prepareMonos(page);
   await page.goto('/settings');
-  await expect(page.locator('h2').first()).toHaveText('Language');
+  await expect(page.locator('h2').first()).toHaveText('Appearance');
+  await expect(page.locator('#settings-appearance #interface-language')).toBeVisible();
+});
+
+test('настройки: навигация по разделам переносит к ним и отмечает тот, что на экране', async ({ page }) => {
+  await prepareMonos(page);
+  await page.goto('/settings');
+  const nav = page.getByTestId('settings-nav');
+  await expect(nav.getByRole('button', { name: 'Appearance' })).toHaveAttribute('aria-current', 'true');
+
+  await nav.getByRole('button', { name: 'Sync', exact: true }).click();
+  await expect(page.locator('#settings-sync')).toBeInViewport();
+  await expect(nav.getByRole('button', { name: 'Sync', exact: true })).toHaveAttribute('aria-current', 'true');
+  await expect(nav.getByRole('button', { name: 'Appearance' })).not.toHaveAttribute('aria-current', 'true');
+
+  await nav.getByRole('button', { name: 'Advanced' }).click();
+  await expect(page.getByTestId('advanced-settings')).toHaveAttribute('open', '');
+});
+
+test('настройки: вместо длинной документации одна строка со ссылкой на справку', async ({ page }) => {
+  await prepareMonos(page);
+  await page.goto('/settings');
+  await expect(page.getByText('Keyboard', { exact: true })).toHaveCount(0);
+  await page.getByTestId('settings-open-help').click();
+  await expect(page).toHaveURL(/\/help$/);
 });
