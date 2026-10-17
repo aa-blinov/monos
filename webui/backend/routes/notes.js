@@ -403,7 +403,7 @@ export function registerNoteRoutes(app) {
       }
 
       const matched = query
-        ? new Set(searchEntries(entries, { query, limit: entries.length }).map((item) => item.path))
+        ? new Set(searchEntries(entries, { query, limit: entries.length, excerpts: false }).map((item) => item.path))
         : null;
       const rows = entries
         .filter((entry) => !matched || matched.has(entry.path))

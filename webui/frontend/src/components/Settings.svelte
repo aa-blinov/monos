@@ -150,11 +150,19 @@
 
   onMount(async () => {
     try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
-    loadOrphanAttachments();
-    loadConnectionReport();
     loadLanAccess();
     loadStorage();
   });
+
+  // The two reports under "Advanced" read every note on disk; they run when that section is first opened,
+  // not each time Settings is (on a big vault they were most of what Settings waited for).
+  let advancedLoaded = false;
+  function loadAdvancedReports(event) {
+    if (advancedLoaded || !event.currentTarget.open) return;
+    advancedLoaded = true;
+    loadOrphanAttachments();
+    loadConnectionReport();
+  }
 
   // Where the notes live. A chosen folder opens on the next start; the section says so until then.
   let storage = null;
@@ -1291,7 +1299,7 @@
       </div>
     </section>
 
-    <details class="group space-y-8 border-t border-[var(--border-subtle)] pt-6" data-testid="advanced-settings">
+    <details class="group space-y-8 border-t border-[var(--border-subtle)] pt-6" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
       <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
         <span class="block">
           <span class="block text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.advanced}</span>

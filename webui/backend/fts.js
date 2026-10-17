@@ -21,6 +21,10 @@
  */
 
 const FTS_TABLE = 'notes_fts';
+// Which FTS row belongs to which note. `DELETE FROM notes_fts WHERE path = ?` has no index to use and reads the
+// whole table: one pass per note made indexing grow with the square of the vault (a minute at 5000 notes).
+// Rows are deleted by rowid instead, and this table is where the rowid comes from.
+const FTS_IDS = 'notes_fts_ids';
 const MIN_TRIGRAM_LENGTH = 3;
 // Above this share of the corpus, narrowing buys nothing: the plain scan
 // already has to touch every row, and the index only adds an oversized
@@ -50,7 +54,28 @@ export function ensureFtsSchema(db) {
       content,
       tokenize = 'trigram'
     );
+    CREATE TABLE IF NOT EXISTS ${FTS_IDS} (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      path TEXT NOT NULL UNIQUE
+    );
   `);
+}
+
+// Statements are compiled once per connection: compiling them again for every note was a visible share of a reindex.
+const statements = new WeakMap();
+function stmt(db, key, sql) {
+  let byKey = statements.get(db);
+  if (!byKey) statements.set(db, (byKey = new Map()));
+  let prepared = byKey.get(key);
+  if (!prepared) byKey.set(key, (prepared = db.prepare(sql)));
+  return prepared;
+}
+
+function ftsRowId(db, notePath, create) {
+  const row = stmt(db, 'idOf', `SELECT id FROM ${FTS_IDS} WHERE path = ?`).get(notePath);
+  if (row) return row.id;
+  if (!create) return null;
+  return Number(stmt(db, 'newId', `INSERT INTO ${FTS_IDS} (path) VALUES (?)`).run(notePath).lastInsertRowid);
 }
 
 function quote(value) {
@@ -74,14 +99,9 @@ function ftsTerm(term) {
   return `"${quote(cleaned)}"`;
 }
 
-export function indexNoteForFts(db, note) {
-  if (!note?.path) return;
-  db.prepare(`DELETE FROM ${FTS_TABLE} WHERE path = ?`).run(note.path);
-  if (note.is_dir) return;
-  db.prepare(`
-    INSERT INTO ${FTS_TABLE} (path, name, title, tags, content)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
+function writeFtsRow(db, id, note) {
+  stmt(db, 'insert', `INSERT INTO ${FTS_TABLE} (rowid, path, name, title, tags, content) VALUES (?, ?, ?, ?, ?, ?)`).run(
+    id,
     note.path,
     quote(note.name || ''),
     quote(note.title || ''),
@@ -90,22 +110,35 @@ export function indexNoteForFts(db, note) {
   );
 }
 
-export function removeNoteFromFts(db, path) {
-  db.prepare(`DELETE FROM ${FTS_TABLE} WHERE path = ?`).run(path);
+export function indexNoteForFts(db, note) {
+  if (!note?.path) return;
+  if (note.is_dir) return removeNoteFromFts(db, note.path);
+  const id = ftsRowId(db, note.path, true);
+  stmt(db, 'deleteRow', `DELETE FROM ${FTS_TABLE} WHERE rowid = ?`).run(id);
+  writeFtsRow(db, id, note);
 }
 
+export function removeNoteFromFts(db, path) {
+  const id = ftsRowId(db, path, false);
+  if (id === null) return;
+  stmt(db, 'deleteRow', `DELETE FROM ${FTS_TABLE} WHERE rowid = ?`).run(id);
+  stmt(db, 'deleteId', `DELETE FROM ${FTS_IDS} WHERE id = ?`).run(id);
+}
+
+/** Fills the index from `notes_index` in one pass, without the per-note delete: it starts from empty. */
 export function rebuildFts(db) {
   ensureFtsSchema(db);
-  db.exec(`DELETE FROM ${FTS_TABLE}`);
   const rows = db.prepare(`
-    SELECT path, name, title, tags, content, is_dir
+    SELECT path, name, title, tags, content
     FROM notes_index
     WHERE is_dir = 0
   `).all();
-  const insert = db.transaction((items) => {
-    for (const row of items) indexNoteForFts(db, row);
+  const fill = db.transaction((items) => {
+    db.exec(`DELETE FROM ${FTS_TABLE}`);
+    db.exec(`DELETE FROM ${FTS_IDS}`);
+    for (const row of items) writeFtsRow(db, ftsRowId(db, row.path, true), row);
   });
-  insert(rows);
+  fill(rows);
   return rows.length;
 }
 
@@ -122,7 +155,10 @@ export function ftsInSync(db) {
     return false;
   }
   const expected = db.prepare('SELECT COUNT(*) AS c FROM notes_index WHERE is_dir = 0').get()?.c ?? 0;
-  return indexed === expected && indexed > 0;
+  // The rowid map must agree too: an index from before the map existed has rows nothing can delete by rowid.
+  let mapped = -1;
+  try { mapped = db.prepare(`SELECT COUNT(*) AS c FROM ${FTS_IDS}`).get()?.c ?? 0; } catch { /* no map yet */ }
+  return indexed === expected && indexed > 0 && mapped === indexed;
 }
 
 /**
@@ -192,4 +228,27 @@ export function searchFts(db, parsed, { searchContent = false } = {}) {
   if (total >= MIN_CORPUS_FOR_SELECTIVITY && rows.length > total * MAX_CANDIDATE_RATIO) return null;
 
   return rows.map((row) => row.path);
+}
+
+/**
+ * The notes whose text may contain one of these phrases — a superset of the real mentions, for the caller to
+ * confirm. `null` when the index cannot answer (out of step, or a phrase shorter than a trigram), so the caller
+ * reads every note instead. Each phrase is asked in both Unicode forms: names come off the disk decomposed.
+ */
+export function pathsMentioning(db, phrases) {
+  if (!ftsInSync(db)) return null;
+  const forms = new Set();
+  for (const phrase of phrases) {
+    forms.add(phrase.normalize('NFC'));
+    forms.add(phrase.normalize('NFD'));
+  }
+  const terms = [...forms].map(ftsTerm);
+  if (!terms.length || terms.some((term) => !term)) return null;
+  try {
+    return db.prepare(`SELECT path FROM ${FTS_TABLE} WHERE ${FTS_TABLE} MATCH ?`)
+      .all(terms.map((term) => `content : ${term}`).join(' OR '))
+      .map((row) => row.path);
+  } catch {
+    return null;
+  }
 }

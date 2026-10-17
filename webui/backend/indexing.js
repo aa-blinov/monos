@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { isAgentRuleFile } from './agent-rules.js';
 import { getDb } from './database.js';
-import { indexNoteForFts, removeNoteFromFts, ensureFtsSchema } from './fts.js';
+import { indexNoteForFts, removeNoteFromFts, ensureFtsSchema, ftsInSync, rebuildFts } from './fts.js';
 import { parseFrontmatterMetadata } from './search.js';
 import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
@@ -178,67 +178,179 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
   }
 }
 
+/**
+ * Whether the index already holds this file exactly: same text, same modification time, same place. Such a file
+ * is left alone — reading every note back into the database on each start, each sync and each setup was a
+ * minute of frozen app on a big vault, for no change.
+ */
+function indexHolds(row, filePath, storedContent, stats) {
+  if (!row) return false;
+  const content = isLockedNote(storedContent) ? '' : storedContent;
+  return row.modified_at === stats.mtime.toISOString()
+    && row.content === content
+    && row.name === path.basename(filePath)
+    && row.parent_path === path.dirname(relPath(filePath)).replace(/\\/g, '/');
+}
+
+// Per connection: the prepared statements, and whether the one-off metadata migration has run.
+const contexts = new WeakMap();
+function contextOf(db) {
+  let context = contexts.get(db);
+  if (!context) {
+    context = {
+      migrated: false,
+      rowOf: db.prepare('SELECT * FROM notes_index WHERE path = ?'),
+      insertDir: db.prepare(`
+        INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, content, date_created, modified_at, last_opened)
+        VALUES (?, ?, ?, 1, ?, '', ?, ?, ?)
+      `),
+      updateDir: db.prepare('UPDATE notes_index SET name = ?, parent_path = ?, modified_at = ? WHERE path = ?'),
+      familyOf: db.prepare("SELECT path FROM notes_index WHERE path = ? OR path LIKE ? || '/%'"),
+      deleteFamily: db.prepare("DELETE FROM notes_index WHERE path = ? OR path LIKE ? || '/%'"),
+    };
+    contexts.set(db, context);
+  }
+  return context;
+}
+
+/** A folder's row, made or brought up to date. */
+function upsertDirectory(db, fullPath, name) {
+  const { rowOf, insertDir, updateDir } = contextOf(db);
+  const relativePath = relPath(fullPath);
+  const existing = rowOf.get(relativePath);
+  const parentPath = path.dirname(relativePath).replace(/\\/g, '/');
+  const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
+  if (!existing) {
+    insertDir.run(relativePath, name, name.normalize('NFC'), parentPath, nowISO(), modifiedAt, nowISO());
+  } else if (existing.name !== name || existing.parent_path !== parentPath || existing.modified_at !== modifiedAt) {
+    updateDir.run(name, parentPath, modifiedAt, relativePath);
+  }
+}
+
+/** A note file, read into the index unless the index already holds it exactly. */
+function indexFileIfChanged(db, fullPath) {
+  const text = readTextFile(fullPath);
+  if (indexHolds(contextOf(db).rowOf.get(relPath(fullPath)), fullPath, text, fs.statSync(fullPath))) return;
+  indexFile(fullPath, text);
+}
+
+const isNoteFile = (name) => name.endsWith('.md') || name.endsWith('.txt');
+const isHiddenSegment = (segment) => segment.startsWith('_') || segment.startsWith('.');
+
+/** Everything under a folder; `seen` collects the paths met, for the sweep of what is gone. */
+function indexSubtree(db, dir, seen) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    seen?.add(relPath(fullPath));
+
+    if (entry.isDirectory()) {
+      if (isHiddenSegment(entry.name)) continue;
+      upsertDirectory(db, fullPath, entry.name);
+      indexSubtree(db, fullPath, seen);
+      continue;
+    }
+
+    // The agent's rule files at the top of the folder (AGENTS.md, CLAUDE.md…) are not notes.
+    if (isAgentRuleFile(fullPath)) continue;
+    if (isNoteFile(entry.name)) indexFileIfChanged(db, fullPath);
+  }
+}
+
 export function indexAllFiles() {
   const db = getDb();
   const indexedPaths = new Set();
+  let ftsAvailable = true;
 
   fs.mkdirSync(NOTES_DIR, { recursive: true });
   try {
     ensureFtsSchema(db);
   } catch {
     // No FTS5 in this build — search falls back to the linear scan.
+    ftsAvailable = false;
   }
-  migrateCachedMetadataToFrontmatter(db);
+  // Notes from before metadata lived in the file: moved over once. It reads every note that has any metadata,
+  // which is most of them, so it does not run again for each pass.
+  const context = contextOf(db);
+  if (!context.migrated) {
+    migrateCachedMetadataToFrontmatter(db);
+    context.migrated = true;
+  }
 
-  function walk(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+  // One transaction for the whole pass: every statement committing on its own made each note cost a disk sync.
+  db.transaction(() => {
+    indexSubtree(db, NOTES_DIR, indexedPaths);
 
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      const relativePath = relPath(fullPath);
-      indexedPaths.add(relativePath);
+    const allPaths = db.prepare('SELECT path FROM notes_index').all().map((row) => row.path);
+    for (const itemPath of allPaths) {
+      if (!indexedPaths.has(itemPath)) forgetPath(db, itemPath);
+    }
 
-      if (entry.isDirectory()) {
-        if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+    ensureTextIndex(db, ftsAvailable);
+  })();
+}
 
-        const existing = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(relativePath);
-        const parentPath = path.dirname(relativePath).replace(/\\/g, '/');
+/** A note, or a folder with everything in it, gone from the disk: out of the index and the text index. */
+function forgetPath(db, itemPath) {
+  const { familyOf, deleteFamily } = contextOf(db);
+  const family = familyOf.all(itemPath, itemPath).map((row) => row.path);
+  deleteFamily.run(itemPath, itemPath);
+  for (const gone of family) {
+    try {
+      removeNoteFromFts(db, gone);
+    } catch {
+      // A missing FTS index must not break reindexing.
+    }
+  }
+}
 
-        if (!existing) {
-          const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
-          db.prepare(`
-            INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, content, date_created, modified_at, last_opened)
-            VALUES (?, ?, ?, 1, ?, '', ?, ?, ?)
-          `).run(relativePath, entry.name, entry.name.normalize('NFC'), parentPath, nowISO(), modifiedAt, nowISO());
-        } else {
-          const modifiedAt = fs.statSync(fullPath).mtime.toISOString();
-          db.prepare('UPDATE notes_index SET name = ?, parent_path = ?, modified_at = ? WHERE path = ?')
-            .run(entry.name, parentPath, modifiedAt, relativePath);
-        }
+// Notes left alone are not written to the text index again, so an index that fell out of step (a new tokenizer,
+// a table dropped by an older build) has to be filled from the rows.
+function ensureTextIndex(db, available = true) {
+  if (!available) return;
+  try {
+    if (!ftsInSync(db)) rebuildFts(db);
+  } catch {
+    // Search falls back to the scan.
+  }
+}
 
-        walk(fullPath);
+/**
+ * Brings the index up to date for these files only (absolute paths): what a pull or an agent changed, rather than
+ * every note again. A file that is gone leaves the index; a folder is read through; a file under a hidden folder
+ * is not a note.
+ */
+export function indexPaths(fullPaths) {
+  const db = getDb();
+  const notesRoot = path.resolve(NOTES_DIR);
+  db.transaction(() => {
+    const ensured = new Set();
+    const ensureAncestors = (dir) => {
+      const absolute = path.resolve(dir);
+      if (absolute === notesRoot || !absolute.startsWith(notesRoot + path.sep) || ensured.has(absolute)) return;
+      ensureAncestors(path.dirname(absolute));
+      upsertDirectory(db, absolute, path.basename(absolute));
+      ensured.add(absolute);
+    };
+    for (const fullPath of fullPaths) {
+      const absolute = path.resolve(fullPath);
+      const relative = path.relative(notesRoot, absolute);
+      if (!relative || relative.startsWith('..')) continue;
+      if (relative.split(path.sep).some(isHiddenSegment)) continue;
+
+      let stats = null;
+      try { stats = fs.statSync(absolute); } catch { /* gone */ }
+      if (!stats) {
+        forgetPath(db, relPath(absolute));
         continue;
       }
-
-      // The agent's rule files at the top of the folder (AGENTS.md, CLAUDE.md…) are not notes.
-      if (isAgentRuleFile(fullPath)) continue;
-      if (entry.name.endsWith('.md') || entry.name.endsWith('.txt')) {
-        indexFile(fullPath, readTextFile(fullPath));
+      ensureAncestors(path.dirname(absolute));
+      if (stats.isDirectory()) {
+        upsertDirectory(db, absolute, path.basename(absolute));
+        indexSubtree(db, absolute, null);
+      } else if (!isAgentRuleFile(absolute) && isNoteFile(path.basename(absolute))) {
+        indexFileIfChanged(db, absolute);
       }
     }
-  }
-
-  walk(NOTES_DIR);
-
-  const allPaths = db.prepare('SELECT path FROM notes_index').all().map((row) => row.path);
-  for (const itemPath of allPaths) {
-    if (!indexedPaths.has(itemPath)) {
-      db.prepare('DELETE FROM notes_index WHERE path = ? OR path LIKE ? || \'/%\'').run(itemPath, itemPath);
-      try {
-        removeNoteFromFts(db, itemPath);
-      } catch {
-        // Same as above: a missing FTS index must not break reindexing.
-      }
-    }
-  }
+    ensureTextIndex(db);
+  })();
 }

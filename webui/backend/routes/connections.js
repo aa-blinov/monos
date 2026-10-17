@@ -4,6 +4,7 @@ import { updateNotes } from '../link-rename.js';
 import { sendError } from './helpers.js';
 import { requireQueryPath } from './validate.js';
 import { findConflictCopies } from '../conflict-copies.js';
+import { pathsMentioning } from '../fts.js';
 
 // Connections between notes: which links resolve, which notes name a note in plain prose without
 // linking to it, which notes have no links at all, and which have gone quiet. Every route reads the
@@ -39,12 +40,23 @@ function resolveTarget(byName, target) {
   return [];
 }
 
+// The graph needs names, titles and links; the text of a note is read only for the notes a route actually looks
+// inside. Loading every note's text for each request (tens of megabytes on a big vault) made opening a note, or
+// Settings, a quarter of a second of frozen app.
 function linkGraph(db) {
+  const readContent = db.prepare('SELECT content FROM notes_index WHERE path = ?');
   const notes = db.prepare(`
-    SELECT path, name, name_nfc, title, content, modified_at, last_opened
+    SELECT path, name, name_nfc, title, modified_at, last_opened
     FROM notes_index
     WHERE is_dir = 0 AND (trashed_at IS NULL OR trashed_at = '')
   `).all();
+  for (const note of notes) {
+    let text;
+    Object.defineProperty(note, 'content', {
+      enumerable: true,
+      get() { return (text ??= readContent.get(note.path)?.content ?? ''); },
+    });
+  }
   const aliases = new Map();
   for (const row of db.prepare('SELECT path, alias_nfc FROM note_aliases').all()) {
     if (!aliases.has(row.path)) aliases.set(row.path, []);
@@ -124,9 +136,13 @@ export function registerConnectionRoutes(app) {
 
       const phrases = mentionPhrases(note, aliases.get(filePath));
       const linking = new Set(links.filter((link) => link.paths.includes(filePath)).map((link) => link.source));
+      // The text index says which notes can hold the phrase at all; only those are read.
+      const candidates = phrases.length ? pathsMentioning(getDb(), phrases) : [];
+      const possible = candidates && new Set(candidates);
       const results = [];
       for (const other of notes) {
         if (other.path === filePath || linking.has(other.path)) continue;
+        if (possible && !possible.has(other.path)) continue;
         const phrase = findMention(other.content, phrases);
         if (!phrase) continue;
         results.push({ path: other.path, title: displayTitle(other), phrase });

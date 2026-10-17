@@ -512,7 +512,8 @@ function scoreSearchEntry(entry, cleanQuery, terms, searchContent, { optional = 
     score,
     // With `body:` alone the free text is empty, so the excerpt would fall back
     // to the head of the note; show the line the operator actually matched.
-    excerpt: buildSearchExcerpt(entry.content, cleanQuery, excerptTerms.length ? excerptTerms : terms),
+    // Built on demand: only the first results are shown, and the excerpt is the dearest part of a match.
+    excerptOf: () => buildSearchExcerpt(entry.content, cleanQuery, excerptTerms.length ? excerptTerms : terms),
   };
 }
 
@@ -540,11 +541,11 @@ function scoreTagSearchEntry(entry, cleanQuery, terms) {
 
   return {
     score,
-    excerpt: tags.map(tag => `#${tag}`).join(' '),
+    excerptOf: () => tags.map(tag => `#${tag}`).join(' '),
   };
 }
 
-export function searchEntries(entries, { query, searchContent = false, limit = 50 } = {}) {
+export function searchEntries(entries, { query, searchContent = false, limit = 50, excerpts = true } = {}) {
   const rawQuery = String(query || '').trim();
   const isTagSearch = rawQuery.startsWith('#');
 
@@ -594,7 +595,7 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
       return {
         path: entry.path,
         name: entry.title?.trim() || String(entry.name || '').replace(/\.md$/i, ''),
-        excerpt: ranked.excerpt,
+        excerptOf: ranked.excerptOf,
         color: entry.color || null,
         category: entry.category || '',
         tags: parseTags(entry.tags),
@@ -608,5 +609,5 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
       return (Date.parse(b.lastOpened) || 0) - (Date.parse(a.lastOpened) || 0);
     })
     .slice(0, limit)
-    .map(({ score, ...result }) => result);
+    .map(({ score, excerptOf, ...result }) => ({ ...result, excerpt: excerpts ? excerptOf() : '' }));
 }
