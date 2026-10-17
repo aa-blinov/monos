@@ -24,6 +24,12 @@ function shellEnv() {
   if (!env.LANG && process.platform !== 'win32') env.LANG = 'en_US.UTF-8';
   // The packaged app's own ELECTRON_* variables would make a node-based CLI start as Electron.
   delete env.ELECTRON_RUN_AS_NODE;
+  // Started from inside another Claude Code session (a terminal running it, an agent's tools), the app inherits
+  // that session's markers; the agent launched here would take itself for a sub-session and stop keeping its
+  // transcript. The terminal here is the person's own: it starts clean of them.
+  for (const key of Object.keys(env)) {
+    if (key === 'CLAUDECODE' || key.startsWith('CLAUDE_CODE_')) delete env[key];
+  }
   return env;
 }
 
@@ -129,4 +135,4 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
   };
 }
 
-module.exports = { registerTerminal };
+module.exports = { registerTerminal, shellEnv };
