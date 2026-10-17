@@ -304,7 +304,9 @@ A three-region app shell — resizable sidebar, main surface, optional inspector
 
 **Density:** compact and consistent. The modal rhythm is `gap-2` / `gap-3` / `gap-4`; the dominant padding pair is `px-4 py-2` for controls and `p-4` for panels.
 
-**Grid:** the note board is a responsive grid — 1 column on narrow, 2 at `sm`, 3 at `lg` (default), 4 at `xl`. Column count is user-configurable (`boardColumns`, default `3`). Grouped views collapse to 2 columns at `lg`.
+**Grid:** the note board draws 2, 3 or 4 columns (`boardColumns`, default `3`), worked out from the board's own width, not the window's: a card is never narrower than 280px, so the column switcher offers only the counts that fit (with the sidebar open at 1440px: 2 and 3), and none at all when even two do not. The chosen count is kept and comes back when the board widens. A phone shows 2, a tablet 3.
+
+**Edges:** two insets, everywhere. Bars — the app header, the note's top row, the editor toolbar, the note's footer — sit 16px (`px-4`) from the content area's edges, their icon buttons the same 40px, so the back arrow and the sidebar toggle never move between screens. Page content — settings, help, trash, templates, the notes table, the board, the note's title and text — starts 48px in on a wide window (`lg:px-12`) and 16px on a phone, 32px below the header (`lg:py-8`), inside `max-w-5xl` (the table `max-w-6xl`). A note's title column follows `--content-width`, so the title starts where the text does.
 
 **Responsive:** `1024px` is the structural breakpoint, derived at runtime in `App.svelte` as `isMobile`, not a CSS media query. Below it the sidebar stops being a column and becomes a full-width `fixed inset-y-0` overlay that slides away on navigation. Tooltips are suppressed entirely below `640px`.
 

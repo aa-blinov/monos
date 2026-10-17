@@ -60,7 +60,7 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col" data-testid="help-view">
-  <div class="shrink-0 border-b border-[var(--border-subtle)] px-4 pb-4 pt-6 lg:px-12">
+  <div class="shrink-0 border-b border-[var(--border-subtle)] px-4 pb-4 pt-4 sm:pt-6 lg:px-12 lg:pt-8">
     <div class="mx-auto max-w-5xl">
       <h1 class="font-serif text-3xl tracking-tight">{$localizedText.help.title}</h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.help.subtitle}</p>
@@ -82,8 +82,8 @@
     </div>
   </div>
 
-  <div class="min-h-0 flex-1 overflow-y-auto" bind:this={scroller} on:scroll={trackSection}>
-    <div class="mx-auto flex max-w-5xl gap-10 px-4 py-6 lg:px-12">
+  <div class="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-12" bind:this={scroller} on:scroll={trackSection}>
+    <div class="mx-auto flex max-w-5xl gap-10">
       <!-- Sections, in view while reading; hidden on a phone, where the search does the finding. -->
       <nav class="sticky top-6 hidden w-52 shrink-0 self-start md:block" aria-label={$localizedText.help.sections}>
         <ul class="space-y-0.5">

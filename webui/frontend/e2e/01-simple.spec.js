@@ -64,7 +64,7 @@ test('board mode is a full-width direct-open workspace', async ({ page }) => {
   await expect(page.locator('main').getByRole('heading', { name: 'Notes' })).toHaveCount(0);
   await expect(page.locator('main').getByRole('button', { name: /^(\+\s*)?New note$/i })).toBeVisible();
 
-  await page.getByRole('button', { name: '4 columns' }).click();
+  await page.getByRole('button', { name: '2 columns' }).click();
   await page.locator('main').getByRole('button', { name: /^Welcome\b/ }).first().click();
 
   await expect(page).toHaveURL(/\/notes\/Welcome/);

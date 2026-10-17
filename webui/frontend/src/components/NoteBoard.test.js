@@ -121,23 +121,17 @@ test('NoteBoard показывает переключатель группиро
   expect(screen.getByText(uiText.app.board.colorGroup('#fabd2f'))).toBeTruthy();
 });
 
-test('NoteBoard на laptop ширине показывает только 2 и 3 колонки', async () => {
+// Which counts fit is worked out from the board's own width (lib/dashboard.js, fittingColumnCounts); jsdom has
+// no layout, so here the board is as narrow as can be.
+test('NoteBoard: где не влезают даже две колонки, цифр нет, а выбор не теряется', () => {
   boardColumns.set('4');
   render(NoteBoard, { notes });
 
-  await waitFor(() => expect(get(boardColumns)).toBe('3'));
-  expect(screen.getByRole('button', { name: uiText.app.board.columns(2) })).toBeTruthy();
-  expect(screen.getByRole('button', { name: uiText.app.board.columns(3) })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: uiText.app.board.columns(4) })).toBeNull();
-});
-
-test('NoteBoard на широкой ширине показывает 2, 3 и 4 колонки', () => {
-  window.innerWidth = 1440;
-  render(NoteBoard, { notes });
-
-  expect(screen.getByRole('button', { name: uiText.app.board.columns(2) })).toBeTruthy();
-  expect(screen.getByRole('button', { name: uiText.app.board.columns(3) })).toBeTruthy();
-  expect(screen.getByRole('button', { name: uiText.app.board.columns(4) })).toBeTruthy();
+  for (const count of [2, 3, 4]) {
+    expect(screen.queryByRole('button', { name: uiText.app.board.columns(count) })).toBeNull();
+  }
+  expect(get(boardColumns)).toBe('4');
+  expect(screen.getByRole('button', { name: uiText.app.board.groupByColor })).toBeTruthy();
 });
 
 test('NoteBoard показывает много тегов перед датой открытия в desktop карточке', () => {

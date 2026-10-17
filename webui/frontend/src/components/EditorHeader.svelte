@@ -38,7 +38,7 @@
   export let onDelete = () => {};
 
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
-  const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-9 lg:w-9';
+  const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   const formatDateTime = (value) => {
@@ -72,14 +72,15 @@
 
 <!-- The note's own header is the only bar above it: back, the sidebar and the trash share a row with the
      folder path, so the text starts high and the note's colour covers one block, not two. -->
-<header class="relative isolate overflow-hidden px-2 pb-2 pt-1 lg:px-12 lg:pb-3 lg:pt-3 space-y-1 lg:space-y-2">
+<header class="relative isolate overflow-hidden px-4 pb-2 lg:px-12 lg:pb-3 space-y-1 lg:space-y-2">
   <!-- The note's colour, set by the editor: the same tint and glow its card has on the board. `!mt-0`: the
        header's vertical spacing must not push these layers down from its top edge. -->
   <span class="pointer-events-none absolute inset-0 -z-10 !mt-0 bg-[var(--note-header-tint,transparent)]" aria-hidden="true"></span>
   <!-- A radial gradient rather than a blurred circle: in a short, wide header a blurred circle is cut by the
        edges and shows a band; the gradient fades out on its own. -->
   <span class="pointer-events-none absolute inset-0 -z-10 !mt-0" style="background: radial-gradient(ellipse 45% 160% at 100% 0%, var(--note-header-glow, transparent), transparent 70%);" aria-hidden="true"></span>
-  <div class="flex min-w-0 items-center gap-1 lg:-ml-10">
+  <!-- The bar row matches the app header: 56px tall, its icons 16px from the edges, wherever the text column sits. -->
+  <div class="!mt-0 flex min-h-14 min-w-0 items-center gap-1 lg:-mx-8">
     <TooltipIconButton on:click={onBack} class={navButtonClass} label={$localizedText.header.back} tooltip={$localizedText.header.back} tooltipAlign="start">
       <ArrowLeft class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
@@ -116,7 +117,8 @@
       <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
   </div>
-  <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12 px-2 lg:px-0" class:hidden={folded}>
+  <!-- The title column is the text column: same width setting, same left edge as the note below. -->
+  <div class="mx-auto flex w-full max-w-[var(--content-width,56rem)] flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12" class:hidden={folded}>
     <div class="flex-1 min-w-0">
       <input
         type="text"

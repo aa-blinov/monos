@@ -43,3 +43,24 @@ export async function loadHomeRecentNotes({ append = false } = {}) {
     homeRecentLoading.set(false);
   }
 }
+
+/** The narrowest a board card may get before its title and excerpt stop reading. */
+export const BOARD_CARD_MIN_WIDTH = 280;
+const BOARD_GAP = 16;
+
+/**
+ * How many columns of cards fit in a board this wide: the choices offered are only these, so a "4" never
+ * shows where four cards would be squeezed (the sidebar open, a narrow window). One column offers no choice.
+ * @returns {number[]} the counts from [2, 3, 4] that fit; empty when even two do not
+ */
+export function fittingColumnCounts(width, { minWidth = BOARD_CARD_MIN_WIDTH, gap = BOARD_GAP } = {}) {
+  if (!(width > 0)) return [];
+  return [2, 3, 4].filter((count) => count * minWidth + (count - 1) * gap <= width);
+}
+
+/** The columns the board actually draws: the chosen count, or the most that fit when it does not. */
+export function boardColumnCount(chosen, fitting) {
+  const wanted = Number(chosen) || 3;
+  if (!fitting.length) return 1;
+  return fitting.includes(wanted) ? wanted : Math.max(...fitting.filter((count) => count <= wanted), fitting[0]);
+}

@@ -124,3 +124,15 @@ test('loadHomeRecentNotes обрабатывает не-массив ответ'
 
   assert.deepEqual(get(homeRecentNotes), []);
 });
+
+test('колонки доски: предлагаются только те, что влезают', async () => {
+  const { fittingColumnCounts, boardColumnCount } = await import('./dashboard.js');
+  assert.deepEqual(fittingColumnCounts(1008), [2, 3]); // 1440 с открытой боковой панелью
+  assert.deepEqual(fittingColumnCounts(1344), [2, 3, 4]); // 1440 без панели
+  assert.deepEqual(fittingColumnCounts(500), []);
+  assert.deepEqual(fittingColumnCounts(0), []);
+  assert.equal(boardColumnCount('4', [2, 3]), 3);
+  assert.equal(boardColumnCount('4', [2, 3, 4]), 4);
+  assert.equal(boardColumnCount('2', [2, 3]), 2);
+  assert.equal(boardColumnCount('3', []), 1);
+});

@@ -130,7 +130,7 @@ test('Header растягивает поиск и показывает quick not
   component.$on('createQuickNote', quickNoteHandler);
 
   const header = screen.getByRole('banner');
-  expect(header.className).toContain('lg:px-4');
+  expect(header.className).toContain('px-4');
   expect(header.className).not.toContain('lg:pr-8');
   const input = screen.getByPlaceholderText(uiText.header.search);
   expect(input.parentElement.className).toContain('flex-1');

@@ -1631,7 +1631,7 @@
     <!-- Нижняя панель: свойства заметки открываются окошками над ней, поэтому текст
          не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
          относятся к запрошенной заметке, а текст ещё от прежней. -->
-    <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-3 lg:px-6" data-testid="editor-footer" inert={isLoading}>
+    <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
       <div class="flex min-w-0 items-center gap-1 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
         <div class="relative" data-panel-anchor="category">
