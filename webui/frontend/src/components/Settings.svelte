@@ -12,7 +12,7 @@
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState } from '../stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection } from '../stores.js';
   import { formFieldClass } from '../lib/form-field.js';
   import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
   import { formatAttachmentSize as humanSize, fetchOrphanAttachments } from '../lib/attachments.js';
@@ -389,6 +389,17 @@
       }
     } catch (e) { console.error(e); }
 
+    // No name chosen yet: the computer's own is filled in, to keep or change while connecting GitHub.
+    if (!String(settings.device_name || '').trim()) {
+      try {
+        const response = await fetch('/api/device');
+        if (response.ok) {
+          const device = await response.json();
+          settings.device_name = device.name || device.suggested || '';
+        }
+      } catch { /* the placeholder stays */ }
+    }
+
     if (settings.git_token) {
       isAuthenticated = true;
       await fetchRepos();
@@ -643,6 +654,17 @@
     } catch (e) { console.error(e); }
   }
 
+  // Opened from the first-run screen at a section: it is scrolled into view and marked for a moment.
+  function revealSection(node, id) {
+    if (get(settingsSection) !== id) return;
+    settingsSection.set('');
+    requestAnimationFrame(() => {
+      node.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      node.classList.add('settings-flash');
+      setTimeout(() => node.classList.remove('settings-flash'), 1600);
+    });
+  }
+
   // Reached from the sidebar's "conflict in N files" link: the list is what the person came for.
   function revealWhenAsked(node) {
     if (!get(revealConflicts)) return;
@@ -860,7 +882,7 @@
       {/if}
     </section>
 
-    <section class="space-y-5" data-testid="storage-section">
+    <section class="space-y-5 scroll-mt-6 rounded-ui" data-testid="storage-section" use:revealSection={'storage'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
       {#if storageStatus === 'remote'}
@@ -897,7 +919,7 @@
     </section>
 
     <!-- GitHub Connection -->
-    <section class="space-y-5 pt-5">
+    <section class="space-y-5 pt-5 scroll-mt-6 rounded-ui" data-testid="sync-section" use:revealSection={'sync'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
@@ -1481,3 +1503,7 @@
     on:done={() => { showConflictResolver = false; }}
   />
 {/if}
+
+<style>
+  :global(.settings-flash) { background: color-mix(in srgb, var(--yellow) 14%, transparent); transition: background-color 0.6s ease; }
+</style>

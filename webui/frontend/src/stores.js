@@ -53,6 +53,8 @@ export const editorState = writable({ path: null, dirty: false, saving: false })
 export const editorAction = writable(null);
 // Id шаблона, из которого менеджер просит создать заметку: модалка создания откроется на нём.
 export const templateRequest = writable(null);
+// A Settings section to bring into view when Settings opens ('sync', 'storage'), set by whoever sent the person there.
+export const settingsSection = writable('');
 export const noteSaveSignal = writable(null);
 // The note just created: its editor puts the caret in the body once the note has loaded.
 export const focusNoteBody = writable(null);
