@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, test, expect, vi } from 'vitest';
 import Settings from './Settings.svelte';
 import { locale, uiText } from '../lib/strings.js';
@@ -66,7 +66,7 @@ function createFetchMock(overrides = {}) {
     }
 
     if (url === '/api/git/setup' && method === 'POST') {
-      return jsonResponse({ message: 'Connected' });
+      return overrides.setup ? overrides.setup() : jsonResponse({ message: 'Connected' });
     }
 
     if (url === '/api/git/sync' && method === 'POST') {
@@ -379,4 +379,65 @@ test('Settings показывает QR-код адреса для телефон
   await fireEvent.click(second);
   await waitFor(() => expect(screen.getByTestId('lan-qr').getAttribute('aria-label')).toBe(uiText.settings.lanQrLabel(urls[1])));
   expect(second.getAttribute('aria-pressed')).toBe('true');
+});
+
+// The connection shows where it stands beside the button: working, done, done with conflicts, or why it failed.
+async function openConnectForm(overrides) {
+  const fetchMock = createFetchMock(overrides);
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+  render(Settings);
+  await waitFor(() => expect(screen.getByRole('option', { name: 'alice/wiki' })).toBeTruthy());
+  await fireEvent.change(screen.getByLabelText(uiText.settings.repository), { target: { value: 'alice/notes' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.connectRepository }).disabled).toBe(false));
+  return fetchMock;
+}
+const connectStatus = () => screen.getByTestId('connect-status');
+
+test('Settings: подключение показывает ход, потом результат рядом с кнопкой', async () => {
+  let finish;
+  await openConnectForm({ setup: () => new Promise((resolve) => { finish = () => resolve(jsonResponse({ message: 'Connected', conflicts: false })); }) });
+  expect(connectStatus().dataset.phase).toBe('idle');
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.connectRepository }));
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('connecting'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectingTo('alice/notes'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectingHint);
+
+  finish();
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('done'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectedTo('alice/notes', 'main'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectedDone);
+});
+
+test('Settings: отказ сервера объясняется рядом с кнопкой', async () => {
+  await openConnectForm({ setup: () => jsonResponse({ detail: 'Token rejected by GitHub' }, false) });
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.connectRepository }));
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('error'));
+  expect(within(connectStatus()).getByRole('alert').textContent).toBe('Token rejected by GitHub');
+});
+
+test('Settings: сбой сети при подключении не молчит', async () => {
+  await openConnectForm({ setup: () => { throw new Error('network down'); } });
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.connectRepository }));
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('error'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectFailed);
+});
+
+test('Settings: подключение с конфликтами говорит об этом, а не об успехе', async () => {
+  await openConnectForm({ setup: () => jsonResponse({ message: 'Conflicts detected during setup', conflicts: true }) });
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.connectRepository }));
+  await waitFor(() => expect(connectStatus().dataset.phase).toBe('conflicts'));
+  expect(connectStatus().textContent).toContain(uiText.settings.connectedConflicts);
+});
+
+test('Settings: у подключённой папки в покое видно, к чему она подключена', async () => {
+  const fetchMock = createFetchMock({
+    statusQueue: [{ initialized: true, current_branch: 'main', branch: 'main', repo: 'alice/notes', status: 'clean', ahead: 0, behind: 0, last_sync: null }],
+  });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+  render(Settings);
+  await waitFor(() => expect(connectStatus().textContent).toContain(uiText.settings.connectedTo('alice/notes', 'main')));
+  expect(connectStatus().dataset.phase).toBe('idle');
 });
