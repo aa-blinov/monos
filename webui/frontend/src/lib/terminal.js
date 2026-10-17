@@ -58,11 +58,21 @@ export function terminalTheme(read) {
   };
 }
 
-/** The panel's height, kept between launches; within reason for the window it is shown in. */
+/** A height read back from storage: a positive number of pixels, or NaN when none was kept. */
+export function storedTerminalHeight(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return NaN;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : NaN;
+}
+
+/**
+ * The panel's height, kept between launches; within reason for the window it is shown in. Until it is dragged,
+ * it takes 45% of the window (never under 320px): an agent needs room for its answer and the prompt below it.
+ */
 export function clampTerminalHeight(value, viewportHeight) {
   const max = Math.max(160, Math.round(viewportHeight * 0.8));
   const height = Number(value);
-  if (!Number.isFinite(height)) return Math.min(320, max);
+  if (!Number.isFinite(height)) return Math.min(Math.max(320, Math.round(viewportHeight * 0.45)), max);
   return Math.min(max, Math.max(140, Math.round(height)));
 }
 

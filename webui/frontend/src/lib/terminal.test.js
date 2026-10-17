@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampTerminalHeight, terminalTheme } from './terminal.js';
+import { clampTerminalHeight, storedTerminalHeight, terminalTheme } from './terminal.js';
 
 test('цвета терминала берутся из темы, недостающие — нейтральные', () => {
   const vars = { '--bg-primary': '#282828', '--text-primary': '#ebdbb2', '--red': '#fb4934', '--blue': ' #83a598 ' };
@@ -15,7 +15,9 @@ test('цвета терминала берутся из темы, недоста
 });
 
 test('высота панели в разумных пределах', () => {
-  assert.equal(clampTerminalHeight(undefined, 900), 320);
+  assert.equal(clampTerminalHeight(undefined, 900), 405);
+  assert.equal(clampTerminalHeight(undefined, 600), 320);
+  assert.equal(clampTerminalHeight(undefined, 300), 240);
   assert.equal(clampTerminalHeight(50, 900), 140);
   assert.equal(clampTerminalHeight(5000, 900), 720);
   assert.equal(clampTerminalHeight(400, 900), 400);
@@ -42,4 +44,13 @@ test('название агента по команде', () => {
   assert.equal(agentLabel('codex'), 'Codex');
   assert.equal(agentLabel('aider --model x'), 'aider --model x');
   assert.equal(agentLabel(''), 'Claude Code');
+});
+
+test('ничего не сохранено — высота по умолчанию, а не минимальная', () => {
+  assert.ok(Number.isNaN(storedTerminalHeight(null)));
+  assert.ok(Number.isNaN(storedTerminalHeight('')));
+  assert.ok(Number.isNaN(storedTerminalHeight('0')));
+  assert.ok(Number.isNaN(storedTerminalHeight('abc')));
+  assert.equal(storedTerminalHeight('420'), 420);
+  assert.equal(clampTerminalHeight(storedTerminalHeight(null), 900), 405);
 });
