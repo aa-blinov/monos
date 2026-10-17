@@ -9,6 +9,7 @@ import { getDb } from '../database.js';
 import { httpError, notesRelativePath, readTextFile } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
 import { isLockedNote, rememberSession, sealWithSession, sessionFor, unlockContent } from '../note-lock.js';
+import { pendingReview, takeKeptForSync } from '../agent-review.js';
 
 export function buildGithubRemoteUrl(repo) {
   return `https://github.com/${repo}.git`;
@@ -158,6 +159,27 @@ function holdBackNotesWithMarkers() {
   });
   if (held.length) gitExec(['reset', '-q', '--', ...held]);
   return held;
+}
+
+/**
+ * Everything this device sends, staged. The agent's edits the person kept go first, in a commit of their own
+ * ("Agent edits on Laptop"), so the history on every device says what the agent did. The ones still waiting
+ * for review stay behind, and so does a note that still holds merge markers.
+ */
+function stageForSync(deviceName) {
+  const pending = pendingReview();
+  const kept = takeKeptForSync().filter((file) => !pending.includes(file));
+  if (kept.length) {
+    for (const file of kept) {
+      try { gitExec(['add', '-A', '--', file]); } catch { /* gone and never tracked */ }
+    }
+    if (hasStagedChanges()) commitStagedChanges(`Agent edits on ${deviceName || 'Monos'}`);
+  }
+  gitExec(['add', '-A']);
+  if (pending.length) {
+    try { gitExec(['reset', '-q', '--', ...pending]); } catch { /* nothing of them staged */ }
+  }
+  return { held: holdBackNotesWithMarkers(), heldForReview: pending };
 }
 
 /**
@@ -1014,8 +1036,8 @@ export function registerGitRoutes(app) {
       // first and pull after it — the same order the full sync uses.
       const dirtied = hasStagedChanges() || hasUnstagedChanges();
       if (dirtied) {
-        gitExec(['add', '-A']);
-        commitStagedChanges('Auto-sync from Monos (pending pull)');
+        stageForSync(storedDeviceName());
+        if (hasStagedChanges()) commitStagedChanges('Auto-sync from Monos (pending pull)');
       }
 
       const headBefore = currentHead();
@@ -1061,9 +1083,9 @@ export function registerGitRoutes(app) {
       const { branch } = readGitSettings();
       const deviceName = storedDeviceName();
 
-      gitExec(['add', '-A']);
       // A note that still holds merge markers is never sent: they would reach the other devices as text.
-      const held = holdBackNotesWithMarkers();
+      // Neither is an agent's edit that waits for review.
+      const { held, heldForReview } = stageForSync(deviceName);
       // Naming the device in the message is what makes a shared history
       // readable: "Auto-sync from Monos" on both devices gives you no way to
       // tell whose edit a commit was.
@@ -1104,6 +1126,7 @@ export function registerGitRoutes(app) {
         // up as `pulled`, which is the number people actually look for.
         pushed: pushedFiles,
         held,
+        heldForReview,
         pulled: arrivedCommits(headBeforePull, branch),
         inSync: after.ahead === 0 && after.behind === 0,
         device: deviceName || null,

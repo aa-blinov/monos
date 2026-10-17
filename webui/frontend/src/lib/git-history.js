@@ -48,13 +48,14 @@ export async function restoreNoteRevisionRequest(notePath, sha) {
  * the device is already on the line under the title.
  *
  * @param {string} message
- * @param {{ synced: string, savedBeforePull: string, connected: string, resolved: string, merged: string }} words
+ * @param {{ synced: string, savedBeforePull: string, connected: string, resolved: string, merged: string, agent: string }} words
  */
 export function revisionTitle(message, words) {
   const text = String(message || '').trim();
   if (/^Auto-sync from .+ \(pending pull\)$/.test(text)) return words.savedBeforePull;
   if (/^Auto-sync from /.test(text)) return words.synced;
   if (/^Init from /.test(text)) return words.connected;
+  if (/^Agent edits on /.test(text)) return words.agent;
   if (/^Resolve conflicts?\b/.test(text)) return words.resolved;
   if (/^Merge\b/.test(text)) return words.merged;
   return text;

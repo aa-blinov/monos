@@ -917,6 +917,21 @@ const enText = {
     save: 'Continue',
     failed: 'Could not save the name. Try again.',
   },
+  agentReview: {
+    title: 'Agent changes',
+    subtitle: (count) => `${count} ${count === 1 ? 'file waits' : 'files wait'} for your review`,
+    status: { added: 'New', modified: 'Changed', deleted: 'Deleted' },
+    keep: 'Keep',
+    revert: 'Revert',
+    keepAll: 'Keep all',
+    revertAll: 'Revert all',
+    open: 'Open note',
+    loading: 'Reading the changes…',
+    footnote: 'Kept changes go to your other devices with the next sync. Until then they stay on this computer.',
+    button: (count) => `Agent changes · ${count}`,
+    badge: 'Agent',
+    badgeHint: 'Changed by the agent, waiting for your review',
+  },
   agent: {
     title: 'Agent',
     hint: 'The agent runs in the terminal (⌘J), in the notes folder of this computer, and edits notes like you do: its changes appear as it makes them and sync to your other devices.',
@@ -956,7 +971,7 @@ const enText = {
     restoring: 'Restoring…',
     unchanged: 'This is the version the note already has.',
     noMessage: '(no message)',
-    messages: { synced: 'Sync', savedBeforePull: 'Edits saved before a sync', connected: 'Sync connected', resolved: 'Conflict resolved', merged: 'Edits from another device combined' },
+    messages: { agent: 'Agent edits', synced: 'Sync', savedBeforePull: 'Edits saved before a sync', connected: 'Sync connected', resolved: 'Conflict resolved', merged: 'Edits from another device combined' },
   },
   editorHeader: {
     noteTitle: 'Note Title',
@@ -1974,6 +1989,25 @@ const ruText = {
     save: 'Продолжить',
     failed: 'Не удалось сохранить имя. Попробуйте ещё раз.',
   },
+  agentReview: {
+    title: 'Изменения агента',
+    subtitle: (count) => {
+      const one = count % 10 === 1 && count % 100 !== 11;
+      const few = [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100);
+      return `${count} ${one ? 'файл ждёт' : few ? 'файла ждут' : 'файлов ждут'} вашей проверки`;
+    },
+    status: { added: 'Новая', modified: 'Изменена', deleted: 'Удалена' },
+    keep: 'Оставить',
+    revert: 'Откатить',
+    keepAll: 'Оставить всё',
+    revertAll: 'Откатить всё',
+    open: 'Открыть заметку',
+    loading: 'Читаю изменения…',
+    footnote: 'Оставленные правки уйдут на другие устройства со следующей синхронизацией. До этого они только на этом компьютере.',
+    button: (count) => `Изменения агента · ${count}`,
+    badge: 'Агент',
+    badgeHint: 'Изменено агентом, ждёт вашей проверки',
+  },
   agent: {
     title: 'Агент',
     hint: 'Агент работает в терминале (⌘J), в папке заметок этого компьютера, и правит заметки так же, как вы: его правки видны сразу и уходят на другие устройства с синхронизацией.',
@@ -2013,7 +2047,7 @@ const ruText = {
     restoring: 'Восстанавливаем…',
     unchanged: 'Это уже текущая версия заметки.',
     noMessage: '(без сообщения)',
-    messages: { synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена синхронизация', resolved: 'Разобран конфликт', merged: 'Объединены правки с другого устройства' },
+    messages: { agent: 'Правки агента', synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена синхронизация', resolved: 'Разобран конфликт', merged: 'Объединены правки с другого устройства' },
   },
   editorHeader: {
     noteTitle: 'Заголовок заметки',

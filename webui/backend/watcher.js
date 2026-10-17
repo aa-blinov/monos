@@ -4,6 +4,7 @@ import { NOTES_DIR } from './config.js';
 import { getDb } from './database.js';
 import { indexAllFiles } from './indexing.js';
 import { isAgentRuleFile } from './agent-rules.js';
+import { recordOutsideChanges } from './agent-review.js';
 
 // Files in the notes folder change without Monos: an agent in the terminal, another editor, a script.
 // The folder is watched, and a change Monos did not make itself is indexed and announced to the open pages
@@ -40,7 +41,13 @@ function flush() {
   }
   if (!outside.length) return;
   indexAllFiles();
-  broadcast({ type: 'files', paths: outside.map((relative) => `notes/${relative}`) });
+  const notePaths = outside.map((relative) => `notes/${relative}`);
+  broadcast({ type: 'files', paths: notePaths });
+  // Changed outside Monos while an agent session is open: they wait for review (agent-review.js).
+  const files = outside.filter((relative) => {
+    try { return !fs.statSync(path.join(NOTES_DIR, relative)).isDirectory(); } catch { return true; }
+  });
+  if (files.length && recordOutsideChanges(files.map((relative) => `notes/${relative}`))) broadcast({ type: 'agent-review' });
 }
 
 export function broadcast(event) {

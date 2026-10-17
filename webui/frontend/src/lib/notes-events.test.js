@@ -9,11 +9,14 @@ test('изменения извне доходят до приложения, м
   globalThis.CustomEvent = class { constructor(type) { this.type = type; } };
   let instance;
   class FakeSource { constructor(url) { this.url = url; instance = this; } close() { this.closed = true; } }
-  const stop = listenForNoteChanges({ onFiles: (paths) => seen.push(paths), EventSourceImpl: FakeSource });
+  let reviews = 0;
+  const stop = listenForNoteChanges({ onFiles: (paths) => seen.push(paths), onReview: () => { reviews += 1; }, EventSourceImpl: FakeSource });
   assert.equal(instance.url, '/api/events');
   instance.onmessage({ data: '{"type":"files","paths":["notes/А.md"]}' });
   instance.onmessage({ data: 'не json' });
   instance.onmessage({ data: '{"type":"other"}' });
+  instance.onmessage({ data: '{"type":"agent-review"}' });
+  assert.equal(reviews, 1);
   assert.deepEqual(seen, [['notes/А.md']]);
   assert.deepEqual(announced, ['monos:notes-pulled']);
   stop();

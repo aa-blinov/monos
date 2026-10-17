@@ -5,6 +5,7 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { relativeDay } from '../lib/date-format.js';
   import { conflictedNotes } from '../lib/git-conflicts.js';
+  import { agentTouched } from '../lib/agent-review.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
   export let note;
@@ -156,6 +157,10 @@
         {/if}
       {/if}
       </span>
+      {#if $agentTouched.has(note?.path)}
+        <!-- Changed by the agent and not reviewed yet: kept or reverted in the terminal's Agent changes. -->
+        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--blue)]" data-testid="card-agent" title={$localizedText.agentReview.badgeHint}>{$localizedText.agentReview.badge}</span>
+      {/if}
       {#if inConflict}
         <!-- A note that changed on two devices says so on the board, not only once it is opened. -->
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>

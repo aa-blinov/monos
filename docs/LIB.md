@@ -64,6 +64,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `terminal.test.js` | Theme colours with fallbacks, selection colour xterm can parse, panel height limits |
 | `notes-events.js` | `listenForNoteChanges` — files changed outside Monos (an agent) arrive over `/api/events`; the open note rereads, the board and tree refresh |
 | `notes-events.test.js` | Change events reach the app, malformed ones are ignored, no EventSource is harmless |
+| `agent-review.js` | `agentReview`, `agentTouched`, `agentReviewOpen`, `refreshAgentReview`, `ensureAgentCheckpoint`, `agentDiff`, `keepAgentChanges`, `revertAgentChanges` — what the agent changed, waiting for review |
+| `agent-review.test.js` | Review list and note marks, keep and revert send their paths, a server error leaves an empty list |
 | `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
