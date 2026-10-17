@@ -80,11 +80,11 @@
   }
 </script>
 
-<header class="relative flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 sm:px-4 lg:px-4">
+<header class="relative flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-2">
   {#if showBack}
     <TooltipIconButton
       on:click={goHome}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={$localizedText.header.back}
       tooltip={$localizedText.header.back}
       tooltipAlign="start"
@@ -93,7 +93,7 @@
     </TooltipIconButton>
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -107,7 +107,7 @@
   {:else}
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -170,7 +170,7 @@
   </div>
   <TooltipIconButton
     on:click={createQuickNote}
-    class="inline-flex h-11 w-11 lg:h-10 lg:w-auto lg:gap-2 lg:px-3 shrink-0 items-center justify-center hover:opacity-60 transition-opacity"
+    class="inline-flex h-11 w-11 lg:h-10 lg:w-auto lg:gap-2 lg:px-3 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
     label={$localizedText.sidebar.quickNoteFromClipboard}
     tooltip={$localizedText.sidebar.quickNoteFromClipboard}
     tooltipAlign="end"
@@ -183,7 +183,7 @@
     <TooltipIconButton
       data-testid="header-terminal"
       on:click={toggleTerminal}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center transition-opacity hover:opacity-60 {$terminalOpen ? 'text-[var(--text-primary)]' : ''}"
+      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {$terminalOpen ? 'text-[var(--text-primary)]' : ''}"
       label={$localizedText.terminal.toggleHint}
       tooltip={$localizedText.terminal.toggleHint}
       tooltipAlign="end"

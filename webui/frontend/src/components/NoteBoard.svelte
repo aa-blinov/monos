@@ -1,6 +1,7 @@
 <script>
   import { cardExcerpt } from '../lib/card-excerpt.js';
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
+  import { boardColumnCount, fittingColumnCounts } from '../lib/dashboard.js';
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop, Plus } from 'lucide-svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -40,7 +41,8 @@
     });
     contextMenuPos = { x: next.x, y: next.y };
   }
-  let wideBoard = typeof window !== 'undefined' ? window.innerWidth >= 1280 : false;
+  // The board's own width, not the window's: the sidebar takes its share.
+  let boardWidth = 0;
   const hydratedExcerptPaths = new Set();
 
   $: colorOptions = getNoteColorOptions($activeTheme);
@@ -56,13 +58,11 @@
 
   $: gridClass = mobile
     ? 'grid grid-cols-2 items-stretch gap-3 md:grid-cols-3'
-    : $boardColumns === '2'
-      ? 'grid items-start gap-4 lg:grid-cols-2'
-      : $boardColumns === '4'
-      ? 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-        : 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3';
-  $: availableColumnCounts = wideBoard ? [2, 3, 4] : [2, 3];
-  $: if (!mobile && !wideBoard && $boardColumns === '4') $boardColumns = '3';
+    : 'grid items-start gap-4';
+  // Only the counts that fit are offered; the chosen one is kept, and comes back when the board widens.
+  $: availableColumnCounts = fittingColumnCounts(boardWidth);
+  $: drawnColumns = boardColumnCount($boardColumns, availableColumnCounts);
+  $: gridStyle = mobile ? '' : `grid-template-columns: repeat(${drawnColumns}, minmax(0, 1fr));`;
   $: visibleNotes = orderedNotes;
   $: shouldGroupByColor = $boardGroupByColor && !query.trim();
   $: visibleGroups = groupNotesByColor(visibleNotes, shouldGroupByColor);
@@ -173,18 +173,6 @@
     contextMenu = { show: true, note, x, y };
   }
 
-  function updateWideBoard() {
-    wideBoard = typeof window !== 'undefined' && window.innerWidth >= 1280;
-  }
-
-  onMount(() => {
-    updateWideBoard();
-    window.addEventListener('resize', updateWideBoard);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener('resize', updateWideBoard);
-  });
 </script>
 
 <svelte:window on:click={closeContextMenu} />
@@ -202,7 +190,7 @@
     >
       <Palette size="14" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
-    {#if !mobile}
+    {#if !mobile && availableColumnCounts.length > 1}
       <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
       <!-- The grid icon names the group, so the numbers need no "columns" after each. -->
       <span class="flex h-7 w-7 items-center justify-center text-[var(--text-tertiary)]" aria-hidden="true">
@@ -210,11 +198,11 @@
       </span>
       {#each availableColumnCounts as columnCount}
         <TooltipIconButton
-          class="h-7 min-w-8 rounded-ui px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {$boardColumns === String(columnCount) ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+          class="h-7 min-w-8 rounded-ui px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {drawnColumns === columnCount ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
           label={$localizedText.app.board.columns(columnCount)}
           tooltip={$localizedText.app.board.columns(columnCount)}
           tooltipAlign="end"
-          aria-pressed={$boardColumns === String(columnCount)}
+          aria-pressed={drawnColumns === columnCount}
           on:click={() => $boardColumns = String(columnCount)}
         >
           {columnCount}
@@ -225,7 +213,7 @@
 </div>
 {/if}
 
-<div class="space-y-8" role="presentation">
+<div class="space-y-8" role="presentation" bind:clientWidth={boardWidth}>
   {#each displayGroups as group, groupIndex (group.id)}
     <section class="space-y-3">
       {#if group.showHeading}
@@ -239,7 +227,7 @@
           <span class="text-[var(--text-tertiary)]">{group.notes.length}</span>
         </div>
       {/if}
-      <div class={gridClass} role="list">
+      <div class={gridClass} style={gridStyle} role="list">
         {#if showCreateCard && groupIndex === 0 && !query.trim()}
           <!-- An invitation, not a note: a dashed outline that steps forward on hover, so the first slot
                does not weigh like a blank card. -->
