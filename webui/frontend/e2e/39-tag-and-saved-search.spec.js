@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { prepareMonos, uniqueTitle } from './support/monos.js';
+import { openSidebarMore, prepareMonos, uniqueTitle } from './support/monos.js';
 
 // A tag in the Tags panel, and a saved search, put a query in the search field and must run it: the
 // header only searches while typing, so the board used to say "nothing found" for notes that are there.
@@ -10,6 +10,7 @@ test('нажатие на тег в панели «Теги» показывае
   await page.request.post('/api/notes/create', { data: { title, category: '', tags: [tag], content: 'Свёкла.' } });
 
   await page.goto('/');
+  await openSidebarMore(page);
   await page.getByTestId('open-tags').first().click();
   await page.getByRole('button', { name: new RegExp(`^${tag}$`) }).click();
 
@@ -26,6 +27,7 @@ test('сохранённый поиск запускается сразу', asyn
   await page.request.put('/api/saved-searches', { data: { searches: [{ name: 'Zebra', query: word }] } });
 
   await page.goto('/');
+  await openSidebarMore(page);
   await page.getByTestId('open-saved-searches').first().click();
   await page.getByTestId('saved-search-run').first().click();
 

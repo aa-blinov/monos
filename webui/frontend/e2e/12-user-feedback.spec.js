@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createBlankNote, editorBody, fillEditor, prepareMonos, uniqueTitle } from './support/monos.js';
+import { createBlankNote, editorBody, fillEditor, openSidebarMore, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test.beforeEach(async ({ page }) => {
   await prepareMonos(page);
@@ -96,6 +96,7 @@ test('удаление тега из всех заметок требует по
   await page.goto('/');
   const toggle = page.getByRole('button', { name: 'Open sidebar' });
   if (await toggle.isVisible()) await toggle.click();
+  await openSidebarMore(page);
   await page.locator('[data-testid="open-tags"]:visible').first().click();
 
   const row = page.locator('ul li').filter({ has: page.getByTestId('tag-delete') }).filter({ hasText: tag });

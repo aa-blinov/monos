@@ -12,7 +12,7 @@
   import { WebLinksAddon } from '@xterm/addon-web-links';
   import { SearchAddon } from '@xterm/addon-search';
   import '@xterm/xterm/css/xterm.css';
-  import { Bot, ChevronDown, ChevronUp, Plus, RotateCcw, Search, X } from 'lucide-svelte';
+  import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
@@ -350,7 +350,15 @@
   }
 
   const iconButton = 'h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
+  const menuItem = 'flex w-full items-center gap-2.5 px-3 py-1.5 text-left outline-none transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--bg-secondary)] focus-visible:text-[var(--text-primary)]';
+  let menuOpen = false;
+  let menuAnchor;
+  function closeMenuOutside(event) {
+    if (menuOpen && menuAnchor && !menuAnchor.contains(event.target)) menuOpen = false;
+  }
 </script>
+
+<svelte:window on:pointerdown={closeMenuOutside} />
 
 {#if terminalBridge}
   <section
@@ -380,7 +388,7 @@
               data-testid="terminal-tab"
               on:click={() => activate(tab.key)}
               class="max-w-[10rem] truncate px-2 py-1 normal-case tracking-normal {tab.exited ? 'line-through opacity-60' : ''}"
-            >{tab.title || `${folder || $localizedText.terminal.tab} ${index + 1}`}</button>
+            >{tab.title || `${$localizedText.terminal.tab} ${index + 1}`}</button>
             <button
               type="button"
               aria-label={$localizedText.terminal.closeTab}
@@ -397,9 +405,6 @@
           </TooltipIconButton>
         {/if}
       </div>
-      {#if rulesMissing}
-        <button type="button" data-testid="agent-rules-create" on:click={createRules} class="hidden truncate normal-case tracking-normal text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:text-[var(--text-primary)] lg:inline" title={$localizedText.terminal.rulesHint}>{$localizedText.terminal.rulesCreate}</button>
-      {/if}
       <span class="ml-auto"></span>
       {#if $agentReview.changes?.length}
         <button
@@ -417,12 +422,31 @@
       >
         <Bot size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
       </button>
-      <TooltipIconButton class={iconButton} label={$localizedText.terminal.search} tooltip={$localizedText.terminal.search} tooltipAlign="end" on:click={openSearch}>
-        <Search size="14" strokeWidth="1.7" aria-hidden="true" />
-      </TooltipIconButton>
-      <TooltipIconButton class={iconButton} label={$localizedText.terminal.restart} tooltip={$localizedText.terminal.restart} tooltipAlign="end" on:click={restart}>
-        <RotateCcw size="14" strokeWidth="1.7" aria-hidden="true" />
-      </TooltipIconButton>
+      <!-- Search, restart and the agent's rules: needed now and then, so behind ⋯ (⌘F still searches). A dot on
+           ⋯ says the rules are missing. -->
+      <div class="relative" bind:this={menuAnchor}>
+        <TooltipIconButton class="{iconButton} relative" label={$localizedText.terminal.menu} tooltip={$localizedText.terminal.menu} tooltipAlign="end" data-testid="terminal-menu" on:click={() => { menuOpen = !menuOpen; }}>
+          <MoreHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
+          {#if rulesMissing}<span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>{/if}
+        </TooltipIconButton>
+        {#if menuOpen}
+          <!-- svelte-ignore a11y-interactive-supports-focus -->
+          <div role="menu" on:keydown={(event) => { if (event.key === 'Escape') menuOpen = false; }} class="absolute bottom-full right-0 z-30 mb-1 w-80 whitespace-nowrap rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 text-sm normal-case tracking-normal text-[var(--text-secondary)] shadow-2xl" data-testid="terminal-menu-list">
+            <button type="button" role="menuitem" class={menuItem} on:click={() => { menuOpen = false; void openSearch(); }}>
+              <Search size="14" strokeWidth="1.7" aria-hidden="true" /><span class="flex-1">{$localizedText.terminal.searchMenu}</span><span class="text-xs text-[var(--text-tertiary)]">⌘F</span>
+            </button>
+            <button type="button" role="menuitem" class={menuItem} on:click={() => { menuOpen = false; restart(); }}>
+              <RotateCcw size="14" strokeWidth="1.7" aria-hidden="true" /><span class="flex-1">{$localizedText.terminal.restart}</span>
+            </button>
+            {#if rulesMissing}
+              <div class="my-1 h-px bg-[var(--border-subtle)]"></div>
+              <button type="button" role="menuitem" data-testid="agent-rules-create" class={menuItem} title={$localizedText.terminal.rulesHint} on:click={() => { menuOpen = false; void createRules(); }}>
+                <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" aria-hidden="true"></span><span class="flex-1">{$localizedText.terminal.rulesCreate}</span>
+              </button>
+            {/if}
+          </div>
+        {/if}
+      </div>
       <TooltipIconButton class={iconButton} label={$localizedText.terminal.hide} tooltip={$localizedText.terminal.hide} tooltipAlign="end" on:click={() => terminalOpen.set(false)}>
         <X size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>

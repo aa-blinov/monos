@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createBlankNote, openBoardCard, prepareMonos, uniqueTitle } from './support/monos.js';
+import { createBlankNote, openBoardCard, openSidebarMore, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test.beforeEach(async ({ page }) => {
   await prepareMonos(page);
@@ -58,7 +58,8 @@ test('повторное создание шаблона: ошибка видн�
 });
 
 test('менеджер шаблонов: «Create from template» открывает модалку на этом шаблоне', async ({ page }) => {
-  await page.getByRole('button', { name: 'Templates', exact: true }).first().click();
+  await openSidebarMore(page);
+  await page.getByRole('menuitem', { name: 'Templates', exact: true }).first().click();
   await expect(page.getByRole('heading', { name: 'Templates', level: 1 })).toBeVisible();
 
   const card = page.getByRole('article').filter({ hasText: 'Weekly Review' }).first();
