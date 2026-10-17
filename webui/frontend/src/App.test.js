@@ -289,7 +289,7 @@ test('App показывает дашборд на главной даже пр�
 
   await waitFor(() => expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy());
   expect(screen.queryByText(uiText.app.emptyMobile)).toBeNull();
-  expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();
+  expect(screen.queryByText(uiText.app.welcome.lead)).toBeNull();
   expect(screen.queryByRole('heading', { name: uiText.app.board.title })).toBeNull();
   expect(screen.queryByText(uiText.app.board.hint)).toBeNull();
 });
@@ -538,13 +538,16 @@ test('App показывает пустое состояние доски, ко�
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.board.title })).toBeTruthy());
-  expect(screen.getByText(uiText.app.emptyDesktop)).toBeTruthy();
-  expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy();
+  // First launch: three ways in — write, bring the notes you have, sync — not a blank page.
+  await waitFor(() => expect(screen.getByRole('heading', { name: uiText.app.welcome.title })).toBeTruthy());
+  expect(screen.getByText(uiText.app.welcome.lead)).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.welcome.writeAction })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.welcome.folderAction })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.welcome.syncAction })).toBeTruthy();
   // "Continue" is deliberately absent here: this state only renders when there
   // are no notes at all, so there is nothing to continue into.
   expect(screen.queryByRole('button', { name: uiText.app.homeActions.continueWork })).toBeNull();
-  expect(screen.getByRole('button', { name: uiText.app.homeActions.importNotes })).toBeTruthy();
+  expect(screen.getByRole('button', { name: uiText.app.welcome.importAction })).toBeTruthy();
 }, 20000);
 
 test('App показывает ошибку загрузки доски с повтором вместо пустого состояния', async () => {
@@ -566,7 +569,7 @@ test('App показывает ошибку загрузки доски с по�
   await boardLoaded();
   await waitFor(() => expect(screen.getByText(uiText.app.board.loadFailed)).toBeTruthy());
   expect(screen.getByText(uiText.app.board.loadFailedHint)).toBeTruthy();
-  expect(screen.queryByText(uiText.app.emptyDesktop)).toBeNull();
+  expect(screen.queryByText(uiText.app.welcome.lead)).toBeNull();
 
   const retry = screen.getByRole('button', { name: uiText.app.board.retry });
   const callsBefore = failingFetch.mock.calls.filter(([u]) => u.includes('/api/notes/recent')).length;

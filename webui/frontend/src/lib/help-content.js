@@ -10,10 +10,10 @@ const ru = [
     title: 'Начало',
     summary: 'Monos — заметки в обычных файлах Markdown на вашем компьютере. Без аккаунта и сервера: синхронизация между устройствами идёт через ваш приватный репозиторий GitHub.',
     items: [
-      { id: 'first-note', title: 'Первая заметка', body: 'Нажмите **⌘N** или карточку «Новая заметка» на доске. Можно начать с пустой заметки, с **заметки на сегодня** (название — дата, лежит в папке «Ежедневник») или с шаблона.\n\nСохранять не нужно: заметка сохраняется сама, пока вы пишете. **⌘S** сохраняет сразу.' },
+      { id: 'first-note', title: 'Первая заметка', body: 'Пока заметок нет, на доске экран «С чего начать»: начать писать, открыть папку с заметками или подключить синхронизацию.\n\nНажмите **⌘N** или карточку «Новая заметка» на доске. Можно начать с пустой заметки, с **заметки на сегодня** (название — дата, лежит в папке «Ежедневник») или с шаблона.\n\nСохранять не нужно: заметка сохраняется сама, пока вы пишете. **⌘S** сохраняет сразу.' },
       { id: 'where-files', title: 'Где лежат файлы', body: 'Каждая заметка — файл `.md`, папки в боковой панели — настоящие папки на диске. Их можно открыть любым редактором, а в **Настройки → Папка заметок** выбрать существующую папку, например хранилище Obsidian.\n\nСлужебные файлы Monos (шаблоны, сохранённые поиски, история правок агента) лежат в скрытой папке `.monos` рядом с заметками.' },
       { id: 'layout', title: 'Как устроено окно', body: '- **Слева** — боковая панель: закреплённые, недавние и дерево папок, а внизу — «Ещё» (таблица заметок, теги, сохранённые поиски, шаблоны), терминал, корзина, справка, синхронизация и настройки. **⌘B** прячет её.\n- **В центре** — доска со всеми заметками или открытая заметка.\n- **Внизу** — терминал для агента (только в приложении для компьютера), **⌘J**.\n- **⌘K** — палитра команд: любое действие и любая заметка по названию.' },
-      { id: 'device-name', title: 'Имя устройства', body: 'При первом запуске Monos спрашивает, как назвать этот компьютер. Имя видно в истории правок и в конфликтах: «на MacBook» и «на рабочем ПК» понятнее, чем «здесь» и «там». Поменять его можно в **Настройки → Подключение GitHub**.' },
+      { id: 'device-name', title: 'Имя устройства', body: 'Имя этого компьютера видно в истории правок и в конфликтах: «на MacBook» и «на рабочем ПК» понятнее, чем «здесь» и «там». Оно нужно только для синхронизации, поэтому задаётся при подключении GitHub: **Настройки → Подключение GitHub → Имя устройства**. Там уже подставлено системное имя компьютера.' },
     ],
   },
   {
@@ -114,10 +114,10 @@ const en = [
     title: 'Getting started',
     summary: 'Monos keeps notes as plain Markdown files on your computer. No account and no server: devices sync through your own private GitHub repository.',
     items: [
-      { id: 'first-note', title: 'Your first note', body: 'Press **⌘N** or the "New note" card on the board. Start blank, with **today\'s note** (titled with the date, kept in "Daily notes"), or from a template.\n\nThere is nothing to save: a note saves itself as you type. **⌘S** saves at once.' },
+      { id: 'first-note', title: 'Your first note', body: 'Until there are notes, the board shows "Where to start": start writing, open a folder of notes, or connect sync.\n\nPress **⌘N** or the "New note" card on the board. Start blank, with **today\'s note** (titled with the date, kept in "Daily notes"), or from a template.\n\nThere is nothing to save: a note saves itself as you type. **⌘S** saves at once.' },
       { id: 'where-files', title: 'Where the files are', body: 'Each note is a `.md` file and the folders in the sidebar are real folders on disk. Any editor can open them, and **Settings → Notes folder** can point Monos at an existing folder, such as an Obsidian vault.\n\nMonos keeps its own files (templates, saved searches, the agent\'s edit history) in a hidden `.monos` folder next to the notes.' },
       { id: 'layout', title: 'The window', body: '- **Left**: the sidebar with pinned, recent and the folder tree; at its foot More (notes table, tags, saved searches, templates), terminal, trash, help, sync and settings. **⌘B** hides it.\n- **Middle**: the board with every note, or the open note.\n- **Bottom**: the agent terminal (desktop app only), **⌘J**.\n- **⌘K**: the command palette, for any action and any note by name.' },
-      { id: 'device-name', title: 'Device name', body: 'On first launch Monos asks what to call this computer. The name appears in history and in conflicts: "on MacBook" and "on work PC" say more than "here" and "there". Change it in **Settings → GitHub Connection**.' },
+      { id: 'device-name', title: 'Device name', body: 'This computer\'s name appears in history and in conflicts: "on MacBook" and "on work PC" say more than "here" and "there". It only matters for sync, so it is set while connecting GitHub: **Settings → GitHub Connection → Device name**, with the computer\'s own name already filled in.' },
     ],
   },
   {

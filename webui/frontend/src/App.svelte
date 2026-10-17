@@ -1,5 +1,4 @@
 <script>
-  import { shortcutLabel } from './lib/shortcut-label.js';
   import { onDestroy, onMount, tick } from 'svelte';
 import { get } from 'svelte/store';
   import { Router, Route, navigate } from 'svelte-routing';
@@ -26,7 +25,7 @@ import { get } from 'svelte/store';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
-import { focusNoteBody } from './stores.js';
+import { focusNoteBody, settingsSection } from './stores.js';
 import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, clampSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
@@ -38,7 +37,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { loadTemplateSettings } from './lib/template-library.js';
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
-  import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
+  import FirstRunWelcome from './components/FirstRunWelcome.svelte';
   import { launchAgent, noteLinkRequest, terminalBridge, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
   import { agentReviewOpen, refreshAgentReview, syncBlockedByReview } from './lib/agent-review.js';
@@ -256,24 +255,10 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     startAutoSync({ onResult: handleAutoPullResult });
   }
 
-  /**
-   * First launch asks what this device is called (DeviceNamePrompt). Only on the computer that keeps the
-   * notes: a phone that opens them over Wi-Fi uses that computer's notes, so the name is not its own.
-   */
-  let deviceNameSuggestion = '';
-  async function askDeviceNameOnce() {
-    const local = /Electron\//.test(navigator.userAgent) || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
-    if (!local) return;
-    try {
-      const response = await fetch('/api/device');
-      // Only a clear "no name yet" asks: an error answer is not a first launch.
-      if (!response.ok) return;
-      const device = await response.json();
-      if (device && !device.name) deviceNameSuggestion = device.suggested || 'Monos';
-    } catch {
-      // Offline backend: asked on the next launch.
-    }
-  }
+  // Whether this window is the computer that keeps the notes (the app, or a browser on it) rather than a phone
+  // opening them over Wi-Fi: the notes folder and GitHub can only be set up from the computer.
+  const onThisComputer = typeof window !== 'undefined'
+    && (/Electron\//.test(navigator.userAgent) || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname));
 
   function handleAutoPullResult(result) {
     if (!result) return;
@@ -305,7 +290,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (routePath.startsWith('/notes/')) $noteView = 'list';
     void loadHomeRecentNotes();
     void refreshConflicts();
-    void askDeviceNameOnce();
     // Files changed outside Monos (an agent in the terminal): the board and the tree follow; the open note
     // reads its file again by itself (lib/notes-events.js).
     if (terminalBridge) void refreshAgentReview();
@@ -580,6 +564,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     setRoutePath('/settings');
     clearSearch();
     navigate('/settings');
+  }
+  // From the first-run screen: Settings, opened at the part that does what the person chose.
+  function openSettingsAt(section) {
+    settingsSection.set(section);
+    openSettings();
   }
   function openHelp() {
     setRoutePath('/help');
@@ -995,41 +984,18 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
                     {$localizedText.searchResults.searching}
                   </div>
                 {:else}
-                  <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
-                    <h1 class="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-                      {$localizedText.app.board.title}
-                    </h1>
-                    <p class="mt-3 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
-                      {isMobile ? $localizedText.app.emptyMobile : $localizedText.app.emptyDesktop}
-                    </p>
-                    <div class="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                      <button
-                        type="button"
-                        class="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70"
-                        on:click={openNewNoteFlow}
-                      >
-                        {$localizedText.app.homeActions.newNote}
-                      </button>
-                      <button
-                        type="button"
-                        class="text-sm uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
-                        on:click={startArchiveImport}
-                      >
-                        {$localizedText.app.homeActions.importNotes}
-                      </button>
-                    </div>
-                    <ul class="mt-10 max-w-sm space-y-2 text-left text-sm leading-relaxed text-[var(--text-secondary)]" data-testid="first-run-tips">
-                      {#if !isMobile}<li><span class="text-[var(--text-primary)]">{shortcutLabel('Ctrl+K')}</span> · {$localizedText.app.tips.search}</li>{/if}
-                      <li>{$localizedText.app.tips.links}</li>
-                      <li>{$localizedText.app.tips.commands}</li>
-                    </ul>
-                    {#if importStatus}
-                      <p class="mt-6 text-xs text-[var(--text-tertiary)]">{importStatus}</p>
-                    {/if}
-                    {#if importError}
-                      <p class="mt-6 max-w-sm text-xs text-[var(--red)]">{importError}</p>
-                    {/if}
-                  </div>
+                  <FirstRunWelcome
+                    mobile={isMobile}
+                    thisComputer={onThisComputer}
+                    terminal={Boolean(terminalBridge)}
+                    {importStatus}
+                    {importError}
+                    on:newNote={openNewNoteFlow}
+                    on:importArchive={startArchiveImport}
+                    on:chooseFolder={() => openSettingsAt('storage')}
+                    on:connectSync={() => openSettingsAt('sync')}
+                    on:openHelp={openHelp}
+                  />
                 {/if}
               {:else}
                 <NoteBoard
@@ -1145,10 +1111,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     </div>
   {/if}
 </Router>
-
-{#if deviceNameSuggestion}
-  <DeviceNamePrompt suggested={deviceNameSuggestion} on:saved={() => { deviceNameSuggestion = ''; }} />
-{/if}
 
 {#if $agentReviewOpen}
   <AgentReviewModal
