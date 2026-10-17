@@ -440,6 +440,19 @@ The backend validates Git inputs, keeps tokens out of remote URLs, and exposes r
 
 `better-sqlite3` is a native dependency, so Electron is pinned to a version that can rebuild it reliably in CI.
 
+### Sync tests: local and live
+
+`webui/backend/two-device-sync.test.js` starts two real backends (`support/two-devices.js`, each a process with its own data and notes folder) and has them sync through a bare repository on this machine: a note travels, an edit comes back, a name outside ASCII arrives intact, the same line edited on both devices becomes a conflict that is settled, and both end level with the remote. It always runs, with the rest of the backend tests.
+
+`webui/backend/github-live.test.js` runs the same story against real GitHub, and also checks the token (a wrong one is refused), that the repository is private, and that the first and the second device can connect. It uses a branch made for the run (`monos-live-…`) and deletes it afterwards. It is skipped unless both of these are set:
+
+| Where | Name | Value |
+| --- | --- | --- |
+| Environment, or the repository's **Secrets** | `MONOS_LIVE_GITHUB_TOKEN` | a fine-grained token for the one test repository: Repository access *Only select repositories*, Contents *Read and write* |
+| Environment, or the repository's **Variables** | `MONOS_LIVE_GITHUB_REPO` | `owner/name` of a **private** repository kept for this, e.g. `aa-blinov/monos-home` |
+
+On a machine: `MONOS_LIVE_GITHUB_TOKEN=… MONOS_LIVE_GITHUB_REPO=owner/name node --test webui/backend/github-live.test.js` (type the token at the prompt of your shell, not into a file). In CI: `.github/workflows/live-github.yml` runs nightly, by hand, and when sync code changes; it stays off until the variable exists. Set them with `gh secret set MONOS_LIVE_GITHUB_TOKEN` (it asks for the value) and `gh variable set MONOS_LIVE_GITHUB_REPO --body owner/name`, in the repository that holds the code.
+
 ## Testing Strategy
 
 The project uses a strict two-track split:
