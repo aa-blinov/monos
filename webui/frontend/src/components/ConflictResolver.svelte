@@ -13,7 +13,7 @@
   // An image is chosen by looking at it: both versions are shown as pictures.
   $: isImage = /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(current?.path || '');
   const versionUrl = (item, side) => `/api/git/conflict-file?path=${encodeURIComponent(item.path)}&side=${side}`;
-  $: oursLabel = current?.sides?.ours?.device ? `${current.sides.ours.device} — ${$localizedText.editor.conflictThisDevice}` : $localizedText.settings.conflictOurs;
+  $: oursLabel = current?.sides?.ours?.device ? `${current.sides.ours.device} (${$localizedText.editor.conflictThisDevice})` : $localizedText.settings.conflictOurs;
   $: theirsLabel = current?.sides?.theirs?.device || $localizedText.settings.conflictTheirs;
   $: hasMore = currentIndex < conflicts.length - 1;
   $: remaining = conflicts.length - currentIndex - 1;

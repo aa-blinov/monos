@@ -221,17 +221,17 @@
               <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 {$localizedText.editor.conflictBase}
               </p>
-              <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-tertiary)]">{segment.shown.base || '—'}</pre>
+              <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-tertiary)]">{segment.shown.base || $localizedText.app.emptyValue}</pre>
             </div>
           {/if}
 
           <!-- The dropped side dims its text, not its cell: a see-through cell lets the grid lines show through. -->
           <div class="bg-[var(--bg-primary)] p-4" data-testid="conflict-ours-cell"><div class="transition-opacity" class:opacity-40={!keeps(choices[segment.conflictNo], 'ours')}>
             <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] font-bold text-[var(--text-primary)]" data-testid="conflict-ours-label">
-              {oursName}{#if sides?.ours?.device}<span class="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">{' — '}{$localizedText.editor.conflictThisDevice}</span>{/if}
+              {oursName}{#if sides?.ours?.device}<span class="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">{' ('}{$localizedText.editor.conflictThisDevice}{')'}</span>{/if}
             </p>
             {#if oursWhen}<p class="-mt-1 mb-2 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{oursWhen}</p>{/if}
-            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.ours as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}—{/each}</pre>
+            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.ours as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}{$localizedText.app.emptyValue}{/each}</pre>
           </div></div>
 
           <!-- The dropped side dims its text, not its cell: a see-through cell lets the grid lines show through. -->
@@ -240,7 +240,7 @@
               {theirsName}
             </p>
             {#if theirsWhen}<p class="-mt-1 mb-2 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{theirsWhen}</p>{/if}
-            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.theirs as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}—{/each}</pre>
+            <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-primary)]">{#each segment.diff.theirs as piece}{#if piece.changed}<mark class="rounded-ui bg-[color-mix(in_srgb,var(--yellow)_35%,transparent)] text-inherit">{piece.text}</mark>{:else}{piece.text}{/if}{:else}{$localizedText.app.emptyValue}{/each}</pre>
           </div></div>
         </div>
         {#if choices[segment.conflictNo] === 'custom'}
