@@ -16,4 +16,6 @@ test('поля поиска в приложении — одно и то же п
   for (const name of ['HelpView', 'PropertiesView', 'TemplateManager', 'TagPanel']) assert.match(read(name), /<SearchField\b/, name);
   assert.match(read('Header'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
   assert.match(read('SearchField'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
+  assert.match(read('CommandPalette'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
+  assert.match(read('TerminalPanel'), /h-11 lg:h-10 \{SEARCH_INPUT_CLASS\}/);
 });
