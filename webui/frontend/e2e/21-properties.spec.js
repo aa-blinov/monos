@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createBlankNote, prepareMonos, uniqueTitle } from './support/monos.js';
+import { createBlankNote, openSidebarMore, prepareMonos, uniqueTitle } from './support/monos.js';
 
 test('таблица заметок открывается из палитры всегда, а из боковой панели — когда у заметок есть свойства', async ({ page }) => {
   await prepareMonos(page);
@@ -19,6 +19,7 @@ test('таблица заметок открывается из палитры �
   const title = uniqueTitle('Has Property');
   await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: '---\nstatus: draft\n---\nТекст' } });
   await page.goto('/');
+  await openSidebarMore(page);
   await page.getByTestId('open-properties').click();
   await expect(page.getByTestId('properties-view')).toBeVisible();
 });

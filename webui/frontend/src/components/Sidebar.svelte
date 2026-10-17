@@ -900,6 +900,18 @@
   }
 
   // A note is resolved in the note itself; a file that is not a note (an attachment) in Settings.
+  // The "More" row's menu (desktop footer).
+  let moreOpen = false;
+  let moreAnchor;
+  const moreItemClass = 'flex h-8 w-full items-center gap-2.5 px-3 text-left text-sm text-[var(--text-secondary)] outline-none transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--bg-secondary)] focus-visible:text-[var(--text-primary)]';
+  function pickMore(event) {
+    moreOpen = false;
+    dispatch(event);
+  }
+  function closeMoreOutside(event) {
+    if (moreOpen && moreAnchor && !moreAnchor.contains(event.target)) moreOpen = false;
+  }
+
   function openFirstConflict() {
     const [path] = [...$conflictedNotes].sort();
     if (!path) {
@@ -1290,55 +1302,51 @@
             <span class="truncate">{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
           </TooltipIconButton>
         {/if}
-        <TooltipIconButton
-          on:click={() => dispatch('openTemplatesManager')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.sidebar.templates}
-          tooltip=""
-          tooltipAlign="end"
-        >
-          <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.sidebar.templates}</span>
-        </TooltipIconButton>
-        {#if showSavedSearchesLink}
-          <TooltipIconButton
-            data-testid="open-saved-searches"
-            on:click={() => dispatch('openSavedSearches')}
-            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            label={$localizedText.savedSearches.title}
-            tooltip=""
-            tooltipAlign="end"
+        <!-- The places opened now and then (templates, saved searches, tags, the notes table) share one row, so
+             the footer stays short; each is also in the command palette (⌘K). -->
+        <div class="relative" bind:this={moreAnchor}>
+          <button
+            type="button"
+            data-testid="open-more"
+            aria-haspopup="menu"
+            aria-expanded={moreOpen}
+            on:click={() => { moreOpen = !moreOpen; }}
+            class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] {moreOpen ? 'text-[var(--text-primary)]' : ''}"
           >
-            <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-            <span class="truncate">{$localizedText.savedSearches.title}</span>
-          </TooltipIconButton>
-        {/if}
-        {#if showTagsLink}
-          <TooltipIconButton
-            data-testid="open-tags"
-            on:click={() => dispatch('openTags')}
-            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            label={$localizedText.tags.title}
-            tooltip=""
-            tooltipAlign="end"
-          >
-            <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-            <span class="truncate">{$localizedText.tags.title}</span>
-          </TooltipIconButton>
-        {/if}
-        {#if showPropertiesLink}
-          <TooltipIconButton
-            data-testid="open-properties"
-            on:click={() => dispatch('openProperties')}
-            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-            label={$localizedText.properties.sidebar}
-            tooltip={$localizedText.properties.tableTooltip}
-            tooltipAlign="start"
-          >
-            <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-            <span class="truncate">{$localizedText.properties.sidebar}</span>
-          </TooltipIconButton>
-        {/if}
+            <Icon.LayoutGrid class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.sidebar.more}</span>
+            <Icon.ChevronRight class="ml-auto w-3.5 h-3.5 shrink-0 transition-transform {moreOpen ? '-rotate-90' : ''}" strokeWidth="1.7" aria-hidden="true" />
+          </button>
+          {#if moreOpen}
+            <!-- svelte-ignore a11y-interactive-supports-focus -->
+            <div
+              role="menu"
+              aria-label={$localizedText.sidebar.more}
+              data-testid="more-menu"
+              on:keydown={(event) => { if (event.key === 'Escape') { moreOpen = false; moreAnchor?.querySelector('button')?.focus(); } }}
+              class="absolute bottom-full left-0 z-40 mb-1 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 normal-case tracking-normal shadow-2xl"
+            >
+              {#if showPropertiesLink}
+                <button type="button" role="menuitem" data-testid="open-properties" class={moreItemClass} on:click={() => pickMore('openProperties')}>
+                  <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.properties.sidebar}
+                </button>
+              {/if}
+              {#if showTagsLink}
+                <button type="button" role="menuitem" data-testid="open-tags" class={moreItemClass} on:click={() => pickMore('openTags')}>
+                  <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.tags.title}
+                </button>
+              {/if}
+              {#if showSavedSearchesLink}
+                <button type="button" role="menuitem" data-testid="open-saved-searches" class={moreItemClass} on:click={() => pickMore('openSavedSearches')}>
+                  <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.savedSearches.title}
+                </button>
+              {/if}
+              <button type="button" role="menuitem" data-testid="open-templates" class={moreItemClass} on:click={() => pickMore('openTemplatesManager')}>
+                <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.sidebar.templates}
+              </button>
+            </div>
+          {/if}
+        </div>
         {#if terminalBridge}
           <TooltipIconButton
             data-testid="open-terminal"
@@ -1430,6 +1438,8 @@
     </div>
   {/if}
 </div>
+
+<svelte:window on:pointerdown={closeMoreOutside} />
 
 <!-- Bulk Tag Modal -->
 {#if showBulkTagPrompt}
