@@ -299,6 +299,12 @@ input[type="number"]::-webkit-outer-spin-button {
   padding-right: 1.5rem;
 }
 
+/* An icon in a menu row keeps its size when the label wraps onto a second line: a flex item shrinks by default,
+   and the agent entry's robot came out smaller than its neighbours. */
+[role="menuitem"] svg {
+  flex-shrink: 0;
+}
+
 /* Placeholders carry real hints ("Name (optional)", the token format), so they keep
    readable contrast instead of the browser's pale grey. Component classes still win. */
 /* Written as input/textarea::placeholder: Tailwind's preflight sets `input::placeholder` to its own gray-400
