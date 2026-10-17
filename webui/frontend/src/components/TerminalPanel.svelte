@@ -14,6 +14,7 @@
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
   import { Bot } from 'lucide-svelte';
+  import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
   import {
     agentLabel,
     agentRequest,
@@ -65,6 +66,8 @@
       const session = await terminalBridge.create({ cols: term.cols, rows: term.rows });
       sessionId = session.id;
       folder = session.cwd;
+      // From here on, files changed outside Monos are compared with how they are now.
+      void ensureAgentCheckpoint().then(refreshAgentReview);
     } catch (error) {
       term.writeln(`\r\n${$localizedText.terminal.startFailed}: ${error?.message || error}`);
       exited = true;
@@ -234,6 +237,14 @@
         <button type="button" data-testid="agent-rules-create" on:click={createRules} class="normal-case tracking-normal text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:text-[var(--text-primary)]" title={$localizedText.terminal.rulesHint}>{$localizedText.terminal.rulesCreate}</button>
       {/if}
       <span class="ml-auto hidden normal-case tracking-normal sm:inline">{$localizedText.terminal.shortcut}</span>
+      {#if $agentReview.changes?.length}
+        <button
+          type="button"
+          data-testid="agent-review-open"
+          on:click={() => agentReviewOpen.set(true)}
+          class="inline-flex h-7 items-center rounded-ui px-2 font-bold normal-case tracking-normal text-[var(--blue)] transition hover:bg-[var(--bg-secondary)]"
+        >{$localizedText.agentReview.button($agentReview.changes.length)}</button>
+      {/if}
       <button
         type="button"
         data-testid="agent-launch"

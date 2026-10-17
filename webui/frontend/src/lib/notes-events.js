@@ -5,15 +5,20 @@ import { announceNotesPulled } from './note-refresh.js';
  * backend as server-sent events (GET /api/events). The open note reads its file again (as after a sync), and
  * `onFiles` lets the app refresh the board and the tree. The browser reconnects a dropped stream on its own.
  *
- * @param {{ onFiles?: (paths: string[]) => void, EventSourceImpl?: typeof EventSource }} options
+ * @param {{ onFiles?: (paths: string[]) => void, onReview?: () => void, EventSourceImpl?: typeof EventSource }} options
  * @returns {() => void} closes the stream
  */
-export function listenForNoteChanges({ onFiles = () => {}, EventSourceImpl = globalThis.EventSource } = {}) {
+export function listenForNoteChanges({ onFiles = () => {}, onReview = () => {}, EventSourceImpl = globalThis.EventSource } = {}) {
   if (typeof EventSourceImpl !== 'function') return () => {};
   const source = new EventSourceImpl('/api/events');
   source.onmessage = (message) => {
     let event;
     try { event = JSON.parse(message.data); } catch { return; }
+    // The agent's changes waiting for review changed (agent-review.js on the backend).
+    if (event?.type === 'agent-review') {
+      onReview();
+      return;
+    }
     if (event?.type !== 'files' || !Array.isArray(event.paths)) return;
     announceNotesPulled();
     onFiles(event.paths);

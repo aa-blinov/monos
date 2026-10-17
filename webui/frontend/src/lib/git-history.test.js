@@ -43,11 +43,12 @@ test('ошибка сервера становится исключением с
 });
 
 test('заголовки версий на языке интерфейса', () => {
-  const words = { synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена', resolved: 'Разобран конфликт', merged: 'Объединены правки' };
+  const words = { agent: 'Правки агента', synced: 'Синхронизация', savedBeforePull: 'Правки перед синхронизацией', connected: 'Подключена', resolved: 'Разобран конфликт', merged: 'Объединены правки' };
   assert.equal(revisionTitle('Auto-sync from Ноутбук', words), 'Синхронизация');
   assert.equal(revisionTitle('Auto-sync from Monos (pending pull)', words), 'Правки перед синхронизацией');
   assert.equal(revisionTitle('Init from Телефон', words), 'Подключена');
   assert.equal(revisionTitle('Resolve conflict in Покупки.md', words), 'Разобран конфликт');
   assert.equal(revisionTitle("Merge branch 'master' of https://github.com/x/y", words), 'Объединены правки');
+  assert.equal(revisionTitle('Agent edits on Ноутбук', words), 'Правки агента');
   assert.equal(revisionTitle('Своё сообщение', words), 'Своё сообщение');
 });

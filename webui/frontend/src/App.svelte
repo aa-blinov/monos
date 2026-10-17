@@ -41,6 +41,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import DeviceNamePrompt from './components/DeviceNamePrompt.svelte';
   import { launchAgent, terminalBridge, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
+  import { agentReviewOpen, refreshAgentReview } from './lib/agent-review.js';
+  import AgentReviewModal from './components/AgentReviewModal.svelte';
 
   const LAST_APP_ROUTE_KEY = 'lastAppRoute';
 
@@ -297,7 +299,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     void askDeviceNameOnce();
     // Files changed outside Monos (an agent in the terminal): the board and the tree follow; the open note
     // reads its file again by itself (lib/notes-events.js).
+    if (terminalBridge) void refreshAgentReview();
     stopNoteChanges = listenForNoteChanges({
+      onReview: () => { void refreshAgentReview(); },
       onFiles: () => {
         void loadHomeRecentNotes();
         void sidebarComponent?.loadTree?.();
@@ -1116,4 +1120,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
 {#if deviceNameSuggestion}
   <DeviceNamePrompt suggested={deviceNameSuggestion} on:saved={() => { deviceNameSuggestion = ''; }} />
+{/if}
+
+{#if $agentReviewOpen}
+  <AgentReviewModal
+    on:close={() => agentReviewOpen.set(false)}
+    on:open={(event) => { agentReviewOpen.set(false); handleNavigate({ detail: { path: event.detail, name: event.detail.split('/').pop(), isDir: false } }); }}
+  />
 {/if}

@@ -3,6 +3,7 @@
   import { displayFolderName, localizedText } from '../lib/strings.js';
   import { Icon } from '../lib/tree-icons.js';
   import { conflictedNotes } from '../lib/git-conflicts.js';
+  import { agentTouched } from '../lib/agent-review.js';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
 
   const dispatch = createEventDispatcher();
@@ -221,6 +222,10 @@
     >
       {fileName}
     </span>
+    {#if !node.is_dir && $agentTouched.has(node.path) && !$conflictedNotes.has(node.path)}
+      <span class="mr-1 h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" title={$localizedText.agentReview.badgeHint} data-testid="tree-agent"></span>
+      <span class="sr-only">{$localizedText.agentReview.badge}</span>
+    {/if}
     {#if !node.is_dir && $conflictedNotes.has(node.path)}
       <span class="mr-1 h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" title={$localizedText.app.board.conflictHint} data-testid="tree-conflict"></span>
       <span class="sr-only">{$localizedText.app.board.conflict}</span>
