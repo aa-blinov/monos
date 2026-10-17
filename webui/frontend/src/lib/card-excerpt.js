@@ -2,10 +2,12 @@
  * The text a note card shows: the note's sentences without the Markdown that makes them.
  *
  * Code, tables' rules, task boxes, callout markers and frontmatter are left out. After a heading, a list
- * item or a table row the next line follows " · ", so a list reads "milk · bread · coffee" instead of
- * running together; after a sentence of running text it follows a space.
+ * item or a table row the next line follows a comma (a colon after a heading), so a list reads "milk, bread,
+ * coffee" instead of running together; after a sentence it follows a space. No separator is a dot.
  */
-const SENTENCE_END = /[.!?:;…»"”)]$/;
+// A line that closed itself with punctuation needs no separator; one that only ends in a quote or bracket does.
+const CLOSED = /[.!?…:;]$/;
+const WRAPPED = /[»"”)]$/;
 
 export function cardExcerpt(markdown, maxLength = 240) {
   const text = String(markdown || '')
@@ -28,7 +30,8 @@ export function cardExcerpt(markdown, maxLength = 240) {
     // A table's rule row carries no words.
     if (/^[ \t]*\|?[ \t]*:?-{2,}:?(?:[ \t]*\|[ \t]*:?-{2,}:?)*[ \t]*\|?[ \t]*$/.test(raw)) continue;
     const unquoted = raw.replace(/^[ \t]*>[ \t]?/, '');
-    const isBlock = /^\[![\w-]+\]|^[ \t]*#{1,6}[ \t]|^[ \t]*(?:[-*+]|\d+[.)])[ \t]|\|/.test(unquoted);
+    const isHeading = /^[ \t]*#{1,6}[ \t]/.test(unquoted);
+    const isBlock = isHeading || /^\[![\w-]+\]|^[ \t]*(?:[-*+]|\d+[.)])[ \t]|\|/.test(unquoted);
     const line = unquoted
       .replace(/^\[![\w-]+\][+-]?[ \t]*/, '')
       .replace(/^[ \t]*#{1,6}[ \t]+/, '')
@@ -47,15 +50,22 @@ export function cardExcerpt(markdown, maxLength = 240) {
       .split('|').map((cell) => cell.trim()).filter(Boolean).join(' – ')
       .replace(/\s+/g, ' ')
       .trim();
-    if (line && !/^last opened:/i.test(line)) lines.push({ line, isBlock });
+    if (line && !/^last opened:/i.test(line)) lines.push({ line, isBlock, isHeading });
   }
 
   let out = '';
-  let previousIsBlock = false;
-  for (const { line, isBlock } of lines) {
+  let previous = null;
+  for (const entry of lines) {
+    const { line } = entry;
     if (!out) out = line;
-    else out += (!previousIsBlock && SENTENCE_END.test(out) ? ' ' : ' · ') + line;
-    previousIsBlock = isBlock;
+    else {
+      let glue;
+      if (!previous.isBlock) glue = CLOSED.test(out) || WRAPPED.test(out) ? ' ' : ', ';
+      else if (CLOSED.test(out)) glue = ' ';
+      else glue = previous.isHeading ? ': ' : ', ';
+      out += glue + line;
+    }
+    previous = entry;
     if (out.length > maxLength) break;
   }
   return out.length > maxLength ? `${out.slice(0, maxLength - 1).trimEnd()}…` : out;

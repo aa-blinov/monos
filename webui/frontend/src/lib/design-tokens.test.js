@@ -343,3 +343,18 @@ test('placeholders take the theme colour, not the preflight grey', () => {
   const css = read(path.join(SRC, 'app.css'));
   assert.match(css, /input::placeholder,\s*textarea::placeholder[^{]*\{\s*color:\s*var\(--text-tertiary\)/);
 });
+
+// Items in the interface are set apart by space, a comma or a colon, never by a middle dot ("main · synced",
+// "Agent changes · 2", "milk · bread"): the dots read as decoration and crowd small text.
+test('no middle-dot separators in the interface text', () => {
+  const dirs = [path.join(SRC, 'components'), path.join(SRC, 'lib')];
+  const offenders = [];
+  for (const dir of dirs) {
+    for (const name of fs.readdirSync(dir)) {
+      if (!/\.(svelte|js)$/.test(name) || /\.test\.js$/.test(name)) continue;
+      const text = read(path.join(dir, name));
+      text.split('\n').forEach((line, index) => { if (line.includes('·')) offenders.push(`${path.relative(SRC, path.join(dir, name))}:${index + 1}`); });
+    }
+  }
+  assert.deepEqual(offenders, []);
+});

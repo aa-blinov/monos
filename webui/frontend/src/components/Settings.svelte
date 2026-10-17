@@ -547,7 +547,8 @@
       if (!r.ok) {
         // The reason is shown where the button is, not only in the box above the form, out of sight.
         connectPhase = 'error';
-        connectMessage = answer.detail || $localizedText.settings.connectFailed;
+        // The common causes have a sentence of their own in this language; anything else keeps the server's words.
+        connectMessage = $localizedText.settings.gitReasons[answer.reason] || answer.detail || $localizedText.settings.connectFailed;
         return;
       }
       await checkGitStatus();
@@ -1002,6 +1003,13 @@
         </div>
       {/if}
 
+      {#if repoSafety && repoSafety.canPush === false}
+        <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3" data-testid="read-only-token">
+          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.readOnlyTokenTitle}</p>
+          <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.readOnlyTokenHint}</p>
+        </div>
+      {/if}
+
       {#if scopeWarnings.length}
         <div class="rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
           <p class="text-xs font-bold text-[var(--text-primary)]">{$localizedText.settings.tokenScopeTitle}</p>
@@ -1129,7 +1137,7 @@
               <div class="flex items-center gap-2.5">
                 <span class="w-2 h-2 rounded-full" class:bg-[var(--green)]={gitStatus.status === 'clean'} class:bg-[var(--yellow)]={gitStatus.status === 'dirty' || gitStatus.ahead > 0} class:bg-[var(--red)]={gitStatus.status === 'conflict' || gitStatus.behind > 0}></span>
                 <span class="font-medium">{gitStatus.current_branch}</span>
-                <span class="text-[var(--text-secondary)]">· {$localizedText.settings[gitStatus.status] || gitStatus.status}</span>
+                <span class="text-[var(--text-secondary)]">{$localizedText.settings[gitStatus.status] || gitStatus.status}</span>
               </div>
               {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}

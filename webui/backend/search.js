@@ -369,7 +369,7 @@ function toPlainExcerptText(content) {
     .replace(/(?<!\\)\$([^$\n]+?)\$/g, (_, latex) => latex.trim())
     // remaining emphasis, quotes and headings
     // a heading keeps its text but is set apart, so it does not run into the next line
-    .replace(/^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$/gm, '$1 ·')
+    .replace(/^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$/gm, (_, title) => (/[.!?…:;]$/.test(title) ? title : `${title}:`))
     .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1')
     .replace(/^[ \t]*>[ \t]?/gm, '')
     // a callout's marker (`> [!note] Title`) is syntax; the title stays
