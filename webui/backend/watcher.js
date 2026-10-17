@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NOTES_DIR } from './config.js';
 import { getDb } from './database.js';
-import { indexAllFiles } from './indexing.js';
+import { indexPaths } from './indexing.js';
 import { isAgentRuleFile } from './agent-rules.js';
 import { recordOutsideChanges } from './agent-review.js';
 
@@ -40,7 +40,8 @@ function flush() {
     return; // the database is closing
   }
   if (!outside.length) return;
-  indexAllFiles();
+  // Only what changed: reading every note again for each file an agent writes was seconds on a big vault.
+  indexPaths(outside.map((relative) => path.join(NOTES_DIR, relative)));
   const notePaths = outside.map((relative) => `notes/${relative}`);
   broadcast({ type: 'files', paths: notePaths });
   // Changed outside Monos while an agent session is open: they wait for review (agent-review.js).

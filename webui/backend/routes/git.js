@@ -7,7 +7,7 @@ import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
 import { httpError, notesRelativePath, readTextFile } from '../utils.js';
-import { indexAllFiles } from '../indexing.js';
+import { indexAllFiles, indexPaths } from '../indexing.js';
 import { isLockedNote, rememberSession, sealWithSession, sessionFor, unlockContent } from '../note-lock.js';
 import { pendingReview, takeKeptForSync } from '../agent-review.js';
 
@@ -604,6 +604,20 @@ function currentHead() {
   try { return gitExec(['rev-parse', 'HEAD']).trim(); } catch { return ''; }
 }
 
+// The index after a pull: the files the pull changed, not every note again. Falls back to the full pass when the
+// change list cannot be read. Nothing to do when the pull brought nothing.
+function reindexAfterPull(headBefore) {
+  const head = currentHead();
+  if (head === headBefore) return;
+  try {
+    if (!headBefore) throw new Error('no earlier commit to compare with');
+    const changed = gitExec(['diff', '--name-only', '--no-renames', '-z', headBefore, head]).split('\0').filter(Boolean);
+    indexPaths(changed.map((name) => path.join(NOTES_DIR, name)));
+  } catch {
+    indexAllFiles();
+  }
+}
+
 // Commits from the other devices that this device did not have before its pull: the number the person acts on.
 // Counted against the remote branch after the pull, so the download is seen even when git fetched it itself.
 function arrivedCommits(headBefore, branch) {
@@ -822,24 +836,28 @@ export function registerGitRoutes(app) {
     }
   });
 
-  app.get('/api/git/status', (req, res) => {
+  // The interface asks for this on every change in the notes folder, so it must not hold the app still: the
+  // commands run beside each other, away from the main thread, and the answer takes as long as the slowest one.
+  app.get('/api/git/status', async (req, res) => {
     try {
       if (!isGitRepo()) return res.json({ initialized: false });
 
       const settings = readGitSettings();
-      const currentBranch = gitExec(['rev-parse', '--abbrev-ref', 'HEAD']);
-      const statusOut = gitExec(['status', '--porcelain']);
+      const quiet = (args) => gitExecAsync(args).catch(() => '');
+      const [currentBranch, statusOut, unmerged, markers, counts] = await Promise.all([
+        gitExecAsync(['rev-parse', '--abbrev-ref', 'HEAD']),
+        gitExecAsync(['status', '--porcelain']),
+        quiet(['diff', '--name-only', '--diff-filter=U']),
+        // git grep exits 1 when nothing matches
+        quiet(['grep', '-l', '--untracked', '-E', '^<{7}( |$)', '--', '*.md', ':!.monos']),
+        // No upstream yet: the same answer as no difference.
+        quiet(['rev-list', '--left-right', '--count', '@{u}...HEAD']),
+      ]);
       const hasChanges = statusOut.length > 0;
-      const hasConflicts = hasUnmergedFiles() || notesWithMarkers().length > 0;
-      let ahead = 0;
-      let behind = 0;
-
-      try {
-        gitExec(['rev-parse', '@{u}']);
-        const counts = gitExec(['rev-list', '--left-right', '--count', '@{u}...HEAD']).split('\t');
-        behind = parseInt(counts[0]) || 0;
-        ahead = parseInt(counts[1]) || 0;
-      } catch {}
+      const hasConflicts = unmerged.length > 0 || markers.length > 0;
+      const [behindText, aheadText] = counts.split('\t');
+      const behind = parseInt(behindText) || 0;
+      const ahead = parseInt(aheadText) || 0;
 
       res.json({
         initialized: true,
@@ -1104,7 +1122,7 @@ export function registerGitRoutes(app) {
       }
 
       const after = divergenceSummary(branch);
-      if (after.behind !== before.behind || after.ahead !== before.ahead) indexAllFiles();
+      reindexAfterPull(headBefore);
       writeGitSettings({ ...readGitSettings(), last_pull: new Date().toISOString() });
 
       res.json({
@@ -1168,9 +1186,8 @@ export function registerGitRoutes(app) {
       await gitExecAsync(['push'], { token: authToken });
       const after = divergenceSummary(branch);
 
-      // Reading every note again takes a while and blocks the app for it; only a pull that brought something in
-      // changes what the index holds (this device's own edits were indexed as they were saved).
-      if (currentHead() !== headBeforePull) indexAllFiles();
+      // This device's own edits were indexed as they were saved; what a pull brought in is indexed here.
+      reindexAfterPull(headBeforePull);
       writeGitSettings({ ...readGitSettings(), last_sync: new Date().toISOString() });
 
       res.json({

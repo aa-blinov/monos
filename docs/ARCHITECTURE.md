@@ -119,6 +119,18 @@ The backend owns:
 
 Frontend code should call backend APIs instead of touching local files directly.
 
+## Performance Rules
+
+The backend runs inside the desktop app's main process, so anything slow in it is a frozen window. Measured on a vault of 5,300 notes (`scripts/` has none of this; the figures come from profiling a copy of the sample notes, 50 times over):
+
+- **The index follows the folder without reading it all again.** `indexAllFiles` skips a note the index already holds (same text, modification time and place), runs in one transaction, and fills the text index in one pass only when it has fallen out of step. `indexPaths` updates just the files a pull or an agent touched, and the watcher and a sync use it. A full start went from 28 s to 6 s (and to 0.5 s once the index exists); a re-read with nothing changed from 60 s to 0.5 s.
+- **The text index deletes by rowid.** `notes_fts_ids` maps a note's path to its FTS rowid; `DELETE ... WHERE path = ?` read the whole table, which made indexing grow with the square of the vault.
+- **Routes read what they show.** The tree selects only its columns and reads folder settings once (252 ms → 35 ms); the link graph loads a note's text only for notes a route looks inside, and unlinked mentions ask the text index which notes can hold the phrase; search builds its excerpts only for the results it returns.
+- **Waiting is never done on the main thread.** Network git (`fetch`, `pull`, `push`) and `/api/git/status` use `gitExecAsync`; quick local git stays synchronous.
+- **Settings reads nothing it does not show.** The two reports under "Advanced" run when that section is first opened.
+
+Not yet fast at that size: a sync still holds the main thread for about 0.2 s (local git and the index), and a pull of 300 changed notes for about 0.5 s; a search matching thousands of notes scores them all (0.3 s).
+
 ## Frontend Module Layout
 
 The frontend code lives in `webui/frontend/src` and is split into three top-level concerns:
