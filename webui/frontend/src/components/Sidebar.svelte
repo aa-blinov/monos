@@ -1247,6 +1247,10 @@
         <Icon.Trash2 size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.trash}</span>
       </button>
+      <button data-testid="open-help" on:click={() => { dispatch('openHelp'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.LifeBuoy size="20" strokeWidth="1.7" />
+        <span>{$localizedText.sidebar.help}</span>
+      </button>
       <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
@@ -1369,6 +1373,16 @@
         >
           <Icon.Trash2 class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
           <span class="truncate">{$localizedText.sidebar.trash}</span>
+        </TooltipIconButton>
+        <TooltipIconButton
+          data-testid="open-help"
+          on:click={() => dispatch('openHelp')}
+          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          label={$localizedText.sidebar.help}
+          tooltip=""
+        >
+          <Icon.LifeBuoy class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          <span class="truncate">{$localizedText.sidebar.help}</span>
         </TooltipIconButton>
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}

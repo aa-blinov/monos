@@ -70,6 +70,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `terminal-links.test.js` | Paths with spaces, the longest match, quoted, `./` and absolute paths; non-notes and word fragments ignored |
 | `git-conflicts.js` | `conflictedNotes`, `conflictedFiles`, `gitConnected`, `revealConflicts`, `refreshConflicts`, `conflictNotePath` — what is in a sync conflict (notes and other files) and whether a repository is connected |
 | `git-conflicts.test.js` | Server paths to note paths, conflict and clean states, offline |
+| `help-content.js` | `helpSections(locale)` — the in-app Help: sections and topics in Markdown, RU and EN with the same ids, ending with a FAQ |
+| `help-content.test.js` | Same sections and topics in both languages, no empty or repeated topics, common questions are findable |
+| `help-search.js` | `searchHelp(sections, query)`, `plainText` — every word must match, title matches first, ё as е, an excerpt around the match |
+| `help-search.test.js` | Ranking, ё, Markdown marks ignored, empty query |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
 | `trash-undo.test.js` | Name and pin remembered, a newer notice wins, undo restores and re-pins |
 | `qr-code.js` | `qrPath(text)` — a QR code as one SVG path with its quiet zone, made locally for the phone-access address |
