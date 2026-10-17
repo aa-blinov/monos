@@ -6,7 +6,6 @@
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
   import ConfirmModal from './ConfirmModal.svelte';
-  import { shortcutLabel } from '../lib/shortcut-label.js';
   import Checkbox from './Checkbox.svelte';
   import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
@@ -14,12 +13,12 @@
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection } from '../stores.js';
   import ConnectStatus from './ConnectStatus.svelte';
+  import SettingsNav from './SettingsNav.svelte';
   import { formFieldClass } from '../lib/form-field.js';
   import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
   import { formatAttachmentSize as humanSize, fetchOrphanAttachments } from '../lib/attachments.js';
   import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
-  import { fetchNotesDir } from '../lib/info.js';
   import {
     chooseNotesFolderRequest,
     deleteFileRequest,
@@ -123,7 +122,6 @@
   let showClipperToken = false;
   let repoSafety = null;
   let scopeWarnings = [];
-  let notesDir = '';
   let connectionStatus = 'loading';
   let connectionReport = {
     broken: [],
@@ -156,7 +154,6 @@
   $: shownQr = shownQrUrl ? qrPath(shownQrUrl) : null;
 
   onMount(async () => {
-    try { notesDir = await fetchNotesDir(); } catch { notesDir = ''; }
     loadLanAccess();
     loadStorage();
   });
@@ -718,12 +715,43 @@
     checkGitStatus();
   }
 
+  // The parts of the page, for the navigation: the one in view is marked as the page scrolls.
+  let scroller;
+  let activeGroup = 'settings-appearance';
+  $: navItems = [
+    { id: 'settings-appearance', label: $localizedText.settings.appearance },
+    ...(terminalBridge ? [{ id: 'settings-agent', label: $localizedText.agent.title }] : []),
+    { id: 'settings-data', label: $localizedText.settings.navData },
+    { id: 'settings-sync', label: $localizedText.settings.navSync },
+    { id: 'settings-devices', label: $localizedText.settings.navDevices },
+    { id: 'settings-more', label: $localizedText.settings.advanced },
+  ];
+
+  function updateActive() {
+    if (!scroller) return;
+    const line = scroller.getBoundingClientRect().top + 140;
+    let current = navItems[0]?.id || '';
+    for (const item of navItems) {
+      const element = document.getElementById(item.id);
+      if (element && element.getBoundingClientRect().top <= line) current = item.id;
+    }
+    activeGroup = current;
+  }
+
+  function goToGroup(event) {
+    const element = document.getElementById(event.detail);
+    if (!element) return;
+    if (element.tagName === 'DETAILS') element.open = true;
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    activeGroup = event.detail;
+  }
+
   onMount(initSettingsPage);
   onDestroy(() => clearInterval(connectTicker));
 </script>
 
-<div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8">
-  <div class="mx-auto w-full max-w-5xl">
+<div class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" bind:this={scroller} on:scroll={updateActive}>
+  <div class="mx-auto w-full max-w-6xl">
 
     <div class="mb-7">
       <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.settings.title}</h1>
@@ -732,10 +760,13 @@
       </p>
     </div>
 
-    <div class="space-y-8">
+    <div class="lg:grid lg:grid-cols-[9.5rem_minmax(0,1fr)] lg:gap-10">
+    <SettingsNav items={navItems} active={activeGroup} on:go={goToGroup} />
 
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.language}</h2>
+    <div class="min-w-0 space-y-8">
+
+    <section class="space-y-5 scroll-mt-16 lg:scroll-mt-6" id="settings-appearance" data-testid="appearance-section">
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.appearance}</h2>
       <div>
         <label for="interface-language" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.interfaceLanguage}</label>
         <select
@@ -749,11 +780,6 @@
           {/each}
         </select>
       </div>
-    </section>
-
-    <!-- Theme -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.theme}</h2>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
         <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-1">
@@ -792,11 +818,6 @@
         {/each}
       </div>
       </div>
-    </section>
-
-    <!-- Font -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.typography}</h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div class="min-w-0">
           <label for="font-family" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.font}</label>
@@ -825,11 +846,6 @@
           </select>
         </div>
       </div>
-    </section>
-
-    <!-- Editor Preferences -->
-    <section class="space-y-5">
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.editor}</h2>
       <div class="min-w-0">
         <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
         <select
@@ -845,10 +861,47 @@
       </div>
     </section>
 
-    <!-- Language -->
     {#if terminalBridge}
-      <AgentSettings />
+      <div id="settings-agent" class="scroll-mt-16 lg:scroll-mt-6">
+        <AgentSettings />
+      </div>
     {/if}
+
+    <section class="space-y-5 scroll-mt-16 rounded-ui border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-data" data-testid="storage-section" use:revealSection={'storage'}>
+      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
+      {#if storageStatus === 'remote'}
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageRemoteOnly}</p>
+      {:else if storage}
+        <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
+        {#if storage.unavailable}
+          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
+        {:else if storage.restartRequired}
+          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.storageRestart.replace('{folder}', storage.target)}</p>
+        {/if}
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={storageBusy}
+            data-testid="storage-choose"
+            on:click={chooseStorage}
+            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+          >{$localizedText.settings.storageChoose}</button>
+          {#if storage.target !== storage.defaultFolder}
+            <button
+              type="button"
+              disabled={storageBusy}
+              data-testid="storage-reset"
+              on:click={useDefaultStorage}
+              class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+            >{$localizedText.settings.storageReset}</button>
+          {/if}
+        </div>
+      {/if}
+      {#if storageError}
+        <p role="alert" class="text-xs text-[var(--red)]">{storageError}</p>
+      {/if}
+    </section>
 
     <section class="space-y-4 border-t border-[var(--border-subtle)] pt-5 pb-2">
       <div>
@@ -919,48 +972,12 @@
       {/if}
     </section>
 
-    <section class="space-y-5 scroll-mt-6 rounded-ui" data-testid="storage-section" use:revealSection={'storage'}>
-      <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
-      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
-      {#if storageStatus === 'remote'}
-        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageRemoteOnly}</p>
-      {:else if storage}
-        <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
-        {#if storage.unavailable}
-          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
-        {:else if storage.restartRequired}
-          <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.storageRestart.replace('{folder}', storage.target)}</p>
-        {/if}
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={storageBusy}
-            data-testid="storage-choose"
-            on:click={chooseStorage}
-            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          >{$localizedText.settings.storageChoose}</button>
-          {#if storage.target !== storage.defaultFolder}
-            <button
-              type="button"
-              disabled={storageBusy}
-              data-testid="storage-reset"
-              on:click={useDefaultStorage}
-              class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-            >{$localizedText.settings.storageReset}</button>
-          {/if}
-        </div>
-      {/if}
-      {#if storageError}
-        <p role="alert" class="text-xs text-[var(--red)]">{storageError}</p>
-      {/if}
-    </section>
-
     <!-- GitHub Connection -->
-    <section class="space-y-5 pt-5 scroll-mt-6 rounded-ui" data-testid="sync-section" use:revealSection={'sync'}>
+    <section class="space-y-5 scroll-mt-16 rounded-ui border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-sync" data-testid="sync-section" use:revealSection={'sync'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
-      <details open class="text-xs text-[var(--text-secondary)] group">
+      <details open={!isAuthenticated} class="text-xs text-[var(--text-secondary)] group">
         <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 rounded-ui border border-[var(--border-subtle)] p-3 leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
@@ -1165,7 +1182,7 @@
 
     {/if}
 
-    <section class="space-y-5" data-testid="lan-section">
+    <section class="space-y-5 scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-devices" data-testid="lan-section">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
       <!-- Said before the switch, at reading size: the risk is part of the decision, not a footnote after it. -->
@@ -1283,68 +1300,16 @@
       </section>
     {/if}
 
-    <!-- Documentation -->
-    <section class="space-y-6 border-t border-[var(--border-subtle)] pt-5 pb-2">
-      <div>
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.documentation}</h2>
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.documentationHint}</p>
+    <!-- The guide lives in the Help; Settings only points to it. -->
+    <section class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-[var(--border-subtle)] pt-5" data-testid="settings-help-link">
+      <div class="min-w-0">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.helpTitle}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.helpText}</p>
       </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsGettingStarted}</h3>
-        <ol class="space-y-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">1</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepNew}</span>. {$localizedText.settings.docsStepNewHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">2</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepImport}</span>. {$localizedText.settings.docsStepImportHint}</span></li>
-          <li class="flex gap-3"><span class="text-[var(--text-tertiary)]">3</span><span><span class="font-bold text-[var(--text-primary)]">{$localizedText.settings.docsStepBackup}</span>. {$localizedText.settings.docsStepBackupHint}</span></li>
-        </ol>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsKeyboard}</h3>
-        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {#each [['Ctrl+K', $localizedText.settings.docsShortcutCommands], ['Ctrl+N', $localizedText.settings.docsShortcutNew], ['Ctrl+O', $localizedText.settings.docsShortcutOpen], ['Ctrl+B', $localizedText.settings.docsShortcutSidebar], ['Ctrl+Shift+F', $localizedText.settings.docsShortcutSearch], ['Ctrl+S', $localizedText.settings.docsShortcutSave]] as [keys, label]}
-            <dt class="tabular-nums text-[var(--text-primary)]">{shortcutLabel(keys)}</dt>
-            <dd class="text-[var(--text-secondary)]">{label}</dd>
-          {/each}
-        </dl>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsOperators}</h3>
-        <p class="mb-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{shortcutLabel($localizedText.settings.docsOperatorsHint)}</p>
-        <dl class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {#each [
-              [$localizedText.settings.docsOpTag, $localizedText.settings.docsOpTagHint],
-              [$localizedText.settings.docsOpFolder, $localizedText.settings.docsOpFolderHint],
-              [$localizedText.settings.docsOpPath, $localizedText.settings.docsOpPathHint],
-              [$localizedText.settings.docsOpTitle, $localizedText.settings.docsOpTitleHint],
-              [$localizedText.settings.docsOpCreated, $localizedText.settings.docsOpCreatedHint],
-              [$localizedText.settings.docsOpNegation, $localizedText.settings.docsOpNegationHint],
-            ] as [op, hint]}
-            <dt class="tabular-nums text-[var(--text-primary)]">{op}</dt>
-            <dd class="text-[var(--text-secondary)]">{hint}</dd>
-          {/each}
-        </dl>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLive}</h3>
-        {#if notesDir}
-          <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]">{notesDir}</code>
-        {/if}
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.docsNotesLiveHint}</p>
-      </div>
-
-      <div>
-        <h3 class="mb-2 text-xs uppercase tracking-[0.16em] font-bold text-[var(--text-tertiary)]">{$localizedText.settings.docsFileFormat}</h3>
-        <ul class="space-y-1.5 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
-          <li>{$localizedText.settings.docsFrontmatter}</li>
-          <li>{$localizedText.settings.docsWikiLinks}</li>
-        </ul>
-      </div>
+      <button type="button" data-testid="settings-open-help" on:click={() => dispatch('openHelp')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.helpOpen}</button>
     </section>
 
-    <details class="group space-y-8 border-t border-[var(--border-subtle)] pt-6" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
+    <details class="group scroll-mt-16 space-y-8 border-t border-[var(--border-subtle)] pt-6 lg:scroll-mt-6" id="settings-more" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
       <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
         <span class="block">
           <span class="block text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.advanced}</span>
@@ -1543,6 +1508,7 @@
       <span class="text-[var(--text-tertiary)]">{$localizedText.settings.version} {appVersion}</span>
     </footer>
 
+    </div>
     </div>
 
   </div>
