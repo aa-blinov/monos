@@ -35,6 +35,7 @@
       on:fileSaved={(e) => dispatch('fileSaved', e.detail)}
       on:noteColorChanged={(e) => dispatch('noteColorChanged', e.detail)}
       on:revealInTree={(e) => dispatch('revealInTree', e.detail)}
+      on:showOnMap={(e) => dispatch('showOnMap', e.detail)}
     />
   </div>
 {/if}

@@ -170,6 +170,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `outline.js` | Builds the heading outline from markdown/TipTap content for the outline panel |
 | `raw-html.js` | Does a note hold raw HTML (tags or comments) outside code? Such a note opens as source text, because the visual editor cannot keep tags |
 | `raw-html.test.js` | Tags, comments, code fences, front matter, autolinks and comparisons |
+| `note-map.js` | The pure parts of the map of notes: neighbours, hops from the note in focus, dot size, fitting and zooming the view, hit test, which labels are drawn and where they fit |
+| `note-map.test.js` | Adjacency, hops, opacity, fit and zoom, hit test, label rules and placement, search |
+| `related-notes.js` | The rows of a note's Related panel: each linked note with the direction of the link (out, in, both) |
+| `related-notes.test.js` | Order, backlinks the graph left out, old answers without a relation |
 | `outline.test.js` | Nested headings, empty documents, heading-level edges |
 | `motion.js` | `scrollBehavior()`: `auto` when the user asked for reduced motion, `smooth` otherwise |
 | `motion.test.js` | Smooth by default, instant under `prefers-reduced-motion` |

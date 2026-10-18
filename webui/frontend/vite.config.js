@@ -26,6 +26,11 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.js"],
   },
+  // Modules that are only imported when a feature is first used (the terminal, the map) are bundled at start. Left to
+  // be found on first use, the dev server bundles them then and reloads the page, which drops what was on screen.
+  optimizeDeps: {
+    include: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-search', '@xterm/addon-web-links', 'd3-force'],
+  },
   server: {
     // Loopback only: the API has no authentication, so the dev server must not be
     // reachable from other machines. Pass --host to share it on purpose.

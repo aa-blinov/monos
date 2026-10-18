@@ -2107,6 +2107,40 @@ apiTest('непривязанное упоминание связывается 
   assert.equal(self.response.status, 400);
 });
 
+apiTest('связи: каждый сосед говорит, как он связан с заметкой, а карта хранения отдаёт узлы и рёбра', async () => {
+  const folder = path.join(notesDir, 'Map');
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, 'Hub.md'), '# Hub\n\n[[Spoke Out]] и [[Spoke Both]] и [[Нет такой заметки]]\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Spoke Out.md'), 'Только отсюда.\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Spoke Both.md'), 'Назад: [[Hub]]\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Spoke In.md'), 'Ссылка сюда: [[Hub]]\n', 'utf-8');
+  fs.writeFileSync(path.join(folder, 'Alone Map.md'), 'Ни с кем не связана.\n', 'utf-8');
+  indexAllFiles();
+
+  const hub = 'notes/Map/Hub.md';
+  const neighbors = await requestJson(buildUrl('/api/notes/neighbors', { path: hub }));
+  const relation = Object.fromEntries(neighbors.data.nodes.map((node) => [node.title, node.relation]));
+  assert.deepEqual(relation, { 'Hub': 'self', 'Spoke Both': 'both', 'Spoke In': 'in', 'Spoke Out': 'out' });
+  assert.deepEqual(neighbors.data.missing, ['Нет такой заметки']);
+  assert.deepEqual((await requestJson(buildUrl('/api/notes/neighbors', { path: 'notes/Map/Nope.md' }))).data, { nodes: [], edges: [], missing: [] });
+
+  const graph = await requestJson(buildUrl('/api/graph'));
+  const titles = graph.data.nodes.map((node) => node.title);
+  for (const title of ['Hub', 'Spoke Out', 'Spoke Both', 'Spoke In']) assert.ok(titles.includes(title), title);
+  assert.ok(!titles.includes('Alone Map'), 'a note without links is not on the map by default');
+  assert.equal(graph.data.nodes.find((node) => node.title === 'Hub').degree, 3);
+  const edgeOf = (a, b) => graph.data.edges.find((edge) => (edge.from === a && edge.to === b) || (edge.from === b && edge.to === a));
+  assert.equal(edgeOf(hub, 'notes/Map/Spoke Both.md').both, true);
+  assert.equal(edgeOf(hub, 'notes/Map/Spoke Out.md').both, false);
+  assert.equal(graph.data.edges.every((edge) => titles.length && graph.data.nodes.some((n) => n.path === edge.from) && graph.data.nodes.some((n) => n.path === edge.to)), true);
+  assert.ok(graph.data.orphanCount >= 1);
+  assert.equal(graph.data.truncated, false);
+  assert.ok(graph.data.noteCount >= graph.data.nodes.length);
+
+  const withOrphans = await requestJson(buildUrl('/api/graph', { orphans: '1' }));
+  assert.ok(withOrphans.data.nodes.some((node) => node.title === 'Alone Map' && node.degree === 0));
+});
+
 apiTest('обслуживание: сироты и давно не трогавшиеся заметки', async () => {
   const lonely = 'notes/Links/Lonely.md';
   fs.writeFileSync(path.join(notesDir, 'Links', 'Lonely.md'), 'Одна.\n', 'utf-8');

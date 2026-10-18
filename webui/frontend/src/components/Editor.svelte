@@ -23,6 +23,7 @@
   import { fileNameProblem } from '../lib/file-name.js';
   import { extractOutline } from '../lib/outline.js';
   import { hasRawHtml } from '../lib/raw-html.js';
+  import { relatedRows } from '../lib/related-notes.js';
   import { notifyDue } from '../lib/reminders.js';
   import { downloadFile, exportFileName, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
   import { printNoteToPdf } from '../lib/print.js';
@@ -59,7 +60,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot, TerminalSquare } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -580,16 +581,10 @@
     ...unlinkedMentions.map((item) => item.path),
   ]).size;
   $: graphLayout = layoutLocalGraph(neighborhood);
+  $: relatedList = relatedRows(neighborhood, backlinks);
+  const relationText = (relation) => relation === 'both' ? $localizedText.editor.relationBoth : relation === 'out' ? $localizedText.editor.relationOut : $localizedText.editor.relationIn;
   // The due date has its own button in this bar; counted again under Properties it read as two settings.
   $: customProperties = (fileInfo?.properties || []).filter((property) => String(property.key).toLowerCase() !== 'due');
-
-  function relationLabel(type) {
-    return type === 'mention' ? $localizedText.sourceEditor.mention : $localizedText.sourceEditor.backlink;
-  }
-
-  function relatedNoteLabel(item) {
-    return `${item?.name || ''}, ${relationLabel(item?.type)}`;
-  }
 
   function resolveEditorImageSrc(src) {
     return displayImageSrc(visibleFile?.path, src);
@@ -1890,31 +1885,51 @@
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class="{panelClass} max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.editor.localNavigation}</p>
                 <ul class="-mx-1 max-h-64 overflow-y-auto">
-                  {#each backlinks as item}
+                  {#each relatedList as item (item.path)}
                     <li>
                       <button
                         type="button"
-                        aria-label={relatedNoteLabel(item)}
+                        aria-label={`${item.name}, ${relationText(item.relation)}`}
                         title={item.path}
+                        data-testid="related-row"
+                        data-relation={item.relation}
                         class="flex w-full min-w-0 items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs hover:bg-[var(--bg-secondary)]"
                         on:click={() => { closePropertyPanel(); openLinkedNote(item); }}
                       >
                         <span class="min-w-0 truncate font-medium text-[var(--text-primary)]">{item.name}</span>
-                        <span class="shrink-0 text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{relationLabel(item.type)}</span>
+                        <span class="inline-flex shrink-0 items-center gap-1.5 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">
+                          {#if item.relation === 'both'}<ArrowLeftRight size="12" strokeWidth="1.7" aria-hidden="true" />
+                          {:else if item.relation === 'out'}<ArrowRight size="12" strokeWidth="1.7" aria-hidden="true" />
+                          {:else}<ArrowLeft size="12" strokeWidth="1.7" aria-hidden="true" />{/if}
+                          {relationText(item.relation)}
+                        </span>
                       </button>
                     </li>
                   {/each}
                 </ul>
+                {#if neighborhood.missing?.length}
+                  <p class="mt-2 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--text-tertiary)]" data-testid="related-missing">
+                    {$localizedText.editor.missingLinks}: {neighborhood.missing.join(', ')}
+                  </p>
+                {/if}
                 {#if graphLayout.nodes.length > 1}
                   <p class="{panelLabelClass} mt-3">{$localizedText.editor.localGraph}</p>
-                  <!-- Decorative: the lists above and below are the accessible way to open these notes. -->
+                  <!-- A shortcut for the pointer: the list above is the accessible way to open these notes. -->
                   <svg viewBox="0 0 240 180" class="h-44 w-full" aria-hidden="true" data-testid="local-graph">
                     {#each graphLayout.edges as edge (`${edge.from}->${edge.to}`)}
                       <line x1={edge.x1} y1={edge.y1} x2={edge.x2} y2={edge.y2} class="stroke-[var(--border-subtle)]" stroke-width="1.2" />
                     {/each}
                     {#each graphLayout.nodes as node (node.path)}
-                      <circle cx={node.x} cy={node.y} r={node.center ? 6 : 4.5} class={node.center ? 'fill-[var(--text-primary)]' : 'fill-[var(--text-tertiary)]'} />
-                      <text x={node.x} y={node.y + 17} text-anchor="middle" font-size="9" class="fill-[var(--text-secondary)]">{truncateLabel(node.title)}</text>
+                      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                      <g class={node.center ? '' : 'cursor-pointer'} data-testid={node.center ? undefined : 'local-graph-node'} on:click={() => { if (!node.center) { closePropertyPanel(); openLinkedNote({ path: node.path, name: node.title }); } }}>
+                        <title>{node.title}</title>
+                        <circle cx={node.x} cy={node.y} r={14} fill="transparent" />
+                        <circle cx={node.x} cy={node.y} r={node.center ? 6 : 4.5} class={node.center ? 'fill-[var(--text-primary)]' : 'fill-[var(--text-tertiary)]'} />
+                      </g>
+                      <!-- A crowd of names smears into one line: past a dozen only the title tip (hover) names a dot. -->
+                      {#if graphLayout.nodes.length <= 12 || node.center}
+                        <text x={node.x} y={node.y + 17} text-anchor="middle" font-size="9" class="fill-[var(--text-secondary)]">{truncateLabel(node.title)}</text>
+                      {/if}
                     {/each}
                   </svg>
                 {/if}
@@ -1937,6 +1952,14 @@
                     {/each}
                   </ul>
                 {/if}
+                <button
+                  type="button"
+                  data-testid="show-on-map"
+                  class="mt-3 inline-flex min-h-9 items-center gap-2 rounded-ui px-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
+                  on:click={() => { closePropertyPanel(); dispatch('showOnMap', { path: loadedFilePath }); }}
+                >
+                  <Waypoints size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.showOnMap}
+                </button>
                 {#if linkMentionFailed}
                   <p class="mt-2 text-xs text-[var(--red)]" role="status">{$localizedText.editor.linkMentionFailed}</p>
                 {/if}

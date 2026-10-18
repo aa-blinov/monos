@@ -151,6 +151,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       || pathname === '/trash'
       || pathname === '/templates'
       || pathname === '/properties'
+      || pathname === '/map'
       || pathname === '/help'
       || pathname.startsWith('/notes/');
   }
@@ -602,6 +603,13 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     navigate('/properties');
   }
 
+  // The map of notes; `focus` is a note to centre on ("Show on the map" in a note's Related panel).
+  function openMap(focus = '') {
+    setRoutePath('/map');
+    clearSearch();
+    navigate(focus ? `/map?focus=${encodeURIComponent(focus)}` : '/map');
+  }
+
   function openTagPanel() {
     tagPanelOpen = true;
   }
@@ -797,6 +805,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'launchAgent') launchAgent();
     if (event.detail === 'openSavedSearches') openSavedSearchPanel();
     if (event.detail === 'openProperties') openPropertiesView();
+    if (event.detail === 'openMap') openMap();
   }
 
   function refreshAfterTrashChange() {
@@ -893,6 +902,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:openTerminal={toggleTerminal}
           on:openTags={openTagPanel}
           on:openProperties={openPropertiesView}
+          on:openMap={() => openMap()}
           on:openSavedSearches={openSavedSearchPanel}
           on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
@@ -951,7 +961,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} on:showOnMap={(e) => openMap(e.detail.path)} />
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} on:openHelp={openHelp} />
@@ -974,6 +984,16 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         <Route path="/properties">
           {#await import('./components/PropertiesView.svelte') then propertiesView}
             <svelte:component this={propertiesView.default} on:navigate={handleNavigate} />
+          {/await}
+        </Route>
+        <Route path="/map">
+          <!-- Fetched when the map is first opened: it carries the layout engine, which nothing else needs. -->
+          {#await import('./components/NoteMap.svelte') then noteMap}
+            <svelte:component
+              this={noteMap.default}
+              on:open={(event) => handleNavigate({ detail: { path: event.detail, isDir: false } })}
+              on:clearFocus={() => navigate('/map', { replace: true })}
+            />
           {/await}
         </Route>
         <Route path="/">

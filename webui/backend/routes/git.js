@@ -1,3 +1,4 @@
+import { excludeAgentSkillFromGit } from '../agent-skill.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -829,6 +830,8 @@ export function registerGitRoutes(app) {
       getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('device_name', device_name);
       applyDeviceNameToRepo(device_name);
       writeRepoHygieneFiles();
+      // Before the first `git add -A`: the assistants' guide is made per device and never travels.
+      excludeAgentSkillFromGit();
 
       gitExec(['checkout', '-B', branch]);
       gitExec(['add', '-A']);
