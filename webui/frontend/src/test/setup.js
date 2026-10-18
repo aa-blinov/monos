@@ -66,7 +66,7 @@ beforeEach(async () => {
   storage.setItem('fontSize', 'medium');
   storage.setItem('lineHeight', 'normal');
   storage.setItem('contentWidth', 'wide');
-  storage.setItem('contentWidthDefaultWide', 'true');
+  storage.setItem('contentWidthDefaultMedium', 'true');
   storage.setItem('editorFontSize', 'md');
 
   const fetchMock = vi.fn();
