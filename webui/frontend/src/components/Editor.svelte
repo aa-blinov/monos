@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, focusNoteBody, propertiesChanged } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -1530,7 +1530,11 @@
   // The page the text is written on stays the theme's own, so the colour never sits under every line.
   // Focus mode narrows the column and drops the colour: only the text being written is left.
   const NEUTRAL_PAGE = '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-border: var(--border-subtle);';
-  $: noteSurfaceStyle = focusMode
+  // The Structure column sits beside the text but not beside the header: the header leaves the same room, so the
+  // title and the text are centred on one axis.
+  $: outlineInset = wideWindow && !focusMode && !inConflict && outlineColumnShown ? `min(${$outlineWidth}px, 45vw)` : '0px';
+  $: noteSurfaceStyle = `--outline-inset: ${outlineInset}; ${surfaceStyle}`;
+  $: surfaceStyle = focusMode
     ? `--content-width: 48rem; ${NEUTRAL_PAGE}`
     : currentNoteColor
     ? `${NEUTRAL_PAGE} --note-accent: ${currentNoteColor}; --note-header-tint: color-mix(in srgb, ${currentNoteColor} 13%, transparent); --note-header-glow: color-mix(in srgb, ${currentNoteColor} 18%, transparent);`
