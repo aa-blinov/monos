@@ -21,27 +21,42 @@ export const gitConnected = persisted('gitConnected', false, {
 });
 
 /**
- * Where this device stands with its repository: connected to a remote at all, when it last synced, and how far
- * it is from the remote. The note shows it beside its own date.
+ * Where this device stands with its repository: connected to a remote at all, when it last synced, and per note
+ * what waits to be sent (`unsent`) and what waits on the remote to be received (`incoming`), as paths relative to
+ * the notes folder.
  */
-export const syncState = writable({ connected: false, lastSync: null, ahead: 0, behind: 0 });
-
-// The last answer that was a real answer. Sync is shown from the first frame of the next run, not after a request.
-
+export const syncState = writable({ connected: false, lastSync: null, unsent: new Set(), incoming: new Set() });
 
 /**
- * How a note stands with the last sync: `none` (no remote), `never` (connected, nothing sent yet), `pending`
- * (changed after the last sync) or `synced`.
- * @param {{ connected: boolean, lastSync: string|null }} state
- * @param {string|null|undefined} modified the note's modification time
+ * One note against the repository, in four words: `synced` (nothing here waits to go, nothing there waits to come),
+ * `local` (changed here, not sent), `remote` (changed on the remote, not yet received), `both` (each side has
+ * its own change); `none` when no remote is connected.
+ * @param {{ connected: boolean, unsent: Set<string>, incoming: Set<string> }} state
+ * @param {string} notePath the app's path, `notes/…` or relative
  */
-export function noteSyncStatus(state, modified) {
+export function noteSyncStatus(state, notePath) {
   if (!state?.connected) return 'none';
-  const last = Date.parse(state.lastSync || '');
-  if (!Number.isFinite(last)) return 'never';
-  const changed = Date.parse(modified || '');
-  // A second of slack: the file is written just before the sync stamps its time.
-  return Number.isFinite(changed) && changed > last + 1000 ? 'pending' : 'synced';
+  const key = String(notePath || '').replace(/^notes\//, '');
+  const here = Boolean(state.unsent?.has(key));
+  const there = Boolean(state.incoming?.has(key));
+  if (here && there) return 'both';
+  if (here) return 'local';
+  if (there) return 'remote';
+  return 'synced';
+}
+
+/** A save is known to leave the note unsent at once; the next read of the status confirms it. */
+export function markUnsent(notePath) {
+  const key = String(notePath || '').replace(/^notes\//, '');
+  if (!key) return;
+  syncState.update((state) => (state.connected && !state.unsent.has(key) ? { ...state, unsent: new Set([...state.unsent, key]) } : state));
+}
+
+let refreshTimer;
+/** The status is read again a moment after the last change, not for every keystroke. */
+export function scheduleSyncRefresh(delay = 1200) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => { void refreshConflicts(); }, delay);
 }
 
 /** The server lists conflicts relative to the notes folder; the app's paths start with `notes/`. */
@@ -59,7 +74,7 @@ export async function refreshConflicts(fetchImpl = (...args) => fetch(...args)) 
     if (typeof status?.initialized !== 'boolean') return;
     const connected = Boolean(status.initialized && (status.repo || status.remote));
     gitConnected.set(connected);
-    syncState.set({ connected, lastSync: status.last_sync || null, ahead: status.ahead || 0, behind: status.behind || 0 });
+    syncState.set({ connected, lastSync: status.last_sync || null, unsent: new Set(status.unsent || []), incoming: new Set(status.incoming || []) });
     if (status?.status !== 'conflict') {
       conflictedNotes.set(new Set());
       conflictedFiles.set(new Set());

@@ -45,11 +45,24 @@ test('сбой статуса или офлайн не прячут кнопку
   assert.equal(get(gitConnected), true);
 });
 
-test('noteSyncStatus: нет remote, ни разу, ждёт отправки, синхронизирована', async () => {
+test('noteSyncStatus: четыре состояния заметки против репозитория', async () => {
   const { noteSyncStatus } = await import('./git-conflicts.js');
-  assert.equal(noteSyncStatus({ connected: false, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T09:00:00Z'), 'none');
-  assert.equal(noteSyncStatus({ connected: true, lastSync: null }, '2026-10-18T09:00:00Z'), 'never');
-  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T09:59:00Z'), 'synced');
-  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T10:00:00.500Z'), 'synced');
-  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T10:05:00Z'), 'pending');
+  const state = (extra) => ({ connected: true, unsent: new Set(), incoming: new Set(), ...extra });
+  assert.equal(noteSyncStatus({ connected: false }, 'notes/a.md'), 'none');
+  assert.equal(noteSyncStatus(state(), 'notes/a.md'), 'synced');
+  assert.equal(noteSyncStatus(state({ unsent: new Set(['a.md']) }), 'notes/a.md'), 'local');
+  assert.equal(noteSyncStatus(state({ incoming: new Set(['Папка/б.md']) }), 'notes/Папка/б.md'), 'remote');
+  assert.equal(noteSyncStatus(state({ unsent: new Set(['a.md']), incoming: new Set(['a.md']) }), 'notes/a.md'), 'both');
+  assert.equal(noteSyncStatus(state({ unsent: new Set(['other.md']) }), 'notes/a.md'), 'synced');
+});
+
+test('сохранение сразу помечает заметку неотправленной, чтение статуса это подтверждает', async () => {
+  const { markUnsent, syncState, noteSyncStatus, refreshConflicts: refresh } = await import('./git-conflicts.js');
+  await refresh(async () => answer({ initialized: true, repo: 'me/notes', unsent: [], incoming: [], last_sync: '2026-10-18T10:00:00Z' }));
+  assert.equal(noteSyncStatus(get(syncState), 'notes/x.md'), 'synced');
+  markUnsent('notes/x.md');
+  assert.equal(noteSyncStatus(get(syncState), 'notes/x.md'), 'local');
+  await refresh(async () => answer({ initialized: true, repo: 'me/notes', unsent: ['x.md'], incoming: ['y.md'] }));
+  assert.equal(noteSyncStatus(get(syncState), 'notes/x.md'), 'local');
+  assert.equal(noteSyncStatus(get(syncState), 'notes/y.md'), 'remote');
 });

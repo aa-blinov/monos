@@ -936,7 +936,8 @@ export function registerGitRoutes(app) {
 
       const settings = readGitSettings();
       const quiet = (args) => gitExecAsync(args).catch(() => '');
-      const [currentBranch, statusOut, unmerged, markers, counts] = await Promise.all([
+      const lines = (text) => String(text || '').split('\n').map((line) => line.trim()).filter(Boolean);
+      const [currentBranch, statusOut, unmerged, markers, counts, changedPaths, newPaths, unpushedPaths, incomingPaths] = await Promise.all([
         gitExecAsync(['rev-parse', '--abbrev-ref', 'HEAD']),
         gitExecAsync(['status', '--porcelain']),
         quiet(['diff', '--name-only', '--diff-filter=U']),
@@ -944,7 +945,16 @@ export function registerGitRoutes(app) {
         quiet(['grep', '-l', '--untracked', '-E', '^<{7}( |$)', '--', '*.md', ':!.monos']),
         // No upstream yet: the same answer as no difference.
         quiet(['rev-list', '--left-right', '--count', '@{u}...HEAD']),
+        // Per note, what has not left this device: changed or new in the working tree, ...
+        quiet(['-c', 'core.quotePath=false', 'diff', '--name-only', 'HEAD']),
+        quiet(['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard']),
+        // ... or committed here and on no remote yet (works with or without tracking),
+        quiet(['-c', 'core.quotePath=false', 'log', '--name-only', '--pretty=format:', 'HEAD', '--not', '--remotes']),
+        // and what changed on the remote since the two met: it arrives with the next sync.
+        quiet(['-c', 'core.quotePath=false', 'diff', '--name-only', 'HEAD...@{u}']),
       ]);
+      const unsent = [...new Set([...lines(changedPaths), ...lines(newPaths), ...lines(unpushedPaths)])].slice(0, 20000);
+      const incoming = [...new Set(lines(incomingPaths))].slice(0, 20000);
       const hasChanges = statusOut.length > 0;
       const hasConflicts = unmerged.length > 0 || markers.length > 0;
       const [behindText, aheadText] = counts.split('\t');
@@ -955,6 +965,9 @@ export function registerGitRoutes(app) {
         initialized: true,
         // A repository can exist only for history: sync means something only with a remote.
         remote: hasRemote(),
+        // Paths (relative to the notes folder) that wait to be sent, and that wait to be received.
+        unsent,
+        incoming,
         current_branch: currentBranch,
         branch: currentBranch,
         repo: settings.repo || '',

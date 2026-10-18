@@ -148,7 +148,7 @@
       {$localizedText.editor.outlineEmpty}
     </p>
   {:else}
-    <ol class="space-y-1 lg:space-y-1.5">
+    <ol class="space-y-1 lg:space-y-0">
       {#each items as item (item.anchor)}
         <li
           class="truncate leading-snug text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -157,7 +157,7 @@
           <a
             href="#{item.anchor}"
             on:click={(e) => clickAnchor(e, item)}
-            class="block truncate py-3 lg:py-1"
+            class="block truncate py-3 lg:flex lg:min-h-7 lg:items-center lg:py-0"
             data-testid="outline-item"
             data-anchor={item.anchor}
           >

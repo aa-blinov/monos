@@ -44,7 +44,7 @@
   const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
-  $: syncStatus = noteSyncStatus(syncInfo, fileInfo?.modified);
+  $: syncStatus = noteSyncStatus(syncInfo, currentFile?.path);
   const formatDateTime = (value) => {
     if (!value) return '';
     const date = new Date(value);
@@ -148,12 +148,12 @@
           {#if syncStatus !== 'none'}
             <!-- The place of sync in the note: beside its own date, only when a repository is connected. -->
             <span
-              class="hidden tabular-nums sm:inline {syncStatus === 'pending' ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}"
+              class="hidden tabular-nums sm:inline {syncStatus === 'synced' ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]'}"
               data-testid="note-sync"
               data-state={syncStatus}
-              title={syncStatus === 'pending' ? $localizedText.editorHeader.syncPendingHint : undefined}
+              title={syncStatus === 'synced' ? undefined : $localizedText.editorHeader[`sync${syncStatus[0].toUpperCase()}${syncStatus.slice(1)}Hint`]}
             >
-              {#if syncStatus === 'synced'}{$localizedText.editorHeader.syncedAt(formatDateTime(syncInfo.lastSync))}{:else if syncStatus === 'pending'}{$localizedText.editorHeader.syncPending}{:else}{$localizedText.editorHeader.syncNever}{/if}
+              {#if syncStatus === 'synced'}{syncInfo.lastSync ? $localizedText.editorHeader.syncedAt(formatDateTime(syncInfo.lastSync)) : $localizedText.editorHeader.synced}{:else}{$localizedText.editorHeader[`sync${syncStatus[0].toUpperCase()}${syncStatus.slice(1)}`]}{/if}
             </span>
           {/if}
           {#if wordCharStats}
