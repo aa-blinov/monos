@@ -12,7 +12,7 @@ test('нажатие на тег в панели «Теги» показывае
   await page.goto('/');
   await openSidebarMore(page);
   await page.getByTestId('open-tags').first().click();
-  await page.getByRole('button', { name: new RegExp(`^${tag}$`) }).click();
+  await page.getByRole('dialog').getByRole('button', { name: tag, exact: true }).click();
 
   // Inside the results, not the sidebar tree, which lists the note anyway.
   await expect(page.locator('main').getByRole('status')).toContainText('1');

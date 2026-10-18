@@ -188,33 +188,67 @@ export function registerNoteRoutes(app) {
     }
   });
 
-  app.get('/api/notes/recent', (req, res) => {
-    try {
-      const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
-      const offset = Math.max(parseInt(req.query.offset) || 0, 0);
-      const sort = String(req.query.sort || '').trim();
-      // Pinned notes come first in either order: pinning is how a note is kept at the top of the board.
-      const orderBy = sort === 'modified'
-        ? `notes_index.pinned DESC,
+  // The board's order. Pinned notes come first in every order: pinning is how a note is kept at the top.
+  const BOARD_ORDERS = {
+    modified: `notes_index.pinned DESC,
                   notes_index.modified_at DESC,
                   notes_index.last_opened DESC,
-                  notes_index.path COLLATE NOCASE ASC`
-        : `notes_index.pinned DESC,
+                  notes_index.path COLLATE NOCASE ASC`,
+    opened: `notes_index.pinned DESC,
+                  notes_index.last_opened DESC,
+                  notes_index.path COLLATE NOCASE ASC`,
+    title: `notes_index.pinned DESC,
+                  COALESCE(NULLIF(TRIM(notes_index.title), ''), notes_index.name) COLLATE NOCASE ASC,
+                  notes_index.path COLLATE NOCASE ASC`,
+  };
+  const BOARD_DEFAULT_ORDER = `notes_index.pinned DESC,
                   notes_index.board_order IS NULL ASC,
                   notes_index.board_order ASC,
                   notes_index.last_opened DESC,
                   notes_index.path COLLATE NOCASE ASC`;
+
+  // Tags are stored as a JSON array, so the quoted name is an exact match: "plan" never finds "planning".
+  function boardFilter(req) {
+    const tag = String(req.query.tag || '').trim();
+    return tag
+      ? { sql: 'AND instr(notes_index.tags, ?) > 0', params: [JSON.stringify(tag)] }
+      : { sql: '', params: [] };
+  }
+
+  app.get('/api/notes/recent', (req, res) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+      const orderBy = BOARD_ORDERS[String(req.query.sort || '').trim()] || BOARD_DEFAULT_ORDER;
+      const filter = boardFilter(req);
       const entries = getDb().prepare(
         `SELECT notes_index.*, folder_config.color
          FROM notes_index
          LEFT JOIN folder_config ON folder_config.path = notes_index.path
          WHERE notes_index.is_dir = 0
            AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
+           ${filter.sql}
          ORDER BY ${orderBy}
          LIMIT ? OFFSET ?`
-      ).all(limit, offset);
+      ).all(...filter.params, limit, offset);
 
       res.json(entries.map(noteCardPayload));
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
+  // How many notes the board holds (for the tag when one is chosen): the "shown N of M" line.
+  app.get('/api/notes/recent/count', (req, res) => {
+    try {
+      const filter = boardFilter(req);
+      const row = getDb().prepare(
+        `SELECT COUNT(*) AS total FROM notes_index
+         WHERE notes_index.is_dir = 0
+           AND (notes_index.trashed_at IS NULL OR notes_index.trashed_at = '')
+           ${filter.sql}`
+      ).get(...filter.params);
+      res.json({ total: row?.total ?? 0 });
     } catch (error) {
       res.status(500).json({ detail: error.message });
     }
