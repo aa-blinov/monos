@@ -207,6 +207,9 @@ const enText = {
       sortOpened: 'Recently opened',
       sortTitle: 'By title',
       tagsLabel: 'Tags',
+      moreTags(count) {
+        return `${count} more`;
+      },
       pinnedGroup: 'Pinned',
       recentGroup: 'Recent',
       titleGroup: 'All notes',
@@ -1264,6 +1267,9 @@ const ruText = {
       sortOpened: 'Недавно открытые',
       sortTitle: 'По названию',
       tagsLabel: 'Теги',
+      moreTags(count) {
+        return `Ещё ${count}`;
+      },
       pinnedGroup: 'Закреплённые',
       recentGroup: 'Недавние',
       titleGroup: 'Все заметки',

@@ -15,12 +15,12 @@ export const boardSort = persisted('boardSort', 'modified');
 export const homeRecentTotal = writable(null);
 export const homeTags = writable([]);
 
-/** The most used tags for the strip above the board. Failing to load them only hides the strip. */
+/** Every tag with its count, busiest first: the strip shows the top few and the list behind "more" all of them. Failing to load them only hides the strip. */
 export async function loadHomeTags() {
   try {
     const stats = await apiGet('/api/tags/stats');
     const list = Array.isArray(stats) ? stats : stats?.tags;
-    homeTags.set(Array.isArray(list) ? list.slice(0, 40) : []);
+    homeTags.set(Array.isArray(list) ? list : []);
   } catch {
     homeTags.set([]);
   }
