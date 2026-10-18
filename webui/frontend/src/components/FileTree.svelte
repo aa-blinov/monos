@@ -193,7 +193,7 @@
     {/if}
 
     <span
-      class="truncate flex-1 {node.is_dir ? 'font-medium' : 'opacity-80'}"
+      class="truncate flex-1 {node.is_dir ? 'font-medium' : ''}"
     >
       {fileName}
     </span>
