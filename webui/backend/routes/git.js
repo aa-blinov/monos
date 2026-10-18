@@ -581,7 +581,7 @@ function writeRepoHygieneFiles() {
 function divergenceSummary(branch) {
   const counts = { ahead: 0, behind: 0 };
   try {
-    const raw = gitExec(['rev-list', '--left-right', '--count', `HEAD...origin/${branch}`]);
+    const raw = gitExec(['rev-list', '--left-right', '--count', branch ? `HEAD...origin/${branch}` : 'HEAD...@{u}']);
     const [behind, ahead] = String(raw).split(/\s+/).map((n) => parseInt(n, 10) || 0);
     counts.ahead = ahead;
     counts.behind = behind;
@@ -629,6 +629,36 @@ function runGitTask(task) {
 }
 
 // The commit this device stands on, or '' before the first commit.
+/** Whether the notes repository has a place to send changes to. A repository can exist only for history. */
+function hasRemote() {
+  try { return gitExec(['remote']).split('\n').some((name) => name.trim()); } catch { return false; }
+}
+
+/**
+ * Makes the current branch follow its remote twin, so a plain `git pull` and `git push` mean something.
+ * A repository that has a remote but no tracking (a first connection, a branch made by hand) used to fail every
+ * round with "There is no tracking information for the current branch".
+ * @returns {Promise<'no-remote' | 'tracking' | 'remote-empty'>} `remote-empty`: the remote has no such branch yet,
+ *   so there is nothing to pull; the branch is pushed with `-u` by the caller.
+ */
+async function ensureTracking(authToken) {
+  if (!hasRemote()) return 'no-remote';
+  try {
+    gitExec(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+    return 'tracking';
+  } catch {
+    // No tracking yet: look at what the remote has.
+  }
+  let branch = '';
+  try { branch = gitExec(['branch', '--show-current']); } catch { branch = ''; }
+  if (!branch) return 'tracking';
+  const heads = await gitExecAsync(['ls-remote', '--heads', 'origin', branch], { token: authToken });
+  if (!String(heads).trim()) return 'remote-empty';
+  await gitExecAsync(['fetch', 'origin', branch], { token: authToken });
+  gitExec(['branch', `--set-upstream-to=origin/${branch}`, branch]);
+  return 'tracking';
+}
+
 function currentHead() {
   try { return gitExec(['rev-parse', 'HEAD']).trim(); } catch { return ''; }
 }
@@ -1174,6 +1204,11 @@ export function registerGitRoutes(app) {
 
       const headBefore = currentHead();
       let message = 'Already up to date.';
+      // A repository only for history, or a remote that has no such branch yet, has nothing to pull.
+      const tracking = await ensureTracking(authToken);
+      if (tracking !== 'tracking') {
+        return res.json({ message: tracking === 'no-remote' ? 'No remote: changes stay in the local history.' : 'The remote has no such branch yet.', conflicts: false, received: 0, dirtied, inSync: true, skipped: tracking });
+      }
       try {
         message = await gitExecAsync(['pull', '--no-rebase', '--no-edit'], { token: authToken });
       } catch (error) {
@@ -1231,7 +1266,19 @@ export function registerGitRoutes(app) {
 
       const headBeforePull = currentHead();
       let result = 'Synced';
+      const tracking = await ensureTracking(authToken);
+      if (tracking === 'no-remote') {
+        // Saved in the local history, which is all a repository without a remote can do: not an error.
+        writeGitSettings({ ...readGitSettings(), last_sync: new Date().toISOString() });
+        return res.json({ message: 'No remote: changes saved in the local history.', conflicts: false, committed, pushed: [], device: deviceName || null, skipped: 'no-remote' });
+      }
       try {
+        if (tracking === 'remote-empty') {
+          // Nothing on the remote yet: the first push makes the branch and its tracking.
+          await gitExecAsync(['push', '-u', 'origin', gitExec(['branch', '--show-current'])], { token: authToken });
+          writeGitSettings({ ...readGitSettings(), last_sync: new Date().toISOString() });
+          return res.json({ message: 'Pushed the first version.', conflicts: false, committed, pushed: pushedFiles, device: deviceName || null });
+        }
         result = await gitExecAsync(['pull', '--no-rebase', '--no-edit'], { token: authToken });
       } catch (error) {
         const errorText = error.stderr || error.message || '';

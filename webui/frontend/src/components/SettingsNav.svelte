@@ -4,7 +4,7 @@
    * The way round a long Settings page: one button per part, the part in view marked. A strip above the page
    * on a narrow window, a column beside it on a wide one; both stay in sight while the page scrolls.
    */
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import { localizedText } from '../lib/strings.js';
 
   /** @type {Array<{ id: string, label: string }>} */
@@ -12,11 +12,25 @@
   export let active = '';
 
   const dispatch = createEventDispatcher();
+  let strip;
+  // In the strip of a narrow window the marked part is kept in sight: it must not slip out of view at either end.
+  $: if (strip && active) {
+    Promise.resolve().then(() => {
+      const mark = strip?.querySelector('[aria-current="true"]');
+      if (mark && strip.scrollWidth > strip.clientWidth) {
+        const left = mark.offsetLeft - 16;
+        const right = mark.offsetLeft + mark.offsetWidth + 16;
+        if (left < strip.scrollLeft) strip.scrollLeft = left;
+        else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+      }
+    });
+  }
 </script>
 
 <nav
   aria-label={$localizedText.settings.navLabel}
   data-testid="settings-nav"
+  bind:this={strip}
   class="sticky -top-4 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 pb-2 pt-6 sm:-top-6 sm:pt-8 lg:top-8 lg:mx-0 lg:mb-0 lg:flex-col lg:self-start lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0"
 >
   {#each items as item (item.id)}

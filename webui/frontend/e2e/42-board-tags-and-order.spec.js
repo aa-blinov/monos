@@ -51,8 +51,8 @@ test('доска на телефоне: длинное название карт
   expect(height).toBeLessThanOrEqual(lineHeight * 2 + 2);
 });
 
-// The phone's menu keeps a touch-sized row (44px) with a small gap, not a wide empty stride between items.
-test('меню слева на телефоне: пункты идут с шагом 44–52px', async ({ page }) => {
+// The phone's menu keeps touch-sized rows (44px) in two columns, so the tools do not push the notes off the screen.
+test('меню слева на телефоне: инструменты в две колонки, у заметок остаётся место', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto('/');
@@ -61,9 +61,14 @@ test('меню слева на телефоне: пункты идут с шаг
   await expect(help).toBeVisible();
   const settings = page.getByRole('button', { name: 'Settings', exact: true }).last();
   const [a, b] = [await help.boundingBox(), await settings.boundingBox()];
-  const stride = b.y - a.y;
-  expect(stride).toBeGreaterThanOrEqual(44);
-  expect(stride).toBeLessThanOrEqual(52);
+  // Neighbours in a row, each a touch target.
+  expect(Math.abs(a.y - b.y)).toBeLessThan(4);
+  expect(a.height).toBeGreaterThanOrEqual(44);
+  expect(b.height).toBeGreaterThanOrEqual(44);
+  expect(b.x + b.width).toBeLessThanOrEqual(390);
+  const tools = await page.getByTestId('phone-tools').boundingBox();
+  // Ten tools stay under a third of the screen, the rest is for the notes.
+  expect(tools.height).toBeLessThan(800 * 0.4);
 });
 
 // The tag field says what it is for even when the note already has tags: an empty box tells nothing.

@@ -1057,6 +1057,7 @@ const enText = {
     searchPlaceholder: 'Search the help, e.g. "conflict" or "template"',
     clear: 'Clear the search',
     sections: 'Sections',
+    top: 'To the top',
     found: (count) => (count === 1 ? '1 topic found' : `${count} topics found`),
     nothing: 'Nothing found. Try other words, or look through the sections.',
     paletteLabel: 'Open help',
@@ -2292,6 +2293,7 @@ const ruText = {
     searchPlaceholder: 'Поиск по справке, например «конфликт» или «шаблон»',
     clear: 'Очистить поиск',
     sections: 'Разделы',
+    top: 'Наверх',
     found: (count) => {
       const one = count % 10 === 1 && count % 100 !== 11;
       const few = [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100);
