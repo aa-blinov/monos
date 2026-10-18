@@ -1707,7 +1707,7 @@
                 bind:value={tagDraft}
                 on:keydown={onTagDraftKeydown}
                 on:blur={addTagsFromDraft}
-                placeholder={editableTags.length ? '' : $localizedText.editor.propertyTagsEmpty}
+                placeholder={editableTags.length ? $localizedText.editor.propertyTagsMore : $localizedText.editor.propertyTagsEmpty}
                 class="mt-2 h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
               />
               {#if offeredTags.length}

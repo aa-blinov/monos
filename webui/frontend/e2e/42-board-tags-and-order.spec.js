@@ -65,3 +65,14 @@ test('меню слева на телефоне: пункты идут с шаг
   expect(stride).toBeGreaterThanOrEqual(44);
   expect(stride).toBeLessThanOrEqual(52);
 });
+
+// The tag field says what it is for even when the note already has tags: an empty box tells nothing.
+test('заметка: поле тегов подсказывает «Add a tag», пока теги уже есть', async ({ page }) => {
+  await prepareMonos(page);
+  const title = `Tag hint ${Date.now()}`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: ['one'], content: 'text' } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  await page.getByTestId('property-tags-button').click();
+  await expect(page.getByTestId('property-tags')).toHaveAttribute('placeholder', 'Add a tag');
+});
