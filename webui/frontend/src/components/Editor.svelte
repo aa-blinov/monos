@@ -16,6 +16,7 @@
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
   import { markPinned, pinEvents } from '../lib/sidebar-pinned.js';
+  import { syncState } from '../lib/git-conflicts.js';
   import { askAgentAboutNote, terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
@@ -1558,6 +1559,7 @@
     bind:editedTitle
     currentFile={visibleFile}
     {fileInfo}
+    syncInfo={$syncState}
     {wordCharStats}
     {taskProgress}
     historyAvailable={Boolean(loadedFilePath) && !inConflict}
