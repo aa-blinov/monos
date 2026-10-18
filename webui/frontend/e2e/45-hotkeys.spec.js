@@ -179,3 +179,24 @@ test.describe('in the tree', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 });
+
+// A narrow window has no room for the footer's terminal button: the note's "..." menu opens the terminal instead.
+test('узкое окно: «Терминал» в меню заметки «…» открывает терминал', async ({ page }) => {
+  await prepareMonos(page);
+  // The desktop app's bridge, as far as the panel needs it.
+  await page.addInitScript(() => {
+    window.monosTerminal = {
+      create: async () => ({ id: 1 }), write() {}, resize() {}, kill() {}, process: async () => null,
+      onData: () => () => {}, onExit: () => () => {},
+    };
+  });
+  await noteWith(page, 'x\n');
+  await expect(page.getByTestId('footer-terminal')).toBeVisible();
+  // Narrow the window with the note open: the footer button gives way, the menu takes over.
+  await page.setViewportSize({ width: 560, height: 800 });
+  await expect(page.getByTestId('footer-terminal')).toBeHidden();
+  await page.getByTestId('editor-more').click();
+  // The terminal's module is fetched on first use; the dev server needs a few seconds to build xterm.
+  await page.getByTestId('menu-terminal').click();
+  await expect(page.getByTestId('terminal-panel')).toBeVisible({ timeout: 30000 });
+});

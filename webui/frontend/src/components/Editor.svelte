@@ -2043,6 +2043,12 @@
               <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
                 <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
               </button>
+              <!-- Narrow window: the footer has no room for the terminal button, so the terminal opens from here. -->
+              {#if terminalBridge}
+                <button type="button" role="menuitem" data-testid="menu-terminal" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; toggleTerminal(); }}>
+                  <TerminalSquare size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.open}
+                </button>
+              {/if}
               <!-- The agent reads the note from the notes folder; a locked note is sealed there, so it is not offered. -->
               {#if terminalBridge && loadedFilePath && !fileInfo?.locked}
                 <button type="button" role="menuitem" data-testid="menu-ask-agent" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; askAgentAboutNote(loadedFilePath); }}>
