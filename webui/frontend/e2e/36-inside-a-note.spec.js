@@ -157,7 +157,7 @@ test('боковая панель: «Синхронизировать» не м�
 
 // The width setting changes the text column only: the title and the header keep their place, and the text starts
 // at the same left edge as the title; only the right edge of the lines moves.
-test('ширина контента: заголовок и шапка не двигаются, текст начинается с того же левого края', async ({ page }) => {
+test('ширина контента: заголовок и шапка не двигаются, поля текста меняются с обеих сторон', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1500, height: 900 });
   const title = uniqueTitle('Width');
@@ -179,6 +179,8 @@ test('ширина контента: заголовок и шапка не дв�
   const narrow = await measure();
   expect(Math.abs(narrow.title.x - wide.title.x)).toBeLessThan(1);
   expect(Math.abs(narrow.title.width - wide.title.width)).toBeLessThan(1);
-  expect(Math.abs(narrow.text.x - narrow.title.x)).toBeLessThan(10);
+  const middle = (box) => box.x + box.width / 2;
+  expect(Math.abs(middle(narrow.text) - middle(wide.text))).toBeLessThan(2);
+  expect(narrow.text.x).toBeGreaterThan(wide.text.x + 100);
   expect(narrow.text.width).toBeLessThan(wide.text.width - 200);
 });

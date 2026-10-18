@@ -1531,7 +1531,7 @@
   // Focus mode narrows the column and drops the colour: only the text being written is left.
   const NEUTRAL_PAGE = '--note-page-bg: var(--bg-primary); --note-page-panel: var(--bg-primary); --note-page-border: var(--border-subtle);';
   $: noteSurfaceStyle = focusMode
-    ? `--content-width: 46rem; --column-left: auto; ${NEUTRAL_PAGE}`
+    ? `--content-width: 48rem; ${NEUTRAL_PAGE}`
     : currentNoteColor
     ? `${NEUTRAL_PAGE} --note-accent: ${currentNoteColor}; --note-header-tint: color-mix(in srgb, ${currentNoteColor} 13%, transparent); --note-header-glow: color-mix(in srgb, ${currentNoteColor} 18%, transparent);`
     : NEUTRAL_PAGE;
@@ -1600,7 +1600,7 @@
       <div class="flex-1 flex flex-col min-w-0 min-h-0">
         {#if lockedConflictEntry}
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
-            <div class="mr-auto ml-[var(--column-left,0px)] max-w-[var(--content-width,56rem)]">
+            <div class="mx-auto max-w-[var(--content-width,56rem)]">
               <LockedConflictView
                 filePath={loadedFilePath}
                 sides={lockedConflictEntry.sides}
@@ -1612,7 +1612,7 @@
           </div>
         {:else if deletedConflict}
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
-            <div class="mr-auto ml-[var(--column-left,0px)] max-w-[var(--content-width,56rem)]">
+            <div class="mx-auto max-w-[var(--content-width,56rem)]">
               <ConflictDeletedView
                 content={editedContent}
                 deletedHere={deletedConflict.deletedHere}
@@ -1626,7 +1626,7 @@
           <!-- The conflict sits in the same column as the text: the banner says what happened and the parts
                below are where it is resolved, right here. -->
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-12 lg:py-8" data-testid="conflict-surface">
-            <div class="mr-auto ml-[var(--column-left,0px)] max-w-[var(--content-width,56rem)] space-y-4">
+            <div class="mx-auto max-w-[var(--content-width,56rem)] space-y-4">
               <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
                 <p class="text-sm font-bold text-[var(--red)]">{$localizedText.editor.conflictTitle}</p>
                 <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
