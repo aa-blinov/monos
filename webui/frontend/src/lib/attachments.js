@@ -287,12 +287,59 @@ export async function fetchAllAttachments() {
   return response.json();
 }
 
-/** Narrow the list by file name or note title (`query`) and by use (`'all' | 'unused'`). */
-export function filterAttachments(items, { query = '', filter = 'all', lockedNotes = 0 } = {}) {
+export const ATTACHMENT_SORTS = ['new', 'size', 'name', 'notes'];
+
+/** Narrow the list by file name or note title (`query`), use (`filter`), type (`kind`) and folder. */
+export function filterAttachments(items, { query = '', filter = 'all', lockedNotes = 0, kind = 'all', folder = '' } = {}) {
   const needle = String(query || '').trim().toLowerCase();
   return (items || []).filter((item) => {
     if (filter === 'unused' && (lockedNotes > 0 || item.usedBy.length > 0)) return false;
+    if (kind !== 'all' && item.kind !== kind) return false;
+    if (folder && item.folder !== folder) return false;
     if (!needle) return true;
-    return item.name.toLowerCase().includes(needle) || item.usedBy.some((note) => note.title.toLowerCase().includes(needle));
+    return item.name.toLowerCase().includes(needle)
+      || String(item.folder || '').toLowerCase().includes(needle)
+      || item.usedBy.some((note) => note.title.toLowerCase().includes(needle));
   });
+}
+
+/** A sorted copy: newest first (`new`), biggest first (`size`), by name (`name`), most notes first (`notes`). */
+export function sortAttachments(items, sort = 'new') {
+  const list = [...(items || [])];
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  if (sort === 'size') return list.sort((a, b) => b.size - a.size || byName(a, b));
+  if (sort === 'name') return list.sort(byName);
+  if (sort === 'notes') return list.sort((a, b) => b.usedBy.length - a.usedBy.length || byName(a, b));
+  return list.sort((a, b) => String(b.modified).localeCompare(String(a.modified)) || byName(a, b));
+}
+
+/** The folders that hold attachments, with how many each holds, for the folder choice. */
+export function attachmentFolders(items) {
+  const counts = new Map();
+  for (const item of items || []) counts.set(item.folder || '', (counts.get(item.folder || '') || 0) + 1);
+  return [...counts].map(([folder, count]) => ({ folder, count })).sort((a, b) => a.folder.localeCompare(b.folder));
+}
+
+/** What to paste into a note to show the file: a picture as an image, a PDF as an embed by name. */
+export function attachmentEmbed(item) {
+  return item.kind === 'pdf' ? `![[${item.name}]]` : `![](_attachments/${encodeURI(item.name)})`;
+}
+
+/** Moves unused files to the local trash; answers `{ batch, deleted, bytes, skipped }`. */
+export async function deleteAttachmentsRequest(paths) {
+  const response = await fetch('/api/attachments/delete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+  return data;
+}
+
+export async function restoreAttachmentsRequest(batch) {
+  const response = await fetch('/api/attachments/restore', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batch }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+  return data;
 }

@@ -35,6 +35,10 @@ export const outlineHidden = persisted('outlineHidden', false, {
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
 });
+// The Attachments page remembers how it was sorted and which type it showed.
+export const attachmentsSort = persisted('attachmentsSort', 'new', { validate: (v) => ['new', 'size', 'name', 'notes'].includes(v) });
+export const attachmentsKind = persisted('attachmentsKind', 'all', { validate: (v) => ['all', 'image', 'pdf'].includes(v) });
+
 // «Закреплённые» в боковой панели можно свернуть до одной строки; выбор помнится.
 export const pinnedCollapsed = persisted('pinnedCollapsed', false, {
   serialize: (v) => String(v),

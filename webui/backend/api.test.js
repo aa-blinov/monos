@@ -2452,3 +2452,40 @@ apiTest('импорт архива: ссылки на картинки нахо�
   const joplin = data.items.find((item) => item.name === `${id}.png`);
   assert.equal(joplin.usedBy[0].title, 'Joplin note');
 });
+
+apiTest('вложения: неиспользуемые уходят в локальную корзину и возвращаются, используемые не удаляются', async () => {
+  const dir = path.join(notesDir, 'Clean');
+  fs.mkdirSync(path.join(dir, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '_attachments', 'keep.png'), 'k');
+  fs.writeFileSync(path.join(dir, '_attachments', 'drop.png'), 'drop-data');
+  fs.writeFileSync(path.join(dir, 'Uses.md'), '![](_attachments/keep.png)\n', 'utf-8');
+  const post = (url, body) => realFetch(buildUrl(url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // A closed locked note makes "unused" unknowable, so the server refuses while one exists (checked first).
+  const sealed = path.join(dir, 'Sealed.md');
+  fs.writeFileSync(sealed, '---\nmonos-locked: true\n---\n-----BEGIN MONOS LOCKED NOTE-----\nAAAA\n-----END MONOS LOCKED NOTE-----\n', 'utf-8');
+  assert.equal((await post('/api/attachments/delete', { paths: ['notes/Clean/_attachments/drop.png'] })).status, 409);
+  fs.rmSync(sealed);
+  // Locked notes left by earlier tests would refuse too: set them aside for this test.
+  const aside = [];
+  const walk = (folder) => fs.readdirSync(folder, { withFileTypes: true }).forEach((entry) => {
+    const full = path.join(folder, entry.name);
+    if (entry.isDirectory()) { if (!entry.name.startsWith('.')) walk(full); return; }
+    if (entry.name.endsWith('.md') && /monos-locked:\s*true/.test(fs.readFileSync(full, 'utf-8'))) { fs.renameSync(full, `${full}.aside`); aside.push(full); }
+  });
+  walk(notesDir);
+
+  const result = await (await post('/api/attachments/delete', { paths: ['notes/Clean/_attachments/keep.png', 'notes/Clean/_attachments/drop.png', 'notes/Clean/_attachments/none.png', 'notes/Clean/Uses.md'] })).json();
+  assert.equal(result.deleted, 1);
+  assert.deepEqual(result.skipped, { used: 1, missing: 2 });
+  assert.equal(fs.existsSync(path.join(dir, '_attachments', 'drop.png')), false);
+  assert.equal(fs.existsSync(path.join(dir, '_attachments', 'keep.png')), true);
+  assert.equal(fs.existsSync(path.join(dir, 'Uses.md')), true);
+
+  const restored = await (await post('/api/attachments/restore', { batch: result.batch })).json();
+  assert.equal(restored.restored, 1);
+  assert.equal(fs.readFileSync(path.join(dir, '_attachments', 'drop.png'), 'utf-8'), 'drop-data');
+  assert.equal((await post('/api/attachments/restore', { batch: '../x' })).status, 400);
+  assert.equal((await post('/api/attachments/delete', { paths: [] })).status, 400);
+  for (const full of aside) fs.renameSync(`${full}.aside`, full);
+});
