@@ -125,7 +125,7 @@ const enText = {
   attachments: {
     title: 'Attachments',
     sidebar: 'Attachments',
-    hint: 'Pictures and PDFs from all notes. Click a picture to see it large; click a note name to open that note.',
+    hint: 'Pictures and PDFs from the notes\' _attachments folders. Click a picture to see it large; click a note name to open that note.',
     search: 'Find a file or a note',
     filterAll: 'All',
     filterUnused: 'Unused',
@@ -155,6 +155,7 @@ const enText = {
     loadMore: (shown, total) => `Show more (${shown} of ${total})`,
     filters: (count) => (count > 0 ? `Filters (${count})` : 'Filters'),
     byName: 'by name', byNameHint: 'The note writes only this file name, so every file of that name counts as used',
+    reviewUnused: 'Review unused', skipToEnd: 'Skip to the end of the list',
     folderSearch: 'Find a folder', folderNone: 'No such folder',
     retry: 'Try again',
     filterDuplicates: 'Same name',
@@ -1305,7 +1306,7 @@ const ruText = {
   attachments: {
     title: 'Вложения',
     sidebar: 'Вложения',
-    hint: 'Картинки и PDF из всех заметок. Нажмите на картинку, чтобы увидеть её крупно, на название заметки, чтобы открыть заметку.',
+    hint: 'Картинки и PDF из папок _attachments рядом с заметками. Нажмите на картинку, чтобы увидеть её крупно, на название заметки, чтобы открыть заметку.',
     search: 'Найти файл или заметку',
     filterAll: 'Все',
     filterUnused: 'Неиспользуемые',
@@ -1335,6 +1336,7 @@ const ruText = {
     loadMore: (shown, total) => `Показать ещё (${shown} из ${total})`,
     filters: (count) => (count > 0 ? `Фильтры (${count})` : 'Фильтры'),
     byName: 'по имени', byNameHint: 'Заметка называет только имя файла, поэтому используемым считается каждый файл с таким именем',
+    reviewUnused: 'Проверить неиспользуемые', skipToEnd: 'Перейти в конец списка',
     folderSearch: 'Найти папку', folderNone: 'Такой папки нет',
     retry: 'Повторить',
     filterDuplicates: 'Одинаковые имена',

@@ -94,6 +94,25 @@
   $: folderChoices = folders.filter((entry) => !folderQuery.trim() || entry.folder.toLowerCase().includes(folderQuery.trim().toLowerCase()));
   // How many choices narrow the list now, for the phone's "Filters" button.
   $: activeFilters = (filter === 'duplicates' ? 1 : 0) + ($attachmentsKind !== 'all' ? 1 : 0) + (folder ? 1 : 0) + ($attachmentsSort !== 'new' ? 1 : 0);
+  // The cleanup in one step: only the unused files, all of them chosen, ready to be looked through and moved.
+  function reviewUnused() {
+    filter = 'unused';
+    folder = '';
+    query = '';
+    $attachmentsKind = 'all';
+    narrowed();
+    selecting = true;
+    selected = new Set(items.filter(isUnused).map((item) => item.path));
+  }
+
+  // From the keyboard, past the cards (each has note links) to the end of the list.
+  async function skipToEnd() {
+    if (shown.length < filtered.length) limit = filtered.length;
+    await tick();
+    const last = scroller?.querySelectorAll('[data-testid=attachment-open]');
+    last?.[last.length - 1]?.focus();
+  }
+
   function chooseFolder(value) {
     folder = value;
     folderPickerOpen = false;
@@ -165,10 +184,10 @@
         // Some files were not moved (a note began to use them, or they are gone): the list is read again, not guessed.
         await load();
         showNotice(result.deleted > 0
-          ? $localizedText.attachments.partlyMoved(result.deleted, formatAttachmentSize(result.bytes), rest)
+          ? $localizedText.attachments.partlyMoved(result.deleted, formatAttachmentSize(result.bytes, $locale), rest)
           : $localizedText.attachments.nothingMoved, result.batch);
       } else {
-        showNotice($localizedText.attachments.trashed(result.deleted, formatAttachmentSize(result.bytes)), result.batch);
+        showNotice($localizedText.attachments.trashed(result.deleted, formatAttachmentSize(result.bytes, $locale)), result.batch);
       }
     } catch (error) {
       console.error('Failed to move attachments to the trash:', error);
@@ -328,7 +347,8 @@
       {#if lockedNotes === 0}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--text-tertiary)]">
           {#if unusedItems.length > 0}
-          <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize))}</span>
+          <button type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-6 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 max-sm:min-h-10">{$localizedText.attachments.reviewUnused}</button>
+          <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize, $locale))}</span>
           {#if !selecting}
             <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-6 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 max-sm:min-h-10">{$localizedText.attachments.select}</button>
           {/if}
@@ -340,11 +360,11 @@
       {#if selecting}
         <div class="rounded-ui sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-xs" data-testid="attachments-selection-bar">
           {#if confirming}
-            <span class="min-w-0 flex-1">{$localizedText.attachments.confirmTrash(selectedItems.length, formatAttachmentSize(selectedSize))}</span>
+            <span class="min-w-0 flex-1">{$localizedText.attachments.confirmTrash(selectedItems.length, formatAttachmentSize(selectedSize, $locale))}</span>
             <button type="button" data-testid="attachments-confirm" disabled={busy} on:click={() => trash(selectedItems.map((item) => item.path))} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.confirmYes}</button>
             <button type="button" on:click={() => { confirming = false; }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.confirmNo}</button>
           {:else}
-            <span class="text-[var(--text-secondary)]" data-testid="attachments-selected">{$localizedText.attachments.selected(selectedItems.length, formatAttachmentSize(selectedSize))}</span>
+            <span class="text-[var(--text-secondary)]" data-testid="attachments-selected">{$localizedText.attachments.selected(selectedItems.length, formatAttachmentSize(selectedSize, $locale))}</span>
             <button type="button" data-testid="attachments-select-unused" on:click={() => { selected = new Set(unusedShown.map((item) => item.path)); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectUnusedShown(unusedShown.length)}</button>
             {#if selectedItems.length > 0}
               <button type="button" on:click={() => { selected = new Set(); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.clearSelection}</button>
@@ -358,6 +378,7 @@
       {#if filtered.length === 0}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.noMatches}</p>
       {:else}
+        <button type="button" data-testid="attachments-skip" on:click={skipToEnd} class="sr-only focus:not-sr-only focus:min-h-9 focus:border-0 focus:bg-transparent focus:p-0 focus:text-xs focus:uppercase focus:tracking-widest focus:text-[var(--text-primary)]">{$localizedText.attachments.skipToEnd}</button>
         <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="attachments-grid">
           {#each shown as item (item.path)}
             <li class="rounded-ui relative flex min-w-0 flex-col overflow-hidden border {selected.has(item.path) ? 'border-[var(--text-primary)]' : 'border-[var(--border-subtle)]'}" data-testid="attachment-card">
@@ -371,7 +392,7 @@
                 class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
               >
                 {#if !broken.has(item.path)}
-                  <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : 'object-cover'}" on:error={() => { broken = new Set([...broken, item.path]); }} />
+                  <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : 'object-contain'}" on:error={() => { broken = new Set([...broken, item.path]); }} />
                 {:else if item.kind === 'image'}
                   <span class="flex flex-col items-center gap-2 px-2 text-center text-[var(--text-tertiary)]" title={$localizedText.attachments.brokenImage}>
                     <ImageOff size="24" strokeWidth="1.7" aria-hidden="true" />
@@ -393,7 +414,7 @@
                 <p class="truncate text-xs font-bold text-[var(--text-primary)]" title={item.name}>{item.name}</p>
                 <p class="truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={item.folder || '/'} data-testid="attachment-folder">{folderTail(item.folder)}</p>
                 <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                  {formatAttachmentSize(item.size)}, {localeDate(new Date(item.modified), $locale)}
+                  {formatAttachmentSize(item.size, $locale)}, {localeDate(new Date(item.modified), $locale)}
                 </p>
                 {#if item.usedBy.length === 0}
                   <p class="text-xs text-[var(--text-tertiary)]" data-testid="attachment-unused">{lockedNotes > 0 ? '' : $localizedText.attachments.unused}</p>
@@ -487,7 +508,7 @@
                 {#each entry.files.slice(0, 100) as file (file.path)}
                   <li class="flex items-center justify-between gap-3 py-1">
                     <span class="min-w-0 flex-1 truncate text-xs text-[var(--text-secondary)]" title={file.path}>{file.name}</span>
-                    <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{formatAttachmentSize(file.size)}</span>
+                    <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{formatAttachmentSize(file.size, $locale)}</span>
                     <button type="button" data-testid="attachments-restore-one" disabled={busy} on:click={() => restoreFromTrash(entry.batch, [file.path])} class="min-h-8 shrink-0 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.restore}</button>
                   </li>
                 {/each}
@@ -527,7 +548,7 @@
         {/if}
       </div>
       <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={viewing.path}>
-        {at >= 0 ? `${$localizedText.attachments.position(at + 1, filtered.length)}, ` : ''}{folderTail(viewing.folder, 3)}, {formatAttachmentSize(viewing.size)}, {localeDate(new Date(viewing.modified), $locale)}
+        {at >= 0 ? `${$localizedText.attachments.position(at + 1, filtered.length)}, ` : ''}{folderTail(viewing.folder, 3)}, {formatAttachmentSize(viewing.size, $locale)}, {localeDate(new Date(viewing.modified), $locale)} {new Date(viewing.modified).toLocaleTimeString($locale === 'ru' ? 'ru-RU' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}
       </p>
       <div>
         <h3 class="mb-1 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">{$localizedText.attachments.notesTitle}</h3>

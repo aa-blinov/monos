@@ -129,3 +129,10 @@ test('поиск не различает _ - . и пробел, «Одинако
   assert.equal(folderTail('A/B'), 'A / B');
   assert.equal(folderTail(''), '/');
 });
+
+test('formatAttachmentSize: единицы по-русски', async () => {
+  const { formatAttachmentSize } = await import('./attachments.js');
+  assert.equal(formatAttachmentSize(5 * 1024 * 1024, 'ru'), '5 МБ');
+  assert.equal(formatAttachmentSize(900, 'ru'), '900 Б');
+  assert.equal(formatAttachmentSize(1536, 'en'), '1.5 KB');
+});
