@@ -106,7 +106,7 @@ test('sortAttachments, attachmentFolders и attachmentEmbed', async () => {
   assert.deepEqual(sortAttachments(items, 'size').map((i) => i.name), ['a10.png', 'a2.pdf', 'b.png']);
   assert.deepEqual(sortAttachments(items, 'name').map((i) => i.name), ['a2.pdf', 'a10.png', 'b.png']);
   assert.deepEqual(sortAttachments(items, 'notes').map((i) => i.name), ['a10.png', 'a2.pdf', 'b.png']);
-  assert.deepEqual(attachmentFolders(items), [{ folder: 'A', count: 2 }, { folder: 'B', count: 1 }]);
+  assert.deepEqual(attachmentFolders(items), [{ folder: 'A', label: 'A', depth: 0, count: 2 }, { folder: 'B', label: 'B', depth: 0, count: 1 }]);
   assert.equal(attachmentEmbed({ kind: 'pdf', name: 'a b.pdf' }), '![[a b.pdf]]');
   assert.equal(attachmentEmbed({ kind: 'image', name: 'a b.png' }), '![](_attachments/a%20b.png)');
   assert.deepEqual(filterAttachments(items, { kind: 'pdf' }).map((i) => i.name), ['a2.pdf']);
@@ -135,4 +135,18 @@ test('formatAttachmentSize: единицы по-русски', async () => {
   assert.equal(formatAttachmentSize(5 * 1024 * 1024, 'ru'), '5 МБ');
   assert.equal(formatAttachmentSize(900, 'ru'), '900 Б');
   assert.equal(formatAttachmentSize(1536, 'en'), '1.5 KB');
+});
+
+test('attachmentFolders: дерево с родителями без своих файлов; фильтр по папке берёт и вложенные', async () => {
+  const { attachmentFolders, filterAttachments } = await import('./attachments.js');
+  const items = [
+    { name: 'a.png', folder: 'Work/Alpha/Deep', usedBy: [] },
+    { name: 'b.png', folder: 'Work/Beta', usedBy: [] },
+    { name: 'c.png', folder: 'Workshop', usedBy: [] },
+  ];
+  assert.deepEqual(attachmentFolders(items).map((f) => [f.folder, f.depth, f.count]), [
+    ['Work', 0, 2], ['Work/Alpha', 1, 1], ['Work/Alpha/Deep', 2, 1], ['Work/Beta', 1, 1], ['Workshop', 0, 1],
+  ]);
+  assert.deepEqual(filterAttachments(items, { folder: 'Work' }).map((i) => i.name), ['a.png', 'b.png']);
+  assert.deepEqual(filterAttachments(items, { folder: 'Work/Alpha' }).map((i) => i.name), ['a.png']);
 });

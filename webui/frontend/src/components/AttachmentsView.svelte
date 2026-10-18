@@ -44,6 +44,8 @@
   let busy = false;
   let zoomed = false;
   let broken = new Set();
+  let oddShape = new Set(); // very tall or very wide pictures: cropped to fill the card, not shrunk to a sliver
+  let viewerAspect = 1;
   let trashOpen = false;
   let trashData = null;
   let trashStatus = 'loading';
@@ -124,6 +126,8 @@
   $: unusedItems = lockedNotes > 0 ? [] : items.filter((item) => item.usedBy.length === 0);
   $: unusedShown = filtered.filter(isUnused);
   $: names = duplicateNames(items);
+  // Everything unused is gone: the filter that shows nothing is left, not a dead end.
+  $: if (status === 'ready' && filter === 'unused' && lockedNotes === 0 && unusedItems.length === 0) { filter = 'all'; selecting = false; selected = new Set(); }
   // What is selected is what is on the page: files that a filter hides leave the selection.
   $: if (selected.size > 0) {
     const visible = new Set(filtered.map((item) => item.path));
@@ -137,7 +141,7 @@
 
   const rawUrl = (item) => `/api/attachments/raw?path=${encodeURIComponent(item.path)}`;
   // A card asks for a copy about its own size (the address carries the file's time, so the browser keeps it).
-  const thumbUrl = (item) => `/api/attachments/thumb?path=${encodeURIComponent(item.path)}&w=480&v=${encodeURIComponent(item.modified)}`;
+  const thumbUrl = (item, width = 480) => `/api/attachments/thumb?path=${encodeURIComponent(item.path)}&w=${width}&v=${encodeURIComponent(item.modified)}`;
 
   function toggleExpanded(path) {
     expanded = expanded.has(path) ? new Set([...expanded].filter((item) => item !== path)) : new Set([...expanded, path]);
@@ -279,6 +283,7 @@
 
   $: viewing, copied = false;
   $: viewing, zoomed = false;
+  $: viewing, viewerAspect = 1;
 </script>
 
 <section bind:this={scroller} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="attachments-view">
@@ -345,15 +350,15 @@
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.lockedHint}</p>
       {/if}
       {#if lockedNotes === 0}
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--text-tertiary)]">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-0 text-xs text-[var(--text-tertiary)]">
           {#if unusedItems.length > 0}
-          <button type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-6 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 max-sm:min-h-10">{$localizedText.attachments.reviewUnused}</button>
+          <button type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-8 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.reviewUnused}</button>
           <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize, $locale))}</span>
           {#if !selecting}
-            <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-6 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 max-sm:min-h-10">{$localizedText.attachments.select}</button>
+            <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.select}</button>
           {/if}
           {/if}
-          <button type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-6 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{$localizedText.attachments.removed}</button>
+          <button type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">{$localizedText.attachments.removed}</button>
         </div>
       {/if}
 
@@ -392,7 +397,7 @@
                 class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
               >
                 {#if !broken.has(item.path)}
-                  <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : 'object-contain'}" on:error={() => { broken = new Set([...broken, item.path]); }} />
+                  <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : oddShape.has(item.path) ? 'object-cover object-top' : 'object-contain'}" on:load={(event) => { const ratio = event.currentTarget.naturalWidth / (event.currentTarget.naturalHeight || 1); if ((ratio < 0.5 || ratio > 3) && !oddShape.has(item.path)) oddShape = new Set([...oddShape, item.path]); }} on:error={() => { broken = new Set([...broken, item.path]); }} />
                 {:else if item.kind === 'image'}
                   <span class="flex flex-col items-center gap-2 px-2 text-center text-[var(--text-tertiary)]" title={$localizedText.attachments.brokenImage}>
                     <ImageOff size="24" strokeWidth="1.7" aria-hidden="true" />
@@ -453,10 +458,9 @@
           </li>
         {/if}
         {#each folderChoices as entry (entry.folder)}
-          {@const parts = entry.folder.split('/').filter(Boolean)}
           <li role="option" aria-selected={folder === entry.folder}>
-            <button type="button" data-testid="attachments-folder-option" on:click={() => chooseFolder(entry.folder)} class="flex min-h-9 w-full items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left text-sm transition hover:text-[var(--text-primary)] max-sm:min-h-11 {folder === entry.folder ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}" style="padding-left: {folderQuery.trim() ? 0 : Math.max(0, parts.length - 1) * 14}px" title={entry.folder || '/'}>
-              <span class="min-w-0 truncate">{folderQuery.trim() ? (entry.folder || '/') : (parts.at(-1) || '/')}</span>
+            <button type="button" data-testid="attachments-folder-option" on:click={() => chooseFolder(entry.folder)} class="flex min-h-9 w-full items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left text-sm transition hover:text-[var(--text-primary)] max-sm:min-h-11 {folder === entry.folder ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}" style="padding-left: {folderQuery.trim() ? 0 : entry.depth * 16}px" title={entry.folder}>
+              <span class="min-w-0 truncate">{folderQuery.trim() ? entry.folder : entry.label}</span>
               <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{entry.count}</span>
             </button>
           </li>
@@ -529,15 +533,18 @@
   <ModalShell title={viewing.name.length > 48 ? `${viewing.name.slice(0, 30)}…${viewing.name.slice(-14)}` : viewing.name} widthClass="w-[min(94vw,56rem)]" on:close={() => { viewing = null; zoomed = false; }}>
     <div class="space-y-4" data-testid="attachment-viewer">
       <div class="relative">
-        <div class="flex max-h-[55vh] items-center justify-center bg-[var(--bg-secondary)] {zoomed ? 'overflow-auto' : 'overflow-hidden'}" data-testid="attachment-stage">
+        <div class="flex max-h-[55vh] justify-center bg-[var(--bg-secondary)] {viewing.kind === 'pdf' || (viewerAspect < 0.5 && !zoomed) ? 'items-start overflow-y-auto' : zoomed ? 'items-center overflow-auto' : 'items-center overflow-hidden'}" data-testid="attachment-stage">
           {#if viewing.kind === 'image' && !broken.has(viewing.path)}
             <button type="button" aria-label={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} title={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} data-testid="attachment-zoom" on:click={() => { zoomed = !zoomed; }} class="m-0 border-0 bg-transparent p-0 {zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}">
-              <img src={rawUrl(viewing)} alt={viewing.name} on:error={() => { broken = new Set([...broken, viewing.path]); }} class={zoomed ? 'max-w-none' : 'max-h-[55vh] max-w-full object-contain'} />
+              <img src={rawUrl(viewing)} alt={viewing.name} on:load={(event) => { viewerAspect = event.currentTarget.naturalWidth / (event.currentTarget.naturalHeight || 1); }} on:error={() => { broken = new Set([...broken, viewing.path]); }} class={zoomed ? 'max-w-none' : viewerAspect < 0.5 ? 'h-auto w-full' : 'max-h-[55vh] max-w-full object-contain'} />
             </button>
           {:else if viewing.kind === 'image'}
             <p class="p-10 text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.brokenImage}</p>
+          {:else if !broken.has(viewing.path)}
+            <!-- The first page, as a picture: the page-in-a-page viewer does not draw inside the app's dialog. "Open file" shows the whole document. -->
+            <img src={thumbUrl(viewing, 1000)} alt={viewing.name} data-testid="attachment-pdf-page" on:error={() => { broken = new Set([...broken, viewing.path]); }} class="h-auto w-full max-w-full" />
           {:else}
-            <embed src={rawUrl(viewing)} type="application/pdf" class="h-[55vh] w-full" />
+            <p class="p-10 text-center text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.pdfNoPreview}</p>
           {/if}
         </div>
         {#if at > 0}

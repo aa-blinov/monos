@@ -161,8 +161,10 @@ export function registerAttachmentRoutes(app) {
       const mime = [...imageMimes.entries()].find(([, value]) => value === ext)?.[0]
         || (ext === '.pdf' ? PDF_MIME : ext === '.svg' ? 'image/svg+xml' : 'application/octet-stream');
       res.type(mime);
-      // A picture from an imported archive is not trusted: an SVG may carry script, so it runs in a sandbox.
-      res.set({ 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'" });
+      res.set('X-Content-Type-Options', 'nosniff');
+      // A picture from an imported archive is not trusted: an SVG may carry script, so it runs in a sandbox. Only
+      // an SVG: a sandbox policy on a PDF would stop the viewer from showing it.
+      if (ext === '.svg') res.set('Content-Security-Policy', "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'");
       res.sendFile(fullPath);
     } catch (error) {
       sendError(res, error);
