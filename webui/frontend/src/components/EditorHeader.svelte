@@ -134,7 +134,7 @@
         class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />
       {#if fileInfo}
-        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-6 gap-y-4 text-[length:var(--text-whisper)] lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
+        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] sm:gap-x-6 lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
           <!-- One date on the line; when the note was made is in the tooltip. Items are set apart by even space, not by dots. -->
           <p class="text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
@@ -170,7 +170,7 @@
             </span>
           {/if}
           <!-- Actions on the note read like the bottom bar's, in sentence case; capitals are kept for labels. -->
-          <span class="ml-auto flex items-center gap-4">
+          <span class="ml-auto flex items-center gap-3 sm:gap-4">
             {#if outlineAvailable}
             <button
               type="button"
@@ -195,7 +195,7 @@
             <button
               type="button"
               on:click={browserPrint}
-              class="-my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
+              class="hidden sm:inline -my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
             >
               {$localizedText.editorHeader.print}
             </button>

@@ -76,3 +76,18 @@ test('заметка: поле тегов подсказывает «Add a tag»
   await page.getByTestId('property-tags-button').click();
   await expect(page.getByTestId('property-tags')).toHaveAttribute('placeholder', 'Add a tag');
 });
+
+// On a phone the date and the note's actions share one line, so the text starts higher.
+test('заметка на телефоне: дата и «Структура/История» в одной строке', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 390, height: 800 });
+  const title = `Meta line ${Date.now()}`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  const outline = page.getByTestId('outline-toggle');
+  await expect(outline).toBeVisible();
+  const date = page.getByText(/^Modified /).first();
+  const [a, b] = [await outline.boundingBox(), await date.boundingBox()];
+  expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThan(12);
+});

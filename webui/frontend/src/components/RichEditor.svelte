@@ -994,7 +994,7 @@
     on:dragleave={() => isImageDragging = false}
     on:drop|capture={handleDrop}
     on:click={(event) => { handleClick(event); if (wikiSuggestionsOpen) refreshWikiSuggestionsAfterDomUpdate(); }}
-    class="min-h-0 h-full flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 py-4 lg:py-10 cursor-text touch-pan-y
+    class="min-h-0 h-full flex-1 overflow-y-auto overscroll-contain px-4 lg:px-12 pt-4 pb-4 lg:py-10 cursor-text touch-pan-y [&_.ProseMirror>:first-child]:mt-0
       {isImageDragging ? 'ring-1 ring-inset ring-[color-mix(in_srgb,var(--text-secondary)_35%,transparent)]' : ''}
       [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full [&_.ProseMirror]:max-w-[var(--content-width,56rem)] [&_.ProseMirror]:mx-auto [&_.ProseMirror_p]:my-2
       [&_.ProseMirror]:[line-height:var(--line-height,1.625)] [&_.ProseMirror]:[font-size:var(--editor-font-size,16px)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[var(--text-secondary)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:opacity-30
