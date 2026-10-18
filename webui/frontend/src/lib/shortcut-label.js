@@ -15,3 +15,13 @@ export function shortcutLabel(text, mac = isMacPlatform()) {
   if (!mac) return value;
   return value.replace(/Ctrl\+/g, '⌘').replace(/Shift\+/g, '⇧');
 }
+
+/**
+ * Help text is written with the Mac's symbols; anywhere else "⌘K" reads "Ctrl+K", "⌘⇧F" "Ctrl+Shift+F" and
+ * "⌘-click" "Ctrl+click".
+ */
+export function platformKeys(text, mac = isMacPlatform()) {
+  const value = String(text ?? '');
+  if (mac) return value;
+  return value.replace(/⌘⇧/g, 'Ctrl+Shift+').replace(/⌘-/g, 'Ctrl+').replace(/⌘/g, 'Ctrl+').replace(/⇧/g, 'Shift+');
+}
