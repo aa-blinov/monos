@@ -767,6 +767,18 @@ function applyDeviceNameToRepo(name) {
   if (gitSettings.repo) writeGitSettings({ ...gitSettings, device_name: name });
 }
 
+/** The note's text at a commit, under its current path or, when it was moved or renamed since, the old one. */
+function noteAtRevision(sha, safePath) {
+  try {
+    const direct = gitExecBuffer(['show', `${sha}:${safePath}`]);
+    if (direct) return { text: direct.toString('utf-8'), thenPath: safePath };
+  } catch {
+    // Not at that path in that commit: look for the name it had then.
+  }
+  const thenPath = assertSafeGitPath(pathAtRevision(sha, safePath));
+  return { text: gitExecBuffer(['show', `${sha}:${thenPath}`])?.toString('utf-8'), thenPath };
+}
+
 /**
  * Where a note lived at a commit. A note that was moved or renamed (an import that sorted it into folders, a
  * rename in the app) has an older name in the commits before: `git show <sha>:<current path>` fails there with
@@ -1350,8 +1362,8 @@ export function registerGitRoutes(app) {
         return res.status(400).json({ detail: 'Invalid revision' });
       }
 
-      const thenPath = assertSafeGitPath(pathAtRevision(sha, safePath));
-      const oldText = gitExecBuffer(['show', `${sha}:${thenPath}`])?.toString('utf-8') || '';
+      const { text: shown, thenPath } = noteAtRevision(sha, safePath);
+      const oldText = shown || '';
       const currentPath = path.join(NOTES_DIR, safePath);
       const currentText = fs.existsSync(currentPath) ? readTextFile(currentPath) : '';
       // Without core.quotePath=false git escapes every non-ASCII byte, so a
@@ -1388,7 +1400,7 @@ export function registerGitRoutes(app) {
         return res.status(400).json({ detail: 'Invalid revision' });
       }
 
-      const restored = gitExecBuffer(['show', `${sha}:${assertSafeGitPath(pathAtRevision(sha, safePath))}`])?.toString('utf-8');
+      const restored = noteAtRevision(sha, safePath).text;
       if (restored === undefined || restored === null) {
         throw httpError(404, 'That version of the note is no longer available');
       }

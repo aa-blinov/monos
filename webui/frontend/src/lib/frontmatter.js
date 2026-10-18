@@ -46,9 +46,20 @@ function fileConventions(content) {
  * @param {string} content
  * @returns {{ frontmatter: string, body: string }}
  */
+// A header is YAML-looking lines between two `---`. A horizontal rule that opens a note, with another further
+// down, is not one: the text between them stays the body.
+function yamlLooking(block) {
+  // The first line says what it is; a value that runs over several lines may continue in any form.
+  const first = String(block).split(/\r?\n/).find((line) => line.trim() !== '');
+  return first === undefined || /^#/.test(first) || /^[^\s:][^:]*:(\s|$)/.test(first) || /^-(\s|$)/.test(first);
+}
+function headerMatch(match) {
+  return match && yamlLooking(match[1]) ? match : null;
+}
+
 export function splitFrontmatter(content) {
   const raw = String(content || '');
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  const match = headerMatch(raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/));
   if (!match) return { frontmatter: '', body: raw };
   return { frontmatter: match[1], body: raw.slice(match[0].length).replace(/^\s*\n/, '') };
 }
@@ -62,7 +73,7 @@ export function splitFrontmatter(content) {
  * @returns {string}
  */
 export function replaceFrontmatterBody(content, body) {
-  const match = String(content || '').match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
+  const match = headerMatch(String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/));
   const eol = match && match[0].includes('\r\n') ? '\r\n' : '\n';
   const nextBody = String(body || '').replace(/^\s*\n/, '').replace(/\r?\n/g, eol);
   if (!match) return nextBody;

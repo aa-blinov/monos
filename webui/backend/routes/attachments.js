@@ -191,7 +191,8 @@ function collectFiles(dir, out = []) {
     return out;
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.')) continue;
+    // A link is neither a note nor an attachment: it may dangle or point out of the notes.
+    if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) collectFiles(full, out);
     else out.push(full);
@@ -202,7 +203,8 @@ function collectFiles(dir, out = []) {
 function resolveReferencedPaths(noteFullPath, markdown) {
   const noteDir = path.dirname(noteFullPath);
   const found = new Set();
-  for (const match of String(markdown || '').matchAll(/!\[[^\]]*\]\(([^)\s]+)/g)) {
+  // Images `![](…)` and plain links `[name](…)` both keep a file in use (a PDF is linked, not embedded).
+  for (const match of String(markdown || '').matchAll(/\]\(([^)\s]+)/g)) {
     let target = match[1].trim();
     if (/^(https?:|data:)/i.test(target)) continue;
     try {
@@ -259,7 +261,7 @@ function referenceTextOf(notePath) {
  */
 function listAttachments() {
   const allFiles = collectFiles(NOTES_DIR);
-  const notes = allFiles.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+  const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
   const byPath = new Map();
   const byName = new Map();
   let lockedNotes = 0;
@@ -283,7 +285,8 @@ function listAttachments() {
     .filter((file) => path.relative(path.resolve(NOTES_DIR), file).split(path.sep).includes(ATTACHMENTS_DIR))
     .filter((file) => /\.(png|jpe?g|gif|webp|svg|pdf)$/i.test(file))
     .map((file) => {
-      const stats = fs.statSync(file);
+      let stats;
+      try { stats = fs.statSync(file); } catch { return null; }
       const users = new Map([...(byPath.get(path.resolve(file)) || []), ...(byName.get(path.basename(file)) || [])]);
       return {
         path: relPath(file),
@@ -295,6 +298,7 @@ function listAttachments() {
         usedBy: [...users.values()],
       };
     })
+    .filter(Boolean)
     .sort((a, b) => b.modified.localeCompare(a.modified));
   return { items, lockedNotes };
 }
@@ -311,7 +315,7 @@ export function registerOrphanRoutes(app) {
   app.get('/api/attachments/orphans', (_req, res) => {
     try {
       const allFiles = collectFiles(NOTES_DIR);
-      const notes = allFiles.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+      const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
 
       const referenced = new Set();
       const named = new Set();

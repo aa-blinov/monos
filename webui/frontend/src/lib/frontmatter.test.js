@@ -218,3 +218,11 @@ test('блочные теги читаются и не теряются при �
   assert.match(next, /"два: три"/);
   assert.doesNotMatch(next, /^\s+-\s/m, 'старый блочный список не должен оставаться в шапке');
 });
+
+test('splitFrontmatter: линия --- в начале заметки — не шапка, текст между линиями остаётся телом', async () => {
+  const { splitFrontmatter } = await import('./frontmatter.js');
+  const note = '---\n\nImportant text\n\n---\nTail\n';
+  assert.equal(splitFrontmatter(note).frontmatter, '');
+  assert.match(splitFrontmatter(note).body, /Important text/);
+  assert.equal(splitFrontmatter('---\ntitle: x\n---\nBody').frontmatter, 'title: x');
+});

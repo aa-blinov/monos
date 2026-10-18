@@ -2401,3 +2401,15 @@ apiTest('вложения: /api/attachments/all отдаёт файлы вмес
   assert.equal(byName['paper.pdf'].usedBy.length, 1);
   assert.deepEqual(byName['lonely.png'].usedBy, []);
 });
+
+apiTest('print: пустая шапка и линия --- в начале заметки не съедают текст, закрытые и удалённые заметки не попадают в книгу', async () => {
+  const dir = path.join(notesDir, 'Book');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'Rule.md'), '---\n\nImportant text\n\n---\nTail\n', 'utf-8');
+  fs.writeFileSync(path.join(dir, 'Sealed.md'), '---\nmonos-locked: true\n---\n-----BEGIN MONOS LOCKED NOTE-----\nAAAA\n-----END MONOS LOCKED NOTE-----\n', 'utf-8');
+  const note = (await requestJson(buildUrl('/api/print/note', { path: 'notes/Book/Rule.md' }))).data;
+  assert.match(note, /Important text/);
+  const book = (await requestJson(buildUrl('/api/print/tree', { path: 'Book' }))).data;
+  assert.match(book, /Important text/);
+  assert.doesNotMatch(book, /BEGIN MONOS LOCKED NOTE|AAAA/);
+});

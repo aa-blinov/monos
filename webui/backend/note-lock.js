@@ -15,7 +15,10 @@ const DAMAGED = 'The locked note is damaged';
 
 function frontmatterOf(text) {
   const match = /^﻿?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
-  return match ? match[1] : null;
+  // Lines that are not YAML mean the opening `---` was a horizontal rule, not a header.
+  const first = match && match[1].split(/\r?\n/).find((line) => line.trim() !== '');
+  const yaml = match && (first === undefined || /^#/.test(first) || /^[^\s:][^:]*:(\s|$)/.test(first) || /^-(\s|$)/.test(first));
+  return yaml ? match[1] : null;
 }
 
 /** Whether a note's text is a locked note: the frontmatter marker and the sealed block are both there. */
