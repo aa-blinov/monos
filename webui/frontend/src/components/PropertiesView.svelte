@@ -16,9 +16,9 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { localizedText, locale } from '../lib/strings.js';
   import SearchField from './SearchField.svelte';
-  import { loadPropertyTableRequest } from '../lib/editor-api.js';
+  import { loadPropertyTableRequest, setPropertyRequest } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
-  import { propertyInputText } from '../lib/properties.js';
+  import { propertyInputText, propertyInputType, propertyValueFrom } from '../lib/properties.js';
 
   // The notes as a table of their custom properties. The query uses the search syntax, so
   // `prop:status=done` filters the rows; a click on a row opens its note.
@@ -99,9 +99,10 @@
   }
 
   // Collapsed: the most used keys and every chosen one; open: all of them, narrowed by what is typed.
+  $: chosenFirst = [...keys.filter((item) => columns?.includes(item.key)), ...keys.filter((item) => !columns?.includes(item.key))];
   $: visibleKeys = showAllKeys
-    ? keys.filter((item) => !keyQuery.trim() || String(item.key).toLowerCase().includes(keyQuery.trim().toLowerCase()))
-    : keys.filter((item, index) => index < COLLAPSED_KEYS || columns?.includes(item.key));
+    ? chosenFirst.filter((item) => !keyQuery.trim() || String(item.key).toLowerCase().includes(keyQuery.trim().toLowerCase()))
+    : chosenFirst.slice(0, Math.max(COLLAPSED_KEYS, columns?.length || 0));
 
   function toggleColumn(key) {
     columns = columns.includes(key) ? columns.filter((item) => item !== key) : [...columns, key];
@@ -128,6 +129,122 @@
   }
   $: if (scroller && rows) requestAnimationFrame(updateFade);
 
+  // ---- Editing in the table: a click on a cell changes the property of that note, without opening it. ----
+  let editing = null; // { path, key }
+  let editValue = '';
+  let editError = '';
+  let saving = false;
+  const typeOf = (key) => keys.find((item) => item.key === key)?.type || 'text';
+  const propertyOf = (row, key) => row.properties.find((item) => String(item.key).toLowerCase() === key.toLowerCase());
+
+  function startEdit(row, key) {
+    if (saving) return;
+    if (typeOf(key) === 'checkbox') { toggleCheckbox(row, key); return; }
+    editing = { path: row.path, key };
+    editError = '';
+    editValue = propertyInputText(propertyOf(row, key));
+  }
+
+  function cancelEdit() {
+    editing = null;
+    editError = '';
+  }
+
+  async function writeProperty(row, key, body) {
+    saving = true;
+    try {
+      const had = Boolean(propertyOf(row, key));
+      const result = await setPropertyRequest(row.path, body);
+      row.properties = Array.isArray(result?.properties) ? result.properties : row.properties;
+      const has = Boolean(propertyOf(row, key));
+      // The row stays where it is (a table that reorders under the pointer is hard to follow); only the counts of
+      // the fields are brought up to date. The next read puts the rows in their order.
+      if (had !== has) {
+        const entry = keys.find((item) => item.key === key);
+        if (entry) entry.count = Math.max(0, entry.count + (has ? 1 : -1));
+        else if (has) keys = [...keys, { key, count: 1, type: typeOf(key) }];
+        keys = keys;
+      }
+      rows = rows;
+      editError = '';
+      return true;
+    } catch (error) {
+      console.error('Failed to save the property:', error);
+      editError = $localizedText.properties.saveFailed;
+      return false;
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function commitEdit() {
+    if (!editing || saving) return;
+    const { path, key } = editing;
+    const row = rows.find((item) => item.path === path);
+    if (!row) { cancelEdit(); return; }
+    const type = typeOf(key);
+    const existing = propertyOf(row, key);
+    const raw = editValue.trim();
+    if (raw === propertyInputText(existing).trim()) { cancelEdit(); return; }
+    if (raw === '') {
+      if (!existing) { cancelEdit(); return; }
+      if (await writeProperty(row, key, { key: existing.key, remove: true })) cancelEdit();
+      return;
+    }
+    const value = propertyValueFrom(type, raw);
+    if (value === null) { editError = $localizedText.properties.invalidValue.replace('{type}', $localizedText.properties.typeNames[type]); return; }
+    if (await writeProperty(row, key, { key: existing?.key || key, type, value })) cancelEdit();
+  }
+
+  async function toggleCheckbox(row, key) {
+    const existing = propertyOf(row, key);
+    await writeProperty(row, key, { key: existing?.key || key, type: 'checkbox', value: !(existing && existing.value === true) });
+  }
+
+  function focusOnMount(node) {
+    node.focus();
+    if (node.select) node.select();
+  }
+
+  function editKeys(event) {
+    if (event.key === 'Enter') { event.preventDefault(); commitEdit(); }
+    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelEdit(); }
+  }
+
+  // ---- Suggestions in the filter: the fields, then the values the notes carry for the field. ----
+  let searchInput;
+  let searchFocused = false;
+  $: token = (query.match(/(\S*)$/) || ['', ''])[1];
+  $: suggestions = suggestFor(token, keys, rows);
+  function suggestFor(current, fieldList, rowList) {
+    const field = current.match(/^(-?)prop:([^=<>!]*)$/i);
+    if (field) {
+      const typed = field[2].toLowerCase();
+      return fieldList.filter((item) => !/\s/.test(item.key) && item.key.toLowerCase().includes(typed)).slice(0, 8)
+        .map((item) => ({ text: `${field[1]}prop:${item.key}`, label: `${item.key} (${item.count})`, keep: true }));
+    }
+    const value = current.match(/^(-?prop:)([^=<>!\s]+)=(.*)$/i);
+    if (value) {
+      const typed = value[3].toLowerCase();
+      const seen = new Map();
+      for (const row of rowList) {
+        const property = row.properties.find((item) => String(item.key).toLowerCase() === value[2].toLowerCase());
+        const text = property ? propertyInputText(property) : '';
+        if (text && !/\s/.test(text) && text.toLowerCase().includes(typed)) seen.set(text, (seen.get(text) || 0) + 1);
+      }
+      return [...seen].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([text, count]) => ({ text: `${value[1]}${value[2]}=${text}`, label: `${text} (${count})` }));
+    }
+    if (!current) return fieldList.slice(0, 5).map((item) => ({ text: `prop:${item.key}`, label: `prop:${item.key}`, keep: true })).filter((item) => !/\s/.test(item.text));
+    return [];
+  }
+  function applySuggestion(item) {
+    query = `${query.slice(0, query.length - token.length)}${item.text}${item.keep ? '=' : ' '}`;
+    session.query = query;
+    clearTimeout(timer);
+    timer = setTimeout(load, 120);
+    searchInput?.focus();
+  }
+
   function modifiedText(value) {
     return value ? localeDate(new Date(value), $locale) : '';
   }
@@ -144,12 +261,24 @@
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.properties.tableTitle}</h1>
         <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.properties.tableHint}</p>
       </div>
+      <div on:focusin={() => { searchFocused = true; }} on:focusout={() => { searchFocused = false; }}>
       <SearchField
         bind:value={query}
+        bind:inputEl={searchInput}
         on:input={onQueryInput}
         placeholder={$localizedText.properties.tableSearch}
         testid="properties-query"
       />
+      </div>
+      {#if suggestions.length > 0 && searchFocused}
+        <ul class="flex flex-wrap gap-2" data-testid="properties-suggestions" aria-label={$localizedText.properties.suggestions}>
+          {#each suggestions as item (item.text)}
+            <li>
+              <button type="button" data-testid="properties-suggestion" on:mousedown|preventDefault={() => applySuggestion(item)} class="rounded-ui min-h-8 border border-[var(--border-subtle)] px-2 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{item.label}</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
       <p class="text-xs text-[var(--text-tertiary)] max-sm:hidden">{$localizedText.properties.syntaxHint}</p>
       <details class="text-xs text-[var(--text-tertiary)] sm:hidden">
         <summary class="min-h-10 cursor-pointer py-2">{$localizedText.properties.syntaxTitle}</summary>
@@ -187,11 +316,11 @@
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.emptyTable}</p>
     {:else}
       <div class="relative">
-      <div class="rounded-ui overflow-x-auto border border-[var(--border-subtle)]" bind:this={scroller} on:scroll={updateFade}>
+      <div class="rounded-ui max-h-[68vh] overflow-auto border border-[var(--border-subtle)]" bind:this={scroller} on:scroll={updateFade} data-testid="properties-scroller">
         <table class="w-full min-w-max border-collapse text-left text-xs">
-          <thead class="bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+          <thead class="sticky top-0 z-[3] bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
             <tr>
-              <th class="px-3 py-2 font-medium" aria-sort={ariaSort('title')}>
+              <th class="sticky left-0 z-[4] bg-[var(--bg-secondary)] px-3 py-2 font-medium" aria-sort={ariaSort('title')}>
                 <button type="button" class="font-medium" on:click={() => sortBy('title')}>{$localizedText.properties.noteColumn}</button>
               </th>
               {#each columns || [] as key (key)}
@@ -206,12 +335,36 @@
           </thead>
           <tbody>
             {#each rows as row (row.path)}
-              <tr class="border-t border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]">
-                <td class="px-3 py-2">
-                  <button type="button" class="block max-w-xs truncate text-left text-[var(--text-primary)] hover:underline" on:click={() => openRow(row)}>{row.title}</button>
+              <tr class="group border-t border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]">
+                <td class="sticky left-0 z-[1] bg-[var(--bg-primary)] px-3 py-2 group-hover:bg-[var(--bg-secondary)]">
+                  <button type="button" class="block max-w-[14rem] truncate text-left text-[var(--text-primary)] hover:underline max-sm:max-w-[9rem]" on:click={() => openRow(row)}>{row.title}</button>
                 </td>
                 {#each columns || [] as key (key)}
-                  <td class="px-3 py-2 text-[var(--text-secondary)]">{cellText(row, key)}</td>
+                  <td class="px-1 py-1 text-[var(--text-secondary)]">
+                    {#if editing && editing.path === row.path && editing.key === key}
+                      <input
+                        use:focusOnMount
+                        type={propertyInputType(typeOf(key))}
+                        value={editValue}
+                        on:input={(event) => { editValue = event.currentTarget.value; }}
+                        on:keydown={editKeys}
+                        on:blur={commitEdit}
+                        aria-label={`${columnLabel(key)}: ${row.title}`}
+                        aria-invalid={editError ? 'true' : undefined}
+                        data-testid="properties-cell-input"
+                        class="h-8 w-full min-w-[7rem] rounded-ui border border-[var(--text-primary)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] max-sm:h-10"
+                      />
+                      {#if editError}<span role="alert" class="mt-0.5 block text-[length:var(--text-whisper)] text-[var(--red)]">{editError}</span>{/if}
+                    {:else}
+                      <button
+                        type="button"
+                        data-testid="properties-cell"
+                        on:click={() => startEdit(row, key)}
+                        title={$localizedText.properties.editCell}
+                        class="block min-h-8 w-full min-w-[5rem] rounded-ui border-0 bg-transparent px-2 text-left text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] max-sm:min-h-10"
+                      >{cellText(row, key) || ' '}</button>
+                    {/if}
+                  </td>
                 {/each}
                 <td class="whitespace-nowrap px-3 py-2 text-[var(--text-tertiary)]">{modifiedText(row.modified)}</td>
               </tr>
