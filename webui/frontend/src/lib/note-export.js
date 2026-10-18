@@ -89,9 +89,28 @@ export async function fetchNoteHtml(notePath) {
   return response.text();
 }
 
+/**
+ * The exported file with the note's pictures and PDFs: a zip that unpacks into one folder, or null when the
+ * note has none (then the plain file is enough).
+ */
+export async function fetchExportBundle(notePath, fileName, content, source = content) {
+  const response = await fetch('/api/print/bundle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: notePath, fileName, content, source }),
+  });
+  if (response.status === 204) return null;
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `HTTP ${response.status}`);
+  }
+  return { blob: await response.blob(), fileName: decodeURIComponent(response.headers.get('X-Bundle-Name') || '') || exportFileName('note', 'zip') };
+}
+
 /** Start a browser download of text content, the same way the backup export does. */
 export function downloadFile(fileName, content, type = 'text/plain') {
-  const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
+  const blob = content instanceof Blob ? content : new Blob([content], { type: `${type};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;

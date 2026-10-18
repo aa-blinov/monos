@@ -25,7 +25,7 @@
   import { hasRawHtml } from '../lib/raw-html.js';
   import { relatedRows } from '../lib/related-notes.js';
   import { notifyDue } from '../lib/reminders.js';
-  import { downloadFile, exportFileName, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
+  import { downloadFile, exportFileName, fetchExportBundle, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
   import { printNoteToPdf } from '../lib/print.js';
   import {
     deleteFileRequest,
@@ -379,10 +379,13 @@
     try {
       await flushPendingEdits();
       const name = editedTitle || title || currentFile.name?.replace(/\.md$/, '') || 'note';
-      if (format === 'md') {
-        downloadFile(exportFileName(name, 'md'), editedContent, 'text/markdown');
-      } else if (format === 'txt') {
-        downloadFile(exportFileName(name, 'txt'), markdownToPlainText(splitFrontmatter(editedContent).body));
+      if (format === 'md' || format === 'txt') {
+        const fileName = exportFileName(name, format);
+        const text = format === 'md' ? editedContent : markdownToPlainText(splitFrontmatter(editedContent).body);
+        // With pictures or PDFs the note leaves as a folder (a zip): the file and its _attachments side by side.
+        const bundle = await fetchExportBundle(currentFile.path, fileName, format === 'md' ? editedContent : text, editedContent);
+        if (bundle) downloadFile(bundle.fileName, bundle.blob);
+        else downloadFile(fileName, text, format === 'md' ? 'text/markdown' : 'text/plain');
       } else if (format === 'html') {
         downloadFile(exportFileName(name, 'html'), await fetchNoteHtml(currentFile.path), 'text/html');
       } else {

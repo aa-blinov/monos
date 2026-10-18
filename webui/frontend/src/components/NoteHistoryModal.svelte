@@ -11,7 +11,7 @@
   import ModalShell from './ModalShell.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { locale, localizedText } from '../lib/strings.js';
-  import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle } from '../lib/git-history.js';
+  import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle, groupRevisionsByDay, relativeDay } from '../lib/git-history.js';
 
   export let notePath = '';
   export let onRestored = () => {};
@@ -32,6 +32,14 @@
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+
+  const formatTime = (value) => new Intl.DateTimeFormat(dateLocale($locale), { timeStyle: 'short' }).format(new Date(value));
+  const formatDay = (value) => new Intl.DateTimeFormat(dateLocale($locale), { dateStyle: 'long' }).format(new Date(value));
+  function dayLabel(date, texts) {
+    const relative = relativeDay(date);
+    return relative ? texts[relative] : formatDay(date);
+  }
+  $: groups = groupRevisionsByDay(revisions);
 
   async function load() {
     loading = true;
@@ -111,22 +119,45 @@
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.empty}</p>
   {:else}
     <div class="grid gap-6 lg:grid-cols-[minmax(0,18rem)_1fr]">
-      <ol class="rounded-ui max-h-[60vh] space-y-px overflow-y-auto border border-[var(--border-subtle)]">
-        {#each revisions as revision (revision.sha)}
-          <li>
-            <button
-              type="button"
-              on:click={() => openRevision(revision)}
-              class="w-full border-0 border-b border-[var(--border-subtle)] px-3 py-2.5 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-primary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]'}"
-            >
-              <span class="block text-xs font-bold text-[var(--text-primary)]">{revisionTitle(revision.message, $localizedText.history.messages) || $localizedText.history.noMessage}</span>
-              <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                {revision.author}, {formatDate(revision.date)}, {revision.short}
-              </span>
-            </button>
-          </li>
-        {/each}
-      </ol>
+      <div class="max-h-[60vh] overflow-y-auto pr-2" data-testid="history-timeline">
+        <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">↑ {$localizedText.history.newerEnd}</p>
+        <ol class="relative" aria-label={$localizedText.history.timeline}>
+          {#each groups as group, groupIndex (group.key)}
+            <li class="relative {groupIndex > 0 ? 'mt-4' : ''}">
+              <!-- One rail per day, running on into the next; it starts at the first dot and ends at the last. -->
+              <span class="absolute left-[5.5px] w-px bg-[var(--border-subtle)] {groupIndex === 0 ? 'top-[3.4rem]' : '-top-4'} {groupIndex === groups.length - 1 ? 'bottom-[2.1rem]' : '-bottom-4'}" aria-hidden="true"></span>
+              <p class="mb-2 pl-6 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)]" data-testid="history-day">{dayLabel(group.date, $localizedText.history)}</p>
+              <ol>
+                {#each group.revisions as revision, index (revision.sha)}
+                  {@const latest = groupIndex === 0 && index === 0}
+                  <li class="relative pl-6">
+                    <span
+                      class="absolute left-0 top-3 h-3 w-3 rounded-full border-2 {selected?.sha === revision.sha ? 'border-[var(--text-primary)] bg-[var(--text-primary)]' : latest ? 'border-[var(--text-primary)] bg-[var(--bg-primary)]' : 'border-[var(--text-tertiary)] bg-[var(--bg-primary)]'}"
+                      aria-hidden="true"
+                    ></span>
+                    <button
+                      type="button"
+                      data-testid="history-revision"
+                      aria-pressed={selected?.sha === revision.sha}
+                      on:click={() => openRevision(revision)}
+                      class="mb-1 w-full rounded-ui border-0 px-3 py-2 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]'}"
+                    >
+                      <span class="flex items-baseline justify-between gap-2">
+                        <span class="text-xs font-bold text-[var(--text-primary)]">{revisionTitle(revision.message, $localizedText.history.messages) || $localizedText.history.noMessage}</span>
+                        <span class="shrink-0 text-[length:var(--text-whisper)] tabular-nums text-[var(--text-secondary)]">{formatTime(revision.date)}</span>
+                      </span>
+                      <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                        {revision.author}, {revision.short}{#if latest}{', '}{$localizedText.history.newest}{/if}
+                      </span>
+                    </button>
+                  </li>
+                {/each}
+              </ol>
+            </li>
+          {/each}
+        </ol>
+        <p class="mt-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">↓ {$localizedText.history.olderEnd}</p>
+      </div>
 
       <div class="min-w-0">
         {#if error}

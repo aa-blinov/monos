@@ -2362,3 +2362,25 @@ apiTest('шифрование: без парольной фразы заметк
   assert.match(fs.readFileSync(file, 'utf-8'), /Новая запись/);
   assert.equal((await requestJson(at('/api/file-info'))).data.locked, false);
 });
+
+apiTest('print: YAML-шапка не попадает в HTML и PDF, а экспорт с вложениями уходит папкой в zip', async () => {
+  const dir = path.join(notesDir, 'Export');
+  fs.mkdirSync(path.join(dir, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '_attachments', 'pic.png'), 'png');
+  fs.writeFileSync(path.join(dir, 'Doc.md'), '---\ntitle: "Doc"\ntags: ["secret-tag"]\n---\n\n# Heading\n\n![](_attachments/pic.png)\n', 'utf-8');
+
+  const html = (await requestJson(buildUrl('/api/print/note', { path: 'notes/Export/Doc.md' }))).data;
+  assert.match(html, /Heading/);
+  assert.doesNotMatch(html, /secret-tag/);
+
+  const source = fs.readFileSync(path.join(dir, 'Doc.md'), 'utf-8');
+  const post = (body) => realFetch(buildUrl('/api/print/bundle'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const bundle = await post({ path: 'notes/Export/Doc.md', fileName: 'Doc.md', content: source });
+  assert.equal(bundle.status, 200);
+  const entries = new AdmZip(Buffer.from(await bundle.arrayBuffer())).getEntries().map((entry) => entry.entryName).sort();
+  assert.deepEqual(entries, ['Doc/Doc.md', 'Doc/_attachments/pic.png']);
+
+  // The text export has no links left, so the Markdown is passed as the source of the links.
+  assert.equal((await post({ path: 'notes/Export/Doc.md', fileName: 'Doc.txt', content: 'Heading', source })).status, 200);
+  assert.equal((await post({ path: 'notes/Export/Doc.md', fileName: 'Doc.txt', content: 'Heading' })).status, 204);
+});
