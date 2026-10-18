@@ -94,3 +94,22 @@ test('filterAttachments: по имени файла, по названию за�
   // A closed locked note may use anything, so nothing counts as unused.
   assert.deepEqual(filterAttachments(items, { filter: 'unused', lockedNotes: 1 }), []);
 });
+
+test('sortAttachments, attachmentFolders и attachmentEmbed', async () => {
+  const { sortAttachments, attachmentFolders, attachmentEmbed, filterAttachments } = await import('./attachments.js');
+  const items = [
+    { name: 'b.png', kind: 'image', folder: 'A', size: 10, modified: '2026-01-02', usedBy: [] },
+    { name: 'a10.png', kind: 'image', folder: 'B', size: 30, modified: '2026-01-03', usedBy: [{ title: 'x' }, { title: 'y' }] },
+    { name: 'a2.pdf', kind: 'pdf', folder: 'A', size: 20, modified: '2026-01-01', usedBy: [{ title: 'x' }] },
+  ];
+  assert.deepEqual(sortAttachments(items, 'new').map((i) => i.name), ['a10.png', 'b.png', 'a2.pdf']);
+  assert.deepEqual(sortAttachments(items, 'size').map((i) => i.name), ['a10.png', 'a2.pdf', 'b.png']);
+  assert.deepEqual(sortAttachments(items, 'name').map((i) => i.name), ['a2.pdf', 'a10.png', 'b.png']);
+  assert.deepEqual(sortAttachments(items, 'notes').map((i) => i.name), ['a10.png', 'a2.pdf', 'b.png']);
+  assert.deepEqual(attachmentFolders(items), [{ folder: 'A', count: 2 }, { folder: 'B', count: 1 }]);
+  assert.equal(attachmentEmbed({ kind: 'pdf', name: 'a b.pdf' }), '![[a b.pdf]]');
+  assert.equal(attachmentEmbed({ kind: 'image', name: 'a b.png' }), '![](_attachments/a%20b.png)');
+  assert.deepEqual(filterAttachments(items, { kind: 'pdf' }).map((i) => i.name), ['a2.pdf']);
+  assert.deepEqual(filterAttachments(items, { folder: 'B' }).map((i) => i.name), ['a10.png']);
+  assert.deepEqual(filterAttachments(items, { query: 'a2', folder: 'A' }).map((i) => i.name), ['a2.pdf']);
+});

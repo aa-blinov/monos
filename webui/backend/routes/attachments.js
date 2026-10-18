@@ -303,7 +303,85 @@ function listAttachments() {
   return { items, lockedNotes };
 }
 
+const TRASH_DAYS = 30;
+const trashRoot = () => path.join(NOTES_DIR, '.monos', 'attachments-trash');
+
+function walkFiles(dir, out = []) {
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkFiles(full, out);
+    else out.push(full);
+  }
+  return out;
+}
+
+/** Batches older than TRASH_DAYS are gone for good; recent ones can still be restored. */
+function purgeOldBatches() {
+  const root = trashRoot();
+  let batches = [];
+  try { batches = fs.readdirSync(root); } catch { return; }
+  const limit = Date.now() - TRASH_DAYS * 86400000;
+  for (const batch of batches) {
+    const stamp = Number(batch.split('-')[0]);
+    if (Number.isFinite(stamp) && stamp < limit) fs.rmSync(path.join(root, batch), { recursive: true, force: true });
+  }
+}
+
 export function registerOrphanRoutes(app) {
+  // Unused pictures and PDFs go to a local trash (`.monos/attachments-trash`, kept 30 days), never straight to
+  // nothing. A file any note still uses is refused, whatever the client says.
+  app.post('/api/attachments/delete', (req, res) => {
+    try {
+      const requested = Array.isArray(req.body?.paths) ? req.body.paths.slice(0, 500) : [];
+      if (requested.length === 0) throw httpError(400, 'Nothing to delete');
+      const { items, lockedNotes } = listAttachments();
+      if (lockedNotes > 0) throw httpError(409, 'A locked note is closed, so its files cannot be told from unused ones');
+      const byPath = new Map(items.map((item) => [item.path, item]));
+      const batch = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      let deleted = 0;
+      let bytes = 0;
+      const skipped = { used: 0, missing: 0 };
+      for (const itemPath of requested) {
+        const item = byPath.get(itemPath);
+        if (!item) { skipped.missing += 1; continue; }
+        if (item.usedBy.length > 0) { skipped.used += 1; continue; }
+        const full = assertAnyAttachmentPath(item.path);
+        const target = path.join(trashRoot(), batch, path.relative(path.resolve(NOTES_DIR), full));
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.renameSync(full, target);
+        deleted += 1;
+        bytes += item.size;
+      }
+      purgeOldBatches();
+      res.json({ batch: deleted ? batch : null, deleted, bytes, skipped });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/attachments/restore', (req, res) => {
+    try {
+      const batch = String(req.body?.batch || '');
+      if (!/^\d+-[0-9a-z]+$/.test(batch)) throw httpError(400, 'Invalid batch');
+      const dir = path.join(trashRoot(), batch);
+      if (!fs.existsSync(dir)) throw httpError(404, 'Nothing to restore');
+      let restored = 0;
+      for (const file of walkFiles(dir)) {
+        const target = path.join(path.resolve(NOTES_DIR), path.relative(dir, file));
+        if (!path.resolve(target).startsWith(path.resolve(NOTES_DIR) + path.sep) || fs.existsSync(target)) continue;
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.renameSync(file, target);
+        restored += 1;
+      }
+      fs.rmSync(dir, { recursive: true, force: true });
+      res.json({ restored });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
   app.get('/api/attachments/all', (_req, res) => {
     try {
       res.json(listAttachments());
