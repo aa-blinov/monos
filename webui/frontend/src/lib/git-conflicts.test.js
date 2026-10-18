@@ -13,11 +13,11 @@ test('conflictNotePath приводит путь сервера к пути за
 
 test('refreshConflicts: конфликтные заметки при статусе conflict, пусто без него и без сети', async () => {
   await refreshConflicts(async (url) => answer(url === '/api/git/status'
-    ? { status: 'conflict' }
+    ? { initialized: true, status: 'conflict' }
     : [{ path: 'План поездки.md' }, { path: 'image.png' }, 'Работа/Встреча.md']));
   assert.deepEqual([...get(conflictedNotes)], ['notes/План поездки.md', 'notes/Работа/Встреча.md']);
 
-  await refreshConflicts(async () => answer({ status: 'clean' }));
+  await refreshConflicts(async () => answer({ initialized: true, status: 'clean' }));
   assert.equal(get(conflictedNotes).size, 0);
 
   conflictedNotes.set(new Set(['notes/x.md']));
@@ -26,10 +26,23 @@ test('refreshConflicts: конфликтные заметки при стату�
 });
 
 test('gitConnected следует за статусом: кнопка синхронизации видна только при подключённом репозитории', async () => {
+  await refreshConflicts(async () => answer({ initialized: true, status: 'clean', repo: 'me/notes' }));
+  assert.equal(get(gitConnected), true);
+  // A repository kept only for history has no remote: nothing to sync.
   await refreshConflicts(async () => answer({ initialized: true, status: 'clean' }));
+  assert.equal(get(gitConnected), false);
+  await refreshConflicts(async () => answer({ initialized: true, status: 'clean', remote: true }));
   assert.equal(get(gitConnected), true);
   await refreshConflicts(async () => answer({ initialized: false }));
   assert.equal(get(gitConnected), false);
+});
+
+test('сбой статуса или офлайн не прячут кнопку синхронизации: ответ без initialized ничего не говорит о подключении', async () => {
+  await refreshConflicts(async () => answer({ initialized: true, status: 'clean', repo: 'me/notes' }));
+  await refreshConflicts(async () => answer({ detail: 'index.lock exists' }));
+  assert.equal(get(gitConnected), true);
+  await refreshConflicts(async () => { throw new Error('offline'); });
+  assert.equal(get(gitConnected), true);
 });
 
 test('noteSyncStatus: нет remote, ни разу, ждёт отправки, синхронизирована', async () => {

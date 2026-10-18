@@ -33,6 +33,12 @@ test.after(async () => {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
+test('статус сообщает, есть ли remote: только с ним кнопка синхронизации имеет смысл', async () => {
+  const before = await (await fetch(`${base}/api/git/status`)).json();
+  assert.equal(before.initialized, true);
+  assert.equal(before.remote, false);
+});
+
 test('без remote автосинхронизация и синхронизация отвечают 200 и ничего не ломают', async () => {
   const auto = await post('/api/git/sync?auto=1');
   assert.equal(auto.status, 200);
@@ -65,4 +71,9 @@ test('remote есть, отслеживание потеряно: следующ
   const sync = await post('/api/git/sync');
   assert.equal(sync.status, 200);
   assert.equal(git(['rev-parse', 'main'], remoteDir), git(['rev-parse', 'HEAD']));
+});
+
+test('после подключения remote статус это показывает', async () => {
+  const status = await (await fetch(`${base}/api/git/status`)).json();
+  assert.equal(status.remote, true);
 });

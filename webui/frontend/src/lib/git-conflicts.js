@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { persisted } from './stores/persisted.js';
 
 /**
  * Notes with an unresolved sync conflict, as `notes/…` paths. The board and the tree mark them, so a
@@ -14,13 +15,19 @@ export const conflictedFiles = writable(new Set());
 export const revealConflicts = writable(false);
 
 /** Whether this device is connected to a repository: the sidebar shows its sync button only then. */
-export const gitConnected = writable(false);
+export const gitConnected = persisted('gitConnected', false, {
+  serialize: (value) => String(value),
+  deserialize: (text) => text === 'true',
+});
 
 /**
  * Where this device stands with its repository: connected to a remote at all, when it last synced, and how far
  * it is from the remote. The note shows it beside its own date.
  */
 export const syncState = writable({ connected: false, lastSync: null, ahead: 0, behind: 0 });
+
+// The last answer that was a real answer. Sync is shown from the first frame of the next run, not after a request.
+
 
 /**
  * How a note stands with the last sync: `none` (no remote), `never` (connected, nothing sent yet), `pending`
@@ -47,8 +54,12 @@ export function conflictNotePath(path) {
 export async function refreshConflicts(fetchImpl = (...args) => fetch(...args)) {
   try {
     const status = await (await fetchImpl('/api/git/status')).json();
-    gitConnected.set(Boolean(status?.initialized));
-    syncState.set({ connected: Boolean(status?.initialized && status?.repo), lastSync: status?.last_sync || null, ahead: status?.ahead || 0, behind: status?.behind || 0 });
+    // An error answer (git busy with another command, a lock) has no `initialized`: it says nothing about the
+    // connection, so what was known stays. Taking it for "not connected" made the Sync button blink away.
+    if (typeof status?.initialized !== 'boolean') return;
+    const connected = Boolean(status.initialized && (status.repo || status.remote));
+    gitConnected.set(connected);
+    syncState.set({ connected, lastSync: status.last_sync || null, ahead: status.ahead || 0, behind: status.behind || 0 });
     if (status?.status !== 'conflict') {
       conflictedNotes.set(new Set());
       conflictedFiles.set(new Set());
@@ -61,8 +72,7 @@ export async function refreshConflicts(fetchImpl = (...args) => fetch(...args)) 
     conflictedNotes.set(new Set(paths.filter((path) => path.endsWith('.md'))));
     conflictedFiles.set(new Set(paths.filter((path) => !path.endsWith('.md'))));
   } catch {
-    // Offline or not connected: no marks rather than stale ones.
-    syncState.set({ connected: false, lastSync: null, ahead: 0, behind: 0 });
+    // Offline: no marks rather than stale ones. Whether a repository is connected does not change by being offline.
     conflictedNotes.set(new Set());
     conflictedFiles.set(new Set());
   }

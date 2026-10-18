@@ -124,3 +124,26 @@ test('заметка: рядом с датой — «Синхронизиров�
   await expect(page.getByTestId('editor-shell')).toBeVisible();
   await expect(page.getByTestId('note-sync')).toHaveCount(0);
 });
+
+// The Sync button belongs to a connected repository: it stays when the status check fails, and a repository
+// kept only for history (no remote) does not show it.
+test('боковая панель: «Синхронизировать» не мигает при сбое статуса и не показывается без remote', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1300, height: 900 });
+  const sync = page.getByRole('button', { name: /^Sync now$/ });
+  await page.route('**/api/git/status', (route) => route.fulfill({ json: { initialized: true, status: 'clean', repo: 'me/notes', last_sync: null } }));
+  await page.goto('/');
+  await expect(sync).toBeVisible();
+
+  await page.unroute('**/api/git/status');
+  await page.route('**/api/git/status', (route) => route.fulfill({ status: 500, json: { detail: 'index.lock exists' } }));
+  await page.reload();
+  await expect(page.getByTestId('open-more')).toBeVisible();
+  await expect(sync).toBeVisible();
+
+  await page.unroute('**/api/git/status');
+  await page.route('**/api/git/status', (route) => route.fulfill({ json: { initialized: true, status: 'clean', repo: '', remote: false } }));
+  await page.reload();
+  await expect(page.getByTestId('open-more')).toBeVisible();
+  await expect(sync).toHaveCount(0);
+});
