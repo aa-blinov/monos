@@ -33,3 +33,34 @@ test('частые вопросы находятся поиском', () => {
   assert.ok(searchHelp(helpSections('ru'), 'пароль').some((r) => r.itemId === 'forgot-password'));
   assert.ok(searchHelp(helpSections('en'), 'terminal').some((r) => r.itemId === 'terminal'));
 });
+
+// The keys table: the same rows in both languages, grouped, and every row names keys the app really answers
+// (the e2e hotkey spec presses each of them).
+const keyRows = (sections) => {
+  const article = sections.flatMap((section) => section.items).find((item) => item.id === 'shortcuts');
+  // Only the keys themselves (the backticked words), not the "or" between them, which is language.
+  return article.body.split('\n').filter((line) => /^\| `/.test(line)).map((line) => [...line.split('|')[1].matchAll(/`([^`]+)`/g)].map((m) => m[1].replace(/клик/, 'click')).join(' '));
+};
+
+test('горячие клавиши: те же строки на обоих языках и все основные на месте', () => {
+  const ru = keyRows(helpSections('ru'));
+  const en = keyRows(helpSections('en'));
+  assert.deepEqual(ru, en);
+  const joined = ru.join(' ');
+  for (const key of ['⌘K', '⌘O', '⌘N', '⌘B', '⌘J', 'Esc', '⌘⇧F', '⌘S', '⌘Z', '⌘⇧Z', '⌘I', '⌘E', '⌘Enter', '⌘-', 'Shift+F10', '⌘F']) {
+    assert.ok(joined.includes(key), `в таблице нет ${key}`);
+  }
+  const groups = (sections) => sections.flatMap((s) => s.items).find((i) => i.id === 'shortcuts').body.match(/^\*\*.+\*\*$/gm);
+  assert.equal(groups(helpSections('ru')).length, 5);
+  assert.equal(groups(helpSections('en')).length, 5);
+});
+
+test('platformKeys: на Mac символы, на остальных Ctrl и Shift', async () => {
+  const { platformKeys } = await import('./shortcut-label.js');
+  assert.equal(platformKeys('⌘K', true), '⌘K');
+  assert.equal(platformKeys('⌘K', false), 'Ctrl+K');
+  assert.equal(platformKeys('⌘⇧F', false), 'Ctrl+Shift+F');
+  assert.equal(platformKeys('⌘-клик, ⌘Enter', false), 'Ctrl+клик, Ctrl+Enter');
+  assert.equal(platformKeys('⌘-click', false), 'Ctrl+click');
+  assert.equal(platformKeys('Shift+F10', false), 'Shift+F10');
+});

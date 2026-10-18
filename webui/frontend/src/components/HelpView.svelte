@@ -10,13 +10,21 @@
   import { helpSections } from '../lib/help-content.js';
   import { searchHelp } from '../lib/help-search.js';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
+  import { platformKeys } from '../lib/shortcut-label.js';
 
   let query = '';
   let searchField;
   let activeSection = '';
   let scroller;
 
-  $: sections = helpSections($locale);
+  // The text is written with the Mac's symbols; the keys of this computer are shown.
+  const forThisComputer = (list) => list.map((section) => ({
+    ...section,
+    title: platformKeys(section.title),
+    summary: section.summary ? platformKeys(section.summary) : section.summary,
+    items: section.items.map((item) => ({ ...item, title: platformKeys(item.title), body: platformKeys(item.body) })),
+  }));
+  $: sections = forThisComputer(helpSections($locale));
   $: results = searchHelp(sections, query);
   $: if (!activeSection && sections.length) activeSection = sections[0].id;
 
@@ -113,7 +121,7 @@
                 {#each section.items as item (item.id)}
                   <article id="help-{section.id}-{item.id}" class="help-item scroll-mt-6 rounded-ui">
                     <h3 class="text-base font-bold text-[var(--text-primary)]">{item.title}</h3>
-                    <div class="help-body mt-1.5">{@html renderMarkdownPreview(item.body)}</div>
+                    <div class="help-body mt-1.5" class:help-keys={item.id === 'shortcuts'}>{@html renderMarkdownPreview(item.body)}</div>
                   </article>
                 {/each}
               </div>
@@ -137,6 +145,12 @@
   .help-body :global(th),
   .help-body :global(td) { border: 1px solid var(--border-subtle); padding: 0.3rem 0.6rem; text-align: left; color: var(--text-secondary); }
   .help-body :global(th) { color: var(--text-primary); background: var(--bg-secondary); }
+  /* The Keys column reads as keys. */
+  .help-keys :global(td:first-child code) { display: inline-block; margin: 0.1rem 0.15rem 0.1rem 0; padding: 0.1rem 0.45rem; border: 1px solid var(--border-subtle); border-bottom-width: 2px; border-radius: var(--radius); background: var(--bg-secondary); font-size: 0.95em; line-height: 1.35; white-space: nowrap; }
+  .help-keys :global(td:first-child) { white-space: normal; }
+  .help-keys :global(table) { width: 100%; max-width: 40rem; margin-bottom: 1rem; }
+  @media (min-width: 640px) { .help-keys :global(th:first-child) { width: 13rem; } }
+  .help-keys :global(p) { margin: 1rem 0 0.35rem; color: var(--text-primary); }
   :global(.help-item) { transition: background-color 0.6s ease; }
   :global(.help-item.help-flash) { background: color-mix(in srgb, var(--yellow) 18%, transparent); }
   :global([data-testid="help-results"] mark),
