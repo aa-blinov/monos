@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import multer from 'multer';
 import { NOTES_DIR } from '../config.js';
 import { relPath, resolveNotesPath, safePathName, httpError, readTextFile } from '../utils.js';
@@ -122,6 +123,28 @@ export function registerAttachmentRoutes(app) {
         mime: req.file.mimetype,
         size: req.file.size,
       });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get('/api/attachments/thumb', async (req, res) => {
+    try {
+      const fullPath = assertAnyAttachmentPath(req.query.path);
+      if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) throw httpError(404, 'Attachment not found');
+      const width = Math.min(THUMB_MAX, Math.max(THUMB_MIN, Number.parseInt(req.query.w, 10) || 480));
+      const made = await thumbnailFor(fullPath, width);
+      // The address carries the file's time (`v`), so a copy never goes stale and the browser keeps it.
+      res.set('Cache-Control', req.query.v ? 'private, max-age=31536000, immutable' : 'private, max-age=60');
+      if (!made) {
+        // A PDF without a preview here has no picture to give; anything else is served as it is.
+        if (/\.pdf$/i.test(fullPath)) throw httpError(404, 'No preview for this file');
+        res.set('X-Thumbnail', 'original');
+        res.redirect(307, `/api/attachments/raw?path=${encodeURIComponent(req.query.path)}`);
+        return;
+      }
+      if (Math.random() < 0.02) setImmediate(purgeOldThumbnails);
+      res.sendFile(made, { dotfiles: 'allow' });
     } catch (error) {
       sendError(res, error);
     }
@@ -268,6 +291,35 @@ function folderOfAttachment(file) {
   return parts.slice(0, at < 0 ? -1 : at).join('/');
 }
 
+// What each note points at, remembered by the note's size and modification time: a list of the whole vault
+// reads only the notes that changed since the last one. A locked note is never remembered (its text is only
+// readable while it is unlocked in this session).
+const referenceCache = new Map(); // absolute note path -> { signature, paths, names }
+const REFERENCE_CACHE_LIMIT = 20000;
+
+/** @returns {{ locked: true } | { locked: false, paths: Set<string>, names: Set<string> }} */
+function noteReferences(notePath) {
+  let signature = '';
+  try {
+    const stats = fs.statSync(notePath);
+    signature = `${stats.size}:${stats.mtimeMs}`;
+  } catch {
+    return { locked: false, paths: new Set(), names: new Set() };
+  }
+  const cached = referenceCache.get(notePath);
+  if (cached && cached.signature === signature) return { locked: false, paths: cached.paths, names: cached.names };
+  const stored = readTextFile(notePath);
+  const sealed = isLockedNote(stored);
+  const text = sealed ? referenceTextOf(notePath) : stored;
+  if (text === null) return { locked: true };
+  const result = { paths: resolveReferencedPaths(notePath, text), names: namedReferences(text) };
+  if (!sealed) {
+    if (referenceCache.size >= REFERENCE_CACHE_LIMIT) referenceCache.clear();
+    referenceCache.set(notePath, { signature, ...result });
+  }
+  return { locked: false, ...result };
+}
+
 function listAttachments() {
   const allFiles = collectFiles(NOTES_DIR);
   const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
@@ -275,19 +327,19 @@ function listAttachments() {
   const byName = new Map();
   let lockedNotes = 0;
   for (const note of notes) {
-    const text = referenceTextOf(note);
-    if (text === null) {
+    const references = noteReferences(note);
+    if (references.locked) {
       lockedNotes += 1;
       continue;
     }
     const entry = { path: relPath(note), title: path.basename(note).replace(/\.(md|markdown)$/i, '') };
-    for (const target of resolveReferencedPaths(note, text)) {
+    for (const target of references.paths) {
       if (!byPath.has(target)) byPath.set(target, new Map());
-      byPath.get(target).set(entry.path, entry);
+      byPath.get(target).set(entry.path, { ...entry, via: 'link' });
     }
-    for (const name of namedReferences(text)) {
+    for (const name of references.names) {
       if (!byName.has(name)) byName.set(name, new Map());
-      byName.get(name).set(entry.path, entry);
+      byName.get(name).set(entry.path, { ...entry, via: 'name' });
     }
   }
   const items = allFiles
@@ -296,7 +348,9 @@ function listAttachments() {
     .map((file) => {
       let stats;
       try { stats = fs.statSync(file); } catch { return null; }
-      const users = new Map([...(byPath.get(path.resolve(file)) || []), ...(byName.get(path.basename(file)) || [])]);
+      // A note that links the file by path is told apart from one that only writes its name: a name matches every
+      // file of that name, so it is the weaker kind of use.
+      const users = new Map([...(byName.get(path.basename(file)) || []), ...(byPath.get(path.resolve(file)) || [])]);
       return {
         path: relPath(file),
         name: path.basename(file),
@@ -310,6 +364,93 @@ function listAttachments() {
     .filter(Boolean)
     .sort((a, b) => b.modified.localeCompare(a.modified));
   return { items, lockedNotes };
+}
+
+// Small copies for the Attachments page. A page of 60 cards must not load 60 originals (photos run to megabytes),
+// so each card asks for a copy about its own size. The copy is made by Electron's image library in the app
+// (and by the system's preview for the first page of a PDF, where there is one), kept in `.monos/thumbs`, and
+// keyed by the file's size and time, so a changed file gets a new copy. Without Electron (a plain Node run) the
+// original is served: slower, never wrong.
+const THUMB_MIN = 96;
+const THUMB_MAX = 1200;
+let electronImageModule;
+async function electronImage() {
+  if (electronImageModule !== undefined) return electronImageModule;
+  try {
+    const electron = process.versions?.electron ? await import('electron') : null;
+    electronImageModule = electron?.nativeImage ? electron.nativeImage : null;
+  } catch {
+    electronImageModule = null;
+  }
+  return electronImageModule;
+}
+
+// Decoding a big picture takes a moment and the page asks for many at once: a few at a time.
+const THUMB_PARALLEL = 3;
+let thumbRunning = 0;
+const thumbWaiting = [];
+async function withThumbSlot(task) {
+  if (thumbRunning >= THUMB_PARALLEL) await new Promise((resolve) => thumbWaiting.push(resolve));
+  thumbRunning += 1;
+  try {
+    return await task();
+  } finally {
+    thumbRunning -= 1;
+    thumbWaiting.shift()?.();
+  }
+}
+
+const thumbsRoot = () => path.join(NOTES_DIR, '.monos', 'thumbs');
+const thumbsInFlight = new Map();
+
+/** The path of a ready copy of `fullPath` at `width`, or null when none can be made here. */
+async function thumbnailFor(fullPath, width) {
+  const nativeImage = await electronImage();
+  if (!nativeImage) return null;
+  const ext = path.extname(fullPath).toLowerCase();
+  const isPdf = ext === '.pdf';
+  if (!isPdf && !['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) return null; // svg and gif are served as they are
+  const stats = fs.statSync(fullPath);
+  const key = crypto.createHash('sha1').update(`${fullPath}|${stats.size}|${stats.mtimeMs}|${width}`).digest('hex');
+  const outExt = isPdf || ext === '.png' ? '.png' : '.jpg';
+  const target = path.join(thumbsRoot(), `${key}${outExt}`);
+  if (fs.existsSync(target)) return target;
+  if (thumbsInFlight.has(target)) return thumbsInFlight.get(target);
+  const job = withThumbSlot(async () => {
+    let image;
+    if (isPdf) {
+      if (typeof nativeImage.createThumbnailFromPath !== 'function') return null;
+      image = await nativeImage.createThumbnailFromPath(fullPath, { width, height: Math.round(width * 1.42) });
+    } else {
+      image = nativeImage.createFromPath(fullPath);
+      const size = image.isEmpty() ? null : image.getSize();
+      // Already as small as the card needs: the original is the copy.
+      if (!size || size.width <= width) return null;
+      image = image.resize({ width, quality: 'good' });
+    }
+    if (!image || image.isEmpty()) return null;
+    fs.mkdirSync(thumbsRoot(), { recursive: true });
+    const data = outExt === '.jpg' ? image.toJPEG(80) : image.toPNG();
+    const temporary = `${target}.${process.pid}.tmp`;
+    fs.writeFileSync(temporary, data);
+    fs.renameSync(temporary, target);
+    return target;
+  }).catch(() => null).finally(() => thumbsInFlight.delete(target));
+  thumbsInFlight.set(target, job);
+  return job;
+}
+
+/** Copies not touched for 30 days go; called now and then, never on the request's way. */
+function purgeOldThumbnails() {
+  const limit = Date.now() - 30 * 86400000;
+  try {
+    for (const name of fs.readdirSync(thumbsRoot())) {
+      const full = path.join(thumbsRoot(), name);
+      if (fs.statSync(full).atimeMs < limit && fs.statSync(full).mtimeMs < limit) fs.rmSync(full, { force: true });
+    }
+  } catch {
+    // No copies yet.
+  }
 }
 
 const TRASH_DAYS = 30;
@@ -448,13 +589,13 @@ export function registerOrphanRoutes(app) {
       const named = new Set();
       let lockedNotes = 0;
       for (const note of notes) {
-        const text = referenceTextOf(note);
-        if (text === null) {
+        const references = noteReferences(note);
+        if (references.locked) {
           lockedNotes += 1;
           continue;
         }
-        for (const target of resolveReferencedPaths(note, text)) referenced.add(target);
-        for (const name of namedReferences(text)) named.add(name);
+        for (const target of references.paths) referenced.add(target);
+        for (const name of references.names) named.add(name);
       }
 
       // A closed locked note may show any picture and its text cannot be read, so until it is unlocked

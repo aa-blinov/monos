@@ -68,6 +68,11 @@ test('настройки: вместо списка вложений ссылк�
   await expect(page.getByTestId('orphan-attachments')).toHaveCount(0);
 });
 
+async function pickFolder(page, name) {
+  await page.getByTestId('attachments-folder').click();
+  await page.getByTestId('attachments-folder-option').filter({ hasText: new RegExp(`^${name}`) }).first().click();
+}
+
 function bigVault(count) {
   const folders = ['Work/Alpha', 'Personal'];
   return Array.from({ length: count }, (_, i) => ({
@@ -107,7 +112,7 @@ test('вложения: страницы по 60, сортировка, тип �
   await page.getByTestId('attachments-kind').selectOption('pdf');
   await expect(page.getByTestId('attachments-count')).toContainText('20 of 200');
   await page.getByTestId('attachments-kind').selectOption('all');
-  await page.getByTestId('attachments-folder').selectOption('Personal');
+  await pickFolder(page, 'Personal');
   await expect(page.getByTestId('attachments-count')).toContainText('100 of 200');
 
   // The sort is remembered.
@@ -182,7 +187,7 @@ test('вложения: выбор следует за фильтрами, «в�
   // 6 PDFs, of which 2 are unused: only those can stay selected.
   await expect(page.getByTestId('attachments-selected')).toContainText('2 selected');
   await page.getByTestId('attachments-kind').selectOption('all');
-  await page.getByTestId('attachments-folder').selectOption('Personal');
+  await pickFolder(page, 'Personal');
   await page.getByTestId('attachments-select-unused').click();
   await expect(page.getByTestId('attachments-select-unused')).toContainText(/Select the \d+ unused shown/);
   const shown = Number(/(\d+) selected/.exec(await page.getByTestId('attachments-selected').innerText())[1]);
@@ -284,4 +289,41 @@ test('вложения: при ошибке загрузки есть «Повт
   fail = false;
   await page.getByTestId('attachments-retry').click();
   await expect(page.getByTestId('attachment-card')).toHaveCount(3);
+});
+
+// A card asks for a small copy, not the original; a note that only writes the file's name is marked as such.
+test('вложения: превью по адресу /thumb, пометка «по имени», выбор папки поиском', async ({ page }) => {
+  const mk = (folder, name, usedBy) => ({ path: `notes/${folder}/_attachments/${name}`, name, kind: 'image', folder, size: 100, modified: '2026-10-01T10:00:00.000Z', usedBy });
+  await page.route('**/api/attachments/thumb**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#6a8"/></svg>' }));
+  await openPage(page, [
+    mk('Work/Alpha/Deep/Chapter 1', 'a.png', [{ path: 'notes/x/L.md', title: 'Linked', via: 'link' }, { path: 'notes/x/N.md', title: 'Named', via: 'name' }]),
+    mk('Personal', 'b.png', []),
+    ...Array.from({ length: 12 }, (_, i) => mk(`Folder ${i}`, `c${i}.png`, [])),
+  ]);
+  await expect(page.locator('[data-testid=attachment-card] img').first()).toHaveAttribute('src', /\/api\/attachments\/thumb\?path=.*&w=480&v=2026-10-01/);
+  await expect(page.getByTestId('attachment-notes').first()).toContainText('Named(by name)');
+  await expect(page.getByTestId('attachment-notes').first()).not.toContainText('Linked (by name)');
+
+  await page.getByTestId('attachments-folder').click();
+  await page.getByTestId('attachments-folder-query').fill('chapter');
+  await expect(page.getByTestId('attachments-folder-option')).toHaveCount(1);
+  await page.getByTestId('attachments-folder-option').click();
+  await expect(page.getByTestId('attachment-card')).toHaveCount(1);
+  await expect(page.getByTestId('attachments-folder')).toContainText('Deep / Chapter 1');
+});
+
+// On a phone the filters wait behind one button, so the first cards are not pushed down the screen.
+test('вложения на телефоне: фильтры за одной кнопкой', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/attachments/all', (route) => route.fulfill({ json: { lockedNotes: 0, items: bigVault(20) } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: /Open sidebar/ }).first().click();
+  await page.getByTestId('open-attachments').click();
+  await expect(page.getByTestId('attachment-card').first()).toBeVisible();
+  await expect(page.getByTestId('attachments-sort')).toBeHidden();
+  const first = await page.getByTestId('attachment-card').first().boundingBox();
+  expect(first.y).toBeLessThan(520);
+  await page.getByTestId('attachments-filters-toggle').click();
+  await expect(page.getByTestId('attachments-sort')).toBeVisible();
 });

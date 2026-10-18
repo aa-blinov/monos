@@ -48,6 +48,9 @@
   let trashData = null;
   let trashStatus = 'loading';
   let toastHover = false;
+  let filtersOpen = false;
+  let folderPickerOpen = false;
+  let folderQuery = '';
 
   async function load() {
     try {
@@ -88,6 +91,15 @@
   }
 
   $: folders = attachmentFolders(items);
+  $: folderChoices = folders.filter((entry) => !folderQuery.trim() || entry.folder.toLowerCase().includes(folderQuery.trim().toLowerCase()));
+  // How many choices narrow the list now, for the phone's "Filters" button.
+  $: activeFilters = (filter === 'duplicates' ? 1 : 0) + ($attachmentsKind !== 'all' ? 1 : 0) + (folder ? 1 : 0) + ($attachmentsSort !== 'new' ? 1 : 0);
+  function chooseFolder(value) {
+    folder = value;
+    folderPickerOpen = false;
+    folderQuery = '';
+    narrowed();
+  }
   $: filtered = sortAttachments(filterAttachments(items, { query, filter, lockedNotes, kind: $attachmentsKind, folder }), $attachmentsSort);
   $: shown = filtered.slice(0, limit);
   $: unusedItems = lockedNotes > 0 ? [] : items.filter((item) => item.usedBy.length === 0);
@@ -105,6 +117,8 @@
   $: selectedSize = selectedItems.reduce((sum, item) => sum + item.size, 0);
 
   const rawUrl = (item) => `/api/attachments/raw?path=${encodeURIComponent(item.path)}`;
+  // A card asks for a copy about its own size (the address carries the file's time, so the browser keeps it).
+  const thumbUrl = (item) => `/api/attachments/thumb?path=${encodeURIComponent(item.path)}&w=480&v=${encodeURIComponent(item.modified)}`;
 
   function toggleExpanded(path) {
     expanded = expanded.has(path) ? new Set([...expanded].filter((item) => item !== path)) : new Set([...expanded, path]);
@@ -280,6 +294,8 @@
           class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'unused' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
         >{$localizedText.attachments.filterUnused} ({unusedItems.length})</button>
 
+        <button type="button" data-testid="attachments-filters-toggle" aria-expanded={filtersOpen} on:click={() => { filtersOpen = !filtersOpen; }} class="rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] sm:hidden max-sm:min-h-10">{$localizedText.attachments.filters(activeFilters)}</button>
+        <div class="contents {filtersOpen ? '' : 'max-sm:hidden'}" data-testid="attachments-filter-row">
         {#if names.size > 0}
           <button
             type="button" aria-pressed={filter === 'duplicates'} data-testid="attachments-filter-duplicates"
@@ -292,12 +308,9 @@
           <option value="image">{$localizedText.attachments.kindImage}</option>
           <option value="pdf">{$localizedText.attachments.kindPdf}</option>
         </select>
-        <select aria-label={$localizedText.attachments.folderLabel} data-testid="attachments-folder" bind:value={folder} on:change={narrowed} class={filterSelectClass}>
-          <option value="">{$localizedText.attachments.folderAll}</option>
-          {#each folders as entry (entry.folder)}
-            <option value={entry.folder}>{entry.folder || '/'} ({entry.count})</option>
-          {/each}
-        </select>
+        <button type="button" data-testid="attachments-folder" aria-haspopup="dialog" aria-label={$localizedText.attachments.folderLabel} on:click={() => { folderPickerOpen = true; }} class="{filterSelectClass} inline-flex items-center gap-1 truncate">
+          <span class="truncate">{folder ? folderTail(folder) : $localizedText.attachments.folderAll}</span>
+        </button>
         <select aria-label={$localizedText.attachments.sortLabel} data-testid="attachments-sort" bind:value={$attachmentsSort} on:change={narrowed} class={filterSelectClass}>
           <option value="new">{$localizedText.attachments.sortNew}</option>
           <option value="size">{$localizedText.attachments.sortSize}</option>
@@ -305,6 +318,7 @@
           <option value="notes">{$localizedText.attachments.sortNotes}</option>
         </select>
 
+        </div>
         <span class="ml-auto text-xs text-[var(--text-tertiary)]" data-testid="attachments-count">{$localizedText.attachments.count(filtered.length, items.length)}</span>
       </div>
 
@@ -356,8 +370,8 @@
                 on:click={() => pick(item)}
                 class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
               >
-                {#if item.kind === 'image' && !broken.has(item.path)}
-                  <img src={rawUrl(item)} alt="" loading="lazy" class="h-full w-full object-cover" on:error={() => { broken = new Set([...broken, item.path]); }} />
+                {#if !broken.has(item.path)}
+                  <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : 'object-cover'}" on:error={() => { broken = new Set([...broken, item.path]); }} />
                 {:else if item.kind === 'image'}
                   <span class="flex flex-col items-center gap-2 px-2 text-center text-[var(--text-tertiary)]" title={$localizedText.attachments.brokenImage}>
                     <ImageOff size="24" strokeWidth="1.7" aria-hidden="true" />
@@ -386,7 +400,7 @@
                 {:else}
                   <div class="space-y-0.5" data-testid="attachment-notes">
                     {#each (expanded.has(item.path) ? item.usedBy : item.usedBy.slice(0, 2)) as note (note.path)}
-                      <button type="button" class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" title={note.path} on:click={() => openNote(note)}>{note.title}</button>
+                      <button type="button" class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" title={note.path} on:click={() => openNote(note)}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</button>
                     {/each}
                     {#if item.usedBy.length > 2}
                       <button type="button" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="block min-h-6 border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</button>
@@ -406,6 +420,32 @@
     {/if}
   </div>
 </section>
+
+{#if folderPickerOpen}
+  <ModalShell title={$localizedText.attachments.folderLabel} widthClass="w-[min(94vw,32rem)]" on:close={() => { folderPickerOpen = false; folderQuery = ''; }}>
+    <div class="space-y-3" data-testid="attachments-folder-picker">
+      <SearchField bind:value={folderQuery} placeholder={$localizedText.attachments.folderSearch} testid="attachments-folder-query" />
+      <ul class="max-h-[50vh] overflow-y-auto" role="listbox" aria-label={$localizedText.attachments.folderLabel}>
+        {#if !folderQuery.trim()}
+          <li role="option" aria-selected={folder === ''}>
+            <button type="button" data-testid="attachments-folder-all" on:click={() => chooseFolder('')} class="block min-h-9 w-full border-0 bg-transparent p-0 text-left text-sm {folder === '' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'} transition hover:text-[var(--text-primary)] max-sm:min-h-11">{$localizedText.attachments.folderAll}</button>
+          </li>
+        {/if}
+        {#each folderChoices as entry (entry.folder)}
+          {@const parts = entry.folder.split('/').filter(Boolean)}
+          <li role="option" aria-selected={folder === entry.folder}>
+            <button type="button" data-testid="attachments-folder-option" on:click={() => chooseFolder(entry.folder)} class="flex min-h-9 w-full items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left text-sm transition hover:text-[var(--text-primary)] max-sm:min-h-11 {folder === entry.folder ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}" style="padding-left: {folderQuery.trim() ? 0 : Math.max(0, parts.length - 1) * 14}px" title={entry.folder || '/'}>
+              <span class="min-w-0 truncate">{folderQuery.trim() ? (entry.folder || '/') : (parts.at(-1) || '/')}</span>
+              <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{entry.count}</span>
+            </button>
+          </li>
+        {:else}
+          <li class="py-2 text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.folderNone}</li>
+        {/each}
+      </ul>
+    </div>
+  </ModalShell>
+{/if}
 
 {#if notice}
   <!-- Fixed to the window: the notice and its Undo must be seen wherever the list is scrolled to. -->
@@ -497,7 +537,7 @@
           <ul class="max-h-40 overflow-y-auto" data-testid="attachment-viewer-notes">
             {#each viewing.usedBy as note (note.path)}
               <li>
-                <button type="button" class="block min-h-8 w-full truncate border-0 bg-transparent p-0 text-left text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}</button>
+                <button type="button" class="block min-h-8 w-full truncate border-0 bg-transparent p-0 text-left text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-xs text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</button>
               </li>
             {/each}
           </ul>
