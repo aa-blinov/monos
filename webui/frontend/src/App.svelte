@@ -37,7 +37,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { announceNoteLinksUpdated, announceNotesPulled, flushOpenNote, NOTE_LINKS_UPDATED_EVENT } from './lib/note-refresh.js';
   import { loadTemplateSettings } from './lib/template-library.js';
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
-  import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
+  import { gitConnected, markUnsent, refreshConflicts, scheduleSyncRefresh } from './lib/git-conflicts.js';
   import FirstRunWelcome from './components/FirstRunWelcome.svelte';
   import { agentRequest, launchAgent, noteLinkRequest, terminalBridge, terminalOpen, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
@@ -809,6 +809,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (detail.savedAt && detail.savedAt === lastSeenNoteSaveAt) return;
     if (detail.savedAt) lastSeenNoteSaveAt = detail.savedAt;
     dashboardNeedsRefresh = true;
+    // The note's own sync line: unsent at once, confirmed by the status a moment later.
+    if (detail.path) markUnsent(detail.path);
+    scheduleSyncRefresh();
     if (isDashboardRoute) refreshDashboardAfterNoteSave();
   }
 

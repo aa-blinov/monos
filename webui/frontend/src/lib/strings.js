@@ -1149,9 +1149,13 @@ const enText = {
     created: 'Created',
     modified: 'Modified',
     syncedAt: (when) => `Synced ${when}`,
-    syncPending: 'Waiting to be sent',
-    syncPendingHint: 'Changed after the last sync; the next sync sends it.',
-    syncNever: 'Not synced yet',
+    synced: 'Synced',
+    syncLocal: 'Not sent to GitHub yet',
+    syncLocalHint: 'Changed on this device; the next sync sends it.',
+    syncRemote: 'Newer on GitHub',
+    syncRemoteHint: 'Changed on another device; the next sync brings it here.',
+    syncBoth: 'Changed here and on GitHub',
+    syncBothHint: 'The next sync merges both versions; if they clash, you choose.',
     stats: {
       words(count) {
         return `${count} ${count === 1 ? 'word' : 'words'}`;
@@ -2402,9 +2406,13 @@ const ruText = {
     created: 'Создано',
     modified: 'Изменено',
     syncedAt: (when) => `Синхронизировано ${when}`,
-    syncPending: 'Ждёт отправки',
-    syncPendingHint: 'Изменена после последней синхронизации; следующая её отправит.',
-    syncNever: 'Пока не синхронизировалась',
+    synced: 'Синхронизировано',
+    syncLocal: 'Не отправлено в GitHub',
+    syncLocalHint: 'Изменена на этом устройстве; следующая синхронизация её отправит.',
+    syncRemote: 'Новее на GitHub',
+    syncRemoteHint: 'Изменена на другом устройстве; следующая синхронизация принесёт её сюда.',
+    syncBoth: 'Изменена здесь и на GitHub',
+    syncBothHint: 'Следующая синхронизация объединит обе версии; если они спорят, выбор будет за вами.',
     stats: {
       words(count) {
         const mod10 = count % 10;

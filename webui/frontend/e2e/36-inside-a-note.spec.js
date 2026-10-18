@@ -99,27 +99,33 @@ test('на длинной заметке шапка сворачивается �
   await expect(titleInput(page)).toBeVisible();
 });
 
-// With a repository connected the note says, beside its date, when this device last synced and whether it waits.
-test('заметка: рядом с датой — «Синхронизировано …» при подключённом репозитории, «Ждёт отправки» после правки, ничего без репозитория', async ({ page }) => {
+// With a repository connected the note says where it stands: synced, not sent, newer on the remote, or both.
+test('заметка: статус синхронизации по четырём состояниям, без репозитория строки нет', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1300, height: 900 });
   const title = uniqueTitle('Sync line');
-  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } });
-  const status = (extra) => ({ initialized: true, status: 'clean', ahead: 0, behind: 0, repo: 'me/notes', ...extra });
-  await page.route('**/api/git/status', (route) => route.fulfill({ json: status({ last_sync: new Date(Date.now() + 3600000).toISOString() }) }));
+  const created = await (await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } })).json();
+  const key = created.path.replace(/^notes\//, '');
+  let answer = { initialized: true, status: 'clean', repo: 'me/notes', last_sync: '2026-10-18T10:00:00.000Z', unsent: [], incoming: [] };
+  await page.route('**/api/git/status', (route) => route.fulfill({ json: answer }));
   await page.goto('/');
   await page.locator('main [role=list]').getByText(title).first().click();
   const line = page.getByTestId('note-sync');
   await expect(line).toHaveAttribute('data-state', 'synced');
   await expect(line).toContainText('Synced');
 
-  await page.unroute('**/api/git/status');
-  await page.route('**/api/git/status', (route) => route.fulfill({ json: status({ last_sync: new Date(Date.now() - 86400000).toISOString() }) }));
-  await page.reload();
-  await expect(page.getByTestId('note-sync')).toHaveAttribute('data-state', 'pending');
+  for (const [extra, state, text] of [
+    [{ unsent: [key] }, 'local', 'Not sent to GitHub yet'],
+    [{ incoming: [key] }, 'remote', 'Newer on GitHub'],
+    [{ unsent: [key], incoming: [key] }, 'both', 'Changed here and on GitHub'],
+  ]) {
+    answer = { ...answer, unsent: [], incoming: [], ...extra };
+    await page.reload();
+    await expect(page.getByTestId('note-sync')).toHaveAttribute('data-state', state);
+    await expect(page.getByTestId('note-sync')).toContainText(text);
+  }
 
-  await page.unroute('**/api/git/status');
-  await page.route('**/api/git/status', (route) => route.fulfill({ json: status({ repo: '', last_sync: null }) }));
+  answer = { initialized: true, status: 'clean', repo: '', remote: false };
   await page.reload();
   await expect(page.getByTestId('editor-shell')).toBeVisible();
   await expect(page.getByTestId('note-sync')).toHaveCount(0);

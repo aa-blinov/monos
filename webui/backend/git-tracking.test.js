@@ -77,3 +77,33 @@ test('после подключения remote статус это показы�
   const status = await (await fetch(`${base}/api/git/status`)).json();
   assert.equal(status.remote, true);
 });
+
+test('статус говорит, какие файлы ещё не отправлены и какие ждут на remote', async () => {
+  // Everything is pushed after the last test.
+  git(['push', '-u', 'origin', 'main']);
+  let status = await (await fetch(`${base}/api/git/status`)).json();
+  assert.deepEqual(status.unsent, []);
+  assert.deepEqual(status.incoming, []);
+
+  // Edited, new and committed-but-not-pushed files all wait to be sent.
+  fs.writeFileSync(path.join(notesDir, 'A.md'), 'changed\n');
+  fs.writeFileSync(path.join(notesDir, 'Ж и я.md'), 'new\n');
+  fs.writeFileSync(path.join(notesDir, 'C.md'), 'committed only\n');
+  git(['add', 'C.md']);
+  git(['commit', '-qm', 'local commit']);
+  status = await (await fetch(`${base}/api/git/status`)).json();
+  assert.deepEqual([...status.unsent].sort(), ['A.md', 'C.md', 'Ж и я.md']);
+
+  // A change that reached the remote from elsewhere is listed as incoming (after a fetch).
+  const other = path.join(tempRoot, 'other');
+  git(['clone', '-q', remoteDir, other], tempRoot);
+  git(['config', 'user.email', 't@m.local'], other);
+  git(['config', 'user.name', 'Other'], other);
+  fs.writeFileSync(path.join(other, 'D.md'), 'from the other device\n');
+  git(['add', '-A'], other);
+  git(['commit', '-qm', 'other device'], other);
+  git(['push', '-q', 'origin', 'main'], other);
+  git(['fetch', '-q', 'origin']);
+  status = await (await fetch(`${base}/api/git/status`)).json();
+  assert.deepEqual(status.incoming, ['D.md']);
+});

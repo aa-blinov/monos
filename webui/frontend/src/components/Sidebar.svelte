@@ -1143,13 +1143,13 @@
         <span class="text-[length:var(--text-whisper)] tabular-nums text-[var(--text-tertiary)]">{$pinnedNotes.length}</span>
       </button>
       <!-- However many are pinned, the list takes a third of the panel at most and scrolls inside. -->
-      <div class="max-h-[32vh] space-y-2 overflow-y-auto {$pinnedCollapsed ? 'hidden' : ''}" data-testid="pinned-list">
+      <div class="max-h-[32vh] space-y-0.5 overflow-y-auto {$pinnedCollapsed ? 'hidden' : ''}" data-testid="pinned-list">
         {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
             on:contextmenu|preventDefault={(event) => handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } })}
-            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"
+            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-0.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
             {#if pathLabel}
