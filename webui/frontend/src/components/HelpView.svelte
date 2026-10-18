@@ -15,7 +15,13 @@
   let query = '';
   let searchField;
   let activeSection = '';
+  let activeTopic = '';
   let scroller;
+  let rootEl;
+  let chipsEl;
+  // Wide: the topics scroll under a fixed header. A phone has no room for a fixed header: the page scrolls as one.
+  const wide = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)')?.matches;
+  const container = () => (wide() ? scroller : rootEl);
 
   // The text is written with the Mac's symbols; the keys of this computer are shown.
   const forThisComputer = (list) => list.map((section) => ({
@@ -28,11 +34,61 @@
   $: results = searchHelp(sections, query);
   $: if (!activeSection && sections.length) activeSection = sections[0].id;
 
-  onMount(() => searchField?.focus());
+  // The chip of the section in view is kept in sight inside the strip (a phone; the strip is hidden when wide).
+  function keepChipInView() {
+    Promise.resolve().then(() => {
+      const chip = chipsEl?.querySelector('[aria-current="true"]');
+      if (!chip || chipsEl.scrollWidth <= chipsEl.clientWidth) return;
+      const left = chip.offsetLeft - 16;
+      const right = chip.offsetLeft + chip.offsetWidth + 16;
+      if (left < chipsEl.scrollLeft) chipsEl.scrollLeft = left;
+      else if (right > chipsEl.scrollLeft + chipsEl.clientWidth) chipsEl.scrollLeft = right - chipsEl.clientWidth;
+    });
+  }
+
+  onMount(() => {
+    const topic = new URLSearchParams(window.location.search).get('topic');
+    if (topic) {
+      const [sectionId, itemId] = topic.split('/');
+      if (helpSections($locale).some((section) => section.id === sectionId)) {
+        go(sectionId, itemId);
+        return;
+      }
+    }
+    searchField?.focus();
+  });
+
+  // "/" focuses the search from anywhere in the Help; Esc in the search clears it.
+  function helpKeys(event) {
+    if (event.key === 'Escape' && query) { query = ''; return; }
+    if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.target?.closest?.('input, textarea, select, [contenteditable]')) {
+      event.preventDefault();
+      searchField?.focus();
+    }
+  }
+
+  function toTop() {
+    container()?.scrollTo({ top: 0, behavior: scrollBehavior() });
+    activeTopic = '';
+  }
+
+  // A topic has an address (`/help?topic=sync/auto`): a link, a reload or the browser's back lands on it.
+  function rememberTopic(sectionId, itemId) {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('topic', itemId ? `${sectionId}/${itemId}` : sectionId);
+      window.history.replaceState(window.history.state, '', url);
+    } catch {
+      // No address to keep: the page still works.
+    }
+  }
 
   async function go(sectionId, itemId) {
     query = '';
     activeSection = sectionId;
+    activeTopic = itemId || '';
+    keepChipInView();
+    rememberTopic(sectionId, itemId);
     await tick();
     const target = document.getElementById(itemId ? `help-${sectionId}-${itemId}` : `help-${sectionId}`);
     target?.scrollIntoView({ block: 'start', behavior: scrollBehavior() });
@@ -44,12 +100,21 @@
 
   // The section in view is marked in the list on the left.
   function trackSection() {
-    if (query || !scroller) return;
-    const top = scroller.getBoundingClientRect().top + 80;
+    const box = container();
+    if (query || !box) return;
+    const top = box.getBoundingClientRect().top + (wide() ? 80 : 130);
     for (const section of [...sections].reverse()) {
       const element = document.getElementById(`help-${section.id}`);
       if (element && element.getBoundingClientRect().top <= top) {
         activeSection = section.id;
+        // The topic in view inside it, for the list of topics under the section.
+        let current = '';
+        for (const item of section.items) {
+          const topic = document.getElementById(`help-${section.id}-${item.id}`);
+          if (topic && topic.getBoundingClientRect().top <= top) current = item.id;
+        }
+        activeTopic = current;
+        keepChipInView();
         return;
       }
     }
@@ -68,8 +133,10 @@
   }
 </script>
 
-<div class="flex h-full min-h-0 flex-col" data-testid="help-view">
-  <div class="shrink-0 border-b border-[var(--border-subtle)] px-4 pb-4 pt-4 sm:pt-6 lg:px-12 lg:pt-8">
+<svelte:window on:keydown={helpKeys} />
+
+<div class="h-full overflow-y-auto md:flex md:min-h-0 md:flex-col md:overflow-hidden" data-testid="help-view" bind:this={rootEl} on:scroll={trackSection}>
+  <div class="border-b border-[var(--border-subtle)] px-4 pb-4 pt-4 sm:pt-6 md:shrink-0 lg:px-12 lg:pt-8">
     <div class="mx-auto max-w-5xl">
       <h1 class="font-serif text-3xl tracking-tight">{$localizedText.help.title}</h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.help.subtitle}</p>
@@ -77,18 +144,49 @@
     </div>
   </div>
 
-  <div class="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-12" bind:this={scroller} on:scroll={trackSection}>
+  <!-- On a phone the sections sit in one scrolling row under the search: there is no side list there. -->
+  <nav class="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-2 md:hidden" bind:this={chipsEl} aria-label={$localizedText.help.sections} data-testid="help-chips">
+    {#each sections as section (section.id)}
+      <button
+        type="button"
+        data-testid="help-chip"
+        aria-current={activeSection === section.id && !query ? 'true' : undefined}
+        on:click={() => go(section.id)}
+        class="rounded-ui min-h-10 shrink-0 whitespace-nowrap border px-3 text-xs {activeSection === section.id && !query ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+      >{section.title}</button>
+    {/each}
+</nav>
+
+  <div class="px-4 py-6 md:min-h-0 md:flex-1 md:overflow-y-auto lg:px-12" bind:this={scroller} on:scroll={trackSection}>
     <div class="mx-auto flex max-w-5xl gap-10">
       <!-- Sections, in view while reading; hidden on a phone, where the search does the finding. -->
-      <nav class="sticky top-6 hidden w-52 shrink-0 self-start md:block" aria-label={$localizedText.help.sections}>
+      <nav class="sticky top-6 hidden max-h-[calc(100vh-14rem)] w-56 shrink-0 self-start overflow-y-auto md:block" aria-label={$localizedText.help.sections}>
         <ul class="space-y-0.5">
           {#each sections as section (section.id)}
             <li>
               <button
                 type="button"
+                data-testid="help-section"
+                aria-current={activeSection === section.id && !query ? 'true' : undefined}
                 on:click={() => go(section.id)}
                 class="w-full rounded-ui px-2 py-1.5 text-left text-sm transition {activeSection === section.id && !query ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
               >{section.title}</button>
+              {#if activeSection === section.id && !query}
+                <ul class="mb-2 ml-2 mt-0.5 space-y-0.5 border-l border-[var(--border-subtle)] pl-2" data-testid="help-topics">
+                  {#each section.items as item (item.id)}
+                    <li>
+                      <button
+                        type="button"
+                        data-testid="help-topic"
+                        aria-current={activeTopic === item.id ? 'true' : undefined}
+                        on:click={() => go(section.id, item.id)}
+                        class="block min-h-7 w-full truncate rounded-ui px-2 py-1 text-left text-xs transition {activeTopic === item.id ? 'text-[var(--text-primary)] font-bold' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+                        title={item.title}
+                      >{item.title}</button>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
             </li>
           {/each}
         </ul>
@@ -125,6 +223,7 @@
                   </article>
                 {/each}
               </div>
+              <button type="button" data-testid="help-top" on:click={toTop} class="mt-6 min-h-9 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">{$localizedText.help.top}</button>
             </section>
           {/each}
         {/if}

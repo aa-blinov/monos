@@ -709,14 +709,19 @@
     { id: 'settings-more', label: $localizedText.settings.advanced },
   ];
 
+  // A part chosen in the list stays marked while the page scrolls to it: a short part near the end cannot reach the
+  // top, and the scroll would otherwise mark its neighbour.
+  let navLockUntil = 0;
   function updateActive() {
-    if (!scroller) return;
+    if (!scroller || Date.now() < navLockUntil) return;
     const line = scroller.getBoundingClientRect().top + 140;
     let current = navItems[0]?.id || '';
     for (const item of navItems) {
       const element = document.getElementById(item.id);
       if (element && element.getBoundingClientRect().top <= line) current = item.id;
     }
+    // At the very end of the page the last part is the one in view, even when it is too short to reach the line.
+    if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) current = navItems[navItems.length - 1]?.id || current;
     activeGroup = current;
   }
 
@@ -724,6 +729,7 @@
     const element = document.getElementById(event.detail);
     if (!element) return;
     if (element.tagName === 'DETAILS') element.open = true;
+    navLockUntil = Date.now() + 1000;
     element.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     activeGroup = event.detail;
   }

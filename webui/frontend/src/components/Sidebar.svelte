@@ -1234,6 +1234,8 @@
   <!-- Stats Footer -->
   <div class="{mobile ? 'flex max-h-[70dvh] shrink-0 flex-col gap-1 overflow-y-auto border-t border-[var(--border-subtle)] px-4 pb-6 pt-3' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
+      <!-- Two columns: ten rows of 48px would take the whole screen and leave the notes a single line. -->
+      <div class="grid grid-cols-2 gap-x-3" data-testid="phone-tools">
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
           {#if isSyncing}
@@ -1290,6 +1292,7 @@
         <Icon.Settings size="20" strokeWidth="1.7" />
         <span>{$localizedText.sidebar.settings}</span>
       </button>
+      </div>
     {:else}
       <span class="text-[var(--text-secondary)]">
         {selectedNoteCount > 0 ? $localizedText.sidebar.selectedNotes(selectedNoteCount) : $localizedText.sidebar.notes(tree ? totalNotes : 0)}
