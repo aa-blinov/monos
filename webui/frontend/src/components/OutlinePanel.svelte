@@ -157,11 +157,12 @@
           <a
             href="#{item.anchor}"
             on:click={(e) => clickAnchor(e, item)}
-            class="block truncate py-3 lg:flex lg:min-h-7 lg:items-center lg:py-0"
+            class="flex min-h-11 items-center lg:min-h-7"
             data-testid="outline-item"
             data-anchor={item.anchor}
           >
-            {item.text}
+            <!-- The ellipsis needs a block-level text box: it does not work on a flex container itself. -->
+            <span class="block min-w-0 truncate">{item.text}</span>
           </a>
         </li>
       {/each}
