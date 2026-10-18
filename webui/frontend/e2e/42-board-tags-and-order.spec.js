@@ -36,3 +36,17 @@ test('доска: тег сразу сужает список, порядок п
   await strip.getByRole('button', { name: tag }).click();
   await expect(page.getByTestId('board-count')).not.toHaveText(/of 2$/i);
 });
+
+// On a phone a long title takes two lines at most, so one card never grows into a column of its own.
+test('доска на телефоне: длинное название карточки занимает не больше двух строк', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.addInitScript(() => localStorage.setItem('noteView', 'board'));
+  const title = `PRD для системы прогноза новостных публикаций для выбранных СМИ ${Date.now()}`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } });
+  await page.goto('/');
+  const heading = page.locator('main [role=list]').getByText(title).first();
+  await expect(heading).toBeVisible();
+  const { height, lineHeight } = await heading.evaluate((el) => ({ height: el.getBoundingClientRect().height, lineHeight: parseFloat(getComputedStyle(el).lineHeight) }));
+  expect(height).toBeLessThanOrEqual(lineHeight * 2 + 2);
+});
