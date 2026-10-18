@@ -6,11 +6,11 @@
 
 <script>
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
-  import { Check, FileText } from 'lucide-svelte';
+  import { Check, ChevronLeft, ChevronRight, FileText, ImageOff } from 'lucide-svelte';
   import { localizedText, locale } from '../lib/strings.js';
   import {
-    attachmentEmbed, attachmentFolders, deleteAttachmentsRequest, fetchAllAttachments, filterAttachments,
-    formatAttachmentSize, restoreAttachmentsRequest, sortAttachments,
+    attachmentEmbed, attachmentFolders, deleteAttachmentsRequest, duplicateNames, fetchAllAttachments, fetchAttachmentTrash,
+    filterAttachments, folderTail, formatAttachmentSize, restoreAttachmentsRequest, sortAttachments,
   } from '../lib/attachments.js';
   import { attachmentsKind, attachmentsSort } from '../stores.js';
   import { localeDate } from '../lib/date-format.js';
@@ -22,7 +22,7 @@
   // local trash (30 days, with an undo) in one go.
   const dispatch = createEventDispatcher();
   const PAGE = 60;
-  const filterSelectClass = 'h-8 max-w-[14rem] cursor-pointer rounded-ui border border-[var(--border-subtle)] bg-transparent px-2 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
+  const filterSelectClass = 'h-8 max-sm:h-10 max-w-[14rem] cursor-pointer rounded-ui border border-[var(--border-subtle)] bg-transparent px-2 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
 
   let items = [];
   let lockedNotes = 0;
@@ -41,6 +41,13 @@
   let notice = null; // { text, batch? }
   let noticeTimer;
   let copied = false;
+  let busy = false;
+  let zoomed = false;
+  let broken = new Set();
+  let trashOpen = false;
+  let trashData = null;
+  let trashStatus = 'loading';
+  let toastHover = false;
 
   async function load() {
     try {
@@ -76,16 +83,28 @@
     if (scroller) scroller.scrollTop = 0;
   }
 
+  function isUnused(item) {
+    return lockedNotes === 0 && item.usedBy.length === 0;
+  }
+
   $: folders = attachmentFolders(items);
   $: filtered = sortAttachments(filterAttachments(items, { query, filter, lockedNotes, kind: $attachmentsKind, folder }), $attachmentsSort);
   $: shown = filtered.slice(0, limit);
   $: unusedItems = lockedNotes > 0 ? [] : items.filter((item) => item.usedBy.length === 0);
+  $: unusedShown = filtered.filter(isUnused);
+  $: names = duplicateNames(items);
+  // What is selected is what is on the page: files that a filter hides leave the selection.
+  $: if (selected.size > 0) {
+    const visible = new Set(filtered.map((item) => item.path));
+    const kept = [...selected].filter((path) => visible.has(path));
+    if (kept.length !== selected.size) selected = new Set(kept);
+  }
+  $: if (selecting && items.length > 0 && !items.some(isUnused)) stopSelecting();
   $: unusedSize = unusedItems.reduce((sum, item) => sum + item.size, 0);
   $: selectedItems = items.filter((item) => selected.has(item.path));
   $: selectedSize = selectedItems.reduce((sum, item) => sum + item.size, 0);
 
   const rawUrl = (item) => `/api/attachments/raw?path=${encodeURIComponent(item.path)}`;
-  const isUnused = (item) => lockedNotes === 0 && item.usedBy.length === 0;
 
   function toggleExpanded(path) {
     expanded = expanded.has(path) ? new Set([...expanded].filter((item) => item !== path)) : new Set([...expanded, path]);
@@ -118,32 +137,87 @@
   }
 
   async function trash(paths) {
+    if (busy) return;
     confirming = false;
+    busy = true;
     try {
       const result = await deleteAttachmentsRequest(paths);
-      const gone = new Set(paths);
-      if (result.deleted > 0) items = items.filter((item) => !gone.has(item.path) || item.usedBy.length > 0);
-      selected = new Set();
+      const moved = new Set(result.trashed || []);
+      items = items.filter((item) => !moved.has(item.path));
+      selected = new Set([...selected].filter((path) => !moved.has(path)));
       viewing = null;
-      if (selecting && filtered.length === 0) selecting = false;
-      showNotice(`${$localizedText.attachments.trashed(result.deleted, formatAttachmentSize(result.bytes))}${result.skipped?.used ? ` ${$localizedText.attachments.usedSkipped}` : ''}`, result.batch);
+      const rest = paths.length - moved.size;
+      if (rest > 0) {
+        // Some files were not moved (a note began to use them, or they are gone): the list is read again, not guessed.
+        await load();
+        showNotice(result.deleted > 0
+          ? $localizedText.attachments.partlyMoved(result.deleted, formatAttachmentSize(result.bytes), rest)
+          : $localizedText.attachments.nothingMoved, result.batch);
+      } else {
+        showNotice($localizedText.attachments.trashed(result.deleted, formatAttachmentSize(result.bytes)), result.batch);
+      }
     } catch (error) {
       console.error('Failed to move attachments to the trash:', error);
       showNotice($localizedText.attachments.trashFailed);
+    } finally {
+      busy = false;
     }
   }
 
   async function undo() {
     const batch = notice?.batch;
-    if (!batch) return;
+    if (!batch || busy) return;
+    busy = true;
     try {
-      await restoreAttachmentsRequest(batch);
+      const result = await restoreAttachmentsRequest(batch);
       await load();
-      showNotice($localizedText.attachments.restored);
+      showNotice(result.renamed ? `${$localizedText.attachments.restored} ${$localizedText.attachments.restoredRenamed(result.renamed)}` : $localizedText.attachments.restored);
     } catch (error) {
       console.error('Failed to restore attachments:', error);
       showNotice($localizedText.attachments.trashFailed);
+    } finally {
+      busy = false;
     }
+  }
+
+  async function openTrash() {
+    trashOpen = true;
+    trashStatus = 'loading';
+    try {
+      trashData = await fetchAttachmentTrash();
+      trashStatus = 'ready';
+    } catch (error) {
+      console.error('Failed to read the attachments trash:', error);
+      trashStatus = 'error';
+    }
+  }
+
+  async function restoreFromTrash(batch, paths) {
+    if (busy) return;
+    busy = true;
+    try {
+      const result = await restoreAttachmentsRequest(batch, paths);
+      trashData = await fetchAttachmentTrash();
+      await load();
+      if (result.renamed) showNotice($localizedText.attachments.restoredRenamed(result.renamed));
+    } catch (error) {
+      console.error('Failed to restore from the attachments trash:', error);
+      trashStatus = 'error';
+    } finally {
+      busy = false;
+    }
+  }
+
+  // The large view walks through the files on the page in their order: arrows and the buttons.
+  function step(delta) {
+    const at = filtered.findIndex((item) => item.path === viewing?.path);
+    const next = filtered[at + delta];
+    if (next) { viewing = next; zoomed = false; }
+  }
+  function viewerKeys(event) {
+    if (!viewing || event.target?.closest?.('select, input, textarea')) return;
+    if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
   }
 
   async function copyEmbed(item) {
@@ -171,6 +245,7 @@
   }
 
   $: viewing, copied = false;
+  $: viewing, zoomed = false;
 </script>
 
 <section bind:this={scroller} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="attachments-view">
@@ -186,7 +261,10 @@
     {#if status === 'loading'}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.loading}</p>
     {:else if status === 'error'}
-      <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.attachments.loadFailed}</p>
+      <p role="alert" class="flex items-center gap-4 text-xs text-[var(--red)]">
+        {$localizedText.attachments.loadFailed}
+        <button type="button" data-testid="attachments-retry" on:click={() => { status = 'loading'; load(); }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.retry}</button>
+      </p>
     {:else if items.length === 0}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.empty}</p>
     {:else}
@@ -194,14 +272,21 @@
         <button
           type="button" aria-pressed={filter === 'all'} data-testid="attachments-filter-all"
           on:click={() => { filter = 'all'; narrowed(); }}
-          class="rounded-ui border px-2 py-1 text-xs {filter === 'all' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+          class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'all' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
         >{$localizedText.attachments.filterAll} ({items.length})</button>
         <button
           type="button" aria-pressed={filter === 'unused'} data-testid="attachments-filter-unused"
           on:click={() => { filter = 'unused'; narrowed(); }}
-          class="rounded-ui border px-2 py-1 text-xs {filter === 'unused' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+          class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'unused' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
         >{$localizedText.attachments.filterUnused} ({unusedItems.length})</button>
 
+        {#if names.size > 0}
+          <button
+            type="button" aria-pressed={filter === 'duplicates'} data-testid="attachments-filter-duplicates"
+            on:click={() => { filter = filter === 'duplicates' ? 'all' : 'duplicates'; narrowed(); }}
+            class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'duplicates' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
+          >{$localizedText.attachments.filterDuplicates}</button>
+        {/if}
         <select aria-label={$localizedText.attachments.kindLabel} data-testid="attachments-kind" bind:value={$attachmentsKind} on:change={narrowed} class={filterSelectClass}>
           <option value="all">{$localizedText.attachments.kindAll}</option>
           <option value="image">{$localizedText.attachments.kindImage}</option>
@@ -225,12 +310,16 @@
 
       {#if lockedNotes > 0}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.lockedHint}</p>
-      {:else if unusedItems.length > 0}
+      {/if}
+      {#if lockedNotes === 0}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--text-tertiary)]">
+          {#if unusedItems.length > 0}
           <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize))}</span>
           {#if !selecting}
-            <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-6 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.select}</button>
+            <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-6 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 max-sm:min-h-10">{$localizedText.attachments.select}</button>
           {/if}
+          {/if}
+          <button type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-6 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{$localizedText.attachments.removed}</button>
         </div>
       {/if}
 
@@ -238,25 +327,16 @@
         <div class="rounded-ui sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-xs" data-testid="attachments-selection-bar">
           {#if confirming}
             <span class="min-w-0 flex-1">{$localizedText.attachments.confirmTrash(selectedItems.length, formatAttachmentSize(selectedSize))}</span>
-            <button type="button" data-testid="attachments-confirm" on:click={() => trash(selectedItems.map((item) => item.path))} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.confirmYes}</button>
+            <button type="button" data-testid="attachments-confirm" disabled={busy} on:click={() => trash(selectedItems.map((item) => item.path))} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.confirmYes}</button>
             <button type="button" on:click={() => { confirming = false; }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.confirmNo}</button>
           {:else}
             <span class="text-[var(--text-secondary)]" data-testid="attachments-selected">{$localizedText.attachments.selected(selectedItems.length, formatAttachmentSize(selectedSize))}</span>
-            <button type="button" data-testid="attachments-select-unused" on:click={() => { selected = new Set(unusedItems.map((item) => item.path)); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectUnused(unusedItems.length)}</button>
+            <button type="button" data-testid="attachments-select-unused" on:click={() => { selected = new Set(unusedShown.map((item) => item.path)); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectUnusedShown(unusedShown.length)}</button>
             {#if selectedItems.length > 0}
               <button type="button" on:click={() => { selected = new Set(); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.clearSelection}</button>
               <button type="button" data-testid="attachments-trash" on:click={() => { confirming = true; }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.moveToTrash(selectedItems.length)}</button>
             {/if}
             <button type="button" on:click={stopSelecting} class="ml-auto min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectDone}</button>
-          {/if}
-        </div>
-      {/if}
-
-      {#if notice}
-        <div role="status" class="rounded-ui flex flex-wrap items-center gap-3 border border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)]" data-testid="attachments-notice">
-          <span class="min-w-0 flex-1">{notice.text}</span>
-          {#if notice.batch}
-            <button type="button" data-testid="attachments-undo" on:click={undo} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.undo}</button>
           {/if}
         </div>
       {/if}
@@ -276,8 +356,13 @@
                 on:click={() => pick(item)}
                 class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
               >
-                {#if item.kind === 'image'}
-                  <img src={rawUrl(item)} alt="" loading="lazy" class="h-full w-full object-cover" />
+                {#if item.kind === 'image' && !broken.has(item.path)}
+                  <img src={rawUrl(item)} alt="" loading="lazy" class="h-full w-full object-cover" on:error={() => { broken = new Set([...broken, item.path]); }} />
+                {:else if item.kind === 'image'}
+                  <span class="flex flex-col items-center gap-2 px-2 text-center text-[var(--text-tertiary)]" title={$localizedText.attachments.brokenImage}>
+                    <ImageOff size="24" strokeWidth="1.7" aria-hidden="true" />
+                    <span class="text-xs">{$localizedText.attachments.brokenImage}</span>
+                  </span>
                 {:else}
                   <span class="flex flex-col items-center gap-2 text-[var(--text-secondary)]">
                     <FileText size="24" strokeWidth="1.7" aria-hidden="true" />
@@ -292,7 +377,7 @@
               {/if}
               <div class="min-w-0 space-y-1 p-3">
                 <p class="truncate text-xs font-bold text-[var(--text-primary)]" title={item.name}>{item.name}</p>
-                <p class="truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={item.folder}>{item.folder || '/'}</p>
+                <p class="truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={item.folder || '/'} data-testid="attachment-folder">{folderTail(item.folder)}</p>
                 <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                   {formatAttachmentSize(item.size)}, {localeDate(new Date(item.modified), $locale)}
                 </p>
@@ -301,7 +386,7 @@
                 {:else}
                   <div class="space-y-0.5" data-testid="attachment-notes">
                     {#each (expanded.has(item.path) ? item.usedBy : item.usedBy.slice(0, 2)) as note (note.path)}
-                      <button type="button" class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]" title={note.path} on:click={() => openNote(note)}>{note.title}</button>
+                      <button type="button" class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" title={note.path} on:click={() => openNote(note)}>{note.title}</button>
                     {/each}
                     {#if item.usedBy.length > 2}
                       <button type="button" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="block min-h-6 border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</button>
@@ -322,18 +407,87 @@
   </div>
 </section>
 
+{#if notice}
+  <!-- Fixed to the window: the notice and its Undo must be seen wherever the list is scrolled to. -->
+  <div
+    role="status"
+    data-testid="attachments-notice"
+    on:mouseenter={() => { toastHover = true; clearTimeout(noticeTimer); }}
+    on:mouseleave={() => { toastHover = false; noticeTimer = setTimeout(() => { notice = null; }, 6000); }}
+    on:focusin={() => clearTimeout(noticeTimer)}
+    class="rounded-ui fixed inset-x-4 bottom-4 z-[120] mx-auto flex max-w-xl flex-wrap items-center gap-3 border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-3 text-xs text-[var(--text-secondary)] shadow-2xl"
+  >
+    <span class="min-w-0 flex-1">{notice.text}</span>
+    {#if notice.batch}
+      <button type="button" data-testid="attachments-undo" disabled={busy} on:click={undo} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.undo}</button>
+    {/if}
+    <button type="button" aria-label={$localizedText.attachments.close} on:click={() => { notice = null; }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">×</button>
+  </div>
+{/if}
+
+{#if trashOpen}
+  <ModalShell title={$localizedText.attachments.removed} widthClass="w-[min(94vw,40rem)]" on:close={() => { trashOpen = false; }}>
+    <div class="space-y-4" data-testid="attachments-trash-view">
+      <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.removedHint(trashData?.days || 30)}</p>
+      {#if trashStatus === 'loading'}
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.loading}</p>
+      {:else if trashStatus === 'error'}
+        <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.attachments.loadFailed}</p>
+      {:else if !trashData || trashData.batches.length === 0}
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.removedEmpty}</p>
+      {:else}
+        <div class="max-h-[50vh] space-y-4 overflow-y-auto">
+          {#each trashData.batches as entry (entry.batch)}
+            <div>
+              <div class="mb-1 flex items-center justify-between gap-3 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                <span>{localeDate(new Date(entry.at), $locale)}, {entry.files.length}</span>
+                <button type="button" disabled={busy} on:click={() => restoreFromTrash(entry.batch)} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.restoreAll}</button>
+              </div>
+              <ul class="divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
+                {#each entry.files.slice(0, 100) as file (file.path)}
+                  <li class="flex items-center justify-between gap-3 py-1">
+                    <span class="min-w-0 flex-1 truncate text-xs text-[var(--text-secondary)]" title={file.path}>{file.name}</span>
+                    <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{formatAttachmentSize(file.size)}</span>
+                    <button type="button" data-testid="attachments-restore-one" disabled={busy} on:click={() => restoreFromTrash(entry.batch, [file.path])} class="min-h-8 shrink-0 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.restore}</button>
+                  </li>
+                {/each}
+              </ul>
+              {#if entry.files.length > 100}<p class="mt-1 text-xs text-[var(--text-tertiary)]">… {entry.files.length - 100}</p>{/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </ModalShell>
+{/if}
+
+<svelte:window on:keydown={viewerKeys} />
+
 {#if viewing}
-  <ModalShell title={viewing.name} widthClass="w-[min(94vw,56rem)]" on:close={() => { viewing = null; }}>
+  {@const at = filtered.findIndex((item) => item.path === viewing.path)}
+  <ModalShell title={viewing.name.length > 48 ? `${viewing.name.slice(0, 30)}…${viewing.name.slice(-14)}` : viewing.name} widthClass="w-[min(94vw,56rem)]" on:close={() => { viewing = null; zoomed = false; }}>
     <div class="space-y-4" data-testid="attachment-viewer">
-      <div class="flex max-h-[55vh] items-center justify-center overflow-hidden bg-[var(--bg-secondary)]">
-        {#if viewing.kind === 'image'}
-          <img src={rawUrl(viewing)} alt={viewing.name} class="max-h-[55vh] max-w-full object-contain" />
-        {:else}
-          <embed src={rawUrl(viewing)} type="application/pdf" class="h-[55vh] w-full" />
+      <div class="relative">
+        <div class="flex max-h-[55vh] items-center justify-center bg-[var(--bg-secondary)] {zoomed ? 'overflow-auto' : 'overflow-hidden'}" data-testid="attachment-stage">
+          {#if viewing.kind === 'image' && !broken.has(viewing.path)}
+            <button type="button" aria-label={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} title={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} data-testid="attachment-zoom" on:click={() => { zoomed = !zoomed; }} class="m-0 border-0 bg-transparent p-0 {zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}">
+              <img src={rawUrl(viewing)} alt={viewing.name} on:error={() => { broken = new Set([...broken, viewing.path]); }} class={zoomed ? 'max-w-none' : 'max-h-[55vh] max-w-full object-contain'} />
+            </button>
+          {:else if viewing.kind === 'image'}
+            <p class="p-10 text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.brokenImage}</p>
+          {:else}
+            <embed src={rawUrl(viewing)} type="application/pdf" class="h-[55vh] w-full" />
+          {/if}
+        </div>
+        {#if at > 0}
+          <button type="button" data-testid="attachment-prev" aria-label={$localizedText.attachments.prev} on:click={() => step(-1)} class="rounded-ui absolute left-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] transition hover:opacity-70"><ChevronLeft size="20" strokeWidth="1.7" aria-hidden="true" /></button>
+        {/if}
+        {#if at >= 0 && at < filtered.length - 1}
+          <button type="button" data-testid="attachment-next" aria-label={$localizedText.attachments.next} on:click={() => step(1)} class="rounded-ui absolute right-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] transition hover:opacity-70"><ChevronRight size="20" strokeWidth="1.7" aria-hidden="true" /></button>
         {/if}
       </div>
-      <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-        {viewing.folder || '/'}, {formatAttachmentSize(viewing.size)}, {localeDate(new Date(viewing.modified), $locale)}
+      <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={viewing.path}>
+        {at >= 0 ? `${$localizedText.attachments.position(at + 1, filtered.length)}, ` : ''}{folderTail(viewing.folder, 3)}, {formatAttachmentSize(viewing.size)}, {localeDate(new Date(viewing.modified), $locale)}
       </p>
       <div>
         <h3 class="mb-1 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">{$localizedText.attachments.notesTitle}</h3>
@@ -343,7 +497,7 @@
           <ul class="max-h-40 overflow-y-auto" data-testid="attachment-viewer-notes">
             {#each viewing.usedBy as note (note.path)}
               <li>
-                <button type="button" class="block min-h-8 w-full truncate border-0 bg-transparent p-0 text-left text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}</button>
+                <button type="button" class="block min-h-8 w-full truncate border-0 bg-transparent p-0 text-left text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}</button>
               </li>
             {/each}
           </ul>
@@ -353,7 +507,7 @@
         <a href={rawUrl(viewing)} target="_blank" rel="noopener" class="inline-flex min-h-9 items-center font-bold text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.open}</a>
         <button type="button" data-testid="attachment-copy" on:click={() => copyEmbed(viewing)} class="min-h-9 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{copied ? $localizedText.attachments.copied : $localizedText.attachments.copyEmbed}</button>
         {#if isUnused(viewing)}
-          <button type="button" data-testid="attachment-trash" on:click={() => trash([viewing.path])} class="ml-auto min-h-9 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.moveToTrash(1)}</button>
+          <button type="button" data-testid="attachment-trash" disabled={busy} on:click={() => trash([viewing.path])} class="ml-auto min-h-9 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.moveToTrash(1)}</button>
         {/if}
       </div>
     </div>

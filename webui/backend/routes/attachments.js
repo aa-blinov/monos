@@ -136,8 +136,10 @@ export function registerAttachmentRoutes(app) {
 
       const ext = path.extname(fullPath).toLowerCase();
       const mime = [...imageMimes.entries()].find(([, value]) => value === ext)?.[0]
-        || (ext === '.pdf' ? PDF_MIME : 'application/octet-stream');
+        || (ext === '.pdf' ? PDF_MIME : ext === '.svg' ? 'image/svg+xml' : 'application/octet-stream');
       res.type(mime);
+      // A picture from an imported archive is not trusted: an SVG may carry script, so it runs in a sandbox.
+      res.set({ 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'" });
       res.sendFile(fullPath);
     } catch (error) {
       sendError(res, error);
@@ -259,6 +261,13 @@ function referenceTextOf(notePath) {
  * links it by path or writes its name; `usedBy` is empty for an unused one. Null while a locked note is closed:
  * what it uses is unknown, so nothing is called unused.
  */
+/** The folder of the notes a file belongs to: what comes before its first `_attachments` segment. */
+function folderOfAttachment(file) {
+  const parts = path.relative(path.resolve(NOTES_DIR), file).split(path.sep);
+  const at = parts.indexOf(ATTACHMENTS_DIR);
+  return parts.slice(0, at < 0 ? -1 : at).join('/');
+}
+
 function listAttachments() {
   const allFiles = collectFiles(NOTES_DIR);
   const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
@@ -292,7 +301,7 @@ function listAttachments() {
         path: relPath(file),
         name: path.basename(file),
         kind: /\.pdf$/i.test(file) ? 'pdf' : 'image',
-        folder: path.relative(path.resolve(NOTES_DIR), path.dirname(path.dirname(file))).split(path.sep).join('/'),
+        folder: folderOfAttachment(file),
         size: stats.size,
         modified: stats.mtime.toISOString(),
         usedBy: [...users.values()],
@@ -334,7 +343,8 @@ export function registerOrphanRoutes(app) {
   // nothing. A file any note still uses is refused, whatever the client says.
   app.post('/api/attachments/delete', (req, res) => {
     try {
-      const requested = Array.isArray(req.body?.paths) ? req.body.paths.slice(0, 500) : [];
+      const requested = Array.isArray(req.body?.paths) ? req.body.paths : [];
+      if (requested.length > 5000) throw httpError(413, 'Too many files at once');
       if (requested.length === 0) throw httpError(400, 'Nothing to delete');
       const { items, lockedNotes } = listAttachments();
       if (lockedNotes > 0) throw httpError(409, 'A locked note is closed, so its files cannot be told from unused ones');
@@ -342,6 +352,7 @@ export function registerOrphanRoutes(app) {
       const batch = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       let deleted = 0;
       let bytes = 0;
+      const trashed = [];
       const skipped = { used: 0, missing: 0 };
       for (const itemPath of requested) {
         const item = byPath.get(itemPath);
@@ -353,30 +364,68 @@ export function registerOrphanRoutes(app) {
         fs.renameSync(full, target);
         deleted += 1;
         bytes += item.size;
+        trashed.push(item.path);
       }
       purgeOldBatches();
-      res.json({ batch: deleted ? batch : null, deleted, bytes, skipped });
+      res.json({ batch: deleted ? batch : null, deleted, bytes, skipped, trashed });
     } catch (error) {
       sendError(res, error);
     }
   });
 
+  // What is in the local trash, newest batch first, so a person can bring a file back after the notice is gone.
+  app.get('/api/attachments/trash', (_req, res) => {
+    try {
+      const root = trashRoot();
+      let batches = [];
+      try { batches = fs.readdirSync(root); } catch { batches = []; }
+      const out = batches.filter((batch) => /^\d+-[0-9a-z]+$/.test(batch)).map((batch) => {
+        const dir = path.join(root, batch);
+        const files = walkFiles(dir).map((file) => ({
+          path: path.relative(dir, file).split(path.sep).join('/'),
+          name: path.basename(file),
+          size: fs.statSync(file).size,
+        }));
+        return { batch, at: new Date(Number(batch.split('-')[0])).toISOString(), files };
+      }).filter((entry) => entry.files.length > 0).sort((a, b) => b.at.localeCompare(a.at));
+      res.json({ batches: out, days: TRASH_DAYS });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  // Brings back a whole batch, or only `paths` from it. A name that is taken again is not overwritten: the
+  // restored file gets "(restored)" in its name, and the answer says how many were renamed.
   app.post('/api/attachments/restore', (req, res) => {
     try {
       const batch = String(req.body?.batch || '');
       if (!/^\d+-[0-9a-z]+$/.test(batch)) throw httpError(400, 'Invalid batch');
       const dir = path.join(trashRoot(), batch);
       if (!fs.existsSync(dir)) throw httpError(404, 'Nothing to restore');
+      const only = Array.isArray(req.body?.paths) ? new Set(req.body.paths.map((value) => String(value))) : null;
+      const notesRootAbs = path.resolve(NOTES_DIR);
       let restored = 0;
+      let renamed = 0;
       for (const file of walkFiles(dir)) {
-        const target = path.join(path.resolve(NOTES_DIR), path.relative(dir, file));
-        if (!path.resolve(target).startsWith(path.resolve(NOTES_DIR) + path.sep) || fs.existsSync(target)) continue;
+        const relative = path.relative(dir, file).split(path.sep).join('/');
+        if (only && !only.has(relative) && !only.has(`notes/${relative}`)) continue;
+        let target = path.join(notesRootAbs, relative);
+        if (!path.resolve(target).startsWith(notesRootAbs + path.sep)) continue;
+        if (fs.existsSync(target)) {
+          const ext = path.extname(target);
+          let index = 1;
+          do {
+            target = path.join(path.dirname(target), `${path.basename(target, ext).replace(/ \(restored(?: \d+)?\)$/, '')} (restored${index > 1 ? ` ${index}` : ''})${ext}`);
+            index += 1;
+          } while (fs.existsSync(target));
+          renamed += 1;
+        }
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.renameSync(file, target);
         restored += 1;
       }
-      fs.rmSync(dir, { recursive: true, force: true });
-      res.json({ restored });
+      if (walkFiles(dir).length === 0) fs.rmSync(dir, { recursive: true, force: true });
+      res.json({ restored, renamed });
     } catch (error) {
       sendError(res, error);
     }

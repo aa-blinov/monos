@@ -171,3 +171,117 @@ test('вложения: поиск и положение в списке пер�
   await page.getByTestId('open-attachments').click();
   await expect(page.getByTestId('attachments-query')).toHaveValue('file-0');
 });
+
+// What is selected is what is on the page: a filter that hides files takes them out of the selection.
+test('вложения: выбор следует за фильтрами, «выбрать все» — только показанные', async ({ page }) => {
+  await openPage(page, bigVault(60));
+  await page.getByTestId('attachments-select').click();
+  await page.getByTestId('attachments-select-unused').click();
+  await expect(page.getByTestId('attachments-selected')).toContainText('20 selected');
+  await page.getByTestId('attachments-kind').selectOption('pdf');
+  // 6 PDFs, of which 2 are unused: only those can stay selected.
+  await expect(page.getByTestId('attachments-selected')).toContainText('2 selected');
+  await page.getByTestId('attachments-kind').selectOption('all');
+  await page.getByTestId('attachments-folder').selectOption('Personal');
+  await page.getByTestId('attachments-select-unused').click();
+  await expect(page.getByTestId('attachments-select-unused')).toContainText(/Select the \d+ unused shown/);
+  const shown = Number(/(\d+) selected/.exec(await page.getByTestId('attachments-selected').innerText())[1]);
+  expect(shown).toBeLessThan(20);
+});
+
+// A batch the server only partly moved is not reported as done: the list is read again and the notice says so.
+test('вложения: частично перемещённое не выдаётся за готовое, список перечитывается', async ({ page }) => {
+  let reads = 0;
+  const items = bigVault(30);
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.route('**/api/attachments/all', (route) => { reads += 1; route.fulfill({ json: { lockedNotes: 0, items } }); });
+  await page.route('**/api/attachments/delete', (route) => route.fulfill({ json: { batch: '2-xyz', deleted: 3, bytes: 3000, skipped: { used: 0, missing: 0 }, trashed: JSON.parse(route.request().postData()).paths.slice(0, 3) } }));
+  await page.goto('/');
+  await page.getByTestId('open-more').click();
+  await page.getByTestId('open-attachments').click();
+  await page.getByTestId('attachments-select').click();
+  await page.getByTestId('attachments-select-unused').click();
+  await page.getByTestId('attachments-trash').click();
+  const before = reads;
+  await page.getByTestId('attachments-confirm').click();
+  await expect(page.getByTestId('attachments-notice')).toContainText('3 files moved to the trash');
+  await expect(page.getByTestId('attachments-notice')).toContainText('7 could not be moved');
+  expect(reads).toBeGreaterThan(before);
+});
+
+// The notice and its Undo are fixed to the window, wherever the list is scrolled to.
+test('вложения: уведомление с «Вернуть» всегда в окне', async ({ page }) => {
+  await openPage(page, bigVault(120), async () => {
+    await page.route('**/api/attachments/delete', (route) => route.fulfill({ json: { batch: '3-q', deleted: 1, bytes: 1100, skipped: {}, trashed: JSON.parse(route.request().postData()).paths } }));
+  });
+  await page.getByTestId('attachments-filter-unused').click();
+  await page.getByTestId('attachment-open').first().click();
+  await page.getByTestId('attachment-trash').click();
+  const box = await page.getByTestId('attachments-notice').boundingBox();
+  expect(box.y).toBeGreaterThan(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(900);
+  await expect(page.getByTestId('attachments-undo')).toBeVisible();
+});
+
+// Look-alike files: the end of the folder shows, the duplicates have a filter, search ignores separators.
+test('вложения: одинаковые имена различимы по папке, фильтр «Одинаковые имена», поиск без учёта _ и -', async ({ page }) => {
+  const mk = (folder, name) => ({ path: `notes/${folder}/_attachments/${name}`, name, kind: 'image', folder, size: 100, modified: new Date().toISOString(), usedBy: [] });
+  await openPage(page, [mk('Work/Alpha/Chapter 1', 'IMG_4021.png'), mk('Work/Beta/Chapter 1', 'IMG_4021.png'), mk('Personal', 'other.png')]);
+  await expect(page.getByTestId('attachments-filter-duplicates')).toBeVisible();
+  await expect(page.getByTestId('attachment-folder').first()).toContainText('… / Alpha / Chapter 1');
+  await page.getByTestId('attachments-filter-duplicates').click();
+  await expect(page.getByTestId('attachment-card')).toHaveCount(2);
+  await page.getByTestId('attachments-filter-duplicates').click();
+  await page.getByTestId('attachments-query').fill('img 4021');
+  await expect(page.getByTestId('attachment-card')).toHaveCount(2);
+});
+
+// The large view walks through the list with the arrows and zooms to the real size.
+test('вложения: просмотр — стрелки между файлами и увеличение', async ({ page }) => {
+  await openPage(page, bigVault(8));
+  await page.getByTestId('attachments-sort').selectOption('name');
+  await page.getByTestId('attachment-open').nth(1).click();
+  const viewer = page.getByTestId('attachment-viewer');
+  await expect(viewer).toContainText('2 of 8');
+  await page.keyboard.press('ArrowRight');
+  await expect(viewer).toContainText('3 of 8');
+  await page.getByTestId('attachment-next').click();
+  await expect(viewer).toContainText('4 of 8');
+  await page.keyboard.press('ArrowLeft');
+  await expect(viewer).toContainText('3 of 8');
+  const zoom = page.getByTestId('attachment-zoom');
+  if (await zoom.count()) {
+    await zoom.click();
+    await expect(zoom).toHaveAttribute('aria-label', 'Fit to window');
+  }
+});
+
+// What was removed can be found again after the notice is gone, and brought back one by one.
+test('вложения: «Недавно удалённые» — список корзины и возврат одного файла', async ({ page }) => {
+  let restoredPaths = null;
+  await openPage(page, bigVault(6), async () => {
+    await page.route('**/api/attachments/trash', (route) => route.fulfill({ json: { days: 30, batches: [{ batch: '5-zz', at: new Date().toISOString(), files: [{ path: 'Work/Alpha/_attachments/old-1.png', name: 'old-1.png', size: 2048 }, { path: 'Personal/_attachments/old-2.png', name: 'old-2.png', size: 4096 }] }] } }));
+    await page.route('**/api/attachments/restore', (route) => { restoredPaths = JSON.parse(route.request().postData()); route.fulfill({ json: { restored: 1, renamed: 0 } }); });
+  });
+  await page.getByTestId('attachments-trash-open').click();
+  const view = page.getByTestId('attachments-trash-view');
+  await expect(view).toContainText('old-1.png');
+  await view.getByTestId('attachments-restore-one').first().click();
+  await expect.poll(() => restoredPaths).toEqual({ batch: '5-zz', paths: ['Work/Alpha/_attachments/old-1.png'] });
+});
+
+// A failed load can be tried again.
+test('вложения: при ошибке загрузки есть «Повторить»', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  let fail = true;
+  await page.route('**/api/attachments/all', (route) => (fail ? route.fulfill({ status: 500, json: { detail: 'boom' } }) : route.fulfill({ json: { lockedNotes: 0, items: bigVault(3) } })));
+  await page.goto('/');
+  await page.getByTestId('open-more').click();
+  await page.getByTestId('open-attachments').click();
+  await expect(page.getByTestId('attachments-retry')).toBeVisible();
+  fail = false;
+  await page.getByTestId('attachments-retry').click();
+  await expect(page.getByTestId('attachment-card')).toHaveCount(3);
+});
