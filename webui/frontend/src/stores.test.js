@@ -27,6 +27,7 @@ global.localStorage = new MemoryStorage({
   fontSize: 'large',
   lineHeight: 'relaxed',
   contentWidth: 'wide',
+  contentWidthDefaultMedium: 'true',
   editorFontSize: 'small',
   noteView: 'board',
   boardColumns: '4',
@@ -83,4 +84,16 @@ storesTest('stores сохраняют изменения обратно в local
   stores.themeMode.set('system');
   assert.equal(global.localStorage.getItem('themeMode'), 'system');
   assert.equal(global.localStorage.getItem('darkMode'), null);
+});
+
+storesTest('ширина контента: по умолчанию Средняя, прежний «Очень широкая» по умолчанию переносится один раз', async () => {
+  const fresh = async (initial, tag) => {
+    global.localStorage = new MemoryStorage(initial);
+    return import(`./stores.js?width-${tag}`);
+  };
+  assert.equal(get((await fresh({}, 'new')).contentWidth), 'medium');
+  assert.equal(get((await fresh({ contentWidth: 'wide' }, 'old')).contentWidth), 'medium');
+  assert.equal(get((await fresh({ contentWidth: 'narrow' }, 'narrow')).contentWidth), 'narrow');
+  // After the move the person's later choice of Very wide stays.
+  assert.equal(get((await fresh({ contentWidth: 'wide', contentWidthDefaultMedium: 'true' }, 'chosen')).contentWidth), 'wide');
 });

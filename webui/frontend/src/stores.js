@@ -50,16 +50,17 @@ export const outlineWidth = persisted('outlineWidth', clampOutlineWidth(), {
   deserialize: clampOutlineWidth,
 });
 
-export const contentWidth = persisted('contentWidth', 'wide', {
+// The default column is Medium (about 100 characters a line). Everyone who still has the old default, Very wide,
+// is moved once: a saved «wide» cannot be told from a choice, so the choice is made again in the three-dot menu.
+export const contentWidth = persisted('contentWidth', 'medium', {
   migrate: (saved, read) => {
-    const migrated = read('contentWidthDefaultWide') === 'true';
-    if (!saved) return 'wide';
-    if (!migrated && saved === 'medium') return 'wide';
+    if (!saved) return 'medium';
+    if (read('contentWidthDefaultMedium') !== 'true' && saved === 'wide') return 'medium';
     return saved;
   },
 });
 contentWidth.subscribe(() => {
-  localStorage.setItem('contentWidthDefaultWide', 'true');
+  localStorage.setItem('contentWidthDefaultMedium', 'true');
 });
 
 export const searchQuery = writable('');
