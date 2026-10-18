@@ -10,10 +10,21 @@ function formatTags(tags = []) {
   return `[${tags.map((tag) => quoteYamlString(tag)).join(', ')}]`;
 }
 
+// A header is YAML-looking lines between two `---`. A horizontal rule that opens a note, with another further
+// down, is not one: the text between them stays the body.
+function yamlLooking(block) {
+  // The first line says what it is; a value that runs over several lines may continue in any form.
+  const first = String(block).split(/\r?\n/).find((line) => line.trim() !== '');
+  return first === undefined || /^#/.test(first) || /^[^\s:][^:]*:(\s|$)/.test(first) || /^-(\s|$)/.test(first);
+}
+function headerMatch(match) {
+  return match && yamlLooking(match[1]) ? match : null;
+}
+
 function splitFrontmatter(content) {
   // The byte order mark is not part of the body: upsertFrontmatter writes it back in front (see fileConventions).
   const rawContent = String(content || '').replace(/^﻿/, '');
-  const match = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  const match = headerMatch(rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/));
   if (!match) return { frontmatter: '', body: rawContent };
 
   return {
@@ -103,7 +114,7 @@ function topLevelKeyOf(line) {
 export function setFrontmatterProperty(content, key, property) {
   const raw = String(content || '');
   const line = property ? `${key}: ${formatPropertyValue(property.type, property.value)}` : null;
-  const match = /^﻿?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
+  const match = headerMatch(/^﻿?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw));
   const { eol } = fileConventions(raw);
 
   if (!match) {

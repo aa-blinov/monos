@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { NOTES_DIR } from '../config.js';
 import { httpError, readTextFile, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { getDb } from '../database.js';
 import { buildExportBundle } from '../export-bundle.js';
 import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
 
@@ -155,8 +156,15 @@ function escapeHtml(value) {
 function inlineAttachments(html, absoluteDir) {
   return html.replace(/<img[^>]+src="([^"]+)"[^>]*>/g, (tag, src) => {
     if (/^(https?:|data:)/.test(src)) return tag;
-    const filePath = path.resolve(absoluteDir, decodeURIComponent(src));
-    if (!filePath.startsWith(absoluteDir) || !fs.existsSync(filePath)) return tag;
+    let decoded = src;
+    try { decoded = decodeURIComponent(src); } catch { /* a stray % is part of the name */ }
+    const filePath = path.resolve(absoluteDir, decoded);
+    if (!filePath.startsWith(path.resolve(absoluteDir) + path.sep) || !fs.existsSync(filePath)) return tag;
+    try {
+      if (!fs.realpathSync(filePath).startsWith(fs.realpathSync(absoluteDir) + path.sep)) return tag;
+    } catch {
+      return tag;
+    }
     const mime = {
       '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
       '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
@@ -166,9 +174,18 @@ function inlineAttachments(html, absoluteDir) {
   });
 }
 
-/** The note without its YAML header: tags, dates and colour are properties, not text to print. */
-function stripFrontmatter(markdown) {
-  return String(markdown ?? '').replace(/^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, '');
+/**
+ * The note without its YAML header: tags, dates and colour are properties, not text to print. The header is a
+ * `---` on the very first line, lines that look like YAML, and a closing `---`. Anything else (a horizontal
+ * rule that opens the note, an unclosed fence) is body text and is kept whole.
+ */
+export function stripFrontmatter(markdown) {
+  const text = String(markdown ?? '');
+  const match = /^\uFEFF?---[ \t]*\r?\n((?:[^\r\n]*\r?\n)*?)---[ \t]*(?:\r?\n|$)/.exec(text);
+  if (!match) return text;
+  const first = match[1].split(/\r?\n/).find((line) => line.trim() !== '');
+  const looksLikeYaml = first === undefined || /^#/.test(first) || /^-\s/.test(first) || /^[^\s:][^:]*:(\s|$)/.test(first);
+  return looksLikeYaml ? text.slice(match[0].length) : text;
 }
 
 function renderMarkdownToHtml(markdown, absoluteDir) {
@@ -184,6 +201,16 @@ function wrapDocument(title, metaLine, bodyHtml) {
 ${metaLine ? `<div class="meta">${escapeHtml(metaLine)}</div>` : ''}
 ${bodyHtml}
 </main></body></html>`;
+}
+
+/** Paths of notes in the trash: the file stays where it was, only the index knows. */
+function trashedPaths() {
+  try {
+    const rows = getDb().prepare("SELECT path FROM notes_index WHERE trashed_at IS NOT NULL AND trashed_at != ''").all();
+    return new Set(rows.map((row) => row.path));
+  } catch {
+    return new Set();
+  }
 }
 
 function collectNotes(root) {
@@ -236,7 +263,16 @@ export function buildTreeDocument(requestPath = '') {
   const files = collectNotes(root);
   if (files.length === 0) throw httpError(404, 'No notes found in this folder');
 
-  const chapters = files.map((filePath) => {
+  const trashed = trashedPaths();
+  const printable = files.filter((filePath) => {
+    const rel = path.relative(path.resolve(NOTES_DIR), filePath).split(path.sep).join('/');
+    if (trashed.has(rel) || trashed.has(`notes/${rel}`)) return false;
+    // A sealed note is never printed in a book: its text is unreadable here, and ciphertext is not a chapter.
+    return !isLockedNote(readTextFile(filePath));
+  });
+  if (printable.length === 0) throw httpError(404, 'No notes found in this folder');
+
+  const chapters = printable.map((filePath) => {
     const rel = path.relative(path.resolve(NOTES_DIR), filePath);
     const html = renderMarkdownToHtml(readTextFile(filePath), path.dirname(filePath));
     return `<section class="chapter">
@@ -247,7 +283,7 @@ export function buildTreeDocument(requestPath = '') {
 
   const label = requestPath ? requestPath : 'All notes';
   return {
-    html: wrapDocument(label, `${files.length} notes`, chapters),
+    html: wrapDocument(label, `${printable.length} notes`, chapters),
     title: label,
     fileName: `monos-${(requestPath ? `${requestPath}-` : '') + new Date().toISOString().slice(0, 10)}.pdf`,
   };
