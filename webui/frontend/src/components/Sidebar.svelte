@@ -1144,7 +1144,7 @@
     <div class="mb-2 shrink-0 px-4 lg:mb-4">
       <!-- With nothing pinned this is the first row: it takes the height of the "Pinned" row, so "Create" does not sit on the top edge. -->
       <div class="flex items-center justify-between gap-3 pb-1.5 {$pinnedNotes.length === 0 ? 'lg:min-h-10 lg:pb-0' : 'lg:pb-2'}">
-        <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
+        <p class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</p>
         <button
           on:click={() => dispatch('openCreateNote')}
           class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui px-2 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"

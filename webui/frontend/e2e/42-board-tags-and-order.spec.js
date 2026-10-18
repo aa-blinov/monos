@@ -22,7 +22,7 @@ test('доска: тег сразу сужает список, порядок п
   // In a vault with many tags this one may wait behind "N more": choose it from the list.
   await page.getByTestId('board-tags-more').click();
   await page.getByTestId('board-tags-filter').fill(tag);
-  await page.getByTestId('board-tags-menu').getByRole('option').click();
+  await page.getByTestId('board-tag-option').click();
   await expect(page.getByTestId('board-count')).toHaveText(/Showing 2 of 2/i);
   await expect(page.getByText(`Other ${stamp}`)).toHaveCount(0);
 

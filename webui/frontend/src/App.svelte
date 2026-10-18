@@ -830,6 +830,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
 <Router>
   <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">
+    <!-- The first Tab stop: past the sidebar straight to the content. -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[400] focus:rounded-ui focus:border focus:border-[var(--border-subtle)] focus:bg-[var(--bg-primary)] focus:px-3 focus:py-2 focus:text-sm focus:text-[var(--text-primary)]"
+      on:click|preventDefault={() => document.getElementById('main-content')?.focus()}
+    >{$localizedText.app.skipToContent}</a>
 
     <CommandPalette
       open={$commandPaletteOpen}
@@ -858,7 +864,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         ></button>
       {/if}
 
-      <div
+      <nav
+        aria-label={$localizedText.app.sidebarLabel}
         class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full flex flex-col' : 'relative shrink-0 flex flex-col'}
                {!$sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
@@ -903,7 +910,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
             <span class="absolute inset-y-0 right-0 w-px bg-transparent transition group-hover:bg-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] group-focus:bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)]"></span>
           </TooltipIconButton>
         {/if}
-      </div>
+      </nav>
 
       <!-- The sidebar runs the full height on every page; the bar above the content belongs to the content
            column, so opening a note (which brings its own header) does not shift the tree. -->
@@ -921,7 +928,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:saveSearch={openSavedSearchPanel}
         />
         {/if}
-      <main class="flex-1 overflow-hidden relative">
+      <main id="main-content" tabindex="-1" class="flex-1 overflow-hidden relative outline-none">
         {#if activeSearchQuery}
           <SearchResults
             query={activeSearchQuery}
@@ -998,6 +1005,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
                   />
                 {/if}
               {:else}
+                <h1 class="sr-only">{$localizedText.app.board.homeHeading}</h1>
                 <NoteBoard
                   notes={$homeRecentNotes}
                   mobile={isMobile}

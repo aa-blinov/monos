@@ -25,8 +25,8 @@ test('доска: много тегов, «Ещё N» открывает спи�
   await expect(menu).toBeVisible();
   await expect(page.getByTestId('board-tags-filter')).toBeFocused();
   await page.getByTestId('board-tags-filter').fill('zz-rare');
-  await expect(menu.getByRole('option')).toHaveCount(1);
-  await menu.getByRole('option').click();
+  await expect(page.getByTestId('board-tag-option')).toHaveCount(1);
+  await page.getByTestId('board-tag-option').click();
 
   await expect(menu).toHaveCount(0);
   await expect(strip.getByRole('button', { name: rare })).toHaveAttribute('aria-pressed', 'true');
@@ -68,7 +68,7 @@ test('доска на телефоне: одна кнопка «Теги» в с
 
   await button.click();
   await page.getByTestId('board-tags-filter').fill(tag);
-  await page.getByTestId('board-tags-menu').getByRole('option').click();
+  await page.getByTestId('board-tag-option').click();
   await expect(button).toContainText(tag);
   await expect(page.getByTestId('board-count')).toHaveText(/1 of 1$/i);
 });

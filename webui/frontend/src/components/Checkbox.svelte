@@ -26,7 +26,7 @@
              border border-[var(--border-subtle)] bg-[var(--bg-primary)]
              checked:border-[var(--text-primary)] checked:bg-[var(--text-primary)]
              group-hover:border-[var(--text-secondary)]
-             focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--text-primary)]
+             focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text-primary)]
              transition-colors duration-150"
     />
     <svg

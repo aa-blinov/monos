@@ -24,9 +24,11 @@
   }
 
   /* Keyboard focus is shown in the theme's own ink, quietly: the system's accent ring (bright orange on some
-     Macs) was the loudest thing on a calm page. A mouse click never shows it. Utilities still override this. */
+     Macs) was the loudest thing on a calm page. A mouse click never shows it. Utilities still override this.
+     Ink at 85% keeps 3:1 against both page backgrounds in all twelve palette and mode pairs (45% fell to 1.8:1
+     on Solarized light); 2px is the thinnest line that still reads on a 16px checkbox. */
   :focus-visible {
-    outline: 1.5px solid color-mix(in srgb, var(--text-primary) 45%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--text-primary) 85%, transparent);
     outline-offset: 2px;
   }
   :focus:not(:focus-visible) {

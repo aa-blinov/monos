@@ -133,6 +133,8 @@ const enText = {
       return `Notes not updated: ${count}`;
     },
     closeMenu: 'Close menu',
+    sidebarLabel: 'Sidebar',
+    skipToContent: 'Skip to content',
     emptyValue: '(empty)',
     resizeSidebar: 'Resize sidebar',
     emptyDesktop: 'Your notes are ordinary files on your computer. Monos helps you read, write and find them.',
@@ -202,6 +204,7 @@ const enText = {
       },
       groupByColor: 'Group by color',
       groupByColorShort: 'By color',
+      homeHeading: 'Home',
       sortLabel: 'Order',
       sortModified: 'Recently changed',
       sortOpened: 'Recently opened',
@@ -1194,6 +1197,8 @@ const ruText = {
       return `Заметок не обновлено: ${count}`;
     },
     closeMenu: 'Закрыть меню',
+    sidebarLabel: 'Боковая панель',
+    skipToContent: 'К содержимому',
     emptyValue: '(пусто)',
     resizeSidebar: 'Изменить ширину сайдбара',
     emptyDesktop: 'Заметки хранятся обычными файлами на вашем компьютере. Monos помогает читать, писать и находить их.',
@@ -1263,6 +1268,7 @@ const ruText = {
       },
       groupByColor: 'Группировать по цветам',
       groupByColorShort: 'По цветам',
+      homeHeading: 'Главная',
       sortLabel: 'Порядок',
       sortModified: 'Недавно изменённые',
       sortOpened: 'Недавно открытые',

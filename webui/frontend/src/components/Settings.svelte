@@ -782,10 +782,11 @@
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-1">
+        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-1" role="group" aria-label={$localizedText.settings.themeMode}>
           {#each themeModeOptions as option}
             <button
               type="button"
+              aria-pressed={$themeMode === option.value}
               on:click={() => { $themeMode = option.value; saveSettings(); }}
               class="min-h-9 px-3 text-xs uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
             >

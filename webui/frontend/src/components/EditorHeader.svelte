@@ -120,6 +120,8 @@
   <!-- The title column is the text column: same width setting, same left edge as the note below. -->
   <div class="mx-auto flex w-full max-w-[var(--content-width,56rem)] flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12" class:hidden={folded}>
     <div class="flex-1 min-w-0">
+      <!-- The note's title is the page's heading; the field below is how it is edited. -->
+      <h1 class="sr-only">{editedTitle}</h1>
       <input
         type="text"
         bind:value={editedTitle}

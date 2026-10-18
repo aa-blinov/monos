@@ -218,7 +218,7 @@
           {#if hasBase}
             <!-- On a phone the two versions come first; where they started from is context, read after. -->
             <div class="order-last bg-[var(--bg-primary)] p-4 sm:order-none">
-              <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
                 {$localizedText.editor.conflictBase}
               </p>
               <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--text-tertiary)]">{segment.shown.base || $localizedText.app.emptyValue}</pre>
