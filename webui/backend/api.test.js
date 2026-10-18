@@ -1145,16 +1145,6 @@ apiTest('POST /api/directory/icon очищает иконку и цвет', asyn
   assert.equal(topicDir.color, null);
 });
 
-apiTest('POST /api/format нормализует markdown-файлы на диске', async () => {
-  const formatted = await requestJson(buildUrl('/api/format'), { method: 'POST' });
-
-  assert.equal(formatted.response.status, 200);
-  assert.match(formatted.data.message, /Formatted/);
-
-  const file = fs.readFileSync(path.join(notesDir, 'FormatMe.md'), 'utf-8');
-  assert.equal(file, 'Line with spaces\n\nSecond line\n');
-});
-
 apiTest('rename, move и delete обновляют файловое дерево и индекс', async () => {
   const create = await requestJson(buildUrl('/api/notes/create'), {
     method: 'POST',

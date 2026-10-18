@@ -783,44 +783,6 @@ export function registerNoteRoutes(app) {
     }
   });
 
-  app.post('/api/format', (req, res) => {
-    try {
-      const excluded = new Set(['README.md', 'AGENTS.md']);
-      let count = 0;
-
-      function walk(dir) {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const fullPath = path.join(dir, entry.name);
-          if (entry.isDirectory() && !entry.name.startsWith('.')) {
-            walk(fullPath);
-            continue;
-          }
-
-          if (entry.name.endsWith('.md') && !excluded.has(entry.name)) {
-            const original = readTextFile(fullPath);
-            const formatted = original
-              .replace(/[ \t]+$/gm, '')
-              .replace(/\r\n/g, '\n')
-              .replace(/\n{3,}/g, '\n\n')
-              .trim() + '\n';
-
-            if (original !== formatted) {
-              fs.writeFileSync(fullPath, formatted, 'utf-8');
-              count++;
-            }
-          }
-        }
-      }
-
-      walk(NOTES_DIR);
-      if (count > 0) indexAllFiles();
-      res.json({ success: true, message: `Formatted. Updated: ${count}` });
-    } catch (error) {
-      res.status(500).json({ detail: error.message });
-    }
-  });
-
   app.get('/api/settings', async (req, res) => {
     try {
       const rows = getDb().prepare('SELECT key, value FROM settings').all();

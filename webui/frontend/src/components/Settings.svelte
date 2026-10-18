@@ -76,7 +76,6 @@
     git_auto_sync_minutes: DEFAULT_SYNC_MINUTES,
     git_auto_upload: true,
     git_auto_upload_quit: false,
-    auto_format_on_save: false,
     git_commit_message: uiText.settings.defaultCommitMessage,
     git_token: '',
     git_owner: DEFAULT_GIT_OWNER,
@@ -1135,15 +1134,6 @@
         </Checkbox>
         <Checkbox id="git-auto-upload-quit" bind:checked={settings.git_auto_upload_quit} on:change={saveAutoSync}>
           {$localizedText.settings.autoUploadOnQuit}
-        </Checkbox>
-      </div>
-      <div class="flex items-center">
-        <Checkbox
-          id="auto-format"
-          bind:checked={settings.auto_format_on_save}
-          on:change={saveSettings}
-        >
-          {$localizedText.settings.autoFormatOnSave}
         </Checkbox>
       </div>
     </section>
