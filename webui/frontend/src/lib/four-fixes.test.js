@@ -192,7 +192,7 @@ test('вложения вынесены из настроек на свою ст
   assert.doesNotMatch(settings, /data-testid="orphan-attachments"/);
   assert.match(settings, /data-testid="settings-open-attachments"/);
   const view = read(SRC, 'components', 'AttachmentsView.svelte');
-  assert.match(view, /formatAttachmentSize\(item\.size\)/);
+  assert.match(view, /formatAttachmentSize\(item\.size, \$locale\)/);
   assert.match(view, /item\.usedBy/);
 });
 

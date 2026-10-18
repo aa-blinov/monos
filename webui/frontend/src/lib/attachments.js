@@ -258,12 +258,13 @@ export function replaceMarkdownImagePath(content, oldRelativePath, nextRelativeP
   ));
 }
 
-/** Bytes as a short human string, for the orphan-attachments list. */
-export function formatAttachmentSize(bytes) {
+/** Bytes as a short human string, in the interface's language (КБ, МБ for Russian). */
+export function formatAttachmentSize(bytes, locale = 'en') {
   const value = Number(bytes);
+  const ru = locale === 'ru';
   if (!Number.isFinite(value) || value < 0) return '—';
-  if (value < 1024) return `${Math.round(value)} B`;
-  const units = ['KB', 'MB', 'GB'];
+  if (value < 1024) return `${Math.round(value)} ${ru ? 'Б' : 'B'}`;
+  const units = ru ? ['КБ', 'МБ', 'ГБ'] : ['KB', 'MB', 'GB'];
   let scaled = value / 1024;
   let unit = 0;
   while (scaled >= 1024 && unit < units.length - 1) {

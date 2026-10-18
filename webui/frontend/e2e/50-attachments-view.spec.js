@@ -102,7 +102,9 @@ test('вложения: страницы по 60, сортировка, тип �
   await openPage(page, bigVault(200));
   await expect(page.getByTestId('attachment-card')).toHaveCount(60);
   await page.getByTestId('attachments-more').click();
-  await expect(page.getByTestId('attachment-card')).toHaveCount(120);
+  // The click and the scroll-triggered load may both add a page: at least two pages, whole pages only.
+  await expect.poll(async () => page.getByTestId('attachment-card').count()).toBeGreaterThanOrEqual(120);
+  expect((await page.getByTestId('attachment-card').count()) % 60).toBe(0);
 
   await page.getByTestId('attachments-sort').selectOption('name');
   await expect(page.getByTestId('attachment-card').first()).toContainText('file-000');
@@ -326,4 +328,26 @@ test('вложения на телефоне: фильтры за одной к�
   expect(first.y).toBeLessThan(520);
   await page.getByTestId('attachments-filters-toggle').click();
   await expect(page.getByTestId('attachments-sort')).toBeVisible();
+});
+
+// "Review unused" is one step: only the unused files, all chosen, ready to look through and move.
+test('вложения: «Проверить неиспользуемые» одним шагом, русские единицы, переход в конец с клавиатуры', async ({ page }) => {
+  await prepareMonos(page);
+  await page.addInitScript(() => localStorage.setItem('locale', 'ru'));
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.route('**/api/attachments/all', (route) => route.fulfill({ json: { lockedNotes: 0, items: bigVault(150) } }));
+  await page.route('**/api/attachments/thumb**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"/>' }));
+  await page.goto('/');
+  await page.getByTestId('open-more').click();
+  await page.getByTestId('open-attachments').click();
+  await expect(page.getByTestId('attachments-unused-summary')).toContainText(/КБ|МБ|Б/);
+  await page.getByTestId('attachments-review-unused').click();
+  await expect(page.getByTestId('attachments-selection-bar')).toBeVisible();
+  await expect(page.getByTestId('attachments-selected')).toContainText('Выбрано: 50');
+  await expect(page.getByTestId('attachments-filter-unused')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('attachments-filter-all').click();
+  await page.getByTestId('attachments-skip').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('attachment-open').last()).toBeFocused();
 });
