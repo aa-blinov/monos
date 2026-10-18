@@ -177,6 +177,13 @@
         detail: $localizedText.commandPalette.commandDetails.openProperties,
       },
       {
+        id: 'openFavorites',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openFavorites,
+        detail: $localizedText.commandPalette.commandDetails.openFavorites,
+      },
+      {
         id: 'openAttachments',
         type: 'command',
         section: 'commands',
@@ -254,11 +261,11 @@
     return 4;
   }
 
-  function filterItems(items, value) {
+  function filterItems(items, value, limit = 12) {
     return items
       .filter((item) => fuzzyMatch(item, value))
       .sort((a, b) => matchScore(a, value) - matchScore(b, value))
-      .slice(0, 12);
+      .slice(0, limit);
   }
 
   function isFeaturedPath(path) {
@@ -362,7 +369,7 @@
       .slice(0, limit);
   }
 
-  $: commandItems = mode === 'notes' ? [] : filterItems(commands(), freeTerm);
+  $: commandItems = mode === 'notes' ? [] : filterItems(commands(), freeTerm, 20);
   $: visiblePinnedItems = filterFeatured(pinnedItems, 4, parsedQuery, freeTerm);
   $: visibleRecentItems = filterFeatured(
     recentItems.filter((item) => !pinnedItems.some((pinned) => pinned.path === item.path)),

@@ -20,9 +20,14 @@ import { basename, displayNoteName } from './sidebar-utils.js';
 const LEGACY_KEY = 'pinnedNotes';
 
 export const pinnedNotes = writable([]);
+/** False until the tree has loaded once: before that the list is empty because nothing is known, not because nothing is pinned. */
+export const pinsKnown = writable(false);
+
+// The board and the tree name the same note with or without the leading `notes/`.
+const samePath = (a, b) => String(a || '').replace(/^notes\//, '') === String(b || '').replace(/^notes\//, '');
 
 export function isPinned(path, list) {
-  return (list || get(pinnedNotes)).some((note) => note.path === path);
+  return (list || get(pinnedNotes)).some((note) => samePath(note.path, path));
 }
 
 /** Collect pinned notes from a tree node in tree order. */
@@ -47,6 +52,7 @@ export function collectPinned(tree) {
 /** Rebuild the store after the tree loads. */
 export function setPinnedFromTree(tree) {
   pinnedNotes.set(collectPinned(tree));
+  pinsKnown.set(true);
 }
 
 /** Pinning from the open note: the sidebar's list follows at once instead of after the next tree load. */
@@ -55,12 +61,13 @@ export function markPinned(path, pinned, name) {
 }
 
 function setPinnedInStore(path, pinned, name) {
+  pinsKnown.set(true);
   pinnedNotes.update((current) => (
     pinned
-      ? current.some((note) => note.path === path)
+      ? current.some((note) => samePath(note.path, path))
         ? current
         : [{ path, name: displayNoteName(name || basename(path)) }, ...current]
-      : current.filter((note) => note.path !== path)
+      : current.filter((note) => !samePath(note.path, path))
   ));
 }
 

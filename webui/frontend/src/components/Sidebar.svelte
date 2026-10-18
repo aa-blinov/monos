@@ -61,7 +61,7 @@
     firstImageFileFromText,
     markdownImage,
   } from '../lib/attachments.js';
-  import { editorState, activeTheme, templateRequest } from '../stores.js';
+  import { editorState, activeTheme, templateRequest, pinnedCollapsed, propertiesChanged, noteSaveSignal } from '../stores.js';
   import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
@@ -144,6 +144,9 @@
       hasProperties = true;
     }
   }
+  $: if ($propertiesChanged > 0) void loadPropertyPresence();
+  // A property typed into the note's source shows up on the next save: look again while the link is still hidden.
+  $: if ($noteSaveSignal && !hasProperties) void loadPropertyPresence();
   $: showTagsLink = allTags.length > 0;
   $: showSavedSearchesLink = $savedSearches.length > 0;
   $: showPropertiesLink = hasProperties;
@@ -1119,15 +1122,27 @@
   <!-- Pinned Notes Section -->
   {#if $pinnedNotes.length > 0}
     <div class="mb-4 shrink-0 px-4">
-      <div class="mb-3 flex min-h-10 items-center justify-between text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)]">
-        <span>{$localizedText.sidebar.pinned}</span>
+      <button
+        type="button"
+        data-testid="pinned-toggle"
+        aria-expanded={!$pinnedCollapsed}
+        aria-label={$pinnedCollapsed ? $localizedText.sidebar.expandPinned : $localizedText.sidebar.collapsePinned}
+        on:click={() => pinnedCollapsed.update((value) => !value)}
+        class="flex min-h-10 w-full items-center justify-between border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)] {$pinnedCollapsed ? '' : 'mb-3'}"
+      >
+        <span class="flex items-center gap-1.5">
+          <Icon.ChevronRight class="h-3.5 w-3.5 shrink-0 transition-transform {$pinnedCollapsed ? '' : 'rotate-90'}" strokeWidth="1.7" aria-hidden="true" />
+          {$localizedText.sidebar.pinned}
+        </span>
         <span class="text-[length:var(--text-whisper)] tabular-nums text-[var(--text-tertiary)]">{$pinnedNotes.length}</span>
-      </div>
-      <div class="space-y-2">
+      </button>
+      <!-- However many are pinned, the list takes a third of the panel at most and scrolls inside. -->
+      <div class="max-h-[32vh] space-y-2 overflow-y-auto {$pinnedCollapsed ? 'hidden' : ''}" data-testid="pinned-list">
         {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
           <button
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
+            on:contextmenu|preventDefault={(event) => handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } })}
             class="w-full min-h-10 rounded-ui border border-transparent px-2 py-1.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"
           >
             <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
@@ -1243,6 +1258,10 @@
         <Icon.Waypoints size="20" strokeWidth="1.7" />
         <span>{$localizedText.map.sidebar}</span>
       </button>
+      <button data-testid="open-favorites" on:click={() => { dispatch('openFavorites'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Star size="20" strokeWidth="1.7" />
+        <span>{$localizedText.favorites.sidebar}</span>
+      </button>
       <button data-testid="open-attachments" on:click={() => { dispatch('openAttachments'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
         <Icon.Paperclip size="20" strokeWidth="1.7" />
         <span>{$localizedText.attachments.sidebar}</span>
@@ -1342,6 +1361,9 @@
             >
               <button type="button" role="menuitem" data-testid="open-map" class={moreItemClass} on:click={() => pickMore('openMap')}>
                 <Icon.Waypoints class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.sidebar}
+              </button>
+              <button type="button" role="menuitem" data-testid="open-favorites" class={moreItemClass} on:click={() => pickMore('openFavorites')}>
+                <Icon.Star class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.favorites.sidebar}
               </button>
               <button type="button" role="menuitem" data-testid="open-attachments" class={moreItemClass} on:click={() => pickMore('openAttachments')}>
                 <Icon.Paperclip class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.attachments.sidebar}

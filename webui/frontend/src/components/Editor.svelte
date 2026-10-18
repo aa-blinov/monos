@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, focusNoteBody } from '../stores.js';
+  import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, focusNoteBody, propertiesChanged } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { formFieldClass } from '../lib/form-field.js';
@@ -42,6 +42,8 @@
     setItemColorRequest,
     uploadAttachment,
   } from '../lib/editor-api.js';
+  import { isFavoriteProperties, setFavoriteRequest } from '../lib/favorites.js';
+  import { flushOpenNote } from '../lib/note-refresh.js';
   import { createFolderRequest, createNoteRequest, loadDirectoriesRequest, loadTagsRequest, moveItemRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { conflictedFiles, conflictedNotes, conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
@@ -60,7 +62,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, Star, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -1473,6 +1475,22 @@
   }
   $: pinnedNow = Boolean(parseFrontmatter(editedContent).pinned);
 
+  // A favourite is a property of the note (lib/favorites.js); the list of them is its own page.
+  $: favoriteNow = isFavoriteProperties(fileInfo?.properties);
+  async function toggleFavorite() {
+    if (!loadedFilePath || inConflict) return;
+    const on = !favoriteNow;
+    try {
+      await flushOpenNote();
+      await setFavoriteRequest(loadedFilePath, on);
+      await loadFile();
+      showToast(on ? $localizedText.editor.favoriteToast : $localizedText.editor.unfavoriteToast);
+    } catch (error) {
+      console.error('Failed to change the favourite mark:', error);
+      showToast($localizedText.properties.saveFailed);
+    }
+  }
+
   $: if (currentFile?.path && !currentFile.isDir && currentFile.path !== loadedFilePath && currentFile.path !== loadingFilePath && currentFile.path !== failedLoadPath) loadFile();
   $: visibleFile = displayedFile || currentFile;
 
@@ -1862,7 +1880,7 @@
             {#if propertyPanel === 'properties'}
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.properties.title}</p>
-                <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => loadFile()} />
+                <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => { propertiesChanged.update((n) => n + 1); loadFile(); }} />
               </div>
             {/if}
           </div>
@@ -2090,6 +2108,9 @@
               <!-- On a phone the bottom bar has room for six buttons; pinning moves here. -->
               <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
                 <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+              </button>
+              <button type="button" role="menuitem" data-testid="menu-favorite" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; toggleFavorite(); }}>
+                <Star size="16" strokeWidth="1.7" fill={favoriteNow ? 'currentColor' : 'none'} aria-hidden="true" />{favoriteNow ? $localizedText.editor.favoriteRemove : $localizedText.editor.favoriteAdd}
               </button>
               <!-- Narrow window: the footer has no room for the terminal button, so the terminal opens from here. -->
               {#if terminalBridge}

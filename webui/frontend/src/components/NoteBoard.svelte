@@ -2,7 +2,8 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
-  import { Copy, ExternalLink, Palette, PanelTop, Plus } from 'lucide-svelte';
+  import { Copy, ExternalLink, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
+  import { pinNote, unpinNote } from '../lib/sidebar-pinned.js';
   import BoardTags from './BoardTags.svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -49,7 +50,7 @@
   $: colorOptions = getNoteColorOptions($activeTheme);
 
   $: {
-    const nextSignature = notes.map((note) => `${note.path}:${note.modified || note.lastOpened || ''}`).join('|');
+    const nextSignature = notes.map((note) => `${note.path}:${note.modified || note.lastOpened || ''}:${note.pinned ? 'p' : ''}`).join('|');
     if (nextSignature !== notesSignature) {
       notesSignature = nextSignature;
       orderedNotes = notes;
@@ -204,6 +205,19 @@
     }
   }
 
+  // Pin or unpin from the board itself; the sidebar's list and the card's mark follow through the shared store.
+  async function togglePin(note) {
+    if (!note?.path) return;
+    const pinning = !note.pinned;
+    closeContextMenu();
+    try {
+      if (pinning) await pinNote(note.path, note.title || note.name);
+      else await unpinNote(note.path);
+    } catch (error) {
+      console.error('Failed to change the pin:', error);
+    }
+  }
+
   function handleCardContext(event) {
     const { note, x, y } = event.detail;
     contextMenu = { show: true, note, x, y };
@@ -322,6 +336,9 @@
     on:click|stopPropagation
     on:keydown={(event) => event.key === 'Escape' && closeContextMenu()}
   >
+    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)}>
+      <Pin size="14" strokeWidth="1.7" fill={contextMenu.note?.pinned ? 'currentColor' : 'none'} aria-hidden="true" /> {contextMenu.note?.pinned ? $localizedText.sidebar.context.unpin : $localizedText.sidebar.context.pin}
+    </button>
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => openFull(contextMenu.note)}>
       <ExternalLink size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.openFull}
     </button>

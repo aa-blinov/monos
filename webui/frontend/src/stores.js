@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import { persisted } from './lib/stores/persisted.js';
 import { clampOutlineWidth } from './lib/outline.js';
+export { tabsToSpaces } from './lib/tabs.js';
 
 const THEME_MODES = ['system', 'light', 'dark'];
 
@@ -34,6 +35,12 @@ export const outlineHidden = persisted('outlineHidden', false, {
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
 });
+// «Закреплённые» в боковой панели можно свернуть до одной строки; выбор помнится.
+export const pinnedCollapsed = persisted('pinnedCollapsed', false, {
+  serialize: (v) => String(v),
+  deserialize: (s) => s === 'true',
+});
+
 // Ширина колонки «Структура» на десктопе: тянется за левый край, помнится между запусками.
 export const outlineWidth = persisted('outlineWidth', clampOutlineWidth(), {
   deserialize: clampOutlineWidth,
@@ -61,6 +68,8 @@ export const templateRequest = writable(null);
 // A Settings section to bring into view when Settings opens ('sync', 'storage'), set by whoever sent the person there.
 export const settingsSection = writable('');
 export const noteSaveSignal = writable(null);
+// Raised whenever a note's properties change, so the sidebar can show the Properties table once the first one exists.
+export const propertiesChanged = writable(0);
 // The note just created: its editor puts the caret in the body once the note has loaded.
 export const focusNoteBody = writable(null);
 

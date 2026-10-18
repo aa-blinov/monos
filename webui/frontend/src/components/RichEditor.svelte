@@ -4,8 +4,7 @@
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import TooltipIconSelect from './TooltipIconSelect.svelte';
-  import { lineHeight, contentWidth, editorFontSize } from '../stores.js';
+  import { lineHeight, contentWidth, editorFontSize, tabsToSpaces } from '../stores.js';
   import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
@@ -23,15 +22,43 @@
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    Maximize2, WrapText, Type, MoreHorizontal, ArrowUpRight, FilePlus
+    Maximize2, WrapText, Type, ArrowRightToLine, MoreHorizontal, ArrowUpRight, FilePlus
   } from 'lucide-svelte';
   import { externalLinkAt, wikiLinksKey } from '../lib/richEditorExtras.js';
   import { isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
   import { newNoteForWikiLink } from '../lib/wiki-links.js';
   import { resolveWikiLink } from '../lib/editor-api.js';
 
-  // Everyday formatting stays in the toolbar; the rest sits behind "More tools".
+  // Everyday formatting stays in the toolbar. The rarer tools (`extraTools`) join it while the row has room for
+  // them and move into "More tools" as it narrows, so nothing is hidden that would have fitted.
   let moreOpen = false;
+  let toolbarEl;
+  let extrasEl;
+  let visibleExtras = 0;
+  const EXTRA_BUTTON_WIDTH = 30;
+  const EXTRA_GROUP_GAP = 15;
+  function fitExtras() {
+    if (!toolbarEl) return;
+    // The row without the extras: the span its buttons cover now (scrollWidth would read as the whole row
+    // while there is room), less the extras' own width and their divider.
+    const first = toolbarEl.firstElementChild;
+    const last = toolbarEl.lastElementChild;
+    if (!first || !last) return;
+    const span = last.getBoundingClientRect().right - first.getBoundingClientRect().left;
+    const base = span - (extrasEl ? extrasEl.offsetWidth + EXTRA_GROUP_GAP : 0);
+    const room = toolbarEl.clientWidth - base - EXTRA_GROUP_GAP;
+    const next = Math.max(0, Math.min(extraTools.length, Math.floor(room / EXTRA_BUTTON_WIDTH)));
+    if (next !== visibleExtras) visibleExtras = next;
+  }
+  onMount(() => {
+    if (typeof ResizeObserver === 'undefined' || !toolbarEl) return undefined;
+    const observer = new ResizeObserver(() => fitExtras());
+    observer.observe(toolbarEl);
+    fitExtras();
+    return () => observer.disconnect();
+  });
+  // The block tools (table, code) take room too: fit again when they come and go.
+  $: if (toolbarEl) { active.table, active.codeBlock; tick().then(fitExtras); }
   function runMore(action) {
     action();
     moreOpen = false;
@@ -102,6 +129,14 @@
 
   const WIKI_SUGGESTION_LIMIT = 8;
 
+  $: extraTools = [
+    { id: 'strike', icon: Strikethrough, label: $localizedText.richEditor.strikethrough, run: cmd('toggleStrike'), on: active.strike },
+    { id: 'code', icon: Code, label: shortcutLabel($localizedText.richEditor.inlineCode), run: cmd('toggleCode'), on: active.code },
+    { id: 'h4', icon: Heading4, label: $localizedText.richEditor.heading4, run: cmd('toggleHeading', { level: 4 }), on: active.heading === 4 },
+    { id: 'codeblock', icon: Code2, label: $localizedText.richEditor.codeBlock, run: cmd('toggleCodeBlock'), on: active.codeBlock },
+    { id: 'hr', icon: Minus, label: $localizedText.richEditor.horizontalRule, run: cmd('hr'), on: false },
+    { id: 'table', icon: Table2, label: $localizedText.richEditor.insertTable, run: cmd('table'), on: active.table },
+  ];
   $: localizedContentWidthOptions = contentWidthOptions.map(option => ({
     ...option,
     label: $localizedText.optionLabels.contentWidth[option.value] || option.name,
@@ -287,7 +322,7 @@
 
   // Tools for the block the caret is in: a table grows and shrinks here, a code block picks its language
   // and copies its text. They appear under the toolbar only while they apply.
-  const CODE_LANGUAGES = ['', 'javascript', 'typescript', 'python', 'bash', 'json', 'html', 'css', 'sql', 'go', 'rust', 'java', 'yaml', 'markdown'];
+  const CODE_LANGUAGES = ['', 'javascript', 'typescript', 'python', 'bash', 'json', 'html', 'css', 'sql', 'go', 'rust', 'java', 'swift', 'kotlin', 'c', 'cpp', 'csharp', 'php', 'ruby', 'xml', 'diff', 'yaml', 'markdown'];
   $: codeLanguages = active.codeLanguage && !CODE_LANGUAGES.includes(active.codeLanguage)
     ? [...CODE_LANGUAGES, active.codeLanguage]
     : CODE_LANGUAGES;
@@ -805,7 +840,7 @@
 <div class="flex flex-col flex-1 min-h-0">
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
   <div class="relative flex items-center gap-1 px-4 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
-    <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0">
+    <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0" bind:this={toolbarEl}>
     <!-- Undo/Redo -->
     <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('redo')} disabled={!canRedo} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.redo)}><Redo2 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
@@ -829,6 +864,14 @@
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
+    {#if visibleExtras > 0}
+      <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
+      <div class="flex shrink-0 items-center gap-0.5" bind:this={extrasEl} data-testid="toolbar-extras">
+        {#each extraTools.slice(0, visibleExtras) as tool (tool.id)}
+          <TooltipIconButton on:click={tool.run} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {tool.on ? 'bg-[var(--bg-secondary)]' : ''}" label={tool.label}><svelte:component this={tool.icon} size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
+        {/each}
+      </div>
+    {/if}
     {#if active.table || active.codeBlock}
       <!-- Tools for the block the caret is in sit in the same row, so the text never jumps when they appear. -->
       <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
@@ -845,6 +888,8 @@
           value={active.codeLanguage}
           on:change={(event) => setCodeLanguage(event.currentTarget.value)}
           class="h-7 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)]"
+          on:mousedown|stopPropagation
+          on:pointerdown|stopPropagation
         >
           {#each codeLanguages as language}
             <option value={language}>{language || $localizedText.richEditor.blockTools.plainText}</option>
@@ -870,58 +915,49 @@
 
     {#if moreOpen}
       <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleStrike'))}>
-          <Strikethrough size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.strikethrough}
-        </button>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleCode'))}>
-          <Code size="16" strokeWidth="1.7" aria-hidden="true" />{shortcutLabel($localizedText.richEditor.inlineCode)}
-        </button>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleHeading', { level: 4 }))}>
-          <Heading4 size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.heading4}
-        </button>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('toggleCodeBlock'))}>
-          <Code2 size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.codeBlock}
-        </button>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('hr'))}>
-          <Minus size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.horizontalRule}
-        </button>
-        <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(cmd('table'))}>
-          <Table2 size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.richEditor.insertTable}
-        </button>
+        {#each extraTools as tool, index (tool.id)}
+          {#if index >= visibleExtras}
+            <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(tool.run)}>
+              <svelte:component this={tool.icon} size="16" strokeWidth="1.7" aria-hidden="true" />{tool.label}
+            </button>
+          {/if}
+        {/each}
         <div class="mt-1 flex flex-col border-t border-[var(--border-subtle)] pt-1">
-          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
-            <TooltipIconSelect
-              bind:value={$contentWidth}
-              options={localizedContentWidthOptions}
-              label={$localizedText.richEditor.contentWidth}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
-            >
-              <Maximize2 size="16" strokeWidth="1.7" aria-hidden="true" />
-            </TooltipIconSelect>
-            <span>{$localizedText.richEditor.contentWidth}</span>
-          </div>
-          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
-            <TooltipIconSelect
-              bind:value={$lineHeight}
-              options={localizedLineHeightOptions}
-              label={$localizedText.richEditor.lineHeight}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
-            >
-              <WrapText size="16" strokeWidth="1.7" aria-hidden="true" />
-            </TooltipIconSelect>
-            <span>{$localizedText.richEditor.lineHeight}</span>
-          </div>
-          <div class="flex items-center gap-3 px-3 py-1.5 text-sm">
-            <TooltipIconSelect
-              bind:value={$editorFontSize}
-              options={localizedEditorFontSizeOptions}
-              label={$localizedText.richEditor.fontSize}
-              class="relative inline-flex shrink-0 cursor-pointer rounded-ui p-1.5 text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]"
-            >
-              <Type size="16" strokeWidth="1.7" aria-hidden="true" />
-            </TooltipIconSelect>
-            <span>{$localizedText.richEditor.fontSize}</span>
-          </div>
+          <!-- The whole row is the control: the select lies transparent over it, so a click anywhere opens the list. -->
+          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
+            <Maximize2 size="16" strokeWidth="1.7" aria-hidden="true" />
+            <span class="flex-1">{$localizedText.richEditor.contentWidth}</span>
+            <span class="text-xs text-[var(--text-secondary)]">{localizedContentWidthOptions.find((option) => option.value === $contentWidth)?.label}</span>
+            <select aria-label={$localizedText.richEditor.contentWidth} bind:value={$contentWidth} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
+              {#each localizedContentWidthOptions as option}<option value={option.value}>{option.label}</option>{/each}
+            </select>
+          </label>
+          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
+            <WrapText size="16" strokeWidth="1.7" aria-hidden="true" />
+            <span class="flex-1">{$localizedText.richEditor.lineHeight}</span>
+            <span class="text-xs text-[var(--text-secondary)]">{localizedLineHeightOptions.find((option) => option.value === $lineHeight)?.label}</span>
+            <select aria-label={$localizedText.richEditor.lineHeight} bind:value={$lineHeight} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
+              {#each localizedLineHeightOptions as option}<option value={option.value}>{option.label}</option>{/each}
+            </select>
+          </label>
+          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
+            <Type size="16" strokeWidth="1.7" aria-hidden="true" />
+            <span class="flex-1">{$localizedText.richEditor.fontSize}</span>
+            <span class="text-xs text-[var(--text-secondary)]">{localizedEditorFontSizeOptions.find((option) => option.value === $editorFontSize)?.label}</span>
+            <select aria-label={$localizedText.richEditor.fontSize} bind:value={$editorFontSize} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
+              {#each localizedEditorFontSizeOptions as option}<option value={option.value}>{option.label}</option>{/each}
+            </select>
+          </label>
+          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
+            <ArrowRightToLine size="16" strokeWidth="1.7" aria-hidden="true" />
+            <span class="flex-1">{$localizedText.settings.tabsToSpaces}</span>
+            <span class="text-xs text-[var(--text-secondary)]">{$tabsToSpaces === 'off' ? $localizedText.settings.tabsOff : $tabsToSpaces}</span>
+            <select aria-label={$localizedText.settings.tabsToSpaces} bind:value={$tabsToSpaces} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
+              <option value="off">{$localizedText.settings.tabsOff}</option>
+              <option value="2">{$localizedText.settings.tabs2}</option>
+              <option value="4">{$localizedText.settings.tabs4}</option>
+            </select>
+          </label>
         </div>
       </div>
     {/if}

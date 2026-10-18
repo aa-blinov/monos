@@ -137,6 +137,8 @@ test('панель инструментов: «More tools» открывает �
   const title = uniqueTitle('Toolbar More Note');
 
   await createBlankNote(page, title);
+  // A narrow window: the rarer tools wait in the menu instead of sitting in the toolbar.
+  await page.setViewportSize({ width: 560, height: 800 });
   await page.getByRole('button', { name: 'More tools' }).click();
 
   await expect(page.getByRole('menuitem', { name: /strikethrough/i })).toBeVisible();

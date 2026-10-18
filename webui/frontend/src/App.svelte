@@ -23,6 +23,7 @@ import { get } from 'svelte/store';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
+  import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
 import { focusNoteBody, settingsSection } from './stores.js';
@@ -153,6 +154,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       || pathname === '/properties'
       || pathname === '/map'
       || pathname === '/attachments'
+      || pathname === '/favorites'
       || pathname === '/help'
       || pathname.startsWith('/notes/');
   }
@@ -518,6 +520,22 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     });
   }
 
+  // The board's pin marks follow the sidebar's list at once, whichever side the pin was changed on.
+  function syncBoardPins(pinned) {
+    const paths = new Set(pinned.map((note) => normalizeNotePath(note.path)));
+    homeRecentNotes.update((current) => {
+      let changed = false;
+      const next = current.map((note) => {
+        const should = paths.has(normalizeNotePath(note.path));
+        if (Boolean(note.pinned) === should) return note;
+        changed = true;
+        return { ...note, pinned: should };
+      });
+      return changed ? next : current;
+    });
+  }
+  $: if ($pinsKnown) syncBoardPins($pinnedNotes);
+
   function promoteRecentNote(note) {
     if (!note?.path) return;
     homeRecentNotes.update((current) => {
@@ -602,6 +620,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     setRoutePath('/properties');
     clearSearch();
     navigate('/properties');
+  }
+
+  function openFavorites() {
+    setRoutePath('/favorites');
+    clearSearch();
+    navigate('/favorites');
   }
 
   function openAttachments() {
@@ -814,6 +838,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openProperties') openPropertiesView();
     if (event.detail === 'openMap') openMap();
     if (event.detail === 'openAttachments') openAttachments();
+    if (event.detail === 'openFavorites') openFavorites();
   }
 
   function refreshAfterTrashChange() {
@@ -912,6 +937,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:openProperties={openPropertiesView}
           on:openMap={() => openMap()}
           on:openAttachments={openAttachments}
+          on:openFavorites={openFavorites}
           on:openSavedSearches={openSavedSearchPanel}
           on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
@@ -993,6 +1019,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         <Route path="/properties">
           {#await import('./components/PropertiesView.svelte') then propertiesView}
             <svelte:component this={propertiesView.default} on:navigate={handleNavigate} />
+          {/await}
+        </Route>
+        <Route path="/favorites">
+          {#await import('./components/FavoritesView.svelte') then favoritesView}
+            <svelte:component this={favoritesView.default} on:navigate={handleNavigate} />
           {/await}
         </Route>
         <Route path="/attachments">

@@ -1,3 +1,5 @@
+import { get as readStore } from 'svelte/store';
+import { replaceTabs, tabsToSpaces } from './tabs.js';
 import { get, post, put, del } from './api/client.js';
 
 export const loadFileContent = (filePath) => get('/api/file', { path: filePath });
@@ -41,8 +43,11 @@ export const restoreNoteRequest = (filePath) => post('/api/notes/restore', null,
  * refuses the save with 409 and the text on disk when the file has changed since, so a sync's edit is never
  * written over. Without it the save is not checked.
  */
-export const saveFileContent = (filePath, content, baseVersion = '') =>
-  post('/api/file', baseVersion ? { content, base_version: baseVersion } : { content }, { query: { path: filePath } });
+export const saveFileContent = (filePath, rawContent, baseVersion = '') => {
+  // "Tabs to spaces" (Settings → Editor): the file is written with spaces, outside fenced code.
+  const content = replaceTabs(rawContent, readStore(tabsToSpaces));
+  return post('/api/file', baseVersion ? { content, base_version: baseVersion } : { content }, { query: { path: filePath } });
+};
 
 export const saveFileMetadata = (filePath, payload) =>
   put('/api/file/metadata', payload, { query: { path: filePath } });
