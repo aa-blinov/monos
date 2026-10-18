@@ -99,7 +99,7 @@ test('на длинной заметке шапка сворачивается �
   await expect(titleInput(page)).toBeVisible();
 });
 
-// With a repository connected the note says where it stands: synced, not sent, newer on the remote, or both.
+// With a repository connected the note says "Synced <time>" or "Not synced"; the tooltip says on which side it differs.
 test('заметка: статус синхронизации по четырём состояниям, без репозитория строки нет', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1300, height: 900 });
@@ -115,14 +115,15 @@ test('заметка: статус синхронизации по четырё�
   await expect(line).toContainText('Synced');
 
   for (const [extra, state, text] of [
-    [{ unsent: [key] }, 'local', 'Not sent to GitHub yet'],
-    [{ incoming: [key] }, 'remote', 'Newer on GitHub'],
-    [{ unsent: [key], incoming: [key] }, 'both', 'Changed here and on GitHub'],
+    [{ unsent: [key] }, 'local', 'sent yet'],
+    [{ incoming: [key] }, 'remote', 'another device; the next sync brings it here'],
+    [{ unsent: [key], incoming: [key] }, 'both', 'merges both versions'],
   ]) {
     answer = { ...answer, unsent: [], incoming: [], ...extra };
     await page.reload();
     await expect(page.getByTestId('note-sync')).toHaveAttribute('data-state', state);
-    await expect(page.getByTestId('note-sync')).toContainText(text);
+    await expect(page.getByTestId('note-sync')).toContainText('Not synced');
+    await expect(page.getByTestId('note-sync')).toHaveAttribute('title', new RegExp(text));
   }
 
   answer = { initialized: true, status: 'clean', repo: '', remote: false };

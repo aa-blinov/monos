@@ -1150,12 +1150,13 @@ const enText = {
     modified: 'Modified',
     syncedAt: (when) => `Synced ${when}`,
     synced: 'Synced',
-    syncLocal: 'Not sent to GitHub yet',
-    syncLocalHint: 'Changed on this device; the next sync sends it.',
-    syncRemote: 'Newer on GitHub',
+    // One label for "not in step"; the tooltip says on which side it differs.
+    syncLocal: 'Not synced',
+    syncLocalHint: 'Changed on this device and not sent yet; the next sync sends it.',
+    syncRemote: 'Not synced',
     syncRemoteHint: 'Changed on another device; the next sync brings it here.',
-    syncBoth: 'Changed here and on GitHub',
-    syncBothHint: 'The next sync merges both versions; if they clash, you choose.',
+    syncBoth: 'Not synced',
+    syncBothHint: 'Changed here and on another device; the next sync merges both versions, and if they clash you choose.',
     stats: {
       words(count) {
         return `${count} ${count === 1 ? 'word' : 'words'}`;
@@ -2407,12 +2408,13 @@ const ruText = {
     modified: 'Изменено',
     syncedAt: (when) => `Синхронизировано ${when}`,
     synced: 'Синхронизировано',
-    syncLocal: 'Не отправлено в GitHub',
-    syncLocalHint: 'Изменена на этом устройстве; следующая синхронизация её отправит.',
-    syncRemote: 'Новее на GitHub',
+    // Одна подпись для «не совпадает»; подсказка говорит, с какой стороны расхождение.
+    syncLocal: 'Не синхронизировано',
+    syncLocalHint: 'Изменена на этом устройстве и ещё не отправлена; следующая синхронизация её отправит.',
+    syncRemote: 'Не синхронизировано',
     syncRemoteHint: 'Изменена на другом устройстве; следующая синхронизация принесёт её сюда.',
-    syncBoth: 'Изменена здесь и на GitHub',
-    syncBothHint: 'Следующая синхронизация объединит обе версии; если они спорят, выбор будет за вами.',
+    syncBoth: 'Не синхронизировано',
+    syncBothHint: 'Изменена здесь и на другом устройстве; следующая синхронизация объединит версии, а если они спорят, выбор будет за вами.',
     stats: {
       words(count) {
         const mod10 = count % 10;
