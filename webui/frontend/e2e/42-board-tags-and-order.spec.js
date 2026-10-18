@@ -50,3 +50,18 @@ test('доска на телефоне: длинное название карт
   const { height, lineHeight } = await heading.evaluate((el) => ({ height: el.getBoundingClientRect().height, lineHeight: parseFloat(getComputedStyle(el).lineHeight) }));
   expect(height).toBeLessThanOrEqual(lineHeight * 2 + 2);
 });
+
+// The phone's menu keeps a touch-sized row (44px) with a small gap, not a wide empty stride between items.
+test('меню слева на телефоне: пункты идут с шагом 44–52px', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Open sidebar/ }).first().click();
+  const help = page.getByTestId('open-help');
+  await expect(help).toBeVisible();
+  const settings = page.getByRole('button', { name: 'Settings', exact: true }).last();
+  const [a, b] = [await help.boundingBox(), await settings.boundingBox()];
+  const stride = b.y - a.y;
+  expect(stride).toBeGreaterThanOrEqual(44);
+  expect(stride).toBeLessThanOrEqual(52);
+});
