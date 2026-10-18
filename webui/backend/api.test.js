@@ -2530,3 +2530,29 @@ apiTest('вложения: больше 500 файлов за раз, SVG отд
   assert.equal(fs.readFileSync(path.join(dir, '_attachments', 'f0 (restored).png'), 'utf-8'), 'x');
   for (const full of aside) fs.renameSync(`${full}.aside`, full);
 });
+
+apiTest('вложения: список учитывает изменения заметок (кэш по размеру и времени), ссылка по пути отличается от упоминания по имени, превью без Electron — оригинал', async () => {
+  const dir = path.join(notesDir, 'Cached');
+  fs.mkdirSync(path.join(dir, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '_attachments', 'one.png'), 'x');
+  fs.writeFileSync(path.join(dir, '_attachments', 'two.png'), 'y');
+  const note = path.join(dir, 'Refs.md');
+  fs.writeFileSync(note, 'nothing yet', 'utf-8');
+  const find = async (name) => (await requestJson(buildUrl('/api/attachments/all'))).data.items.find((item) => item.path === `notes/Cached/_attachments/${name}`);
+
+  assert.deepEqual((await find('one.png')).usedBy, []);
+  fs.writeFileSync(note, '![](_attachments/one.png)\n\n![[two.png]]\n', 'utf-8');
+  const one = await find('one.png');
+  const two = await find('two.png');
+  assert.equal(one.usedBy[0].via, 'link');
+  assert.equal(two.usedBy[0].via, 'name');
+  // The cache follows the note: an edit that drops the references frees both files again.
+  fs.writeFileSync(note, 'gone', 'utf-8');
+  assert.deepEqual((await find('one.png')).usedBy, []);
+
+  // Outside Electron the "small copy" is the original itself.
+  const thumb = await realFetch(buildUrl('/api/attachments/thumb', { path: 'notes/Cached/_attachments/one.png', w: 200 }), { redirect: 'manual' });
+  assert.equal(thumb.status, 307);
+  assert.equal(thumb.headers.get('x-thumbnail'), 'original');
+  assert.equal((await realFetch(buildUrl('/api/attachments/thumb', { path: 'notes/Cached/Refs.md' }))).status, 403);
+});
