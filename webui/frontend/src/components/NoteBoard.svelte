@@ -1,8 +1,9 @@
 <script>
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
-  import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, homeTags, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
+  import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
   import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop, Plus } from 'lucide-svelte';
+  import BoardTags from './BoardTags.svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { loadFileContent, setItemColorRequest } from '../lib/editor-api.js';
@@ -76,7 +77,6 @@
       : [{ id: 'empty', color: null, label: '', notes: [], showHeading: false }];
   // The invitation to write sits first among the unpinned notes, not under the pinned heading.
   $: createGroupId = sectioned && sections.length > 1 ? 'rest' : displayGroups[0]?.id;
-  $: stripTags = pickStripTags($homeTags, $boardTag);
   $: sortOptions = [
     ['modified', $localizedText.app.board.sortModified],
     ['opened', $localizedText.app.board.sortOpened],
@@ -96,15 +96,8 @@
     return groups;
   }
 
-  // The busiest tags, and the chosen one even when it is not among them.
-  function pickStripTags(stats, chosen) {
-    const names = (stats || []).map((entry) => entry.tag).slice(0, 10);
-    if (chosen && !names.includes(chosen)) names.push(chosen);
-    return names;
-  }
-
   function chooseTag(tag) {
-    $boardTag = $boardTag === tag ? '' : tag;
+    $boardTag = tag;
     void loadHomeRecentNotes({ queueIfBusy: true });
   }
 
@@ -221,21 +214,8 @@
 <svelte:window on:click={closeContextMenu} />
 
 {#if !query.trim()}
-<div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-  {#if stripTags.length > 0}
-    <div class="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-1 sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-visible sm:pb-0" role="group" aria-label={$localizedText.app.board.tagsLabel} data-testid="board-tags">
-      {#each stripTags as tag (tag)}
-        <button
-          type="button"
-          class="max-w-[12rem] shrink-0 truncate rounded-ui border px-2 py-1 text-[length:var(--text-whisper-lg)] leading-tight transition {$boardTag === tag ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
-          aria-pressed={$boardTag === tag}
-          on:click={() => chooseTag(tag)}
-        >
-          {tag}
-        </button>
-      {/each}
-    </div>
-  {/if}
+<div class="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+  <BoardTags on:choose={(event) => chooseTag(event.detail)} />
   <div class="ml-auto inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
     <label class="sr-only" for="board-sort">{$localizedText.app.board.sortLabel}</label>
     <select
@@ -258,7 +238,7 @@
       on:click={() => $boardGroupByColor = !$boardGroupByColor}
     >
       <Palette size="14" strokeWidth="1.7" aria-hidden="true" />
-      <span aria-hidden="true">{$localizedText.app.board.groupByColorShort}</span>
+      <span class="hidden sm:inline" aria-hidden="true">{$localizedText.app.board.groupByColorShort}</span>
     </TooltipIconButton>
     {#if !mobile && availableColumnCounts.length > 1}
       <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>

@@ -19,8 +19,10 @@ test('доска: тег сразу сужает список, порядок п
 
   await page.goto('/');
   const strip = page.getByTestId('board-tags');
-  await strip.getByRole('button', { name: tag }).click();
-  const cards = page.locator('main [role=list] [data-testid="note-card"], main [role=list] > button:not([class*="border-dashed"])');
+  // In a vault with many tags this one may wait behind "N more": choose it from the list.
+  await page.getByTestId('board-tags-more').click();
+  await page.getByTestId('board-tags-filter').fill(tag);
+  await page.getByTestId('board-tags-menu').getByRole('option').click();
   await expect(page.getByTestId('board-count')).toHaveText(/Showing 2 of 2/i);
   await expect(page.getByText(`Other ${stamp}`)).toHaveCount(0);
 
@@ -33,5 +35,4 @@ test('доска: тег сразу сужает список, порядок п
 
   await strip.getByRole('button', { name: tag }).click();
   await expect(page.getByTestId('board-count')).not.toHaveText(/of 2$/i);
-  void cards;
 });
