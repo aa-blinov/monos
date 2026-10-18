@@ -15,6 +15,11 @@
   let status = 'loading';
   let query = '';
   let filter = 'all';
+  // Cards whose full list of notes is open.
+  let expanded = new Set();
+  function toggleExpanded(path) {
+    expanded = expanded.has(path) ? new Set([...expanded].filter((item) => item !== path)) : new Set([...expanded, path]);
+  }
 
   onMount(async () => {
     try {
@@ -29,6 +34,7 @@
   });
 
   $: shown = filterAttachments(items, { query, filter, lockedNotes });
+  $: unusedSize = lockedNotes > 0 ? 0 : items.filter((item) => item.usedBy.length === 0).reduce((sum, item) => sum + item.size, 0);
   $: unusedCount = lockedNotes > 0 ? 0 : items.filter((item) => item.usedBy.length === 0).length;
 
   const rawUrl = (item) => `/api/attachments/raw?path=${encodeURIComponent(item.path)}`;
@@ -74,6 +80,8 @@
       </div>
       {#if lockedNotes > 0}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.lockedHint}</p>
+      {:else if unusedCount > 0}
+        <p class="text-xs text-[var(--text-tertiary)]" data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedCount, formatAttachmentSize(unusedSize))}</p>
       {/if}
 
       {#if shown.length === 0}
@@ -100,16 +108,23 @@
                 {#if item.usedBy.length === 0}
                   <p class="text-xs text-[var(--text-tertiary)]" data-testid="attachment-unused">{lockedNotes > 0 ? '' : $localizedText.attachments.unused}</p>
                 {:else}
-                  <div class="space-y-0.5">
-                    {#each item.usedBy.slice(0, 2) as note (note.path)}
+                  <div class="space-y-0.5" data-testid="attachment-notes">
+                    {#each (expanded.has(item.path) ? item.usedBy : item.usedBy.slice(0, 2)) as note (note.path)}
                       <button
                         type="button"
                         class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+                        title={note.path}
                         on:click={() => openNote(note)}
                       >{note.title}</button>
                     {/each}
                     {#if item.usedBy.length > 2}
-                      <p class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.attachments.usedIn(item.usedBy.length)}</p>
+                      <button
+                        type="button"
+                        data-testid="attachment-more-notes"
+                        aria-expanded={expanded.has(item.path)}
+                        class="block min-h-6 border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]"
+                        on:click={() => toggleExpanded(item.path)}
+                      >{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</button>
                     {/if}
                   </div>
                 {/if}

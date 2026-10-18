@@ -18,8 +18,7 @@
   import SettingsNav from './SettingsNav.svelte';
   import { formFieldClass } from '../lib/form-field.js';
   import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
-  import { formatAttachmentSize as humanSize, fetchOrphanAttachments } from '../lib/attachments.js';
-  import { printTreeToPdf } from '../lib/print.js';
+    import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
   import {
     chooseNotesFolderRequest,
@@ -108,11 +107,6 @@
   let isCheckingStatus = false;
   let isExporting = false;
   let isImporting = false;
-  let orphans = [];
-  let orphanStatus = 'loading';
-  let orphanTotalSize = 0;
-  // Closed locked notes whose pictures cannot be checked; while there are any, nothing is listed as unused.
-  let orphanLocked = 0;
   let backupStatus = '';
   let backupError = '';
   let selectedArchiveName = '';
@@ -165,7 +159,6 @@
   function loadAdvancedReports(event) {
     if (advancedLoaded || !event.currentTarget.open) return;
     advancedLoaded = true;
-    loadOrphanAttachments();
     loadConnectionReport();
   }
 
@@ -261,18 +254,6 @@
   function renewLanToken() {
     confirmingLanRenew = false;
     return changeLanAccess(() => regenerateLanTokenRequest());
-  }
-
-  async function loadOrphanAttachments() {
-    try {
-      const data = await fetchOrphanAttachments();
-      orphans = data.orphans || [];
-      orphanTotalSize = data.totalSize || 0;
-      orphanLocked = data.lockedNotes || 0;
-      orphanStatus = 'ready';
-    } catch {
-      orphanStatus = 'error';
-    }
   }
 
   // Broken links, notes no link reaches and notes gone quiet. Read-only: a row opens its note.
@@ -1369,32 +1350,10 @@
       </section>
 
 
-      <section class="space-y-5">
+      <section class="space-y-3">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
-        {#if orphanStatus === 'loading'}
-          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLoading}</div>
-        {:else if orphanStatus === 'error'}
-          <div class="text-xs text-[var(--red)]">{$localizedText.settings.attachmentsError}</div>
-        {:else if orphanLocked > 0}
-          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsLocked}</div>
-        {:else if orphans.length === 0}
-          <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsClean}</div>
-        {:else}
-          <div class="text-xs text-[var(--text-secondary)]">
-            {$localizedText.settings.attachmentsFound.replace('{count}', orphans.length).replace('{size}', humanSize(orphanTotalSize))}
-          </div>
-          <ul class="rounded-ui divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="orphan-attachments">
-            {#each orphans as orphan (orphan.path)}
-              <li class="flex items-center justify-between gap-3 px-3 py-2">
-                <span class="min-w-0">
-                  <span class="block truncate text-xs text-[var(--text-primary)]">{orphan.name}</span>
-                  <span class="block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{orphan.folder}</span>
-                </span>
-                <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{humanSize(orphan.size)}</span>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+        <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsMoved}</p>
+        <button type="button" data-testid="settings-open-attachments" on:click={() => dispatch('openAttachments')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.attachmentsOpen}</button>
       </section>
 
       <section class="space-y-5">
