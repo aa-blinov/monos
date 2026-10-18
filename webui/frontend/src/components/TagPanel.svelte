@@ -116,7 +116,7 @@
           {$localizedText.tags.loading}
         </p>
       {:else if visible.length === 0}
-        <p class="py-6 text-center text-sm text-[var(--text-muted)]">
+        <p class="py-6 text-center text-sm text-[var(--text-tertiary)]">
           {filter ? $localizedText.tags.emptyFiltered : $localizedText.tags.empty}
         </p>
       {:else}

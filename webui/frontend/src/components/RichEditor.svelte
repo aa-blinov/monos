@@ -63,6 +63,22 @@
   let canRedo = false;
   let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false, table: false, codeLanguage: '' };
   let slashMenuOpen = false;
+
+  // While the menu is open the text box says so and names the highlighted command, which a screen reader
+  // cannot see: focus stays in the text.
+  $: syncSlashAria(slashMenuOpen, activeSlashIndex);
+  function syncSlashAria(open, index) {
+    const dom = editor?.view?.dom;
+    if (!dom) return;
+    if (open) {
+      dom.setAttribute('aria-haspopup', 'listbox');
+      dom.setAttribute('aria-expanded', 'true');
+      dom.setAttribute('aria-controls', 'slash-menu');
+      dom.setAttribute('aria-activedescendant', `slash-option-${index}`);
+    } else {
+      for (const name of ['aria-haspopup', 'aria-expanded', 'aria-controls', 'aria-activedescendant']) dom.removeAttribute(name);
+    }
+  }
   let activeSlashIndex = 0;
   let slashMenuEl;
   let surfaceEl;
@@ -961,6 +977,7 @@
       bind:this={slashMenuEl}
       class="absolute z-20 w-64 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl p-1"
       style="left: {slashMenuPosition.left}px; top: {slashMenuPosition.top}px"
+      id="slash-menu"
       role="listbox"
       aria-label={$localizedText.richEditor.slashMenuLabel}
     >
@@ -968,6 +985,8 @@
       {#each slashCommands as slashCommand, index}
         <button
           type="button"
+          id="slash-option-{index}"
+          tabindex="-1"
           role="option"
           aria-selected={activeSlashIndex === index}
           class="flex w-full items-center justify-between gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] {activeSlashIndex === index ? 'bg-[var(--bg-secondary)]' : ''}"

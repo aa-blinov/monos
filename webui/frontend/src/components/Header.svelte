@@ -128,6 +128,8 @@
       bind:this={searchInputEl}
       type="text"
       placeholder={$localizedText.header.search}
+      aria-label={$localizedText.header.search}
+      role="searchbox"
       title={$localizedText.header.searchHint}
       bind:value={$searchQuery}
       on:input={handleSearchInput}

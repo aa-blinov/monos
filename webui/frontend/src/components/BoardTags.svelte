@@ -122,7 +122,7 @@
         <button
           type="button"
           class="inline-flex max-w-[8rem] items-center gap-1 rounded-ui border px-2.5 text-[length:var(--text-whisper-lg)] leading-tight transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] h-[38px] sm:max-w-none sm:px-2.5 {$boardTag ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)] sm:border-dashed sm:border-[var(--border-subtle)] sm:bg-transparent sm:font-normal sm:text-[var(--text-secondary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] sm:border-dashed'}"
-          aria-haspopup="listbox"
+          aria-haspopup="dialog"
           aria-expanded={open}
           data-testid="board-tags-more"
           on:click={toggle}
@@ -135,6 +135,8 @@
           <div
             class="absolute left-0 top-full z-40 mt-1.5 w-[min(18rem,calc(100vw-2rem))] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-2 shadow-lg shadow-black/10"
             data-testid="board-tags-menu"
+            role="dialog"
+            aria-label={$localizedText.app.board.tagsLabel}
           >
             <SearchField
               testid="board-tags-filter"
@@ -142,11 +144,13 @@
               bind:value={filter}
               bind:inputEl
             />
-            <ul class="mt-2 max-h-72 overflow-y-auto" role="listbox" aria-label={$localizedText.app.board.tagsLabel}>
+            <ul class="mt-2 max-h-72 overflow-y-auto">
               {#each visible as entry (entry.tag)}
-                <li role="option" aria-selected={$boardTag === entry.tag}>
+                <li>
                   <button
                     type="button"
+                    data-testid="board-tag-option"
+                    aria-pressed={$boardTag === entry.tag}
                     class="flex w-full items-center gap-2 rounded-ui px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] {$boardTag === entry.tag ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
                     on:click={() => pick($boardTag === entry.tag ? '' : entry.tag)}
                   >

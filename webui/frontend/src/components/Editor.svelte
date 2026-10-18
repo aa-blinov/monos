@@ -1780,7 +1780,7 @@
                       ? 'bg-[color-mix(in_srgb,var(--red)_14%,transparent)] text-[var(--red)]'
                       : dueStatusOf === 'today'
                         ? 'bg-[color-mix(in_srgb,var(--yellow)_18%,transparent)] text-[var(--yellow)]'
-                        : 'text-[var(--text-muted)]'}"
+                        : 'text-[var(--text-tertiary)]'}"
                   >
                     {dueLabelOf}
                   </span>

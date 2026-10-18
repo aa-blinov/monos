@@ -8,7 +8,8 @@ import test from 'node:test';
 // 4.5:1 on every surface where the token is actually used. Backgrounds,
 // foreground and accents stay exactly as the upstream palettes define them.
 import assert from 'node:assert/strict';
-import { themes } from './themes.js';
+import { themes, contrastRatio } from './themes.js';
+import fs from 'node:fs';
 
 // Gruvbox — каноническая палитра (morhetz/gruvbox)
 test('gruvbox.dark совпадает с medium-контрастной палитрой morhetz/gruvbox', () => {
@@ -335,5 +336,41 @@ test('--text-tertiary не проваливается и на чистой бу�
       const ratio = contrast(theme[mode]['--text-tertiary'], theme[mode]['--bg-primary']);
       assert.ok(ratio >= 4.5, `${name}.${mode}: ${ratio.toFixed(2)}:1 на бумаге`);
     }
+  }
+});
+
+
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const blend = (fg, bg, alpha) => '#' + hexRgb(fg).map((c, i) => Math.round(c * alpha + hexRgb(bg)[i] * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+
+test('кольцо фокуса: не слабее 3:1 на обоих фонах во всех 12 парах палитра и режим', () => {
+  const css = fs.readFileSync(new URL('../app.css', import.meta.url), 'utf8');
+  const match = css.match(/:focus-visible\s*\{\s*outline:\s*[\d.]+px solid color-mix\(in srgb, var\(--text-primary\) (\d+)%, transparent\)/);
+  assert.ok(match, 'кольцо фокуса в app.css записано как color-mix от --text-primary');
+  const alpha = Number(match[1]) / 100;
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      for (const bgKey of ['--bg-primary', '--bg-secondary']) {
+        const bg = theme[mode][bgKey];
+        const ring = blend(theme[mode]['--text-primary'], bg, alpha);
+        assert.ok(contrastRatio(ring, bg) >= 3, `${name}.${mode} кольцо на ${bgKey}: ${contrastRatio(ring, bg).toFixed(2)}`);
+      }
+    }
+  }
+});
+
+test('--text-tertiary читается (4.5:1) на обоих фонах во всех 12 парах; --text-muted не для текста', () => {
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark']) {
+      for (const bgKey of ['--bg-primary', '--bg-secondary']) {
+        const ratio = contrastRatio(theme[mode]['--text-tertiary'], theme[mode][bgKey]);
+        assert.ok(ratio >= 4.5, `${name}.${mode} tertiary на ${bgKey}: ${ratio.toFixed(2)}`);
+      }
+    }
+  }
+  const dir = new URL('../components/', import.meta.url);
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.svelte'))) {
+    const source = fs.readFileSync(new URL(file, dir), 'utf8');
+    assert.ok(!/text-\[var\(--text-muted\)\]/.test(source), `${file}: --text-muted как цвет текста (не проходит 4.5:1 в 11 из 12 пар)`);
   }
 });

@@ -383,13 +383,16 @@
 
 {#if open}
   <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/20 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
-    <button class="absolute inset-0 cursor-default" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
+    <button class="absolute inset-0 cursor-default" tabindex="-1" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
 
+    <!-- Esc must work wherever focus is inside the dialog (a result, the backdrop), not only in the field. -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
       class="relative w-full max-w-2xl overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl"
       role="dialog"
       aria-modal="true"
       aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcher : $localizedText.commandPalette.title}
+      on:keydown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); close(); } }}
     >
       <div class="border-b border-[var(--border-subtle)] px-5 py-4">
         <div class="mb-3 flex items-center justify-between gap-4">
@@ -401,7 +404,7 @@
               {mode === 'notes' ? $localizedText.commandPalette.quickSwitcherHint : $localizedText.commandPalette.commandHint}
             </div>
           </div>
-          <div class="hidden items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)] sm:flex">
+          <div class="hidden items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)] sm:flex">
             <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">↑↓</span>
             <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">Enter</span>
             <span class="rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5">Esc</span>
@@ -418,6 +421,7 @@
             role="combobox"
             aria-expanded="true"
             aria-controls="command-palette-results"
+            aria-activedescendant={filteredItems.length ? `command-palette-option-${activeIndex}` : undefined}
             aria-autocomplete="list"
             aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
             placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
@@ -439,6 +443,8 @@
               </div>
             {/if}
             <button
+              id="command-palette-option-{index}"
+              tabindex="-1"
               class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition {activeIndex === index ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)]'}"
               role="option"
               aria-selected={activeIndex === index}
@@ -450,7 +456,7 @@
                 <span class="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{item.detail}</span>
               </span>
               {#if item.shortcut}
-                <span class="rounded-ui shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-muted)]">{item.shortcut}</span>
+                <span class="rounded-ui shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{item.shortcut}</span>
               {/if}
             </button>
           {/each}
