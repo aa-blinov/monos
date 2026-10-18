@@ -311,7 +311,7 @@ export function filterAttachments(items, { query = '', filter = 'all', lockedNot
     if (filter === 'unused' && (lockedNotes > 0 || item.usedBy.length > 0)) return false;
     if (duplicates && !duplicates.has(item.name.toLowerCase())) return false;
     if (kind !== 'all' && item.kind !== kind) return false;
-    if (folder && item.folder !== folder) return false;
+    if (folder && item.folder !== folder && !String(item.folder || '').startsWith(`${folder}/`)) return false;
     if (!needle) return true;
     return looseText(item.name).includes(needle)
       || looseText(item.folder).includes(needle)
@@ -337,11 +337,33 @@ export function folderTail(folder, segments = 2) {
   return parts.length <= segments ? parts.join(' / ') : `… / ${parts.slice(-segments).join(' / ')}`;
 }
 
-/** The folders that hold attachments, with how many each holds, for the folder choice. */
+/**
+ * The folders that hold attachments as a tree, in reading order, each with how many files lie in it and below it:
+ * `[{ folder: 'A/B', label: 'B', depth: 1, count }]`. A folder without files of its own still appears when something
+ * below it holds some, so the nesting reads as it is on disk.
+ */
 export function attachmentFolders(items) {
   const counts = new Map();
-  for (const item of items || []) counts.set(item.folder || '', (counts.get(item.folder || '') || 0) + 1);
-  return [...counts].map(([folder, count]) => ({ folder, count })).sort((a, b) => a.folder.localeCompare(b.folder));
+  for (const item of items || []) {
+    const parts = String(item.folder || '').split('/').filter(Boolean);
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const folder = parts.slice(0, depth).join('/');
+      counts.set(folder, (counts.get(folder) || 0) + 1);
+    }
+  }
+  const compare = (a, b) => {
+    const left = a.split('/');
+    const right = b.split('/');
+    for (let i = 0; i < Math.min(left.length, right.length); i += 1) {
+      const order = left[i].localeCompare(right[i], undefined, { numeric: true, sensitivity: 'base' });
+      if (order) return order;
+    }
+    return left.length - right.length;
+  };
+  return [...counts.keys()].sort(compare).map((folder) => {
+    const parts = folder.split('/');
+    return { folder, label: parts[parts.length - 1], depth: parts.length - 1, count: counts.get(folder) };
+  });
 }
 
 /** What to paste into a note to show the file: a picture as an image, a PDF as an embed by name. */

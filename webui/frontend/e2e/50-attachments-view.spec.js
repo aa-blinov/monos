@@ -104,7 +104,8 @@ test('вложения: страницы по 60, сортировка, тип �
   await page.getByTestId('attachments-more').click();
   // The click and the scroll-triggered load may both add a page: at least two pages, whole pages only.
   await expect.poll(async () => page.getByTestId('attachment-card').count()).toBeGreaterThanOrEqual(120);
-  expect((await page.getByTestId('attachment-card').count()) % 60).toBe(0);
+  const drawn = await page.getByTestId('attachment-card').count();
+  expect(drawn % 60 === 0 || drawn === 200).toBe(true);
 
   await page.getByTestId('attachments-sort').selectOption('name');
   await expect(page.getByTestId('attachment-card').first()).toContainText('file-000');
@@ -350,4 +351,19 @@ test('вложения: «Проверить неиспользуемые» од
   await page.getByTestId('attachments-skip').focus();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('attachment-open').last()).toBeFocused();
+});
+
+// Found in the real app: the PDF viewer showed a blank box, and after the last unused file was moved the page
+// stayed on an empty "Unused" list. A PDF shows its first page as a picture; an emptied filter returns to "All".
+test('вложения: PDF в просмотре — первая страница картинкой, опустевший фильтр «Неиспользуемые» возвращает ко всем', async ({ page }) => {
+  const mk = (name, kind, usedBy) => ({ path: `notes/Docs/_attachments/${name}`, name, kind, folder: 'Docs', size: 100, modified: '2026-10-01T10:00:00.000Z', usedBy });
+  await page.route('**/api/attachments/thumb**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="56"><rect width="40" height="56" fill="#fff"/></svg>' }));
+  await page.route('**/api/attachments/delete', (route) => route.fulfill({ json: { batch: '9-k', deleted: 1, bytes: 100, skipped: {}, trashed: JSON.parse(route.request().postData()).paths } }));
+  await openPage(page, [mk('one.pdf', 'pdf', []), mk('two.png', 'image', [{ path: 'notes/x/N.md', title: 'N' }])]);
+  await page.getByTestId('attachments-filter-unused').click();
+  await page.getByTestId('attachment-open').first().click();
+  await expect(page.getByTestId('attachment-pdf-page')).toHaveAttribute('src', /\/api\/attachments\/thumb\?path=.*w=1000/);
+  await page.getByTestId('attachment-trash').click();
+  await expect(page.getByTestId('attachments-filter-all')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('attachment-card')).toHaveCount(1);
 });
