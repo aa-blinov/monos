@@ -53,3 +53,31 @@ test('инструменты: таблица свойств появляется
   await page.getByTestId('open-more').click();
   await expect(page.getByTestId('open-properties')).toBeVisible();
 });
+
+// The Tools menu has many items now: on a short window it scrolls inside itself instead of leaving the screen.
+test('меню «Инструменты» на низком окне не выходит за экран', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1300, height: 520 });
+  await page.goto('/');
+  await page.getByTestId('open-more').click();
+  const menu = page.getByTestId('more-menu');
+  await expect(menu).toBeVisible();
+  const box = await menu.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(520);
+});
+
+// The More tools menu of the editor stays on the screen on a short window and a phone.
+test('меню редактора «Ещё» не выходит за экран на телефоне', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 375, height: 560 });
+  const title = `Menu fit ${Date.now()}`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  await page.locator('[data-more-tools] button[aria-haspopup="menu"]').click();
+  const box = await page.locator('[role="menu"]').first().boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(375);
+  expect(box.y + box.height).toBeLessThanOrEqual(560);
+});

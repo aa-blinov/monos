@@ -1357,7 +1357,7 @@
               aria-label={$localizedText.sidebar.more}
               data-testid="more-menu"
               on:keydown={(event) => { if (event.key === 'Escape') { moreOpen = false; moreAnchor?.querySelector('button')?.focus(); } }}
-              class="absolute bottom-full left-0 z-40 mb-1 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 normal-case tracking-normal shadow-2xl"
+              class="absolute bottom-full left-0 z-40 mb-1 max-h-[min(24rem,calc(100dvh-10rem))] w-full overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 normal-case tracking-normal shadow-2xl"
             >
               <button type="button" role="menuitem" data-testid="open-map" class={moreItemClass} on:click={() => pickMore('openMap')}>
                 <Icon.Waypoints class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.sidebar}
