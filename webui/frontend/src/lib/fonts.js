@@ -31,10 +31,10 @@ export const lineHeightOptions = [
 ];
 
 export const contentWidthOptions = [
-  { name: 'Narrow', value: 'narrow', value_css: '38rem' },
-  { name: 'Snug', value: 'snug', value_css: '48rem' },
-  { name: 'Medium', value: 'medium', value_css: '58rem' },
-  { name: 'Broad', value: 'broad', value_css: '68rem' },
+  { name: 'Narrow', value: 'narrow', value_css: '34rem' },
+  { name: 'Snug', value: 'snug', value_css: '46rem' },
+  { name: 'Medium', value: 'medium', value_css: '60rem' },
+  { name: 'Broad', value: 'broad', value_css: '78rem' },
   { name: 'Wide', value: 'wide', value_css: 'none' },
 ];
 

@@ -285,7 +285,7 @@ Only JetBrains Mono ships with the app (`public/fonts`, Latin and Cyrillic). The
 - **Display** (700, `30px`, 1.25, `-0.025em`): page titles only — Settings, Trash, Templates (`text-3xl`). The single largest type in the app.
 - **Headline** (700, `24px`, 1.25, `-0.025em`): modal titles (`text-2xl`) and the editor title at `xl`. The editor title scales with the window (`text-lg` → `lg:text-2xl` → `xl:text-[1.7rem]`) because it is the note's own title and should dominate its surface.
 - **Title** (700, `20px`, 1.3, `-0.025em`): `h1` (`text-xl`) and card titles at desktop.
-- **Body** (400, `14px`, 1.625): running text, note excerpts, descriptions. Reading measure is governed by `--content-width` (38/48/58/68rem or full), not by the type scale.
+- **Body** (400, `14px`, 1.625): running text, note excerpts, descriptions. Reading measure is governed by `--content-width` (34/46/60/78rem or full), not by the type scale.
 - **Label** (400, `10px`, `0.12em`, uppercase): the metadata voice — timestamps, folder paths, tag text.
 
 `h1`/`h2`/`h3` use `tracking-tight`. Everything global carries `transition-colors duration-200`.
@@ -310,7 +310,7 @@ A three-region app shell — resizable sidebar, main surface, optional inspector
 
 **Responsive:** `1024px` is the structural breakpoint, derived at runtime in `App.svelte` as `isMobile`, not a CSS media query. Below it the sidebar stops being a column and becomes a full-width `fixed inset-y-0` overlay that slides away on navigation. Tooltips are suppressed entirely below `640px`.
 
-**Editor measure:** `--content-width` sets the text column (38–68rem, or full), independent of the window. `--editor-font-size` (13–20px) and `--font-size-base` (14–20px) scale UI and editor separately.
+**Editor measure:** `--content-width` sets the text column (34–78rem, or full), independent of the window. `--editor-font-size` (13–20px) and `--font-size-base` (14–20px) scale UI and editor separately.
 
 ## Elevation & Depth
 

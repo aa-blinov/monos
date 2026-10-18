@@ -121,8 +121,8 @@
       <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
   </div>
-  <!-- The header does not follow the text width: it is a column of fixed width, the text below centres on its own margins. -->
-  <div class="mx-auto max-w-[48rem] flex w-full flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12" class:hidden={folded}>
+  <!-- The header does not follow the text width: it is a column of fixed width centred on the same axis as the text below (the Structure column's room is left out). -->
+  <div class="ml-[max(0px,calc((100%-var(--outline-inset,0px)-48rem)/2))] max-w-[min(48rem,calc(100%-var(--outline-inset,0px)))] flex w-full flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12" class:hidden={folded}>
     <div class="flex-1 min-w-0">
       <!-- The note's title is the page's heading; the field below is how it is edited. -->
       <h1 class="sr-only">{editedTitle}</h1>
