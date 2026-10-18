@@ -208,6 +208,8 @@ test('App показывает поиск только на dashboard и общ�
   expect(screen.queryByText('search visible')).toBeNull();
   expect(screen.getByText('sidebar open')).toBeTruthy();
 
+  // The note page is fetched on first use, so it appears a moment after the address changes.
+  await waitFor(() => expect(screen.getByText('go home')).toBeTruthy());
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(screen.getByText('sidebar open')).toBeTruthy();
@@ -233,6 +235,8 @@ test('App возвращается на главную по клику на ло
   await fireEvent.click(screen.getByText('sidebar navigate'));
   await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
 
+  // The note page is fetched on first use, so it appears a moment after the address changes.
+  await waitFor(() => expect(screen.getByText('go home')).toBeTruthy());
   await fireEvent.click(screen.getByText('go home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(screen.getByRole('button', { name: /^(\+ )?New note$/ })).toBeTruthy();
@@ -251,6 +255,8 @@ test('App сохраняет scroll дашборда при возврате к�
   await fireEvent.click(screen.getByText('sidebar navigate'));
   await waitFor(() => expect(window.location.pathname).toBe('/notes/FromSidebar.md'));
 
+  // The note page is fetched on first use, so it appears a moment after the address changes.
+  await waitFor(() => expect(screen.getByText('go home')).toBeTruthy());
   await fireEvent.click(screen.getByText('go home'));
 
   await waitFor(() => expect(window.location.pathname).toBe('/'));

@@ -682,10 +682,29 @@ export const WikiLinks = Extension.create({
         decorations(state) {
           const { links } = wikiLinksKey.getState(state);
           if (!links.length) return null;
-          return DecorationSet.create(state.doc, links.map((link) => Decoration.inline(link.from, link.to, {
-            class: `wiki-link wiki-link-${statusOf(link.target).kind}`,
-            'data-wiki-target': link.target,
-          })));
+          const { from: selFrom, to: selTo } = state.selection;
+          const decorations = [];
+          for (const link of links) {
+            decorations.push(Decoration.inline(link.from, link.to, {
+              class: `wiki-link wiki-link-${statusOf(link.target).kind}`,
+              'data-wiki-target': link.target,
+            }));
+            // The brackets are Markdown, not content: they hide while the caret is elsewhere and come back as
+            // soon as it touches the link, so the text can still be edited. The note's file is not changed.
+            const touched = selTo >= link.from && selFrom <= link.to;
+            if (touched || link.to - link.from < 5) continue;
+            decorations.push(Decoration.inline(link.from, link.from + 2, { class: 'wiki-link-bracket' }));
+            decorations.push(Decoration.inline(link.to - 2, link.to, { class: 'wiki-link-bracket' }));
+            // `[[target|shown]]` reads as "shown": the target and the bar hide too, when the text is exactly that.
+            if (link.alias) {
+              const head = `[[${link.target}|`;
+              const end = link.from + head.length;
+              if (end < link.to - 2 && state.doc.textBetween(link.from, end, '', '\u0001') === head) {
+                decorations.push(Decoration.inline(link.from + 2, end, { class: 'wiki-link-bracket' }));
+              }
+            }
+          }
+          return DecorationSet.create(state.doc, decorations);
         },
         handleClick(view, pos, event) {
           if (!(event.metaKey || event.ctrlKey)) return false;
