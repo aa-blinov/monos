@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { NOTES_DIR } from '../config.js';
 import { httpError, readTextFile, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { buildExportBundle } from '../export-bundle.js';
 import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
 
 const TEXT_EXTENSIONS = new Set(['.md', '.markdown']);
@@ -165,8 +166,13 @@ function inlineAttachments(html, absoluteDir) {
   });
 }
 
+/** The note without its YAML header: tags, dates and colour are properties, not text to print. */
+function stripFrontmatter(markdown) {
+  return String(markdown ?? '').replace(/^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, '');
+}
+
 function renderMarkdownToHtml(markdown, absoluteDir) {
-  const html = marked.parse(String(markdown ?? ''), { async: false });
+  const html = marked.parse(stripFrontmatter(markdown), { async: false });
   return inlineAttachments(highlightCodeBlocks(html), absoluteDir);
 }
 
@@ -300,6 +306,21 @@ export function registerPrintRoutes(app) {
       res.type('html').send(buildTreeDocument(requestPath).html);
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message || 'Print failed' });
+    }
+  });
+
+  // Markdown and text exports that carry pictures or PDFs leave as one zip with the files beside the note.
+  app.post('/api/print/bundle', (req, res) => {
+    try {
+      const { path: notePath, fileName, content, source } = req.body || {};
+      const bundle = buildExportBundle(notePath, fileName, content, source);
+      if (!bundle) {
+        res.status(204).end();
+        return;
+      }
+      res.type('application/zip').set('X-Bundle-Name', encodeURIComponent(bundle.fileName)).send(bundle.buffer);
+    } catch (error) {
+      res.status(error.statusCode || 500).json({ detail: error.message || 'Export failed' });
     }
   });
 

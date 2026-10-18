@@ -1,6 +1,6 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle } from './git-history.js';
+import { noteHistoryRequest, noteRevisionRequest, restoreNoteRevisionRequest, revisionTitle, groupRevisionsByDay, relativeDay } from './git-history.js';
 
 const realFetch = globalThis.fetch;
 
@@ -51,4 +51,19 @@ test('заголовки версий на языке интерфейса', () 
   assert.equal(revisionTitle("Merge branch 'master' of https://github.com/x/y", words), 'Объединены правки');
   assert.equal(revisionTitle('Agent edits on Ноутбук', words), 'Правки агента');
   assert.equal(revisionTitle('Своё сообщение', words), 'Своё сообщение');
+});
+
+test('groupRevisionsByDay: версии одного дня идут в одной группе, порядок сохраняется', () => {
+  const at = (day, hour) => ({ sha: `${day}${hour}`, date: new Date(2026, 9, day, hour).toISOString() });
+  const groups = groupRevisionsByDay([at(18, 14), at(18, 9), at(17, 20), at(10, 8)]);
+  assert.deepEqual(groups.map((g) => g.revisions.length), [2, 1, 1]);
+  assert.equal(groups[0].revisions[0].sha, '1814');
+  assert.deepEqual(groupRevisionsByDay(null), []);
+});
+
+test('relativeDay: сегодня, вчера или ничего', () => {
+  const now = new Date(2026, 9, 18, 12);
+  assert.equal(relativeDay(new Date(2026, 9, 18, 1), now), 'today');
+  assert.equal(relativeDay(new Date(2026, 9, 17, 23), now), 'yesterday');
+  assert.equal(relativeDay(new Date(2026, 9, 10), now), null);
 });

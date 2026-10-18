@@ -60,3 +60,29 @@ export function revisionTitle(message, words) {
   if (/^Merge\b/.test(text)) return words.merged;
   return text;
 }
+
+
+/**
+ * Revisions (newest first) cut into days for the timeline: `{ key, date, revisions }` per calendar day in the
+ * reader's time zone, in the order they arrive. `date` is the day's first revision, for labelling.
+ */
+export function groupRevisionsByDay(revisions) {
+  const groups = [];
+  for (const revision of revisions || []) {
+    const when = new Date(revision.date);
+    const key = `${when.getFullYear()}-${when.getMonth()}-${when.getDate()}`;
+    const last = groups[groups.length - 1];
+    if (last?.key === key) last.revisions.push(revision);
+    else groups.push({ key, date: revision.date, revisions: [revision] });
+  }
+  return groups;
+}
+
+/** 'today' | 'yesterday' | null for the day of `date` against `now`. */
+export function relativeDay(date, now = new Date()) {
+  const day = (value) => { const d = new Date(value); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+  const diff = Math.round((day(now) - day(date)) / 86400000);
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'yesterday';
+  return null;
+}

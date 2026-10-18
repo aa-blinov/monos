@@ -30,4 +30,10 @@ describe('пустая строка в заметке', () => {
     const editor = makeEditor('Первая\n\n&nbsp;\n\n&nbsp;\n\nВторая\n');
     expect(editor.storage.markdown.getMarkdown()).toBe('Первая\n\n&nbsp;\n\n&nbsp;\n\nВторая');
   });
+
+  it('пустая заметка и пустой пункт списка не получают &nbsp; при переходе в визуальный редактор', () => {
+    expect(makeEditor('').storage.markdown.getMarkdown()).toBe('');
+    expect(makeEditor('\n\n  \n').storage.markdown.getMarkdown()).toBe('');
+    expect(makeEditor('- \n- b\n').storage.markdown.getMarkdown()).not.toContain('&nbsp;');
+  });
 });

@@ -20,8 +20,11 @@ export const EditableParagraph = Paragraph.extend({
   addStorage() {
     return {
       markdown: {
-        serialize(state, node) {
-          if (node.content.size === 0) state.write(BLANK_LINE);
+        serialize(state, node, parent) {
+          // An empty note and an empty list item are not lines the person made: they stay empty in the file.
+          // `&nbsp;` is for an empty line among other content.
+          const alone = parent?.childCount === 1;
+          if (node.content.size === 0 && !alone) state.write(BLANK_LINE);
           else state.renderInline(node);
           state.closeBlock(node);
         },
