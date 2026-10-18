@@ -2,7 +2,7 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
-  import { Copy, ExternalLink, LayoutGrid, Palette, PanelTop, Plus } from 'lucide-svelte';
+  import { Copy, ExternalLink, Palette, PanelTop, Plus } from 'lucide-svelte';
   import BoardTags from './BoardTags.svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -242,10 +242,8 @@
     </TooltipIconButton>
     {#if !mobile && availableColumnCounts.length > 1}
       <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
-      <!-- The grid icon names the group, so the numbers need no "columns" after each. -->
-      <span class="flex h-7 w-7 items-center justify-center text-[var(--text-tertiary)]" aria-hidden="true">
-        <LayoutGrid size="14" strokeWidth="1.7" />
-      </span>
+      <!-- The word names the group, so the numbers need no "columns" after each. -->
+      <span class="px-1 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]" aria-hidden="true">{$localizedText.app.board.columnsLabel}</span>
       {#each availableColumnCounts as columnCount}
         <TooltipIconButton
           class="h-7 min-w-8 rounded-ui px-2 text-[length:var(--text-whisper-lg)] tabular-nums tracking-[0.08em] transition {drawnColumns === columnCount ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"

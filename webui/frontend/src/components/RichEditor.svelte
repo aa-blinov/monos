@@ -1087,6 +1087,7 @@
   /* A wiki link reads as a link; one that leads nowhere is drawn dashed and quieter, like a draft. */
   :global(.ProseMirror .wiki-link) { color: var(--text-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
   :global(.ProseMirror .external-link) { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text-primary) 40%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  :global(.ProseMirror .wiki-link-bracket) { font-size: 0; }
   :global(.ProseMirror .wiki-link-missing) { color: var(--text-secondary); text-decoration-style: dashed; }
   :global(.ProseMirror .wiki-link-ambiguous) { text-decoration-style: double; }
   /* flow-root keeps the paragraphs' margins inside the editor: a collapsed margin would stick out past min-height and show a scrollbar on a short note. */

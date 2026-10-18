@@ -18,7 +18,9 @@
 
   const dispatch = createEventDispatcher();
 
-  const action = 'inline-flex min-h-9 items-center text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60';
+  // The one thing most people came to do: a filled button, the only one on the screen. The folder and sync paths
+  // stay quiet text buttons; they matter to some people, not to everyone.
+  const primaryAction = 'inline-flex min-h-11 items-center rounded-ui bg-[var(--text-primary)] px-5 text-xs font-bold uppercase tracking-widest text-[var(--bg-primary)] transition hover:opacity-85';
   const secondaryAction = 'inline-flex min-h-9 items-center text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]';
   const kbd = 'rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5 text-[length:var(--text-whisper-lg)] text-[var(--text-primary)]';
 
@@ -30,12 +32,12 @@
   <p class="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{text.lead}</p>
 
   <div class="mt-8 grid gap-4 {thisComputer ? 'md:grid-cols-3' : ''}">
-    <section class="flex flex-col rounded-ui border border-[var(--border-subtle)] p-5" data-testid="welcome-write">
+    <section class="flex flex-col rounded-ui border border-[var(--text-secondary)] p-5" data-testid="welcome-write">
       <PenLine size="20" strokeWidth="1.7" class="text-[var(--text-secondary)]" aria-hidden="true" />
       <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.writeTitle}</h2>
       <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.writeText}</p>
       <div class="mt-4 flex flex-wrap gap-x-6">
-        <button type="button" class={action} on:click={() => dispatch('newNote')}>{text.writeAction}</button>
+        <button type="button" class={primaryAction} on:click={() => dispatch('newNote')}>{text.writeAction}</button>
       </div>
     </section>
 
@@ -45,7 +47,7 @@
         <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.haveTitle}</h2>
         <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.haveText}</p>
         <div class="mt-4 flex flex-wrap gap-x-6">
-          <button type="button" class={action} on:click={() => dispatch('chooseFolder')}>{text.folderAction}</button>
+          <button type="button" class={secondaryAction} on:click={() => dispatch('chooseFolder')}>{text.folderAction}</button>
           <button type="button" class={secondaryAction} on:click={() => dispatch('importArchive')}>{text.importAction}</button>
         </div>
         {#if importStatus}<p class="mt-3 text-xs text-[var(--text-tertiary)]" role="status">{importStatus}</p>{/if}
@@ -57,7 +59,7 @@
         <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.syncTitle}</h2>
         <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.syncText}</p>
         <div class="mt-4 flex flex-wrap gap-x-6">
-          <button type="button" class={action} on:click={() => dispatch('connectSync')}>{text.syncAction}</button>
+          <button type="button" class={secondaryAction} on:click={() => dispatch('connectSync')}>{text.syncAction}</button>
         </div>
       </section>
     {/if}

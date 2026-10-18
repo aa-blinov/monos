@@ -13,7 +13,7 @@
   import { localizedText } from '../lib/strings.js';
 
   // Every control in the row is as tall as the order-and-colors box beside it: border 2 + padding 8 + h-7 28 = 38px.
-  const CHIPS = 5;
+  const CHIPS = 4;
   const dispatch = createEventDispatcher();
 
   let open = false;
@@ -26,7 +26,7 @@
   // invisible, so they can still be measured when the row grows.
   const GAP = 6;
   // "Ещё 25" with its arrow, 38px tall: kept free at the row's end while some tag is not a chip.
-  const MORE_WIDTH = 120;
+  const MORE_WIDTH = 130;
   let rowWidth = 0;
   let chipEls = {};
   let widths = {};
@@ -128,7 +128,7 @@
           on:click={toggle}
         >
           <span class="min-w-0 truncate sm:hidden">{$boardTag || $localizedText.app.board.tagsLabel}</span>
-          <span class="hidden sm:inline">{$localizedText.app.board.moreTags(moreCount)}</span>
+          <span class="hidden sm:inline">{$localizedText.app.board.allTags}</span>
           <ChevronDown size="12" strokeWidth="1.7" class="shrink-0" aria-hidden="true" />
         </button>
         {#if open}

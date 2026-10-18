@@ -128,10 +128,45 @@ test('при «меньше движения» карточка не припо�
   expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(transform);
 });
 
-test('цвет страницы: color-scheme и theme-color следуют за выбранной темой', async ({ page }) => {
+test('цвет страницы: theme-color следует за темой, списки <select> берут режим приложения', async ({ page }) => {
   await prepareMonos(page);
-  await page.goto('/');
-  const state = await page.evaluate(() => ({ scheme: document.documentElement.style.colorScheme, meta: document.querySelector('meta[name="theme-color"]')?.getAttribute('content'), bg: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() }));
-  expect(['light', 'dark']).toContain(state.scheme);
+  await page.goto('/settings');
+  const state = await page.evaluate(() => ({ meta: document.querySelector('meta[name="theme-color"]')?.getAttribute('content'), bg: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim(), dark: document.documentElement.classList.contains('dark'), selectScheme: getComputedStyle(document.querySelector('select')).colorScheme, pageScheme: getComputedStyle(document.documentElement).colorScheme }));
   expect(state.meta?.toLowerCase()).toBe(state.bg.toLowerCase());
+  expect(state.selectScheme).toBe(state.dark ? 'dark' : 'light');
+  // Not on the whole page: it slowed rendering and broke caret placement in the editor.
+  expect(state.pageScheme).toBe('normal');
+});
+
+// The brackets of a wiki link are Markdown, not words: a reader sees the name alone, the caret brings them back.
+test('ссылка на заметку: скобки [[ ]] скрыты, пока курсор не в ссылке', async ({ page }) => {
+  await prepareMonos(page);
+  const title = `Bracket ${Date.now()}`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'Смотри [[Целевая заметка]] и [[Целевая заметка|вот это]] дальше.' } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  // Decorations of one link are spans of their own: the name, and the hidden pieces beside it.
+  const names = page.locator('.ProseMirror .wiki-link:not(.wiki-link-bracket)');
+  await expect(names.first()).toBeVisible();
+  const hidden = page.locator('.ProseMirror .wiki-link-bracket');
+  await expect(hidden.first()).toBeAttached();
+  const before = await hidden.count();
+  expect(before).toBeGreaterThanOrEqual(4);
+  expect(await hidden.evaluateAll((els) => els.every((el) => getComputedStyle(el).fontSize === '0px'))).toBe(true);
+  // The file itself is unchanged: the text still contains the brackets.
+  expect(await page.locator('.ProseMirror').innerText()).toContain('[[');
+  // Caret inside the first link brings its brackets back; the other link stays tidy.
+  await names.first().click();
+  await expect(hidden).toHaveCount(before - 2);
+});
+
+// A disclosure line looks like one: it keeps the browser's marker, so a person sees there is more behind it.
+test('настройки: свёрнутые блоки «Дополнительно» и подсказка про токен показывают маркер раскрытия', async ({ page }) => {
+  await prepareMonos(page);
+  await page.goto('/settings');
+  for (const selector of ['[data-testid="git-advanced"] > summary', '[data-testid="commit-advanced"] > summary']) {
+    const summary = page.locator(selector);
+    await expect(summary).toBeAttached();
+    expect(await summary.evaluate((el) => getComputedStyle(el).display)).toBe('list-item');
+  }
 });

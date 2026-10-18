@@ -1,5 +1,6 @@
 <script>
   import { scrollBehavior } from '../lib/motion.js';
+  import { ShieldAlert } from 'lucide-svelte';
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
@@ -721,10 +722,10 @@
   let activeGroup = 'settings-appearance';
   $: navItems = [
     { id: 'settings-appearance', label: $localizedText.settings.appearance },
-    ...(terminalBridge ? [{ id: 'settings-agent', label: $localizedText.agent.title }] : []),
     { id: 'settings-data', label: $localizedText.settings.navData },
     { id: 'settings-sync', label: $localizedText.settings.navSync },
     { id: 'settings-devices', label: $localizedText.settings.navDevices },
+    ...(terminalBridge ? [{ id: 'settings-agent', label: $localizedText.agent.title }] : []),
     { id: 'settings-more', label: $localizedText.settings.advanced },
   ];
 
@@ -863,12 +864,6 @@
       </div>
     </section>
 
-    {#if terminalBridge}
-      <div id="settings-agent" class="scroll-mt-16 lg:scroll-mt-6">
-        <AgentSettings />
-      </div>
-    {/if}
-
     <section class="space-y-5 scroll-mt-16 rounded-ui border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-data" data-testid="storage-section" use:revealSection={'storage'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
@@ -980,7 +975,7 @@
 
       <!-- Help -->
       <details open={!isAuthenticated} class="text-xs text-[var(--text-secondary)] group">
-        <summary class="block min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.tokenHelp}</summary>
+        <summary class="min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 rounded-ui border border-[var(--border-subtle)] p-3 leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
@@ -1063,6 +1058,16 @@
 
       <div class="grid grid-cols-2 gap-6">
         <div>
+          <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
+          <input id="device-name" type="text" maxlength="40" bind:value={settings.device_name} on:change={saveDeviceName} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+          <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.deviceNameHint}</p>
+        </div>
+      </div>
+
+      <!-- Git's word for a version line: most people never change it, so it waits one click away. -->
+      <details class="text-xs text-[var(--text-secondary)]" data-testid="git-advanced">
+        <summary class="min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.gitAdvanced}</summary>
+        <div class="mt-3 max-w-sm">
           <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
           <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
             {#if isLoadingBranches}
@@ -1075,13 +1080,9 @@
               <option value="master">master</option>
             {/if}
           </select>
+          <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.branchHint}</p>
         </div>
-        <div>
-          <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" maxlength="40" bind:value={settings.device_name} on:change={saveDeviceName} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
-          <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.deviceNameHint}</p>
-        </div>
-      </div>
+      </details>
 
       <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <ConnectStatus
@@ -1117,11 +1118,16 @@
           <div class="flex items-center gap-3"><input id="auto-sync-minutes" type="number" min="1" max="1440" bind:value={settings.git_auto_sync_minutes} on:change={saveAutoSync} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} /><span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.minutesUnit}</span></div>
           <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
         </div>
-        <div>
+      </div>
+
+      <details class="text-xs text-[var(--text-secondary)]" data-testid="commit-advanced">
+        <summary class="min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.commitAdvanced}</summary>
+        <div class="mt-3 max-w-sm">
           <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
           <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
+          <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.commitMessageHint}</p>
         </div>
-      </div>
+      </details>
 
       <div class="space-y-3">
         <Checkbox id="git-auto-upload" bind:checked={settings.git_auto_upload} on:change={saveAutoSync}>
@@ -1188,7 +1194,10 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
       <!-- Said before the switch, at reading size: the risk is part of the decision, not a footnote after it. -->
-      <p class="max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.lanSecurity}</p>
+      <div role="note" data-testid="lan-security" class="flex max-w-2xl gap-3 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3">
+        <ShieldAlert size="20" strokeWidth="1.7" class="mt-0.5 shrink-0 text-[var(--text-primary)]" aria-hidden="true" />
+        <p class="text-sm leading-relaxed text-[var(--text-primary)]">{$localizedText.settings.lanSecurity}</p>
+      </div>
       {#if lanStatus === 'remote'}
         <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
       {:else if lanStatus === 'error'}
@@ -1300,6 +1309,13 @@
           </button>
         {/if}
       </section>
+    {/if}
+
+    <!-- The agent is for people who run one in the terminal: after what everyone needs (look, data, sync, devices). -->
+    {#if terminalBridge}
+      <div id="settings-agent" class="scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
+        <AgentSettings />
+      </div>
     {/if}
 
     <!-- The guide lives in the Help; Settings only points to it. -->

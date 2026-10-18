@@ -4,7 +4,6 @@ import { get } from 'svelte/store';
   import { Router, Route, navigate } from 'svelte-routing';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
-  import NotePage from './components/NotePage.svelte';
   import NoteBoard from './components/NoteBoard.svelte';
   import Settings from './components/Settings.svelte';
   import SavedSearchesPanel from './components/SavedSearchesPanel.svelte';
@@ -38,7 +37,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, refreshConflicts } from './lib/git-conflicts.js';
   import FirstRunWelcome from './components/FirstRunWelcome.svelte';
-  import { launchAgent, noteLinkRequest, terminalBridge, toggleTerminal } from './lib/terminal.js';
+  import { agentRequest, launchAgent, noteLinkRequest, terminalBridge, terminalOpen, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
   import { agentReviewOpen, refreshAgentReview, syncBlockedByReview } from './lib/agent-review.js';
   import AgentReviewModal from './components/AgentReviewModal.svelte';
@@ -105,13 +104,16 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   if (!$urlSearchQuery) urlSearchQuery.set(searchParamFromUrl().trim());
   if ($urlSearchQuery) $searchQuery = $urlSearchQuery;
 
+  // Once asked for the terminal stays mounted, so hiding it keeps the shells running.
+  let terminalWanted = false;
+  $: if ($terminalOpen || $agentRequest) terminalWanted = true;
+
   $: isDarkMode = typeof window !== 'undefined' ? (systemThemeSignal, detectDarkMode($themeMode)) : false;
   $: if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', isDarkMode);
   $: applyTheme($activeTheme, isDarkMode, themes);
-  // Native controls (the option lists of a <select>, scrollbars, form fields) follow the app's mode, not the
-  // system's, and the browser chrome takes the page colour of the chosen palette.
+  // The browser chrome takes the page colour of the chosen palette. (The mode for native option lists is set
+  // in app.css, on the selects alone: `color-scheme` on the whole page made the editor's caret unreliable.)
   $: if (typeof document !== 'undefined') {
-    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
     const pageColor = themes[$activeTheme]?.[isDarkMode ? 'dark' : 'light']?.['--bg-primary'];
     if (pageColor) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', pageColor);
   }
@@ -284,6 +286,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   }
 
   onMount(() => {
+    // Fetched while the board is already drawn and the browser is idle, so the first note opens as fast as when
+    // the editor was bundled in, and the board's first paint no longer carries it.
+    const preloadNotePage = () => { void import('./components/NotePage.svelte'); };
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(preloadNotePage, { timeout: 1500 });
+    else window.setTimeout(preloadNotePage, 300);
     setSidebarOpen(true);
     updateMobileState();
     setRoutePath(window.location.pathname);
@@ -948,7 +955,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          <!-- The editor stack (ProseMirror, highlighting, formulas) is the largest part of the app and the board
+               never needs it: it is fetched while the board is on screen (below), and here on first use. -->
+          {#await import('./components/NotePage.svelte') then notePageModule}
+            <svelte:component this={notePageModule.default} path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
+          {/await}
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} on:openHelp={openHelp} />
@@ -1040,8 +1051,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       </main>
       <!-- The agent terminal docks under the content, in the same column as the note: the notes, the agent and its
            edits in one window. Desktop app only (see lib/terminal.js). -->
-      {#if terminalBridge}
-        <!-- Loaded only here: xterm is a large module a browser or a phone never needs. -->
+      {#if terminalBridge && terminalWanted}
+        <!-- Loaded only when the terminal is first asked for: xterm is a large module, and most launches never open it. -->
         {#await import('./components/TerminalPanel.svelte') then terminalModule}
           <svelte:component this={terminalModule.default} />
         {/await}
