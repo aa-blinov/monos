@@ -33,7 +33,7 @@ export function applyTypographyVars({
   // 12px (text-xs) for its labels, at the default 16px base.
   root.style.setProperty('--text-whisper', `${(baseSize * 0.6875).toFixed(2)}px`);
   root.style.setProperty('--text-whisper-lg', `${(baseSize * 0.75).toFixed(2)}px`);
-  root.style.setProperty('--font-family', fontOptions.find((item) => item.family.includes(fontFamily) || item.name === fontFamily)?.family || fontFamily);
+  root.style.setProperty('--font-family', (fontOptions.find((item) => item.name === fontFamily) || fontOptions.find((item) => item.family.includes(fontFamily)))?.family || fontFamily);
 }
 
 export function detectDarkMode(themeMode = localStorage.getItem('themeMode') || 'system') {

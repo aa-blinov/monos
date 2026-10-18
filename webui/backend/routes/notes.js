@@ -430,6 +430,8 @@ export function registerNoteRoutes(app) {
       for (const entry of entries) {
         for (const property of parseStoredProperties(entry.props)) {
           const id = String(property.key).toLowerCase();
+          // The favourite mark is the app's own flag, not a property to build columns from.
+          if (id === 'monos-favorite') continue;
           const use = keyUse.get(id) || { key: String(property.key), count: 0, type: property.type };
           use.count += 1;
           keyUse.set(id, use);

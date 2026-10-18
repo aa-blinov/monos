@@ -53,7 +53,9 @@
     const nextSignature = notes.map((note) => `${note.path}:${note.modified || note.lastOpened || ''}:${note.pinned ? 'p' : ''}`).join('|');
     if (nextSignature !== notesSignature) {
       notesSignature = nextSignature;
-      orderedNotes = notes;
+      // A reset (a pin toggled, a note changed) keeps the excerpts already read for the cards.
+      const loaded = new Map(orderedNotes.filter(hasRealExcerpt).map((note) => [note.path, note.excerpt]));
+      orderedNotes = notes.map((note) => (!hasRealExcerpt(note) && loaded.has(note.path) ? { ...note, excerpt: loaded.get(note.path) } : note));
       hydrateMissingExcerpts(notes);
     }
   }
@@ -212,7 +214,7 @@
     closeContextMenu();
     try {
       if (pinning) await pinNote(note.path, note.title || note.name);
-      else await unpinNote(note.path);
+      else await unpinNote(note.path, note.title || note.name);
     } catch (error) {
       console.error('Failed to change the pin:', error);
     }

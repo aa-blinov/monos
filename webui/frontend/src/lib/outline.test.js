@@ -208,3 +208,9 @@ test('clampOutlineWidth: держит ширину колонки в преде�
   assert.equal(clampOutlineWidth('abc'), OUTLINE_WIDTH.DEFAULT);
   assert.equal(clampOutlineWidth(null), OUTLINE_WIDTH.DEFAULT);
 });
+
+test('extractOutline: решётка в конце названия остаётся, закрывающие ## снимаются', () => {
+  assert.deepEqual(extractOutline('## Learning C#\n').map((i) => i.text), ['Learning C#']);
+  assert.deepEqual(extractOutline('## Title ##\n').map((i) => i.text), ['Title']);
+  assert.deepEqual(extractOutline('# F#\n').map((i) => i.text), ['F#']);
+});

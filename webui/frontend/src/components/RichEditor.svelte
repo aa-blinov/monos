@@ -58,7 +58,8 @@
     return () => observer.disconnect();
   });
   // The block tools (table, code) take room too: fit again when they come and go.
-  $: if (toolbarEl) { active.table, active.codeBlock; tick().then(fitExtras); }
+  $: blockToolsShown = active.table || active.codeBlock;
+  $: if (toolbarEl) { blockToolsShown; tick().then(fitExtras); }
   function runMore(action) {
     action();
     moreOpen = false;

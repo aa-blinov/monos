@@ -122,7 +122,7 @@
       <div class="max-h-[60vh] overflow-y-auto pr-2" data-testid="history-timeline">
         <p class="mb-2 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">↑ {$localizedText.history.newerEnd}</p>
         <ol class="relative" aria-label={$localizedText.history.timeline}>
-          {#each groups as group, groupIndex (group.key)}
+          {#each groups as group, groupIndex (`${group.key}:${groupIndex}`)}
             <li class="relative {groupIndex > 0 ? 'mt-4' : ''}">
               <!-- One rail per day, running on into the next; it starts at the first dot and ends at the last. -->
               <span class="absolute left-[5.5px] w-px bg-[var(--border-subtle)] {groupIndex === 0 ? 'top-[3.4rem]' : '-top-4'} {groupIndex === groups.length - 1 ? 'bottom-[2.1rem]' : '-bottom-4'}" aria-hidden="true"></span>

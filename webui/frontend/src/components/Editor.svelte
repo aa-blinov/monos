@@ -43,6 +43,7 @@
     uploadAttachment,
   } from '../lib/editor-api.js';
   import { isFavoriteProperties, setFavoriteRequest } from '../lib/favorites.js';
+  import { replaceTabs, tabsToSpaces } from '../lib/tabs.js';
   import { flushOpenNote } from '../lib/note-refresh.js';
   import { createFolderRequest, createNoteRequest, loadDirectoriesRequest, loadTagsRequest, moveItemRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
@@ -385,7 +386,10 @@
         const fileName = exportFileName(name, format);
         const text = format === 'md' ? editedContent : markdownToPlainText(splitFrontmatter(editedContent).body);
         // With pictures or PDFs the note leaves as a folder (a zip): the file and its _attachments side by side.
-        const bundle = await fetchExportBundle(currentFile.path, fileName, format === 'md' ? editedContent : text, editedContent);
+        const bundle = await fetchExportBundle(currentFile.path, fileName, format === 'md' ? editedContent : text, editedContent).catch((error) => {
+          console.error('Export with attachments failed, saving the plain file:', error);
+          return null;
+        });
         if (bundle) downloadFile(bundle.fileName, bundle.blob);
         else downloadFile(fileName, text, format === 'md' ? 'text/markdown' : 'text/plain');
       } else if (format === 'html') {
@@ -589,7 +593,7 @@
   $: relatedList = relatedRows(neighborhood, backlinks);
   const relationText = (relation) => relation === 'both' ? $localizedText.editor.relationBoth : relation === 'out' ? $localizedText.editor.relationOut : $localizedText.editor.relationIn;
   // The due date has its own button in this bar; counted again under Properties it read as two settings.
-  $: customProperties = (fileInfo?.properties || []).filter((property) => String(property.key).toLowerCase() !== 'due');
+  $: customProperties = (fileInfo?.properties || []).filter((property) => !['due', 'monos-favorite'].includes(String(property.key).toLowerCase()));
 
   function resolveEditorImageSrc(src) {
     return displayImageSrc(visibleFile?.path, src);
@@ -1115,6 +1119,9 @@
       autosaveTimer = null;
     }
     if (saveMessageTimeout) clearTimeout(saveMessageTimeout);
+    // With "tabs to spaces" on, the editor's text is normalised first, so what it holds is what the file holds.
+    const normalizedTabs = replaceTabs(editedContent, get(tabsToSpaces));
+    if (normalizedTabs !== editedContent) editedContent = normalizedTabs;
     const savedContent = editedContent;
     const savedTitle = editedTitle;
 
@@ -2109,9 +2116,9 @@
               <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
                 <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
               </button>
-              <button type="button" role="menuitem" data-testid="menu-favorite" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; toggleFavorite(); }}>
+              {#if !fileInfo?.locked}<button type="button" role="menuitem" data-testid="menu-favorite" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; toggleFavorite(); }}>
                 <Star size="16" strokeWidth="1.7" fill={favoriteNow ? 'currentColor' : 'none'} aria-hidden="true" />{favoriteNow ? $localizedText.editor.favoriteRemove : $localizedText.editor.favoriteAdd}
-              </button>
+              </button>{/if}
               <!-- Narrow window: the footer has no room for the terminal button, so the terminal opens from here. -->
               {#if terminalBridge}
                 <button type="button" role="menuitem" data-testid="menu-terminal" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; toggleTerminal(); }}>

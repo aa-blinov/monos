@@ -146,7 +146,11 @@
   }
   $: if ($propertiesChanged > 0) void loadPropertyPresence();
   // A property typed into the note's source shows up on the next save: look again while the link is still hidden.
-  $: if ($noteSaveSignal && !hasProperties) void loadPropertyPresence();
+  let presenceCheckedAt = 0;
+  $: if ($noteSaveSignal && !hasProperties && Date.now() - presenceCheckedAt > 30000) {
+    presenceCheckedAt = Date.now();
+    void loadPropertyPresence();
+  }
   $: showTagsLink = allTags.length > 0;
   $: showSavedSearchesLink = $savedSearches.length > 0;
   $: showPropertiesLink = hasProperties;
@@ -838,9 +842,9 @@
       renameNewName = renameOldName;
       showRenameModal = true;
     } else if (action === 'pin') {
-      pinNote(path, name);
+      pinNote(path, name).catch((error) => console.error('Failed to pin:', error));
     } else if (action === 'unpin') {
-      unpinNote(path);
+      unpinNote(path, name).catch((error) => console.error('Failed to unpin:', error));
     } else if (action === 'delete') {
       const deletePaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [path];
       // One note goes to the trash at once, with an undo notice. A folder is deleted for good and a
@@ -1126,7 +1130,7 @@
         type="button"
         data-testid="pinned-toggle"
         aria-expanded={!$pinnedCollapsed}
-        aria-label={$pinnedCollapsed ? $localizedText.sidebar.expandPinned : $localizedText.sidebar.collapsePinned}
+        title={$pinnedCollapsed ? $localizedText.sidebar.expandPinned : $localizedText.sidebar.collapsePinned}
         on:click={() => pinnedCollapsed.update((value) => !value)}
         class="flex min-h-10 w-full items-center justify-between border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)] {$pinnedCollapsed ? '' : 'mb-3'}"
       >

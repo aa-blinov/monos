@@ -44,3 +44,16 @@ test('saveFileContent: при включённой настройке в фай�
   assert.equal(bodies[0].content, '    - x');
   assert.equal(bodies[1].content, '\t- x');
 });
+
+test('replaceTabs: вложенное ограждение, ограждение в списке, строчный код и <pre> не трогаются', () => {
+  const nested = '````\n```js\n\ta\n```\n\tb\n````\n\tc';
+  assert.equal(replaceTabs(nested, '4'), '````\n```js\n\ta\n```\n\tb\n````\n    c');
+  assert.equal(replaceTabs('- item\n  ```make\n\tgcc\n  ```\n\tx', '4'), '- item\n  ```make\n\tgcc\n  ```\n    x');
+  assert.equal(replaceTabs('see `a\tb` and\tc', '4'), 'see `a\tb` and   c');
+  assert.equal(replaceTabs('<pre>\n\tx\n</pre>\n\ty', '4'), '<pre>\n\tx\n</pre>\n    y');
+});
+
+test('replaceTabs: под нумерованным пунктом вложение не меньше четырёх колонок', () => {
+  assert.equal(replaceTabs('1. a\n\t- b', '2'), '1. a\n    - b');
+  assert.equal(replaceTabs('- a\n\t- b', '2'), '- a\n  - b');
+});

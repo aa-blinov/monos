@@ -521,20 +521,18 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   }
 
   // The board's pin marks follow the sidebar's list at once, whichever side the pin was changed on.
-  function syncBoardPins(pinned) {
+  function syncBoardPins(pinned, boardNotes) {
     const paths = new Set(pinned.map((note) => normalizeNotePath(note.path)));
-    homeRecentNotes.update((current) => {
-      let changed = false;
-      const next = current.map((note) => {
-        const should = paths.has(normalizeNotePath(note.path));
-        if (Boolean(note.pinned) === should) return note;
-        changed = true;
-        return { ...note, pinned: should };
-      });
-      return changed ? next : current;
-    });
+    const stale = boardNotes.some((note) => Boolean(note.pinned) !== paths.has(normalizeNotePath(note.path)));
+    // Only a real difference is written back: setting the store notifies even when nothing changed.
+    if (!stale) return;
+    homeRecentNotes.set(boardNotes.map((note) => {
+      const should = paths.has(normalizeNotePath(note.path));
+      return Boolean(note.pinned) === should ? note : { ...note, pinned: should };
+    }));
   }
-  $: if ($pinsKnown) syncBoardPins($pinnedNotes);
+  // Also when the board's own list arrives: an answer that was in flight during a pin carries the old marks.
+  $: if ($pinsKnown) syncBoardPins($pinnedNotes, $homeRecentNotes);
 
   function promoteRecentNote(note) {
     if (!note?.path) return;

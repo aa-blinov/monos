@@ -3,7 +3,7 @@
   import { outlineWidth } from '../stores.js';
   import { scrollBehavior } from '../lib/motion.js';
   import { localizedText } from '../lib/strings.js';
-  import { createEventDispatcher, tick } from 'svelte';
+  import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { X } from 'lucide-svelte';
 
   /** The markdown source to extract the outline from. */
@@ -49,6 +49,8 @@
   // Desktop column: its left edge is a handle. Dragging left widens the column, double click restores the
   // default, arrows nudge it by 16px.
   let resizing = false;
+  let stopDrag = null;
+  onDestroy(() => stopDrag?.());
   function startResize(event) {
     if (event.button > 0) return;
     event.preventDefault();
@@ -59,6 +61,7 @@
     document.body.style.userSelect = 'none';
     const move = (e) => outlineWidth.set(clampOutlineWidth(startWidth + startX - e.clientX));
     const stop = () => {
+      stopDrag = null;
       resizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
@@ -66,6 +69,7 @@
       window.removeEventListener('pointerup', stop);
       window.removeEventListener('pointercancel', stop);
     };
+    stopDrag = stop;
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', stop);
     window.addEventListener('pointercancel', stop);
@@ -110,7 +114,7 @@
 
 <aside
   class="{open ? 'fixed inset-y-0 right-0 z-40 block w-64 max-w-[85vw] overflow-y-auto shadow-2xl' : 'hidden w-56'} {collapsed ? 'lg:hidden' : 'lg:block'} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs lg:relative lg:z-auto lg:w-[var(--outline-width)] lg:max-w-none lg:overflow-visible lg:shadow-none"
-  style="--outline-width: {$outlineWidth}px"
+  style="--outline-width: min({$outlineWidth}px, 45vw)"
   data-testid="outline-panel"
 >
   <button
