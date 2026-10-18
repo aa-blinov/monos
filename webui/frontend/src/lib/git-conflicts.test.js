@@ -31,3 +31,12 @@ test('gitConnected следует за статусом: кнопка синхр
   await refreshConflicts(async () => answer({ initialized: false }));
   assert.equal(get(gitConnected), false);
 });
+
+test('noteSyncStatus: нет remote, ни разу, ждёт отправки, синхронизирована', async () => {
+  const { noteSyncStatus } = await import('./git-conflicts.js');
+  assert.equal(noteSyncStatus({ connected: false, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T09:00:00Z'), 'none');
+  assert.equal(noteSyncStatus({ connected: true, lastSync: null }, '2026-10-18T09:00:00Z'), 'never');
+  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T09:59:00Z'), 'synced');
+  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T10:00:00.500Z'), 'synced');
+  assert.equal(noteSyncStatus({ connected: true, lastSync: '2026-10-18T10:00:00Z' }, '2026-10-18T10:05:00Z'), 'pending');
+});

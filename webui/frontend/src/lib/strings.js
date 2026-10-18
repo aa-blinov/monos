@@ -1148,6 +1148,10 @@ const enText = {
     noteTitle: 'Note Title',
     created: 'Created',
     modified: 'Modified',
+    syncedAt: (when) => `Synced ${when}`,
+    syncPending: 'Waiting to be sent',
+    syncPendingHint: 'Changed after the last sync; the next sync sends it.',
+    syncNever: 'Not synced yet',
     stats: {
       words(count) {
         return `${count} ${count === 1 ? 'word' : 'words'}`;
@@ -2397,6 +2401,10 @@ const ruText = {
     noteTitle: 'Заголовок заметки',
     created: 'Создано',
     modified: 'Изменено',
+    syncedAt: (when) => `Синхронизировано ${when}`,
+    syncPending: 'Ждёт отправки',
+    syncPendingHint: 'Изменена после последней синхронизации; следующая её отправит.',
+    syncNever: 'Пока не синхронизировалась',
     stats: {
       words(count) {
         const mod10 = count % 10;

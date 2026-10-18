@@ -1,4 +1,5 @@
 <script>
+  import { noteSyncStatus } from '../lib/git-conflicts.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
   import { openPrintView } from '../lib/print.js';
   import { ArrowLeft, History, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-svelte';
@@ -9,6 +10,8 @@
   export let currentFile = null;
   export let fileInfo = null;
   export let wordCharStats = '';
+  /** { connected, lastSync } of the repository; the line shows when it last synced and whether this note waits. */
+  export let syncInfo = null;
   export let taskProgress = null;
   export let historyAvailable = false;
   export let onOpenHistory = () => {};
@@ -41,6 +44,7 @@
   const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
+  $: syncStatus = noteSyncStatus(syncInfo, fileInfo?.modified);
   const formatDateTime = (value) => {
     if (!value) return '';
     const date = new Date(value);
@@ -141,6 +145,17 @@
           <p class="text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
           </p>
+          {#if syncStatus !== 'none'}
+            <!-- The place of sync in the note: beside its own date, only when a repository is connected. -->
+            <span
+              class="hidden tabular-nums sm:inline {syncStatus === 'pending' ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}"
+              data-testid="note-sync"
+              data-state={syncStatus}
+              title={syncStatus === 'pending' ? $localizedText.editorHeader.syncPendingHint : undefined}
+            >
+              {#if syncStatus === 'synced'}{$localizedText.editorHeader.syncedAt(formatDateTime(syncInfo.lastSync))}{:else if syncStatus === 'pending'}{$localizedText.editorHeader.syncPending}{:else}{$localizedText.editorHeader.syncNever}{/if}
+            </span>
+          {/if}
           {#if wordCharStats}
             <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
           {/if}
