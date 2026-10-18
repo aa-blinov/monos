@@ -252,7 +252,62 @@ function referenceTextOf(notePath) {
   }
 }
 
+/**
+ * Every picture and PDF in a `_attachments` folder, with the notes that use it. A file is used by a note that
+ * links it by path or writes its name; `usedBy` is empty for an unused one. Null while a locked note is closed:
+ * what it uses is unknown, so nothing is called unused.
+ */
+function listAttachments() {
+  const allFiles = collectFiles(NOTES_DIR);
+  const notes = allFiles.filter((file) => file.endsWith('.md') || file.endsWith('.markdown'));
+  const byPath = new Map();
+  const byName = new Map();
+  let lockedNotes = 0;
+  for (const note of notes) {
+    const text = referenceTextOf(note);
+    if (text === null) {
+      lockedNotes += 1;
+      continue;
+    }
+    const entry = { path: relPath(note), title: path.basename(note).replace(/\.(md|markdown)$/i, '') };
+    for (const target of resolveReferencedPaths(note, text)) {
+      if (!byPath.has(target)) byPath.set(target, new Map());
+      byPath.get(target).set(entry.path, entry);
+    }
+    for (const name of namedReferences(text)) {
+      if (!byName.has(name)) byName.set(name, new Map());
+      byName.get(name).set(entry.path, entry);
+    }
+  }
+  const items = allFiles
+    .filter((file) => path.relative(path.resolve(NOTES_DIR), file).split(path.sep).includes(ATTACHMENTS_DIR))
+    .filter((file) => /\.(png|jpe?g|gif|webp|svg|pdf)$/i.test(file))
+    .map((file) => {
+      const stats = fs.statSync(file);
+      const users = new Map([...(byPath.get(path.resolve(file)) || []), ...(byName.get(path.basename(file)) || [])]);
+      return {
+        path: relPath(file),
+        name: path.basename(file),
+        kind: /\.pdf$/i.test(file) ? 'pdf' : 'image',
+        folder: path.relative(path.resolve(NOTES_DIR), path.dirname(path.dirname(file))).split(path.sep).join('/'),
+        size: stats.size,
+        modified: stats.mtime.toISOString(),
+        usedBy: [...users.values()],
+      };
+    })
+    .sort((a, b) => b.modified.localeCompare(a.modified));
+  return { items, lockedNotes };
+}
+
 export function registerOrphanRoutes(app) {
+  app.get('/api/attachments/all', (_req, res) => {
+    try {
+      res.json(listAttachments());
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  });
+
   app.get('/api/attachments/orphans', (_req, res) => {
     try {
       const allFiles = collectFiles(NOTES_DIR);

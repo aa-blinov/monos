@@ -81,3 +81,16 @@ test('markdownLinkPath экранирует пробелы и скобки, ки
   assert.equal(markdownLinkPath('_attachments/Снимок экрана (1).webp'), '_attachments/Снимок%20экрана%20%281%29.webp');
   assert.equal(decodeURI(markdownLinkPath('_attachments/Снимок экрана.webp')), '_attachments/Снимок экрана.webp');
 });
+
+test('filterAttachments: по имени файла, по названию заметки и «неиспользуемые»', async () => {
+  const { filterAttachments } = await import('./attachments.js');
+  const items = [
+    { name: 'plan.png', usedBy: [{ path: 'a.md', title: 'Roadmap' }] },
+    { name: 'old.png', usedBy: [] },
+  ];
+  assert.deepEqual(filterAttachments(items, { query: 'PLAN' }).map((i) => i.name), ['plan.png']);
+  assert.deepEqual(filterAttachments(items, { query: 'road' }).map((i) => i.name), ['plan.png']);
+  assert.deepEqual(filterAttachments(items, { filter: 'unused' }).map((i) => i.name), ['old.png']);
+  // A closed locked note may use anything, so nothing counts as unused.
+  assert.deepEqual(filterAttachments(items, { filter: 'unused', lockedNotes: 1 }), []);
+});

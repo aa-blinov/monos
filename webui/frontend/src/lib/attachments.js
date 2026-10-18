@@ -279,3 +279,20 @@ export async function fetchOrphanAttachments() {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
+
+/** Every picture and PDF in the notes with the notes that use it: `{ items, lockedNotes }`. */
+export async function fetchAllAttachments() {
+  const response = await fetch('/api/attachments/all');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+/** Narrow the list by file name or note title (`query`) and by use (`'all' | 'unused'`). */
+export function filterAttachments(items, { query = '', filter = 'all', lockedNotes = 0 } = {}) {
+  const needle = String(query || '').trim().toLowerCase();
+  return (items || []).filter((item) => {
+    if (filter === 'unused' && (lockedNotes > 0 || item.usedBy.length > 0)) return false;
+    if (!needle) return true;
+    return item.name.toLowerCase().includes(needle) || item.usedBy.some((note) => note.title.toLowerCase().includes(needle));
+  });
+}

@@ -830,7 +830,7 @@
             class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
           >
             {#each fontOptions as f}
-              <option value={f.name}>{f.name} ({$localizedText.optionLabels.fontCategory?.[f.category] || f.category})</option>
+              <option value={f.name}>{f.category === 'system' ? $localizedText.settings.fontSystem : `${f.name} (${$localizedText.optionLabels.fontCategory?.[f.category] || f.category})`}</option>
             {/each}
           </select>
         </div>

@@ -2384,3 +2384,20 @@ apiTest('print: YAML-шапка не попадает в HTML и PDF, а экс�
   assert.equal((await post({ path: 'notes/Export/Doc.md', fileName: 'Doc.txt', content: 'Heading', source })).status, 200);
   assert.equal((await post({ path: 'notes/Export/Doc.md', fileName: 'Doc.txt', content: 'Heading' })).status, 204);
 });
+
+apiTest('вложения: /api/attachments/all отдаёт файлы вместе с заметками, где они используются', async () => {
+  const dir = path.join(notesDir, 'Files');
+  fs.mkdirSync(path.join(dir, '_attachments'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '_attachments', 'used.png'), 'png');
+  fs.writeFileSync(path.join(dir, '_attachments', 'lonely.png'), 'png');
+  fs.writeFileSync(path.join(dir, '_attachments', 'paper.pdf'), 'pdf');
+  fs.writeFileSync(path.join(dir, 'Uses.md'), '![x](_attachments/used.png)\n\n![[paper.pdf]]\n', 'utf-8');
+
+  const { data } = await requestJson(buildUrl('/api/attachments/all'));
+  const byName = Object.fromEntries(data.items.filter((item) => item.folder === 'Files').map((item) => [item.name, item]));
+  assert.deepEqual(Object.keys(byName).sort(), ['lonely.png', 'paper.pdf', 'used.png']);
+  assert.equal(byName['used.png'].usedBy[0].title, 'Uses');
+  assert.equal(byName['paper.pdf'].kind, 'pdf');
+  assert.equal(byName['paper.pdf'].usedBy.length, 1);
+  assert.deepEqual(byName['lonely.png'].usedBy, []);
+});
