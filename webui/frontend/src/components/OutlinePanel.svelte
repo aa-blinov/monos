@@ -108,7 +108,7 @@
           <a
             href="#{item.anchor}"
             on:click={(e) => clickAnchor(e, item)}
-            class="block truncate py-3 lg:py-0"
+            class="block truncate py-3 lg:py-1"
             data-testid="outline-item"
             data-anchor={item.anchor}
           >

@@ -1,4 +1,5 @@
 <script>
+  import { scrollBehavior } from '../lib/motion.js';
   /**
    * The Help: how to use Monos, topic by topic, with a FAQ, in the interface language. Sections on the left,
    * the topics on the right; the search above finds a topic by any of its words and shows why it matched.
@@ -26,7 +27,7 @@
     activeSection = sectionId;
     await tick();
     const target = document.getElementById(itemId ? `help-${sectionId}-${itemId}` : `help-${sectionId}`);
-    target?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    target?.scrollIntoView({ block: 'start', behavior: scrollBehavior() });
     if (itemId) {
       target?.classList.add('help-flash');
       setTimeout(() => target?.classList.remove('help-flash'), 1400);

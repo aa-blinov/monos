@@ -2,11 +2,14 @@
  * Text ramp and the note tint.
  *
  * `--text-secondary` keeps each palette's official value. It is also used for
- * 14px card excerpts, and on a note card carrying the 13% accent tint that
- * combination measures below WCAG AA 4.5:1 in 6 of the 12 theme/mode pairs
- * (worst: solarized.dark at 2.79:1). Closing that gap means deviating from the
- * upstream palettes, which is an owner decision, not a mechanical fix — see
- * docs/ARCHITECTURE.md.
+ * 14px card excerpts. Measured against the 13% accent tint of the worst note
+ * colour, that combination is below WCAG AA 4.5:1 in 2 of the 12 theme/mode
+ * pairs (github.light 4.35 on a hovered card, solarized.dark 4.47); an earlier
+ * note here said 6 of 12 and 2.79, which the ramp since moved past. Closing the
+ * last gap means deviating from the upstream palettes, which is an owner
+ * decision, not a mechanical fix — see docs/ARCHITECTURE.md. Solarized's
+ * `--text-primary` on `--bg-secondary` (selected navigation) is 4.39 light and
+ * 4.11 dark for the same reason.
  *
  * `--text-tertiary` is new and covers the metadata whisper (11px paths and
  * timestamps), which previously stacked opacity onto `--text-secondary` and

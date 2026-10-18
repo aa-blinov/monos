@@ -108,6 +108,13 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   $: isDarkMode = typeof window !== 'undefined' ? (systemThemeSignal, detectDarkMode($themeMode)) : false;
   $: if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', isDarkMode);
   $: applyTheme($activeTheme, isDarkMode, themes);
+  // Native controls (the option lists of a <select>, scrollbars, form fields) follow the app's mode, not the
+  // system's, and the browser chrome takes the page colour of the chosen palette.
+  $: if (typeof document !== 'undefined') {
+    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
+    const pageColor = themes[$activeTheme]?.[isDarkMode ? 'dark' : 'light']?.['--bg-primary'];
+    if (pageColor) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', pageColor);
+  }
   $: applyTypographyVars({
     lineHeight: $lineHeight,
     contentWidth: $contentWidth,

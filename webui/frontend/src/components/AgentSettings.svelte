@@ -85,7 +85,7 @@
       {rulesReady ? $localizedText.agent.rulesReady : $localizedText.agent.rulesMissing}
     </p>
     {#if !rulesReady}
-      <button type="button" disabled={busy} on:click={createRules} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.terminal.rulesCreate}</button>
+      <button type="button" disabled={busy} on:click={createRules} class="min-h-6 text-xs font-bold max-sm:min-h-11 uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.terminal.rulesCreate}</button>
     {/if}
   </div>
 </section>

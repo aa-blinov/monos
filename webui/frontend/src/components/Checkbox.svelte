@@ -11,7 +11,7 @@
 </script>
 
 <label
-  class="group inline-flex items-center gap-2.5 select-none cursor-pointer {disabled ? 'cursor-not-allowed opacity-50' : ''}"
+  class="group inline-flex min-h-6 items-center gap-2.5 select-none cursor-pointer max-sm:min-h-11 {disabled ? 'cursor-not-allowed opacity-50' : ''}"
 >
   <span class="relative inline-flex w-4 h-4 items-center justify-center">
     <input
