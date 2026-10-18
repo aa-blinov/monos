@@ -767,6 +767,25 @@ function applyDeviceNameToRepo(name) {
   if (gitSettings.repo) writeGitSettings({ ...gitSettings, device_name: name });
 }
 
+/**
+ * Where a note lived at a commit. A note that was moved or renamed (an import that sorted it into folders, a
+ * rename in the app) has an older name in the commits before: `git show <sha>:<current path>` fails there with
+ * "exists on disk, but not in <sha>". `log --follow --name-only` lists the path each commit knew it by.
+ * @returns {string} the path at that commit, or the current one when git has no other answer
+ */
+export function pathAtRevision(sha, safePath) {
+  try {
+    const raw = gitExec(['-c', 'core.quotePath=false', 'log', '--follow', '--name-only', '--format=%x1e%H', '--', safePath]);
+    for (const block of raw.split('\u001e')) {
+      const [hash, ...names] = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (hash && sha && hash.startsWith(String(sha)) && names[0]) return names[0];
+    }
+  } catch {
+    // No log for this path: the current one is the best guess.
+  }
+  return safePath;
+}
+
 export function registerGitRoutes(app) {
   // The device's name: what the history and the conflict screens call it ("Phone, today 14:35").
   app.get('/api/device', (_req, res) => {
@@ -1331,13 +1350,14 @@ export function registerGitRoutes(app) {
         return res.status(400).json({ detail: 'Invalid revision' });
       }
 
-      const oldText = gitExecBuffer(['show', `${sha}:${safePath}`])?.toString('utf-8') || '';
+      const thenPath = assertSafeGitPath(pathAtRevision(sha, safePath));
+      const oldText = gitExecBuffer(['show', `${sha}:${thenPath}`])?.toString('utf-8') || '';
       const currentPath = path.join(NOTES_DIR, safePath);
       const currentText = fs.existsSync(currentPath) ? readTextFile(currentPath) : '';
       // Without core.quotePath=false git escapes every non-ASCII byte, so a
       // Russian note name arrives as "\320\237\321\200..." in the diff header —
       // unreadable, and the only line a user reads first.
-      const diff = gitExecBuffer(['-c', 'core.quotePath=false', 'diff', '--no-color', '--unified=3', `${sha}`, '--', safePath])
+      const diff = gitExecBuffer(['-c', 'core.quotePath=false', 'diff', '--no-color', '--unified=3', '-M', `${sha}`, '--', ...new Set([thenPath, safePath])])
         ?.toString('utf-8') || '';
 
       res.json({
@@ -1368,7 +1388,7 @@ export function registerGitRoutes(app) {
         return res.status(400).json({ detail: 'Invalid revision' });
       }
 
-      const restored = gitExecBuffer(['show', `${sha}:${safePath}`])?.toString('utf-8');
+      const restored = gitExecBuffer(['show', `${sha}:${assertSafeGitPath(pathAtRevision(sha, safePath))}`])?.toString('utf-8');
       if (restored === undefined || restored === null) {
         throw httpError(404, 'That version of the note is no longer available');
       }

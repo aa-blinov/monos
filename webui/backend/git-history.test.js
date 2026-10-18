@@ -135,3 +135,28 @@ test('маршруты отклоняют выход за пределы notes',
     assert.notEqual(res.status, 404, 'отказ должен быть отказом, а не «файл не найден»');
   }
 });
+test('версия из времени до переезда заметки открывается по тому пути, который был тогда', async () => {
+  // An import that sorts notes into folders: the note is moved, and its older commits know the old name.
+  const oldRel = 'Inbox/defer.md';
+  const newRel = 'Programming/Swift/18. defer.md';
+  fs.mkdirSync(path.join(notesDir, 'Inbox'), { recursive: true });
+  fs.writeFileSync(path.join(notesDir, oldRel), 'Тело заметки про defer, достаточно длинное, чтобы git узнал файл.\n'.repeat(5), 'utf-8');
+  git(['add', '-A']);
+  git(['commit', '-m', 'Импорт']);
+  const before = git(['rev-parse', 'HEAD']);
+  fs.mkdirSync(path.join(notesDir, 'Programming/Swift'), { recursive: true });
+  fs.renameSync(path.join(notesDir, oldRel), path.join(notesDir, newRel));
+  git(['add', '-A']);
+  git(['commit', '-m', 'Разложено по папкам']);
+
+  const content = await fetch(`${base}/api/git/history/content?path=${encodeURIComponent(newRel)}&sha=${before}`);
+  assert.equal(content.status, 200);
+  const data = await content.json();
+  assert.match(data.old, /defer/);
+  assert.equal(data.changed, false);
+
+  const restore = await fetch(`${base}/api/git/history/restore`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: newRel, sha: before }),
+  });
+  assert.equal(restore.status, 200);
+});
