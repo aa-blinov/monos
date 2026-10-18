@@ -5,6 +5,7 @@ import multer from 'multer';
 import { NOTES_DIR } from '../config.js';
 import { decodeTextBuffer, httpError, readTextFile, textFileBuffer } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
+import { relinkImportedNotes } from '../import-links.js';
 
 const MAX_ARCHIVE_SIZE = 100 * 1024 * 1024;
 const ARCHIVE_FIELD = 'archive';
@@ -116,7 +117,7 @@ function addDirectoryToArchive(zip, absoluteDir, relativeDir = '') {
   return exported;
 }
 
-function importZip(buffer) {
+export function importZip(buffer) {
   const zip = new AdmZip(buffer);
   const entries = zip.getEntries();
   const summary = {
@@ -125,7 +126,11 @@ function importZip(buffer) {
     importedAttachments: 0,
     skipped: 0,
     renamed: 0,
+    relinkedImages: 0,
+    unresolvedImages: [],
   };
+  const importedNotePaths = [];
+  const importedFiles = new Map();
 
   for (const entry of entries) {
     const relativePath = normalizeArchivePath(entry.entryName);
@@ -154,14 +159,26 @@ function importZip(buffer) {
     summary.importedFiles += 1;
     if (TEXT_EXTENSIONS.has(ext)) {
       summary.importedNotes += 1;
+      importedNotePaths.push(finalPath);
     } else {
       summary.importedAttachments += 1;
+      importedFiles.set(relativePath, finalPath);
     }
     if (finalPath !== targetPath) summary.renamed += 1;
   }
 
   if (summary.importedFiles === 0) {
     throw httpError(400, 'Archive does not contain supported note files');
+  }
+
+  // Links to pictures and files are found again in the new layout (see import-links.js).
+  try {
+    const links = relinkImportedNotes({ notesRoot: path.resolve(NOTES_DIR), notes: importedNotePaths, files: importedFiles });
+    summary.relinkedImages = links.relinked;
+    summary.unresolvedImages = links.unresolved.slice(0, 50);
+  } catch (error) {
+    // The notes are in; only the link repair failed. Say so rather than fail the whole import.
+    console.error('Relinking imported attachments failed:', error);
   }
 
   indexAllFiles();

@@ -2413,3 +2413,42 @@ apiTest('print: пустая шапка и линия --- в начале зам
   assert.match(book, /Important text/);
   assert.doesNotMatch(book, /BEGIN MONOS LOCKED NOTE|AAAA/);
 });
+
+apiTest('импорт архива: ссылки на картинки находятся заново (Joplin по id, Obsidian по имени, Notion в процентах, HTML)', async () => {
+  const { importZip } = await import('./routes/backup.js');
+  const png = Buffer.from('89504e470d0a1a0a', 'hex');
+  const zip = new AdmZip();
+  const id = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+  zip.addFile('Imp/_resources/' + id + '.png', png);
+  zip.addFile('Imp/Joplin note.md', Buffer.from(`# J\n\n![pic](:/${id})\n\n![same](../Imp/_resources/${id}.png)\n`));
+  zip.addFile('Imp/Pics/Схема 1.png', Buffer.concat([png, Buffer.from('1')]));
+  zip.addFile('Imp/Obsidian note.md', Buffer.from('# O\n\n![[Схема 1.png]]\n\n![[Схема 1.png|300]]\n'));
+  zip.addFile('Imp/Notion note/image one.png', Buffer.concat([png, Buffer.from('2')]));
+  zip.addFile('Imp/Notion note.md', Buffer.from('# N\n\n![img](Notion%20note/image%20one.png)\n\n<img src="Notion%20note/image%20one.png" width="100">\n\n![gone](missing.png)\n'));
+  const summary = importZip(zip.toBuffer());
+  assert.ok(summary.relinkedImages >= 6, `relinked ${summary.relinkedImages}`);
+  assert.deepEqual(summary.unresolvedImages.length, 1);
+  assert.match(summary.unresolvedImages[0], /missing\.png/);
+
+  const dir = path.join(notesDir, 'Imp');
+  const read = (name) => fs.readFileSync(path.join(dir, name), 'utf-8');
+  assert.match(read('Joplin note.md'), /!\[pic\]\(_attachments\/[^)]+\.png\)/);
+  assert.doesNotMatch(read('Joplin note.md'), /:\/a1b2|_resources/);
+  assert.match(read('Obsidian note.md'), /!\[\]\(_attachments\/%D0%A1[^)]*1\.png\)/);
+  assert.match(read('Notion note.md'), /\(_attachments\/image%20one\.png\)/);
+  assert.match(read('Notion note.md'), /src="_attachments\/image%20one\.png"/);
+  assert.match(read('Notion note.md'), /!\[gone\]\(missing\.png\)/);
+  assert.ok(fs.existsSync(path.join(dir, '_attachments', `${id}.png`)));
+  assert.ok(fs.existsSync(path.join(dir, '_attachments', 'Схема 1.png')));
+  // The old places are emptied once nothing points at them.
+  assert.equal(fs.existsSync(path.join(dir, '_resources')), false);
+  assert.equal(fs.existsSync(path.join(dir, 'Pics')), false);
+
+  // What the editor shows: the file is served from the note's own _attachments.
+  const raw = await realFetch(buildUrl('/api/attachments/raw', { path: `notes/Imp/_attachments/${id}.png` }));
+  assert.equal(raw.status, 200);
+  // And the Attachments page counts them as used.
+  const { data } = await requestJson(buildUrl('/api/attachments/all'));
+  const joplin = data.items.find((item) => item.name === `${id}.png`);
+  assert.equal(joplin.usedBy[0].title, 'Joplin note');
+});
