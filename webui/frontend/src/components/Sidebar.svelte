@@ -1211,7 +1211,7 @@
   </div>
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex-1 flex flex-col justify-center gap-6 px-6 py-8' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-4 pb-6 pt-3' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
       {#if gitConfigured}
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
