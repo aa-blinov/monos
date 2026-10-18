@@ -201,6 +201,18 @@ const enText = {
         return `${count} columns`;
       },
       groupByColor: 'Group by color',
+      groupByColorShort: 'By color',
+      sortLabel: 'Order',
+      sortModified: 'Recently changed',
+      sortOpened: 'Recently opened',
+      sortTitle: 'By title',
+      tagsLabel: 'Tags',
+      pinnedGroup: 'Pinned',
+      recentGroup: 'Recent',
+      titleGroup: 'All notes',
+      shownOf(shown, total) {
+        return `Showing ${shown} of ${total}`;
+      },
       ungroupByColor: 'Ungroup colors',
       emptyNote: 'Note is empty',
       openFull: 'Open note',
@@ -1246,6 +1258,18 @@ const ruText = {
         return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
       },
       groupByColor: 'Группировать по цветам',
+      groupByColorShort: 'По цветам',
+      sortLabel: 'Порядок',
+      sortModified: 'Недавно изменённые',
+      sortOpened: 'Недавно открытые',
+      sortTitle: 'По названию',
+      tagsLabel: 'Теги',
+      pinnedGroup: 'Закреплённые',
+      recentGroup: 'Недавние',
+      titleGroup: 'Все заметки',
+      shownOf(shown, total) {
+        return `Показано ${shown} из ${total}`;
+      },
       ungroupByColor: 'Без группировки по цветам',
       emptyNote: 'Заметка пустая',
       openFull: 'Открыть заметку',

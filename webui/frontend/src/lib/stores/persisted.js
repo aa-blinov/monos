@@ -33,9 +33,13 @@ function identity(value) {
   return value;
 }
 
+// No storage (a plain Node run of a lib test) means no saved values, not a crash.
+const storage = () => (typeof localStorage === 'undefined' ? null : localStorage);
+
 function resolveInitial(key, fallback, validate, migrate, deserialize) {
-  const saved = localStorage.getItem(key);
-  const migrated = migrate ? migrate(saved, (k) => localStorage.getItem(k)) : saved;
+  const read = (k) => storage()?.getItem(k) ?? null;
+  const saved = read(key);
+  const migrated = migrate ? migrate(saved, read) : saved;
   if (migrated === null || migrated === undefined) return fallback;
   const value = deserialize(migrated);
   if (validate && !validate(value)) return fallback;
@@ -44,6 +48,6 @@ function resolveInitial(key, fallback, validate, migrate, deserialize) {
 
 function writeValue(key, value, serialize) {
   const serialized = serialize(value);
-  if (serialized === null) localStorage.removeItem(key);
-  else localStorage.setItem(key, serialized);
+  if (serialized === null) storage()?.removeItem(key);
+  else storage()?.setItem(key, serialized);
 }

@@ -267,6 +267,27 @@ apiTest('POST /api/notes/touch поднимает заметку в recent', asy
   assert.equal(recent.data[0].path, 'notes/Beta.md');
 });
 
+apiTest('GET /api/notes/recent: порядок по названию, фильтр по тегу и счётчик', async () => {
+  const byTitle = await requestJson(buildUrl('/api/notes/recent', { sort: 'title', limit: '50' }));
+  assert.equal(byTitle.response.status, 200);
+  const names = byTitle.data.map((note) => note.name);
+  const sorted = [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  assert.deepEqual(names, sorted);
+
+  const shared = await requestJson(buildUrl('/api/notes/recent', { tag: 'shared', limit: '50' }));
+  assert.ok(shared.data.length >= 2);
+  assert.ok(shared.data.every((note) => note.tags.includes('shared')));
+
+  // The tag is matched whole: a prefix of a tag name finds nothing.
+  const prefix = await requestJson(buildUrl('/api/notes/recent', { tag: 'shar', limit: '50' }));
+  assert.deepEqual(prefix.data, []);
+
+  const count = await requestJson(buildUrl('/api/notes/recent/count', { tag: 'shared' }));
+  assert.equal(count.data.total, shared.data.length);
+  const all = await requestJson(buildUrl('/api/notes/recent/count'));
+  assert.ok(all.data.total >= count.data.total);
+});
+
 apiTest('GET /api/notes/recent sort=modified сортирует по mtime, а не по last_opened', async () => {
   const alphaPath = path.join(notesDir, 'Topic', 'Alpha.md');
   const betaPath = path.join(notesDir, 'Beta.md');
