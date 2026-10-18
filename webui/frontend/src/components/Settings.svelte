@@ -1,4 +1,5 @@
 <script>
+  import { scrollBehavior } from '../lib/motion.js';
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
@@ -692,7 +693,7 @@
     if (get(settingsSection) !== id) return;
     settingsSection.set('');
     requestAnimationFrame(() => {
-      node.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      node.scrollIntoView({ block: 'start', behavior: scrollBehavior() });
       node.classList.add('settings-flash');
       setTimeout(() => node.classList.remove('settings-flash'), 1600);
     });
@@ -702,7 +703,7 @@
   function revealWhenAsked(node) {
     if (!get(revealConflicts)) return;
     revealConflicts.set(false);
-    requestAnimationFrame(() => node.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    requestAnimationFrame(() => node.scrollIntoView({ block: 'center', behavior: scrollBehavior() }));
   }
 
   function openConflictResolver() {
@@ -742,7 +743,7 @@
     const element = document.getElementById(event.detail);
     if (!element) return;
     if (element.tagName === 'DETAILS') element.open = true;
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    element.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     activeGroup = event.detail;
   }
 
@@ -979,7 +980,7 @@
 
       <!-- Help -->
       <details open={!isAuthenticated} class="text-xs text-[var(--text-secondary)] group">
-        <summary class="cursor-pointer hover:text-[var(--text-primary)] transition-colors">{$localizedText.settings.tokenHelp}</summary>
+        <summary class="block min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.tokenHelp}</summary>
         <div class="mt-3 space-y-2 rounded-ui border border-[var(--border-subtle)] p-3 leading-relaxed">
           <p>{$localizedText.settings.tokenHelpSteps[0]} <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="underline hover:opacity-60">{$localizedText.settings.tokenHelpUrl}</a></p>
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
@@ -1174,7 +1175,7 @@
       </div>
 
       <div class="flex gap-4 text-xs">
-        <button on:click={checkGitStatus} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.refreshStatus}</button>
+        <button on:click={checkGitStatus} class="min-h-6 uppercase tracking-widest transition hover:opacity-60 max-sm:min-h-11">{$localizedText.settings.refreshStatus}</button>
         {#if gitConflicts.length > 0}
           <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
         {/if}

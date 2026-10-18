@@ -97,7 +97,7 @@
       <div class="ml-2 flex min-w-0 flex-1 items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
         {#each breadcrumbParts as part, index}
           {#if index > 0}
-            <span class="opacity-40">/</span>
+            <span aria-hidden="true">/</span>
           {/if}
           <span class="max-w-[12rem] truncate">{part.name}</span>
         {/each}
@@ -179,7 +179,7 @@
               aria-expanded={outlineOpen}
               data-testid="outline-toggle"
               on:click={onToggleOutline}
-              class="-my-4 py-4 text-xs transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="-my-4 py-4 text-xs transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             >
               {$localizedText.editor.outline}
             </button>
@@ -188,7 +188,7 @@
               <button
                 type="button"
                 on:click={onOpenHistory}
-                class="-my-4 inline-flex items-center gap-1.5 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
+                class="-my-4 inline-flex items-center gap-1.5 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1"
               >
                 <History size="12" strokeWidth="1.7" aria-hidden="true" />
                 {$localizedText.editorHeader.historyButton}
@@ -197,7 +197,7 @@
             <button
               type="button"
               on:click={browserPrint}
-              class="hidden sm:inline -my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-0"
+              class="hidden sm:inline -my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1"
             >
               {$localizedText.editorHeader.print}
             </button>
