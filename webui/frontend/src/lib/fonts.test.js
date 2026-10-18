@@ -56,3 +56,15 @@ test('fontOptions: есть системный шрифт, и он находи�
   assert.ok(system);
   assert.match(system.family, /^system-ui/);
 });
+
+test('applyTypographyVars: шрифт ищется по имени, а не по вхождению в чужое семейство (Roboto не становится System)', async () => {
+  const { applyTypographyVars } = await import('./app-shell.js');
+  const props = {};
+  globalThis.document = { documentElement: { style: { setProperty: (key, value) => { props[key] = value; } } } };
+  const base = { lineHeight: 'normal', contentWidth: 'wide', editorFontSize: 'md', fontSize: 'medium', lineHeightOptions: [], contentWidthOptions: [], editorFontSizeOptions: [], fontSizeOptions: [], fontOptions };
+  applyTypographyVars({ ...base, fontFamily: 'Roboto' });
+  assert.match(props['--font-family'], /^"Roboto"/);
+  applyTypographyVars({ ...base, fontFamily: 'System' });
+  assert.match(props['--font-family'], /^system-ui/);
+  delete globalThis.document;
+});

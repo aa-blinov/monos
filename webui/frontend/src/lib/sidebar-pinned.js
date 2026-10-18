@@ -88,13 +88,14 @@ export async function pinNote(path, name) {
   }
 }
 
-export async function unpinNote(path) {
+export async function unpinNote(path, name) {
   if (!path) return;
   setPinnedInStore(path, false);
   try {
     await writePin(path, false);
   } catch (error) {
-    // Возвращаем как было: молча снятое закрепление хуже, чем ошибка.
+    // Put it back as it was: a pin that vanished quietly is worse than an error.
+    setPinnedInStore(path, true, name);
     throw error;
   }
 }

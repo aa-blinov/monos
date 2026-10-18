@@ -181,7 +181,7 @@ test('эндпоинт считает вложение использованн�
   // Референсы собираются из markdown самих заметок: иначе в отчёт попадали бы
   // все файлы подряд.
   assert.ok(
-    attachmentsSource.includes('matchAll(/!'),
+    /resolveReferencedPaths[\s\S]*matchAll\(\/\\\]/.test(attachmentsSource),
     'ссылки собираются из текста заметки — по одному пути на файл',
   );
   assert.match(attachmentsSource, /referenced\.has/);

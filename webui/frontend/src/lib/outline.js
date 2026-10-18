@@ -118,7 +118,7 @@ export function extractOutline(markdown) {
     // ATX heading: 1-6 leading #, optional trailing #s
     // Поддерживаем экранированный \# (когда заголовок хранится внутри
     // YAML frontmatter, tiptap-markdown экранирует # чтобы не сломать YAML)
-    const atx = line.match(/^\s*\\?(#{1,6})\s+(.+?)\s*\\?#*\s*$/);
+    const atx = line.match(/^\s*\\?(#{1,6})\s+(.+?)(?:\s+\\?#+)?\s*$/);
     if (atx) {
       const level = atx[1].length;
       const text = plainHeadingText(atx[2]);
