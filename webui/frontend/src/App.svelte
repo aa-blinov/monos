@@ -5,6 +5,7 @@ import { get } from 'svelte/store';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
   import NoteBoard from './components/NoteBoard.svelte';
+  import NotePage from './components/NotePage.svelte';
   import Settings from './components/Settings.svelte';
   import SavedSearchesPanel from './components/SavedSearchesPanel.svelte';
   import TagPanel from './components/TagPanel.svelte';
@@ -286,11 +287,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   }
 
   onMount(() => {
-    // Fetched while the board is already drawn and the browser is idle, so the first note opens as fast as when
-    // the editor was bundled in, and the board's first paint no longer carries it.
-    const preloadNotePage = () => { void import('./components/NotePage.svelte'); };
-    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(preloadNotePage, { timeout: 1500 });
-    else window.setTimeout(preloadNotePage, 300);
     setSidebarOpen(true);
     updateMobileState();
     setRoutePath(window.location.pathname);
@@ -955,11 +951,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <!-- The editor stack (ProseMirror, highlighting, formulas) is the largest part of the app and the board
-               never needs it: it is fetched while the board is on screen (below), and here on first use. -->
-          {#await import('./components/NotePage.svelte') then notePageModule}
-            <svelte:component this={notePageModule.default} path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
-          {/await}
+          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} />
         </Route>
         <Route path="/settings">
           <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} on:openHelp={openHelp} />
