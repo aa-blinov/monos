@@ -1,3 +1,4 @@
+import { excludeAgentSkillFromGit } from '../agent-skill.js';
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -62,6 +63,8 @@ export async function connectLocal(device, remote, { branch = 'master', first = 
   git(cwd, ['config', 'user.name', device.name]);
   git(cwd, ['config', 'merge.conflictStyle', 'zdiff3']);
   git(cwd, ['remote', 'add', 'origin', remote]);
+  // What the app's connect step does before its first `git add -A`: the per-device skill stays out of the repository.
+  excludeAgentSkillFromGit(cwd);
   fs.mkdirSync(path.join(device.root, '.data'), { recursive: true });
   fs.writeFileSync(path.join(device.root, '.data', 'git_settings.json'), JSON.stringify({ branch, repo: 'local/test', device_name: device.name }));
   if (first) {

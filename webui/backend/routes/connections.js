@@ -16,6 +16,9 @@ const MIN_PHRASE_LENGTH = 3;
 const LIST_LIMIT = 200;
 const MENTION_LIMIT = 30;
 const NEIGHBOR_LIMIT = 24;
+const MISSING_LIMIT = 10;
+// More nodes than this and the map is neither drawable nor readable: the best connected notes are kept.
+const MAP_NODE_LIMIT = 2500;
 
 const displayTitle = (note) => note.title?.trim() || note.name.replace(/\.md$/i, '');
 const timeOf = (value) => {
@@ -227,19 +230,29 @@ export function registerConnectionRoutes(app) {
   });
 
   // The note with its resolved neighbours (links out and in) and the links between them: the local graph.
+  // Each neighbour says how it relates to the note: `out` (the note links to it), `in` (it links to the note) or
+  // `both`. `missing` lists the names the note links to that no note answers to.
   app.get('/api/notes/neighbors', (req, res) => {
     try {
       const filePath = requireQueryPath(req);
       const { notes, links } = linkGraph(getDb());
       const center = notes.find((note) => note.path === filePath);
-      if (!center) return res.json({ nodes: [], edges: [] });
+      if (!center) return res.json({ nodes: [], edges: [], missing: [] });
 
-      const neighbors = new Set();
+      const out = new Set();
+      const into = new Set();
+      const missing = new Set();
       for (const link of links) {
-        if (link.source === filePath) link.paths.forEach((path) => neighbors.add(path));
-        else if (link.paths.includes(filePath)) neighbors.add(link.source);
+        if (link.source === filePath) {
+          if (link.paths.length === 0 && linkable(link.target)) missing.add(link.target);
+          link.paths.forEach((path) => out.add(path));
+        } else if (link.paths.includes(filePath)) {
+          into.add(link.source);
+        }
       }
-      neighbors.delete(filePath);
+      out.delete(filePath);
+      into.delete(filePath);
+      const neighbors = new Set([...out, ...into]);
 
       const byPath = new Map(notes.map((note) => [note.path, note]));
       const shown = [filePath, ...[...neighbors]
@@ -255,9 +268,66 @@ export function registerConnectionRoutes(app) {
         }
       }
 
+      const relationOf = (path) => (path === filePath ? 'self' : out.has(path) && into.has(path) ? 'both' : out.has(path) ? 'out' : 'in');
       res.json({
-        nodes: shown.map((path) => ({ path, title: displayTitle(byPath.get(path)), center: path === filePath })),
+        nodes: shown.map((path) => ({ path, title: displayTitle(byPath.get(path)), center: path === filePath, relation: relationOf(path) })),
         edges: [...edges.values()],
+        missing: [...missing].sort((a, b) => a.localeCompare(b)).slice(0, MISSING_LIMIT),
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  // The map of the vault: every linked note, and the links between them. A note is a node, a resolved link an
+  // edge (`both` when each links to the other). Notes without a link are left out unless `orphans=1`; a vault
+  // with more linked notes than the map can draw gives the best connected ones and says it was cut.
+  app.get('/api/graph', (req, res) => {
+    try {
+      const withOrphans = req.query.orphans === '1';
+      const db = getDb();
+      const { notes, links } = linkGraph(db);
+      const byPath = new Map(notes.map((note) => [note.path, note]));
+      const colors = new Map(db.prepare("SELECT path, color FROM folder_config WHERE color IS NOT NULL AND color != ''").all()
+        .map((row) => [row.path, row.color]));
+
+      const edges = new Map();
+      const neighbors = new Map();
+      const touch = (a, b) => {
+        if (!neighbors.has(a)) neighbors.set(a, new Set());
+        neighbors.get(a).add(b);
+      };
+      for (const link of links) {
+        if (!byPath.has(link.source)) continue;
+        for (const target of link.paths) {
+          if (target === link.source || !byPath.has(target)) continue;
+          addEdge(edges, link.source, target);
+          touch(link.source, target);
+          touch(target, link.source);
+        }
+      }
+
+      const degree = (path) => neighbors.get(path)?.size || 0;
+      const byTitle = (a, b) => displayTitle(a).localeCompare(displayTitle(b));
+      const connected = notes.filter((note) => degree(note.path) > 0)
+        .sort((a, b) => degree(b.path) - degree(a.path) || byTitle(a, b));
+      const orphans = notes.filter((note) => degree(note.path) === 0).sort(byTitle);
+
+      const chosen = connected.slice(0, MAP_NODE_LIMIT);
+      if (withOrphans) chosen.push(...orphans.slice(0, Math.max(0, MAP_NODE_LIMIT - chosen.length)));
+      const inMap = new Set(chosen.map((note) => note.path));
+
+      res.json({
+        nodes: chosen.map((note) => ({
+          path: note.path,
+          title: displayTitle(note),
+          degree: degree(note.path),
+          color: colors.get(note.path) || null,
+        })),
+        edges: [...edges.values()].filter((edge) => inMap.has(edge.from) && inMap.has(edge.to)),
+        noteCount: notes.length,
+        orphanCount: orphans.length,
+        truncated: connected.length > MAP_NODE_LIMIT,
       });
     } catch (error) {
       sendError(res, error);

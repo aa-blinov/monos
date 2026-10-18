@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { closeDb } from './database.js';
 import { ROOT_DIR, NOTES_DIR } from './config.js';
 import { indexAllFiles } from './indexing.js';
+import { ensureAgentSkill } from './agent-skill.js';
 import { registerFileRoutes } from './routes/files.js';
 import { registerTreeRoutes } from './routes/tree.js';
 import { registerNoteRoutes } from './routes/notes.js';
@@ -217,6 +218,8 @@ export function startServer({ port = 8000, host } = {}) {
     return Promise.resolve({ app, server, port: server.address().port });
   }
 
+  // The assistants' guide to this folder, made once and then left alone (a failure here must not stop the app).
+  try { ensureAgentSkill(); } catch (error) { console.error('Could not write the agent skill:', error); }
   indexAllFiles();
   startNotesWatcher();
   registerFrontendStatic();

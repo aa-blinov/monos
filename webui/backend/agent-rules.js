@@ -15,6 +15,8 @@ export const AGENTS_MD = `# Working in this notes folder
 
 This folder is a Monos notes vault: plain Markdown files that a person reads and edits in the Monos app,
 and that are synced between their devices through a Git repository. Keep every file valid, portable Markdown.
+The full guide, with how to create, link, rename and find notes, is \`.claude/skills/monos-notes/SKILL.md\`
+(a skill that Claude Code and OpenCode load by themselves): read it before you change notes.
 
 ## Notes
 
