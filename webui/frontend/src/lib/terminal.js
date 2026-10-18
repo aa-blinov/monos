@@ -82,6 +82,8 @@ export const AGENT_PRESETS = [
   { id: 'codex', label: 'Codex', command: 'codex' },
   { id: 'gemini', label: 'Gemini CLI', command: 'gemini' },
   { id: 'opencode', label: 'OpenCode', command: 'opencode' },
+  // Cursor's command-line agent; it takes the first question as the argument, like Claude Code.
+  { id: 'cursor', label: 'Cursor CLI', command: 'cursor-agent' },
 ];
 export const DEFAULT_AGENT_COMMAND = 'claude';
 

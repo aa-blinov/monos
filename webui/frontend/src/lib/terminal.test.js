@@ -75,3 +75,11 @@ test('вопрос агенту набирается так, как приним
   assert.equal(line('opencode --prompt'), 'opencode --prompt "Про заметку Work/План.md: "', 'a flag already there is not doubled');
   assert.equal(line('my-opencode-wrapper'), 'my-opencode-wrapper "Про заметку Work/План.md: "', 'only the opencode command itself');
 });
+
+test('Cursor CLI — среди агентов в настройках, вопрос о заметке идёт аргументом', async () => {
+  const { AGENT_PRESETS, agentLabel, noteQuestion } = await import('./terminal.js');
+  assert.ok(AGENT_PRESETS.some((preset) => preset.id === 'cursor' && preset.command === 'cursor-agent'));
+  assert.equal(agentLabel('cursor-agent'), 'Cursor CLI');
+  const line = noteQuestion('notes/Work/План.md', (path) => `Про ${path}: `).commandLine('cursor-agent');
+  assert.match(line, /^cursor-agent "Про /);
+});

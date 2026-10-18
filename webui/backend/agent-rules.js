@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NOTES_DIR } from './config.js';
 
-// Files an agent reads before it works in a folder: Codex and most agents read AGENTS.md, Claude Code reads
+// Files an agent reads before it works in a folder: Codex, Cursor CLI and most agents read AGENTS.md, Claude Code reads
 // CLAUDE.md, Gemini CLI reads GEMINI.md. They sit at the top of the notes folder and are not notes: the index
 // (and so the board, the tree and search) skips them.
 export const AGENT_RULE_FILES = ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md'];
