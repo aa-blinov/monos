@@ -187,11 +187,13 @@ test('эндпоинт считает вложение использованн�
   assert.match(attachmentsSource, /referenced\.has/);
 });
 
-test('в настройках есть список с путём и размером', () => {
+test('вложения вынесены из настроек на свою страницу: в настройках только ссылка', () => {
   const settings = read(SRC, 'components', 'Settings.svelte');
-  assert.match(settings, /data-testid="orphan-attachments"/);
-  assert.match(settings, /orphan\.path|orphan\.folder/);
-  assert.match(settings, /humanSize\(orphan\.size\)/);
+  assert.doesNotMatch(settings, /data-testid="orphan-attachments"/);
+  assert.match(settings, /data-testid="settings-open-attachments"/);
+  const view = read(SRC, 'components', 'AttachmentsView.svelte');
+  assert.match(view, /formatAttachmentSize\(item\.size\)/);
+  assert.match(view, /item\.usedBy/);
 });
 
 test('форматтер размера не врёт на границах', () => {

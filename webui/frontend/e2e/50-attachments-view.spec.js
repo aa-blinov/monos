@@ -35,3 +35,35 @@ test('шрифт: в настройках есть системный, и он �
   await page.goto('/');
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--font-family'))).toMatch(/^system-ui/);
 });
+
+// Every note that uses a file is reachable from its card: two are shown, the rest open with one click.
+test('вложения: у файла в нескольких заметках видны все, остальные раскрываются', async ({ page }) => {
+  await prepareMonos(page);
+  const notes = ['One', 'Two', 'Three', 'Four'].map((title) => ({ path: `notes/Docs/${title}.md`, title }));
+  await page.route('**/api/attachments/all', (route) => route.fulfill({
+    json: {
+      lockedNotes: 0,
+      items: [{ path: 'notes/Docs/_attachments/shared.png', name: 'shared.png', kind: 'image', folder: 'notes/Docs', size: 4096, modified: new Date().toISOString(), usedBy: notes }],
+    },
+  }));
+  await page.goto('/');
+  await page.getByTestId('open-more').click();
+  await page.getByTestId('open-attachments').click();
+  const list = page.getByTestId('attachment-notes');
+  await expect(list.getByRole('button', { name: /^(One|Two|Three|Four)$/ })).toHaveCount(2);
+  await page.getByTestId('attachment-more-notes').click();
+  await expect(list.getByRole('button', { name: /^(One|Two|Three|Four)$/ })).toHaveCount(4);
+});
+
+// The list of unused files is no longer in Settings: only a way to the page.
+test('настройки: вместо списка вложений ссылка на страницу «Вложения»', async ({ page }) => {
+  await prepareMonos(page);
+  await page.goto('/settings');
+  // The link sits in the collapsed "More" block: open it.
+  await page.evaluate(() => document.querySelectorAll('details').forEach((el) => { if (el.querySelector('[data-testid="settings-open-attachments"]')) el.open = true; }));
+  const link = page.getByTestId('settings-open-attachments');
+  await link.scrollIntoViewIfNeeded();
+  await link.click();
+  await expect(page.getByTestId('attachments-view')).toBeVisible();
+  await expect(page.getByTestId('orphan-attachments')).toHaveCount(0);
+});
