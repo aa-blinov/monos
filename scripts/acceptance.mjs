@@ -1,0 +1,269 @@
+#!/usr/bin/env node
+// Acceptance run of Monos as a person meets it: a clean install, one real session in the app itself (the dev app,
+// or a packaged one: `--app release/mac-arm64/Monos.app`), then a restart. One story, in order, each step a
+// sentence of what the person does and sees. It is slow on purpose (a real window, a real shell) and runs before a
+// release, next to the unit and e2e suites; it exits 1 when a step fails and says which.
+//
+//   node scripts/acceptance.mjs [--app <path to Monos.app or the binary>] [--shots <folder>]
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(path.join(root, 'webui', 'frontend', 'package.json'));
+const { _electron: electron } = require('@playwright/test');
+
+const args = process.argv.slice(2);
+const option = (name) => { const at = args.indexOf(name); return at >= 0 ? args[at + 1] : ''; };
+const appArg = option('--app');
+const shots = option('--shots') || fs.mkdtempSync(path.join(os.tmpdir(), 'monos-acceptance-'));
+fs.mkdirSync(shots, { recursive: true });
+
+function launchTarget() {
+  if (!appArg) return { executablePath: path.join(root, 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron'), prefix: [root], label: 'dev app' };
+  const full = path.resolve(appArg);
+  const binary = full.endsWith('.app') ? path.join(full, 'Contents', 'MacOS', 'Monos') : full;
+  assert.ok(fs.existsSync(binary), `no app at ${binary}`);
+  return { executablePath: binary, prefix: [], label: `packaged ${path.basename(full)}` };
+}
+
+const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-acceptance-ud-'));
+const notesDir = path.join(userData, 'MonosData', 'notes');
+const errors = [];
+const results = [];
+let app;
+let win;
+
+async function launch() {
+  const target = launchTarget();
+  app = await electron.launch({ executablePath: target.executablePath, args: [...target.prefix, `--user-data-dir=${userData}`], cwd: root });
+  win = await app.firstWindow();
+  win.on('pageerror', (error) => errors.push(`pageerror: ${String(error).slice(0, 300)}`));
+  win.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text().slice(0, 300)}`); });
+  await win.waitForSelector('main', { timeout: 60000 });
+  await win.waitForTimeout(1500);
+  return target.label;
+}
+
+async function size(width, height) {
+  await app.evaluate(({ BrowserWindow }, [w, h]) => BrowserWindow.getAllWindows()[0].setSize(w, h), [width, height]);
+  await win.waitForTimeout(700);
+}
+
+const shot = (name) => win.screenshot({ path: path.join(shots, `${name}.png`) });
+const notesOnDisk = () => {
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full); else if (entry.name.endsWith('.md')) found.push(full);
+    }
+  };
+  if (fs.existsSync(notesDir)) walk(notesDir);
+  return found;
+};
+const poll = async (check, what, timeout = 15000) => {
+  const end = Date.now() + timeout;
+  let last;
+  while (Date.now() < end) {
+    try { const value = await check(); if (value) return value; } catch (error) { last = error; }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  throw new Error(`timed out: ${what}${last ? ` (${last.message})` : ''}`);
+};
+
+async function step(name, fn) {
+  const started = Date.now();
+  try {
+    await fn();
+    results.push({ name, ok: true, ms: Date.now() - started });
+    console.log(`  ok   ${name} (${Date.now() - started} ms)`);
+  } catch (error) {
+    results.push({ name, ok: false, error: error.message });
+    console.log(`  FAIL ${name}\n       ${String(error.message).split('\n')[0]}`);
+    try { await shot(`FAIL-${results.length}`); } catch { /* the window may be gone */ }
+  }
+}
+
+// The card whose title starts with the name (another note's excerpt may quote the name too).
+const card = (name) => win.locator('main [role=list] button').filter({ hasText: new RegExp(`^\\s*${name}`, 'i') }).first();
+const api = (route, init) => win.evaluate(async ([url, options]) => {
+  const response = await fetch(url, options);
+  return { status: response.status, body: await response.json().catch(() => null) };
+}, [route, init]);
+const makeNote = (title, content) => api('/api/notes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category: '', tags: [], content }) });
+const mod = 'Meta';
+
+console.log(`Monos acceptance, ${launchTarget().label}. Screenshots: ${shots}`);
+fs.mkdirSync(notesDir, { recursive: true });
+const label = await launch();
+
+await step('a clean install opens on "Where to start"', async () => {
+  await win.evaluate(async () => {
+    localStorage.setItem('locale', 'en');
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: 'en', themeMode: 'light' }) });
+  });
+  await win.reload();
+  await win.waitForSelector('main');
+  await size(1360, 880);
+  const welcome = win.getByTestId('first-run-welcome');
+  await welcome.waitFor({ timeout: 15000 });
+  assert.match(await welcome.innerText(), /Where to start/);
+  assert.equal(notesOnDisk().length, 0, 'a clean install holds no notes');
+  await shot('01-welcome');
+});
+
+await step('the assistants\' guide is already in the folder, hidden from the notes', async () => {
+  const skill = path.join(notesDir, '.claude', 'skills', 'monos-notes', 'SKILL.md');
+  await poll(() => fs.existsSync(skill), 'SKILL.md is written at start');
+  assert.match(fs.readFileSync(skill, 'utf-8'), /^---\nname: monos-notes/);
+  assert.equal(notesOnDisk().length, 0, 'the skill is not a note');
+  assert.equal(fs.existsSync(path.join(notesDir, 'AGENTS.md')), false, 'the rule files wait to be asked for');
+});
+
+await step('write a first note: it is created, typed into, and saved by itself', async () => {
+  await win.getByTestId('first-run-welcome').getByRole('button', { name: 'New note' }).click();
+  const dialog = win.getByRole('dialog');
+  await dialog.waitFor();
+  await dialog.getByRole('textbox').first().fill('Acceptance note');
+  await win.keyboard.press('Enter');
+  const editor = win.locator('.ProseMirror');
+  await editor.waitFor({ timeout: 15000 });
+  await editor.click();
+  await win.keyboard.type('Hello from the acceptance run.');
+  const file = await poll(() => notesOnDisk().find((f) => /Acceptance note/.test(f) && /Hello from the acceptance run/.test(fs.readFileSync(f, 'utf-8'))), 'the note reaches the disk');
+  const saved = fs.readFileSync(file, 'utf-8');
+  assert.match(saved, /^---\n[\s\S]*title: "?Acceptance note"?/, `front matter missing in:\n${saved}`);
+  await shot('02-first-note');
+});
+
+await step('two notes that link to each other: relations, and the map shows both', async () => {
+  const second = await makeNote('Linked note', 'Points back: [[Acceptance note]]');
+  assert.equal(second.status, 200);
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.reload();
+  await win.waitForSelector('main [role=list]');
+  await card('Acceptance note').click();
+  await win.locator('.ProseMirror').waitFor();
+  await win.getByTestId('property-related-button').click();
+  const row = win.getByTestId('related-row').filter({ hasText: 'Linked note' });
+  await row.waitFor();
+  assert.equal(await row.getAttribute('data-relation'), 'in');
+  await win.getByTestId('show-on-map').click();
+  await win.getByTestId('map-counts').waitFor({ timeout: 15000 });
+  assert.match(await win.getByTestId('map-counts').innerText(), /2 notes, 1 link$/);
+  const painted = await win.getByTestId('map-canvas').evaluate((canvas) => {
+    const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) count += 1;
+    return count;
+  });
+  assert.ok(painted > 100, `the map is drawn (${painted} pixels)`);
+  await shot('03-map');
+});
+
+await step('search finds the note by name, from anywhere (⌘K)', async () => {
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.waitForTimeout(600);
+  await win.keyboard.press(`${mod}+k`);
+  const box = win.getByRole('dialog').getByRole('combobox');
+  await box.fill('Linked');
+  await win.getByRole('option', { name: /Linked note/ }).first().click();
+  await win.locator('input[placeholder="Note Title"]').waitFor();
+  assert.equal(await win.locator('input[placeholder="Note Title"]').inputValue(), 'Linked note');
+});
+
+await step('keys: ⌘N opens a new note, Esc closes it, ⌘B hides the sidebar and brings it back', async () => {
+  await win.keyboard.press(`${mod}+n`);
+  await win.getByRole('dialog').waitFor();
+  await win.keyboard.press('Escape');
+  await poll(async () => (await win.getByRole('dialog').count()) === 0, 'the dialog closes');
+  await win.locator('main').click({ position: { x: 4, y: 300 } }).catch(() => {});
+  const sidebar = win.getByTestId('sidebar-shell');
+  const width = async () => (await sidebar.boundingBox())?.width || 0;
+  assert.ok(await width() > 100);
+  await win.evaluate(() => document.activeElement?.blur?.());
+  await win.keyboard.press(`${mod}+b`);
+  await poll(async () => (await width()) < 10, 'the sidebar hides');
+  await win.keyboard.press(`${mod}+b`);
+  await poll(async () => (await width()) > 100, 'the sidebar returns');
+});
+
+await step('settings: the theme changes the whole page, and back', async () => {
+  await win.evaluate(() => { history.pushState({}, '', '/settings'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+  await win.getByRole('button', { name: 'Dark', exact: true }).click();
+  await poll(() => win.evaluate(() => document.documentElement.classList.contains('dark')), 'dark mode is applied');
+  const bg = await win.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  assert.notEqual(bg, 'rgb(251, 241, 199)');
+  await shot('04-settings-dark');
+  await win.getByRole('button', { name: 'Light', exact: true }).click();
+  await poll(() => win.evaluate(() => !document.documentElement.classList.contains('dark')), 'light mode returns');
+});
+
+await step('help has the keyboard table, with ⌘ on a Mac', async () => {
+  await win.evaluate(() => { history.pushState({}, '', '/help'); dispatchEvent(new PopStateEvent('popstate')); });
+  const help = win.getByTestId('help-view');
+  await help.waitFor();
+  await help.getByText('Keyboard shortcuts').first().scrollIntoViewIfNeeded();
+  const text = await help.innerText();
+  assert.match(text, /Command palette|command palette/);
+  assert.match(text, process.platform === 'darwin' ? /⌘K/ : /Ctrl\+K/);
+  await shot('05-help-keys');
+});
+
+await step('the terminal opens (⌘J), runs a command and shows its answer', async () => {
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.waitForTimeout(500);
+  await win.locator('main').click({ position: { x: 4, y: 300 } }).catch(() => {});
+  await win.keyboard.press(`${mod}+j`);
+  const panel = win.getByTestId('terminal-panel');
+  await poll(async () => { const box = await panel.boundingBox().catch(() => null); return box && box.height > 40; }, 'the terminal panel is shown');
+  await win.waitForTimeout(1500);
+  await win.keyboard.type('echo ACCEPT_$((20+22))\n');
+  await poll(async () => /ACCEPT_42/.test((await panel.innerText().catch(() => '')) + (await win.locator('.xterm-rows').innerText().catch(() => ''))), 'the shell answers', 20000);
+  await shot('06-terminal');
+  await win.keyboard.press(`${mod}+j`);
+});
+
+await step('a phone-sized window stays usable: board, a note, no sideways scroll', async () => {
+  await size(400, 860);
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.waitForSelector('main [role=list]');
+  const sideways = await win.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  assert.equal(sideways, false);
+  await card('Acceptance note').click();
+  await win.locator('.ProseMirror').waitFor();
+  assert.match(await win.locator('.ProseMirror').innerText(), /Hello from the acceptance run/);
+  await shot('07-phone-note');
+  await size(1360, 880);
+});
+
+await step('quit and start again: the notes are where they were, links and map intact', async () => {
+  await app.close();
+  await launch();
+  await win.waitForSelector('main [role=list]', { timeout: 30000 });
+  const list = await win.locator('main [role=list]').innerText();
+  assert.match(list, /Acceptance note/);
+  assert.match(list, /Linked note/);
+  const graph = await api('/api/graph');
+  assert.equal(graph.body.nodes.length, 2);
+  assert.equal(graph.body.edges.length, 1);
+  assert.equal(notesOnDisk().length, 2);
+  await shot('08-after-restart');
+});
+
+await step('no error reached the console during the whole run', async () => {
+  const real = errors.filter((line) => !/favicon|DevTools|Autofill/i.test(line));
+  assert.deepEqual(real, [], `console errors:\n${real.join('\n')}`);
+});
+
+await app.close().catch(() => {});
+fs.rmSync(userData, { recursive: true, force: true });
+const failed = results.filter((item) => !item.ok);
+console.log(`\n${results.length - failed.length} of ${results.length} steps passed on the ${label}. Screenshots: ${shots}`);
+process.exit(failed.length ? 1 : 0);

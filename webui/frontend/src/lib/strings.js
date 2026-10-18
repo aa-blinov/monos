@@ -102,7 +102,7 @@ const enText = {
     around: (title) => `Around ${title}`,
     showAll: 'Show all',
     canvasLabel: (count) => `Map of notes: ${count}. Use the search above to open one.`,
-    counts: (notes, links) => `${notes} notes, ${links} links`,
+    counts: (notes, links) => `${notes} ${notes === 1 ? 'note' : 'notes'}, ${links} ${links === 1 ? 'link' : 'links'}`,
     truncated: (shown, total) => `Showing the ${shown} best connected of ${total} notes`,
     loading: 'Drawing the map',
     loadFailed: 'The map could not be loaded.',
