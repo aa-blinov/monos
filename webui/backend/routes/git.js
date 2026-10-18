@@ -953,6 +953,8 @@ export function registerGitRoutes(app) {
 
       res.json({
         initialized: true,
+        // A repository can exist only for history: sync means something only with a remote.
+        remote: hasRemote(),
         current_branch: currentBranch,
         branch: currentBranch,
         repo: settings.repo || '',
