@@ -152,6 +152,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       || pathname === '/templates'
       || pathname === '/properties'
       || pathname === '/map'
+      || pathname === '/attachments'
       || pathname === '/help'
       || pathname.startsWith('/notes/');
   }
@@ -603,6 +604,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     navigate('/properties');
   }
 
+  function openAttachments() {
+    setRoutePath('/attachments');
+    clearSearch();
+    navigate('/attachments');
+  }
+
   // The map of notes; `focus` is a note to centre on ("Show on the map" in a note's Related panel).
   function openMap(focus = '') {
     setRoutePath('/map');
@@ -806,6 +813,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail === 'openSavedSearches') openSavedSearchPanel();
     if (event.detail === 'openProperties') openPropertiesView();
     if (event.detail === 'openMap') openMap();
+    if (event.detail === 'openAttachments') openAttachments();
   }
 
   function refreshAfterTrashChange() {
@@ -903,6 +911,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:openTags={openTagPanel}
           on:openProperties={openPropertiesView}
           on:openMap={() => openMap()}
+          on:openAttachments={openAttachments}
           on:openSavedSearches={openSavedSearchPanel}
           on:openTemplatesManager={openTemplatesManager}
           on:openQuickSwitcher={() => openCommandPalette('notes')}
@@ -984,6 +993,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         <Route path="/properties">
           {#await import('./components/PropertiesView.svelte') then propertiesView}
             <svelte:component this={propertiesView.default} on:navigate={handleNavigate} />
+          {/await}
+        </Route>
+        <Route path="/attachments">
+          {#await import('./components/AttachmentsView.svelte') then attachmentsView}
+            <svelte:component this={attachmentsView.default} on:navigate={handleNavigate} />
           {/await}
         </Route>
         <Route path="/map">

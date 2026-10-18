@@ -177,6 +177,13 @@
         detail: $localizedText.commandPalette.commandDetails.openProperties,
       },
       {
+        id: 'openAttachments',
+        type: 'command',
+        section: 'commands',
+        label: $localizedText.commandPalette.commands.openAttachments,
+        detail: $localizedText.commandPalette.commandDetails.openAttachments,
+      },
+      {
         id: 'openMap',
         type: 'command',
         section: 'commands',

@@ -1,4 +1,6 @@
 export const fontOptions = [
+  // The system's own interface font (San Francisco on a Mac, Segoe UI on Windows): nothing to load, native look.
+  { name: 'System', family: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif', category: 'system' },
   { name: 'JetBrains Mono', family: '"JetBrains Mono", ui-monospace, monospace', category: 'mono' },
   { name: 'Inter', family: '"Inter", system-ui, sans-serif', category: 'sans' },
   { name: 'Roboto', family: '"Roboto", system-ui, sans-serif', category: 'sans' },

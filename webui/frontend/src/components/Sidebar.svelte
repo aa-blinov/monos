@@ -1243,6 +1243,10 @@
         <Icon.Waypoints size="20" strokeWidth="1.7" />
         <span>{$localizedText.map.sidebar}</span>
       </button>
+      <button data-testid="open-attachments" on:click={() => { dispatch('openAttachments'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+        <Icon.Paperclip size="20" strokeWidth="1.7" />
+        <span>{$localizedText.attachments.sidebar}</span>
+      </button>
       {#if showPropertiesLink}
         <button data-testid="open-properties" on:click={() => { dispatch('openProperties'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
           <Icon.SlidersHorizontal size="20" strokeWidth="1.7" />
@@ -1338,6 +1342,9 @@
             >
               <button type="button" role="menuitem" data-testid="open-map" class={moreItemClass} on:click={() => pickMore('openMap')}>
                 <Icon.Waypoints class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.sidebar}
+              </button>
+              <button type="button" role="menuitem" data-testid="open-attachments" class={moreItemClass} on:click={() => pickMore('openAttachments')}>
+                <Icon.Paperclip class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.attachments.sidebar}
               </button>
               {#if showPropertiesLink}
                 <button type="button" role="menuitem" data-testid="open-properties" class={moreItemClass} on:click={() => pickMore('openProperties')}>
