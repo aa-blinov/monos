@@ -154,3 +154,31 @@ test('боковая панель: «Синхронизировать» не м�
   await expect(page.getByTestId('open-more')).toBeVisible();
   await expect(sync).toHaveCount(0);
 });
+
+// The width setting changes the text column only: the title and the header keep their place, and the text starts
+// at the same left edge as the title; only the right edge of the lines moves.
+test('ширина контента: заголовок и шапка не двигаются, текст начинается с того же левого края', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1500, height: 900 });
+  const title = uniqueTitle('Width');
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'Some words that fill the column. '.repeat(40) } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  await expect(page.locator('.ProseMirror')).toBeVisible();
+  const measure = async () => ({
+    title: await page.getByLabel('Note Title').boundingBox(),
+    text: await page.locator('.ProseMirror').boundingBox(),
+  });
+  await page.evaluate(() => localStorage.setItem('contentWidth', 'wide'));
+  await page.reload();
+  await expect(page.locator('.ProseMirror')).toBeVisible();
+  const wide = await measure();
+  await page.evaluate(() => localStorage.setItem('contentWidth', 'narrow'));
+  await page.reload();
+  await expect(page.locator('.ProseMirror')).toBeVisible();
+  const narrow = await measure();
+  expect(Math.abs(narrow.title.x - wide.title.x)).toBeLessThan(1);
+  expect(Math.abs(narrow.title.width - wide.title.width)).toBeLessThan(1);
+  expect(Math.abs(narrow.text.x - narrow.title.x)).toBeLessThan(10);
+  expect(narrow.text.width).toBeLessThan(wide.text.width - 200);
+});
