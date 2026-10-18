@@ -1638,7 +1638,7 @@
           open={outlineOpen}
           collapsed={outlineCollapsed}
           on:navigate={handleOutlineNavigate}
-          on:close={() => { outlineOpen = false; }}
+          on:close={() => { if (wideWindow) toggleOutline(); else outlineOpen = false; }}
         />
       {/if}
     </div>

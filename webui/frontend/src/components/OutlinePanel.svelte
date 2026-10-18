@@ -1,5 +1,6 @@
 <script>
-  import { extractOutline, withOccurrences } from '../lib/outline.js';
+  import { extractOutline, withOccurrences, clampOutlineWidth, OUTLINE_WIDTH } from '../lib/outline.js';
+  import { outlineWidth } from '../stores.js';
   import { scrollBehavior } from '../lib/motion.js';
   import { localizedText } from '../lib/strings.js';
   import { createEventDispatcher, tick } from 'svelte';
@@ -45,6 +46,37 @@
     dispatch('close');
   }
 
+  // Desktop column: its left edge is a handle. Dragging left widens the column, double click restores the
+  // default, arrows nudge it by 16px.
+  let resizing = false;
+  function startResize(event) {
+    if (event.button > 0) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = $outlineWidth;
+    resizing = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const move = (e) => outlineWidth.set(clampOutlineWidth(startWidth + startX - e.clientX));
+    const stop = () => {
+      resizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+  }
+  function resizeKeydown(event) {
+    const step = event.key === 'ArrowLeft' ? 16 : event.key === 'ArrowRight' ? -16 : 0;
+    if (!step) return;
+    event.preventDefault();
+    outlineWidth.set(clampOutlineWidth($outlineWidth + step));
+  }
+
   function onKeydown(event) {
     if (open && event.key === 'Escape') close();
   }
@@ -77,9 +109,22 @@
 {/if}
 
 <aside
-  class="{open ? 'fixed inset-y-0 right-0 z-40 block w-64 max-w-[85vw] overflow-y-auto shadow-2xl' : 'hidden w-56'} {collapsed ? 'lg:hidden' : 'lg:block'} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs lg:static lg:z-auto lg:w-56 lg:max-w-none lg:overflow-visible lg:shadow-none"
+  class="{open ? 'fixed inset-y-0 right-0 z-40 block w-64 max-w-[85vw] overflow-y-auto shadow-2xl' : 'hidden w-56'} {collapsed ? 'lg:hidden' : 'lg:block'} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs lg:relative lg:z-auto lg:w-[var(--outline-width)] lg:max-w-none lg:overflow-visible lg:shadow-none"
+  style="--outline-width: {$outlineWidth}px"
   data-testid="outline-panel"
 >
+  <button
+    type="button"
+    aria-label={$localizedText.editor.resizeOutline}
+    title={$localizedText.editor.resizeOutline}
+    data-testid="outline-resize"
+    class="group absolute inset-y-0 -left-1.5 z-10 hidden w-3 cursor-col-resize touch-none border-0 bg-transparent p-0 outline-none lg:block"
+    on:pointerdown={startResize}
+    on:dblclick={() => outlineWidth.set(OUTLINE_WIDTH.DEFAULT)}
+    on:keydown={resizeKeydown}
+  >
+    <span class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition group-hover:bg-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] group-focus:bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)] {resizing ? 'bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)]' : ''}"></span>
+  </button>
   <div class="mb-3 flex items-center justify-between gap-2">
     <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
       {$localizedText.editor.outline}
@@ -88,7 +133,7 @@
       type="button"
       bind:this={closeButton}
       aria-label={$localizedText.editor.closeOutline}
-      class="-my-2 -mr-2 inline-flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:hidden"
+      class="-my-2 -mr-2 inline-flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:-my-1 lg:-mr-1 lg:h-7 lg:w-7"
       on:click={close}
     >
       <X class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />

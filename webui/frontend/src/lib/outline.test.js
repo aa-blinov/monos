@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractOutline, findHeadingPos, slugifyAnchor, withOccurrences } from './outline.js';
+import { extractOutline, findHeadingPos, plainHeadingText, slugifyAnchor, withOccurrences } from './outline.js';
 
 test('slugifyAnchor: ascii lowercase + дефисы', () => {
   assert.equal(slugifyAnchor('Hello World'), 'hello-world');
@@ -165,4 +165,46 @@ content`;
   const items = extractOutline(md);
   assert.equal(items.length, 1);
   assert.equal(items[0].text, 'Real heading');
+});
+
+test('plainHeadingText: разметка заголовка не попадает в оглавление', () => {
+  const cases = {
+    '**Введение**': 'Введение',
+    '***both***': 'both',
+    '~~x~~ done': 'x done',
+    '_it_ and __b__': 'it and b',
+    'See [docs](https://a.b) now': 'See docs now',
+    '![pic](a.png) cap': 'pic cap',
+    'Use `**raw**` here': 'Use **raw** here',
+    'snake_case_word': 'snake_case_word',
+    '2 * 3 * 4': '2 * 3 * 4',
+    '[[Wiki link]]': '[[Wiki link]]',
+    '\\*not italic\\*': '*not italic*',
+  };
+  for (const [raw, expected] of Object.entries(cases)) assert.equal(plainHeadingText(raw), expected, raw);
+});
+
+test('extractOutline: заголовок в **жирном** выходит без звёздочек', () => {
+  const [item] = extractOutline('## **Введение**\n');
+  assert.equal(item.text, 'Введение');
+  assert.equal(item.anchor, 'введение');
+});
+
+test('extractOutline: горизонтальная линия без frontmatter не прячет заголовки после неё', () => {
+  const items = extractOutline('# A\n\ntext\n\n---\n\n## B\n\n---\n\n## C\n');
+  assert.deepEqual(items.map((i) => i.text), ['A', 'B', 'C']);
+});
+
+test('extractOutline: настоящий frontmatter по-прежнему пропускается', () => {
+  const items = extractOutline('---\ntitle: # not heading\n---\n\n# Real\n');
+  assert.deepEqual(items.map((i) => i.text), ['Real']);
+});
+
+test('clampOutlineWidth: держит ширину колонки в пределах, мусор даёт значение по умолчанию', async () => {
+  const { clampOutlineWidth, OUTLINE_WIDTH } = await import('./outline.js');
+  assert.equal(clampOutlineWidth(10), OUTLINE_WIDTH.MIN);
+  assert.equal(clampOutlineWidth(9999), OUTLINE_WIDTH.MAX);
+  assert.equal(clampOutlineWidth('300.4'), 300);
+  assert.equal(clampOutlineWidth('abc'), OUTLINE_WIDTH.DEFAULT);
+  assert.equal(clampOutlineWidth(null), OUTLINE_WIDTH.DEFAULT);
 });

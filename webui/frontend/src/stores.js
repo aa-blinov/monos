@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { persisted } from './lib/stores/persisted.js';
+import { clampOutlineWidth } from './lib/outline.js';
 
 const THEME_MODES = ['system', 'light', 'dark'];
 
@@ -32,6 +33,10 @@ export const boardGroupByColor = persisted('boardGroupByColor', false, {
 export const outlineHidden = persisted('outlineHidden', false, {
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
+});
+// Ширина колонки «Структура» на десктопе: тянется за левый край, помнится между запусками.
+export const outlineWidth = persisted('outlineWidth', clampOutlineWidth(), {
+  deserialize: clampOutlineWidth,
 });
 
 export const contentWidth = persisted('contentWidth', 'wide', {
