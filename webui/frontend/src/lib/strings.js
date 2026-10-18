@@ -749,7 +749,11 @@ const enText = {
       const notes = Number(summary.importedNotes || 0);
       const files = Number(summary.importedFiles || 0);
       const renamed = Number(summary.renamed || 0);
-      const suffix = renamed ? ` ${renamed} renamed to avoid overwriting.` : '';
+      const relinked = Number(summary.relinkedImages || 0);
+      const lost = Array.isArray(summary.unresolvedImages) ? summary.unresolvedImages.length : 0;
+      const suffix = (renamed ? ` ${renamed} renamed to avoid overwriting.` : '')
+        + (relinked ? ` ${relinked} picture link${relinked === 1 ? '' : 's'} pointed at the new place.` : '')
+        + (lost ? ` ${lost} picture${lost === 1 ? '' : 's'} not found in the archive.` : '');
       return `Imported ${notes} note${notes === 1 ? '' : 's'} (${files} file${files === 1 ? '' : 's'}).${suffix}`;
     },
     backupError(message) {
@@ -1925,7 +1929,11 @@ const ruText = {
       const renamed = Number(summary.renamed || 0);
       const noteWord = notes === 1 ? 'заметка' : notes > 1 && notes < 5 ? 'заметки' : 'заметок';
       const fileWord = files === 1 ? 'файл' : files > 1 && files < 5 ? 'файла' : 'файлов';
-      const suffix = renamed ? ` ${renamed} переименовано, чтобы не перезаписать существующие.` : '';
+      const relinked = Number(summary.relinkedImages || 0);
+      const lost = Array.isArray(summary.unresolvedImages) ? summary.unresolvedImages.length : 0;
+      const suffix = (renamed ? ` ${renamed} переименовано, чтобы не перезаписать существующие.` : '')
+        + (relinked ? ` Ссылок на картинки перенаправлено: ${relinked}.` : '')
+        + (lost ? ` Не найдено в архиве картинок: ${lost}.` : '');
       return `Импортировано: ${notes} ${noteWord} (${files} ${fileWord}).${suffix}`;
     },
     backupError(message) {
