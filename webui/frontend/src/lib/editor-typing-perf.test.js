@@ -51,7 +51,7 @@ test('редактор сбрасывает разметку при выгруз
 
 test('переключение в сырой режим показывает свежий текст', () => {
   // Режим переключается из меню «ещё», которое тут же закрывается; сбор разметки идёт первым.
-  assert.match(editor, /on:click=\{\(\) => \{ flushEditorMarkdown\(\); rawMode = !rawMode; footerMoreOpen = false; \}\}/);
+  assert.match(editor, /on:click=\{\(\) => \{ flushEditorMarkdown\(\); chooseRawMode\(!rawMode\); footerMoreOpen = false; \}\}/);
 });
 
 test('окно до автосохранения не удлинилось', () => {

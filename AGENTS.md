@@ -77,7 +77,6 @@ notes/              # Markdown заметки
 | GET | `/api/directories` | Список папок |
 | POST | `/api/directory/create?path=` | Создать папку |
 | POST | `/api/directory/icon?path=` | Иконка и цвет |
-| POST | `/api/format` | Форматировать все заметки |
 | GET | `/api/git/status` | Git статус |
 | POST | `/api/git/setup` | Настроить Git |
 | POST | `/api/git/sync` | Синхронизация |

@@ -22,6 +22,7 @@
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
   import { fileNameProblem } from '../lib/file-name.js';
   import { extractOutline } from '../lib/outline.js';
+  import { hasRawHtml } from '../lib/raw-html.js';
   import { notifyDue } from '../lib/reminders.js';
   import { downloadFile, exportFileName, fetchNoteHtml, markdownToPlainText } from '../lib/note-export.js';
   import { printNoteToPdf } from '../lib/print.js';
@@ -74,6 +75,14 @@
   // Raw Markdown view: the note *is* a file in git, so seeing exactly the bytes
   // that will be committed matters — not only what the rich editor rebuilds.
   let rawMode = false;
+  // A note with raw HTML opens as source text: the visual editor would save its tags as `&lt;div&gt;`. The mode the
+  // person had chosen comes back when the next note has no HTML; choosing a mode by hand ends the automatic one.
+  let rawForHtml = false;
+  let rawModeBeforeHtml = false;
+  function chooseRawMode(next) {
+    rawMode = next;
+    rawForHtml = false;
+  }
   // Режим фокуса: одна мысль на экране — узкая колонка и никакой второстепенной
   // панели. Мера текста в дизайн-системе уже есть, мы её переиспользуем.
   let focusMode = false;
@@ -750,6 +759,14 @@
       if (!isCurrentLoad(requestId, filePath)) return;
       content = nextContent;
       editedContent = nextContent;
+      if (hasRawHtml(nextContent)) {
+        if (!rawForHtml) rawModeBeforeHtml = rawMode;
+        rawMode = true;
+        rawForHtml = true;
+      } else if (rawForHtml) {
+        rawMode = rawModeBeforeHtml;
+        rawForHtml = false;
+      }
       diskVersion = data.version || '';
       conflictCount = summarizeConflicts(nextContent).count;
       applyConflictEntry(conflictEntry);
@@ -1587,13 +1604,18 @@
             </div>
           </div>
         {:else if rawMode}
+          <div class="flex h-full min-h-0 flex-col">
+          {#if rawForHtml}
+            <p class="shrink-0 border-b border-[var(--border-subtle)] px-4 py-2 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--text-secondary)] lg:px-12" data-testid="raw-html-notice">{$localizedText.editor.rawHtmlNotice}</p>
+          {/if}
           <textarea
             data-testid="raw-source"
-            class="h-full min-h-0 w-full resize-none bg-transparent px-4 py-4 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-12 lg:py-10"
+            class="min-h-0 w-full flex-1 resize-none bg-transparent px-4 py-4 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-12 lg:py-10"
             placeholder={isLoading ? '' : $localizedText.editor.beginWriting}
             spellcheck="false"
             bind:value={editedContent}
           />
+          </div>
         {:else}
         <RichEditor
           bind:this={richEditor}
@@ -2061,7 +2083,7 @@
               <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; setFocusMode(!focusMode); }}>
                 <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
               </button>
-              <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); rawMode = !rawMode; footerMoreOpen = false; }}>
+              <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); chooseRawMode(!rawMode); footerMoreOpen = false; }}>
                 <FileText size="16" strokeWidth="1.7" aria-hidden="true" />{rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
               </button>
               <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
