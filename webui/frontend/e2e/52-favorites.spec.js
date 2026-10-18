@@ -81,3 +81,29 @@ test('меню редактора «Ещё» не выходит за экран
   expect(box.x + box.width).toBeLessThanOrEqual(375);
   expect(box.y + box.height).toBeLessThanOrEqual(560);
 });
+
+// One pin, three readers: unpinned in the sidebar, the open note's own button follows at once.
+test('закрепление: открепили в боковой панели, кнопка в открытой заметке сразу снята', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1400, height: 800 });
+  const title = `Pin sync ${Date.now()}`;
+  const created = await (await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } })).json();
+  await page.request.put(`/api/file/metadata?path=${encodeURIComponent(created.path)}`, { data: { pinned: true } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+  const pin = page.getByTestId('property-pin');
+  await expect(pin).toHaveAttribute('aria-pressed', 'true');
+  const item = page.getByTestId('pinned-list').getByRole('button', { name: new RegExp(title) });
+  await item.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Unpin Note' }).click();
+  await expect(pin).toHaveAttribute('aria-pressed', 'false');
+  // The open note does not write the old flag back over the sidebar's change.
+  await page.waitForTimeout(1800);
+  const onDisk = async () => String((await (await page.request.get(`/api/file?path=${encodeURIComponent(created.path)}`)).json()).content);
+  expect(await onDisk()).not.toMatch(/pinned: true/);
+  // And back: pinning from the note reaches the sidebar.
+  await pin.click();
+  await expect(page.getByTestId('pinned-list').getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  // The file agrees with what is shown.
+  await expect.poll(async () => String((await (await page.request.get(`/api/file?path=${encodeURIComponent(created.path)}`)).json()).content)).toMatch(/pinned: true/);
+});

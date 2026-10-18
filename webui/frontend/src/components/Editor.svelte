@@ -15,7 +15,7 @@
   import { formFieldClass } from '../lib/form-field.js';
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
-  import { markPinned } from '../lib/sidebar-pinned.js';
+  import { markPinned, pinEvents } from '../lib/sidebar-pinned.js';
   import { askAgentAboutNote, terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
@@ -1481,6 +1481,20 @@
     return Boolean(parseFrontmatter(editedContent).pinned);
   }
   $: pinnedNow = Boolean(parseFrontmatter(editedContent).pinned);
+
+  // A pin changed anywhere else (the sidebar, the board) reaches the open note at once: its text and the saved
+  // baseline take the new flag together, so the note neither shows the old state nor writes it back.
+  function followPinEvent(event) {
+    if (!event || !loadedFilePath) return;
+    if (String(event.path).replace(/^notes\//, '') !== String(loadedFilePath).replace(/^notes\//, '')) return;
+    if (noteIsPinned() === event.pinned) return;
+    const value = event.pinned ? 'true' : '';
+    editedContent = setFrontmatterKey(editedContent, 'pinned', value);
+    content = setFrontmatterKey(content, 'pinned', value);
+    if (fileInfo?.metadata) fileInfo = { ...fileInfo, metadata: { ...fileInfo.metadata, pinned: event.pinned } };
+  }
+  // A subscription, not a `$:` statement: the note's own reactive marks must run after the change, not in the same pass.
+  onMount(() => pinEvents.subscribe(followPinEvent));
 
   // A favourite is a property of the note (lib/favorites.js); the list of them is its own page.
   $: favoriteNow = isFavoriteProperties(fileInfo?.properties);

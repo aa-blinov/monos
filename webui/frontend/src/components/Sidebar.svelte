@@ -21,7 +21,7 @@
     fileExtension,
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
-  import { pinnedNotes, isPinned, pinNote, unpinNote, setPinnedFromTree, migrateLegacyPins } from '../lib/sidebar-pinned.js';
+  import { pinnedNotes, isPinned, pinNote, unpinNote, forgetPin, pinSyncMark, setPinnedFromTree, migrateLegacyPins } from '../lib/sidebar-pinned.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -404,12 +404,14 @@
     try {
       if (!tree) isLoading = true;
       error = '';
+      // A pin changed while the tree is on its way is newer than the tree: the mark says which changes those are.
+      const pinMark = pinSyncMark();
       tree = await loadTreeData();
       await loadTags();
       void loadPropertyPresence();
       // Закрепления читаются из самих заметок, поэтому список живёт ровно
       // столько, сколько живёт дерево.
-      setPinnedFromTree(tree);
+      setPinnedFromTree(tree, pinMark);
       treeKey++;
       if (pendingSelectedPath) {
         selectedPath = pendingSelectedPath;
@@ -938,7 +940,7 @@
       keepParentsExpanded(uniquePaths);
       for (const path of uniquePaths) {
         await deleteItemRequest(path);
-        unpinNote(path);
+        forgetPin(path);
       }
       removeExpandedDescendants(uniquePaths);
       selectedPaths = new Set([...selectedPaths].filter((path) => !uniquePaths.includes(path)));

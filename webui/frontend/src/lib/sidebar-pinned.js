@@ -49,15 +49,57 @@ export function collectPinned(tree) {
   return found;
 }
 
-/** Rebuild the store after the tree loads. */
-export function setPinnedFromTree(tree) {
-  pinnedNotes.set(collectPinned(tree));
+/**
+ * One mechanism, three readers (the sidebar's list, the board's marks, the open note's button).
+ *
+ * The truth is the note's own `pinned` flag on disk. Every change a person makes, wherever they make it, goes
+ * through `recordPin`: it updates the list at once, remembers the change under a sequence number, and announces it
+ * on `pinEvents`, which the open note follows. A tree that was requested before a change and arrives after it must
+ * not undo it, so a load is applied with the sequence number it started at: changes made since then, and changes
+ * whose write is still out, win over the tree's older answer.
+ */
+let writeSeq = 0;
+const lastChange = new Map(); // normalised path -> { seq, pinned, name }
+const pendingWrites = new Map(); // normalised path -> pinned, while the request is out
+
+const keyOf = (path) => String(path || '').replace(/^notes\//, '');
+
+/** Announces the last change: `{ path, pinned, seq }`. The open note listens and follows. */
+export const pinEvents = writable(null);
+
+/** Call before requesting the tree; pass the result to `setPinnedFromTree`. */
+export function pinSyncMark() {
+  return writeSeq;
+}
+
+/** Rebuild the store after the tree loads. `since` is the mark taken before the tree was requested. */
+export function setPinnedFromTree(tree, since = writeSeq) {
+  const list = collectPinned(tree);
+  const apply = (path, pinned, name) => {
+    const at = list.findIndex((note) => samePath(note.path, path));
+    if (pinned && at < 0) list.unshift({ path, name: displayNoteName(name || basename(path)) });
+    if (!pinned && at >= 0) list.splice(at, 1);
+  };
+  for (const [key, change] of lastChange) {
+    if (change.seq > since) apply(key, change.pinned, change.name);
+  }
+  for (const [key, pinned] of pendingWrites) apply(key, pinned);
+  pinnedNotes.set(list);
   pinsKnown.set(true);
 }
 
-/** Pinning from the open note: the sidebar's list follows at once instead of after the next tree load. */
+/** A pin changed by a person: list, sequence and announcement in one place. */
+function recordPin(path, pinned, name) {
+  if (!path) return;
+  writeSeq += 1;
+  lastChange.set(keyOf(path), { seq: writeSeq, pinned, name });
+  setPinnedInStore(path, pinned, name);
+  pinEvents.set({ path, pinned, seq: writeSeq });
+}
+
+/** Pinning from the open note, which writes the file itself: the other readers follow at once. */
 export function markPinned(path, pinned, name) {
-  if (path) setPinnedInStore(path, pinned, name);
+  recordPin(path, pinned, name);
 }
 
 function setPinnedInStore(path, pinned, name) {
@@ -77,27 +119,33 @@ async function writePin(path, pinned) {
   await put('/api/file/metadata', { pinned }, { query: { path } });
 }
 
-export async function pinNote(path, name) {
+async function writeChange(path, pinned, name) {
   if (!path) return;
-  setPinnedInStore(path, true, name);
+  recordPin(path, pinned, name);
+  pendingWrites.set(keyOf(path), pinned);
   try {
-    await writePin(path, true);
+    await writePin(path, pinned);
   } catch (error) {
-    setPinnedInStore(path, false);
+    // Put it back as it was, everywhere: a pin that moved quietly is worse than an error.
+    recordPin(path, !pinned, name);
     throw error;
+  } finally {
+    // Only the newest write of a path may clear its pending mark.
+    if (pendingWrites.get(keyOf(path)) === pinned) pendingWrites.delete(keyOf(path));
   }
 }
 
+/** A deleted or moved-away note leaves the list; there is no file left to write. */
+export function forgetPin(path) {
+  recordPin(path, false);
+}
+
+export async function pinNote(path, name) {
+  await writeChange(path, true, name);
+}
+
 export async function unpinNote(path, name) {
-  if (!path) return;
-  setPinnedInStore(path, false);
-  try {
-    await writePin(path, false);
-  } catch (error) {
-    // Put it back as it was: a pin that vanished quietly is worse than an error.
-    setPinnedInStore(path, true, name);
-    throw error;
-  }
+  await writeChange(path, false, name);
 }
 
 /** Pins that predate the move into frontmatter, still sitting in localStorage. */
