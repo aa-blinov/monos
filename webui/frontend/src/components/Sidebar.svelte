@@ -1142,7 +1142,8 @@
 
   <!-- Tree View Header -->
     <div class="mb-2 shrink-0 px-4 lg:mb-4">
-      <div class="flex items-center justify-between gap-3 pb-1.5 lg:pb-2">
+      <!-- With nothing pinned this is the first row: it takes the height of the "Pinned" row, so "Create" does not sit on the top edge. -->
+      <div class="flex items-center justify-between gap-3 pb-1.5 {$pinnedNotes.length === 0 ? 'lg:min-h-10 lg:pb-0' : 'lg:pb-2'}">
         <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</h3>
         <button
           on:click={() => dispatch('openCreateNote')}
