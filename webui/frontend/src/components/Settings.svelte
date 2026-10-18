@@ -13,7 +13,7 @@
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection } from '../stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection, tabsToSpaces } from '../stores.js';
   import ConnectStatus from './ConnectStatus.svelte';
   import SettingsNav from './SettingsNav.svelte';
   import { formFieldClass } from '../lib/form-field.js';
@@ -860,6 +860,19 @@
             <option value={s.value}>{s.label} ({s.base})</option>
           {/each}
         </select>
+      </div>
+      <div class="min-w-0">
+        <label for="tabs-to-spaces" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.tabsToSpaces}</label>
+        <select
+          id="tabs-to-spaces"
+          bind:value={$tabsToSpaces}
+          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+        >
+          <option value="off">{$localizedText.settings.tabsOff}</option>
+          <option value="2">{$localizedText.settings.tabs2}</option>
+          <option value="4">{$localizedText.settings.tabs4}</option>
+        </select>
+        <p class="mt-1.5 text-xs text-[var(--text-tertiary)]">{$localizedText.settings.tabsToSpacesHint}</p>
       </div>
     </section>
 

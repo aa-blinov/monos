@@ -37,6 +37,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `form-field.js` | `formFieldClass({ extraClass })` — locks `text-sm leading-6 py-1.5` for input/select baseline alignment |
 | `form-field.test.js` | Required utility presence, theme variable usage, focus state |
 | `form-field-alignment.test.js` | Reads `app.css` and asserts the global input rule's `py-N` matches `formFieldClass()` so the cascade doesn't silently win and shift the underline |
+| `favorites.js` | Favourite notes: the `favorite` property, `loadFavoriteNotes`, `setFavoriteRequest`; used by `Editor.svelte` and `FavoritesView.svelte` |
+| `favorites.test.js` | Which property lists mark a favourite |
+| `tabs.js` | `replaceTabs` (tabs to spaces outside fenced code) and the saved `tabsToSpaces` setting; used by `editor-api.js` saves |
+| `tabs.test.js` | Tab stops, fences kept, the save path |
 | `fonts.js` | Available font families and size presets; consumed by `Settings.svelte` |
 
 ## Markdown and content
