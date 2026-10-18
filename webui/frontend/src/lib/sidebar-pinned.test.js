@@ -9,6 +9,9 @@ import {
   setPinnedFromTree,
   migrateLegacyPins,
   pinnedNotes,
+  pinEvents,
+  pinSyncMark,
+  forgetPin,
 } from './sidebar-pinned.js';
 
 const store = new Map();
@@ -163,4 +166,35 @@ test('markPinned сразу добавляет и убирает заметку 
   assert.equal(get(pinnedNotes).length, 1);
   markPinned('notes/Вторая.md', false);
   assert.equal(get(pinnedNotes).length, 0);
+});
+
+test('дерево, запрошенное до открепления и пришедшее после него, не возвращает закрепление', async () => {
+  setPinnedFromTree(folder('notes', [note('notes/Гонка.md', true)]));
+  const mark = pinSyncMark();           // the tree is requested here...
+  await unpinNote('notes/Гонка.md');    // ...a person unpins while it is on its way...
+  setPinnedFromTree(folder('notes', [note('notes/Гонка.md', true)]), mark); // ...and the old answer arrives
+  assert.equal(isPinned('notes/Гонка.md'), false);
+  // A tree requested after the change is believed.
+  setPinnedFromTree(folder('notes', [note('notes/Гонка.md', true)]), pinSyncMark());
+  assert.equal(isPinned('notes/Гонка.md'), true);
+});
+
+test('каждое изменение объявляется в pinEvents, чтобы открытая заметка шла следом', async () => {
+  const seen = [];
+  const start = pinSyncMark();
+  const stop = pinEvents.subscribe((event) => { if (event && event.seq > start) seen.push(`${event.path}:${event.pinned}`); });
+  await pinNote('notes/Событие.md', 'Событие');
+  markPinned('notes/Событие.md', false);
+  forgetPin('notes/Событие.md');
+  stop();
+  assert.deepEqual(seen, ['notes/Событие.md:true', 'notes/Событие.md:false', 'notes/Событие.md:false']);
+});
+
+test('неудавшаяся запись возвращает закрепление везде', async () => {
+  setPinnedFromTree(folder('notes', [note('notes/Сбой.md', true)]));
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false, status: 500, text: async () => '{"detail":"no"}', json: async () => ({ detail: 'no' }) });
+  await assert.rejects(unpinNote('notes/Сбой.md'));
+  globalThis.fetch = realFetch;
+  assert.equal(isPinned('notes/Сбой.md'), true);
 });
