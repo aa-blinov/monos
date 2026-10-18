@@ -2489,3 +2489,44 @@ apiTest('вложения: неиспользуемые уходят в лока
   assert.equal((await post('/api/attachments/delete', { paths: [] })).status, 400);
   for (const full of aside) fs.renameSync(`${full}.aside`, full);
 });
+
+apiTest('вложения: больше 500 файлов за раз, SVG отдаётся картинкой, вложенная папка, возврат при занятом имени, список корзины', async () => {
+  const dir = path.join(notesDir, 'Many');
+  fs.mkdirSync(path.join(dir, '_attachments', 'sub'), { recursive: true });
+  for (let i = 0; i < 520; i += 1) fs.writeFileSync(path.join(dir, '_attachments', `f${i}.png`), 'x');
+  fs.writeFileSync(path.join(dir, '_attachments', 'sub', 'nested.png'), 'n');
+  fs.writeFileSync(path.join(dir, '_attachments', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  const post = (url, body) => realFetch(buildUrl(url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // Locked notes from other tests would refuse the delete: set them aside.
+  const aside = [];
+  const walk = (folder) => fs.readdirSync(folder, { withFileTypes: true }).forEach((entry) => {
+    const full = path.join(folder, entry.name);
+    if (entry.isDirectory()) { if (!entry.name.startsWith('.')) walk(full); return; }
+    if (entry.name.endsWith('.md') && /monos-locked:\s*true/.test(fs.readFileSync(full, 'utf-8'))) { fs.renameSync(full, `${full}.aside`); aside.push(full); }
+  });
+  walk(notesDir);
+
+  const all = (await requestJson(buildUrl('/api/attachments/all'))).data.items.filter((item) => item.path.startsWith('notes/Many/'));
+  assert.equal(all.find((item) => item.name === 'nested.png').folder, 'Many');
+  const svg = await realFetch(buildUrl('/api/attachments/raw', { path: 'notes/Many/_attachments/logo.svg' }));
+  assert.equal(svg.headers.get('content-type').split(';')[0], 'image/svg+xml');
+  assert.match(svg.headers.get('content-security-policy'), /sandbox/);
+
+  const pngs = all.filter((item) => item.name.startsWith('f')).map((item) => item.path);
+  const result = await (await post('/api/attachments/delete', { paths: pngs })).json();
+  assert.equal(result.deleted, 520);
+  assert.equal(result.trashed.length, 520);
+
+  const trash = await (await realFetch(buildUrl('/api/attachments/trash'))).json();
+  const entry = trash.batches.find((item) => item.batch === result.batch);
+  assert.equal(entry.files.length, 520);
+
+  // The name is taken again: the file comes back under another name, nothing is overwritten.
+  fs.writeFileSync(path.join(dir, '_attachments', 'f0.png'), 'new');
+  const back = await (await post('/api/attachments/restore', { batch: result.batch, paths: ['notes/Many/_attachments/f0.png'].map((value) => value.replace(/^notes\//, '')) })).json();
+  assert.deepEqual([back.restored, back.renamed], [1, 1]);
+  assert.equal(fs.readFileSync(path.join(dir, '_attachments', 'f0.png'), 'utf-8'), 'new');
+  assert.equal(fs.readFileSync(path.join(dir, '_attachments', 'f0 (restored).png'), 'utf-8'), 'x');
+  for (const full of aside) fs.renameSync(`${full}.aside`, full);
+});

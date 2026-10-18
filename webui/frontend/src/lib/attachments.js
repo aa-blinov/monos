@@ -289,28 +289,51 @@ export async function fetchAllAttachments() {
 
 export const ATTACHMENT_SORTS = ['new', 'size', 'name', 'notes'];
 
-/** Narrow the list by file name or note title (`query`), use (`filter`), type (`kind`) and folder. */
+// "IMG_4021", "img-4021" and "IMG 4021" are one name to a person looking for a file.
+const looseText = (value) => String(value || '').toLowerCase().replace(/[\s_.\-]+/g, ' ').trim();
+
+/** Names that more than one file carries (any case), so look-alike files in different folders can be told apart. */
+export function duplicateNames(items) {
+  const counts = new Map();
+  for (const item of items || []) counts.set(item.name.toLowerCase(), (counts.get(item.name.toLowerCase()) || 0) + 1);
+  return new Set([...counts].filter(([, count]) => count > 1).map(([name]) => name));
+}
+
+/**
+ * Narrow the list by file name, folder or note title (`query`, separators ignored), use (`filter`: all, unused or
+ * duplicates), type (`kind`) and folder.
+ */
 export function filterAttachments(items, { query = '', filter = 'all', lockedNotes = 0, kind = 'all', folder = '' } = {}) {
-  const needle = String(query || '').trim().toLowerCase();
+  const needle = looseText(query);
+  const duplicates = filter === 'duplicates' ? duplicateNames(items) : null;
   return (items || []).filter((item) => {
     if (filter === 'unused' && (lockedNotes > 0 || item.usedBy.length > 0)) return false;
+    if (duplicates && !duplicates.has(item.name.toLowerCase())) return false;
     if (kind !== 'all' && item.kind !== kind) return false;
     if (folder && item.folder !== folder) return false;
     if (!needle) return true;
-    return item.name.toLowerCase().includes(needle)
-      || String(item.folder || '').toLowerCase().includes(needle)
-      || item.usedBy.some((note) => note.title.toLowerCase().includes(needle));
+    return looseText(item.name).includes(needle)
+      || looseText(item.folder).includes(needle)
+      || item.usedBy.some((note) => looseText(note.title).includes(needle));
   });
 }
 
-/** A sorted copy: newest first (`new`), biggest first (`size`), by name (`name`), most notes first (`notes`). */
+/** A sorted copy: newest first (`new`), biggest first (`size`), by name (`name`), most notes first (`notes`). Ties go by name, then folder. */
 export function sortAttachments(items, sort = 'new') {
   const list = [...(items || [])];
-  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    || String(a.folder || '').localeCompare(String(b.folder || ''));
   if (sort === 'size') return list.sort((a, b) => b.size - a.size || byName(a, b));
   if (sort === 'name') return list.sort(byName);
   if (sort === 'notes') return list.sort((a, b) => b.usedBy.length - a.usedBy.length || byName(a, b));
   return list.sort((a, b) => String(b.modified).localeCompare(String(a.modified)) || byName(a, b));
+}
+
+/** The end of a folder path, which is the part that tells two folders apart: `…/Swift/Chapter 3`. */
+export function folderTail(folder, segments = 2) {
+  const parts = String(folder || '').split('/').filter(Boolean);
+  if (parts.length === 0) return '/';
+  return parts.length <= segments ? parts.join(' / ') : `… / ${parts.slice(-segments).join(' / ')}`;
 }
 
 /** The folders that hold attachments, with how many each holds, for the folder choice. */
@@ -335,11 +358,19 @@ export async function deleteAttachmentsRequest(paths) {
   return data;
 }
 
-export async function restoreAttachmentsRequest(batch) {
+/** Brings a batch back from the local trash, or only some of its files (`paths`, as listed by the trash). */
+export async function restoreAttachmentsRequest(batch, paths) {
   const response = await fetch('/api/attachments/restore', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batch }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(paths ? { batch, paths } : { batch }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
   return data;
+}
+
+/** What the local trash holds: `{ batches: [{ batch, at, files: [{ path, name, size }] }], days }`. */
+export async function fetchAttachmentTrash() {
+  const response = await fetch('/api/attachments/trash');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
 }

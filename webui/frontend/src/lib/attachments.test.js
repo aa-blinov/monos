@@ -113,3 +113,19 @@ test('sortAttachments, attachmentFolders и attachmentEmbed', async () => {
   assert.deepEqual(filterAttachments(items, { folder: 'B' }).map((i) => i.name), ['a10.png']);
   assert.deepEqual(filterAttachments(items, { query: 'a2', folder: 'A' }).map((i) => i.name), ['a2.pdf']);
 });
+
+test('поиск не различает _ - . и пробел, «Одинаковые имена», хвост папки', async () => {
+  const { filterAttachments, duplicateNames, folderTail } = await import('./attachments.js');
+  const items = [
+    { name: 'IMG_4021.png', folder: 'A', usedBy: [] },
+    { name: 'img_4021.PNG', folder: 'B', usedBy: [] },
+    { name: 'other.png', folder: 'A/B/C/D', usedBy: [] },
+  ];
+  assert.equal(filterAttachments(items, { query: 'img 4021' }).length, 2);
+  assert.equal(filterAttachments(items, { query: 'IMG-4021' }).length, 2);
+  assert.deepEqual([...duplicateNames(items)], ['img_4021.png']);
+  assert.equal(filterAttachments(items, { filter: 'duplicates' }).length, 2);
+  assert.equal(folderTail('A/B/C/D'), '… / C / D');
+  assert.equal(folderTail('A/B'), 'A / B');
+  assert.equal(folderTail(''), '/');
+});
