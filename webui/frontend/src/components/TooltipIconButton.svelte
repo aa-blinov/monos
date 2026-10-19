@@ -12,9 +12,11 @@
   let className = '';
   export { className as class };
 
+  // The node itself, for a parent that has to hand the focus back when its panel closes.
+  export let buttonEl = null;
+
   $: tooltipClassName = tooltipClass(tooltip);
 
-  let buttonEl;
   let tooltipEl;
   let tooltipVisible = false;
   let tooltipStyle = '';
