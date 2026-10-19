@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { get } from 'svelte/store';
 import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
 import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
 import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
 import { contentWidthOptions } from '../lib/fonts.js';
 import { locale, uiText } from '../lib/strings.js';
+import { contentWidth, lineHeight } from '../stores.js';
 import RichEditor from './RichEditor.svelte';
 
 beforeEach(() => {
@@ -136,21 +138,21 @@ test('RichEditor detects markdown clipboard text for paste formatting', () => {
   expect(markdownTextFromClipboard(htmlClipboard)).toBe('');
 });
 
-test('RichEditor holds no layout dropdowns: the settings moved to Settings', async () => {
+test('RichEditor holds the view settings in the panel: width and line spacing', async () => {
   render(RichEditor, {
     content: 'Line one',
     onUpdate: () => {},
   });
 
-  // В jsdom ширины нет, поэтому «…» открывается: важно, что внутри только кнопки, а не списки настроек вида.
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.contentWidth })).toBeNull();
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.lineHeight })).toBeNull();
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.fontSize })).toBeNull();
+  // Настройки вида — в самой панели: «…» появляется только при переполнении, и настройка, доступная
+  // лишь из Настроек, до редактора не доходит.
+  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.contentWidth }));
+  await fireEvent.click(screen.getByRole('menuitemradio', { name: 'Narrow' }));
+  expect(get(contentWidth)).toBe('narrow');
 
-  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.more }));
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.contentWidth })).toBeNull();
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.lineHeight })).toBeNull();
-  expect(screen.queryByRole('combobox', { name: uiText.richEditor.fontSize })).toBeNull();
+  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.lineHeight }));
+  await fireEvent.click(screen.getByRole('menuitemradio', { name: 'Compact' }));
+  expect(get(lineHeight)).toBe('compact');
 });
 
 test('RichEditor wide content width disables max-width centering', () => {

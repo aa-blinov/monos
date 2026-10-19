@@ -20,8 +20,11 @@
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    MoreHorizontal, ArrowUpRight, FilePlus
+    MoreHorizontal, ArrowUpRight, FilePlus,
+    Maximize2, WrapText, Check
   } from 'lucide-svelte';
+  import { contentWidth, lineHeight } from '../stores.js';
+  import { contentWidthOptions, lineHeightOptions } from '../lib/fonts.js';
   import { externalLinkAt, wikiLinksKey } from '../lib/richEditorExtras.js';
   import { isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
   import { newNoteForWikiLink } from '../lib/wiki-links.js';
@@ -30,6 +33,10 @@
   // Everyday formatting stays in the toolbar. The rarer tools (`extraTools`) join it while the row has room for
   // them and move into "More tools" as it narrows, so nothing is hidden that would have fitted.
   let moreOpen = false;
+  // The view of the text — its width and the line spacing — sits in the panel itself, at its right edge.
+  // It lived in the "…" menu, and the menu is only there when the row overflows: a setting that is only in
+  // Settings is a setting that is lost. Settings keeps them too.
+  let viewPanel = null;
   let toolbarEl;
   let extrasEl;
   let visibleExtras = 0;
@@ -69,9 +76,11 @@
   }
   function closeMoreOnOutsideClick(event) {
     if (moreOpen && !event.target.closest?.('[data-more-tools]')) moreOpen = false;
+    if (viewPanel && !event.target.closest?.('[data-view-panel]')) viewPanel = null;
   }
   function closeMoreOnEscape(event) {
     if (moreOpen && event.key === 'Escape') moreOpen = false;
+    if (viewPanel && event.key === 'Escape') viewPanel = null;
   }
 
   export let content = '';
@@ -142,6 +151,13 @@
     { id: 'code', icon: Code, label: shortcutLabel($localizedText.richEditor.inlineCode), run: cmd('toggleCode'), on: active.code },
     { id: 'link', icon: Link, label: $localizedText.richEditor.addLink, run: cmd('link'), on: false },
     { id: 'table', icon: Table2, label: $localizedText.richEditor.insertTable, run: cmd('table'), on: active.table },
+  ];
+
+  $: localizedWidthOptions = contentWidthOptions.map((option) => ({ ...option, label: $localizedText.optionLabels.contentWidth[option.value] || option.name }));
+  $: localizedSpacingOptions = lineHeightOptions.map((option) => ({ ...option, label: $localizedText.optionLabels.lineHeight[option.value] || option.name }));
+  $: viewControls = [
+    { id: 'width', icon: Maximize2, label: $localizedText.richEditor.contentWidth, value: $contentWidth, store: contentWidth, options: localizedWidthOptions },
+    { id: 'spacing', icon: WrapText, label: $localizedText.richEditor.lineHeight, value: $lineHeight, store: lineHeight, options: localizedSpacingOptions },
   ];
 
   const slashCommands = [
@@ -890,6 +906,37 @@
       </div>
     {/if}
     </div>
+
+    <!-- The view of the text: its width and the line spacing. Pinned at the right, so they are always at hand. -->
+    <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5 shrink-0"></span>
+    {#each viewControls as control (control.id)}
+      <div class="relative shrink-0" data-view-panel={control.id}>
+        <TooltipIconButton
+          on:click={() => { viewPanel = viewPanel === control.id ? null : control.id; moreOpen = false; }}
+          class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition"
+          label={control.label}
+          tooltip="{control.label}: {control.options.find((option) => option.value === control.value)?.label || ''}"
+        >
+          <svelte:component this={control.icon} size="16" strokeWidth="1.7" aria-hidden="true" />
+        </TooltipIconButton>
+        {#if viewPanel === control.id}
+          <div class="absolute right-0 top-full z-30 mt-1 w-56 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={control.label}>
+            {#each control.options as option (option.value)}
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={control.value === option.value}
+                class="flex w-full items-center gap-2 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]"
+                on:click={() => { control.store.set(option.value); viewPanel = null; }}
+              >
+                <span class="w-3.5 shrink-0">{#if control.value === option.value}<Check size="14" strokeWidth="1.7" aria-hidden="true" />{/if}</span>
+                {option.label}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/each}
 
     {#if hiddenTools > 0}
       <button
