@@ -1494,7 +1494,11 @@ const ruText = {
       conflictHint: 'Заметку изменили на двух устройствах. Откройте её, чтобы выбрать версию.',
       yesterday: 'Вчера',
       columns(count) {
-        return `${count} ${count === 2 ? 'колонки' : 'колонки'}`;
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${count} колонка`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} колонки`;
+        return `${count} колонок`;
       },
       groupByColor: 'Группировать по цветам',
       groupByColorShort: 'По цветам',
@@ -1726,10 +1730,11 @@ const ruText = {
       deleteSelected: 'Удалить выбранные',
       addTag: 'Добавить тег',
       tagSelected: (count) => {
+        // «для» takes the genitive, and 2-4 are genitive singular as well: для 3 заметки, not для 3 заметок.
         const mod10 = count % 10;
         const mod100 = count % 100;
-        if (mod10 === 1 && mod100 !== 11) return `Тег для ${count} заметки`;
-        return `Тег для ${count} заметок`;
+        const few = mod10 >= 1 && mod10 <= 4 && mod100 !== 11 && (mod100 < 12 || mod100 > 14);
+        return `Тег для ${count} ${few ? 'заметки' : 'заметок'}`;
       },
       duplicate: 'Дублировать',
     },
@@ -2450,7 +2455,11 @@ const ruText = {
         return `${count} слов`;
       },
       readingMinutes(count) {
-        return `${count} мин чтения`;
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${count} минута чтения`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} минуты чтения`;
+        return `${count} минут чтения`;
       },
       empty: 'Пока нет слов',
     },
