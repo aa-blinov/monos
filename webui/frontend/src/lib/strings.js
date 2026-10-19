@@ -948,10 +948,17 @@ const enText = {
     saved: 'Saved',
     saveFailed: 'Save failed',
     // The server names the reason in every answer; one line for all of them left the person guessing.
-    saveFailedReason(status) {
+    // 403 comes in three kinds, and the code in the answer says which: a path, a foreign address or a
+    // foreign source. Without it the path was blamed for a request that never came from the app.
+    saveFailedReason(status, code) {
+      if (status === 403) {
+        return {
+          origin: 'the request did not come from the app',
+          host: 'the server does not accept this address',
+        }[code] || 'the path is outside the notes folder';
+      }
       return {
         0: 'no connection to the app',
-        403: 'the path is outside the notes folder',
         404: 'the note file is gone',
         409: 'the note changed elsewhere',
         410: 'the note is in the trash',
@@ -2199,10 +2206,17 @@ const ruText = {
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',
     // Сервер называет причину в каждом ответе; одна надпись на все случаи заставляла угадывать.
-    saveFailedReason(status) {
+    // 403 бывает трёх видов, и код в ответе говорит какой: путь, чужой адрес или чужой источник.
+    // Без кода за путь винили запрос, который пришёл вообще не от приложения.
+    saveFailedReason(status, code) {
+      if (status === 403) {
+        return {
+          origin: 'запрос пришёл не от приложения',
+          host: 'сервер не принимает этот адрес',
+        }[code] || 'путь ведёт за пределы папки с заметками';
+      }
       return {
         0: 'нет связи с приложением',
-        403: 'путь ведёт за пределы папки с заметками',
         404: 'файла заметки больше нет',
         409: 'заметку изменили в другом месте',
         410: 'заметка в корзине',

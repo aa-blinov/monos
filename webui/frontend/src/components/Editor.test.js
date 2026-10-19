@@ -992,3 +992,20 @@ test('Editor называет причину отказа в надписи, а 
   await waitFor(() => expect(screen.getByRole('button', { name: uiText.editor.retry })).toBeTruthy(), { timeout: 4000 });
   expect(screen.getByRole('status').textContent).toContain(uiText.editor.saveFailedReason(410));
 });
+
+test('Editor называет 403 по коду ответа, а не винит путь', async () => {
+  const path = 'notes/Alpha.md';
+  installFetchMock({
+    ...createDefaultResponses(path),
+    [`POST /api/file?path=${encodeURIComponent(path)}`]: jsonResponse({ detail: 'Origin not allowed', code: 'origin' }, false, 403),
+  });
+  render(Editor, { currentFile: { path, name: 'Alpha.md', isDir: false } });
+  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
+
+  const editorInput = screen.getByTestId('rich-editor-input');
+  await fireEvent.input(editorInput, { target: { value: 'Changed' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.editor.retry })).toBeTruthy(), { timeout: 4000 });
+  const label = screen.getByRole('status').textContent;
+  expect(label).toContain(uiText.editor.saveFailedReason(403, 'origin'));
+  expect(label).not.toContain(uiText.editor.saveFailedReason(403));
+});

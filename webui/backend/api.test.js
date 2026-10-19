@@ -130,6 +130,8 @@ apiTest('backend ограничивает браузерные Origin локал
   });
   assert.equal(blocked.response.status, 403);
   assert.equal(blocked.data.detail, 'Origin not allowed');
+  // Код ответа говорит надписи, что именно отказало: иначе она винит путь вместо источника запроса.
+  assert.equal(blocked.data.code, 'origin');
 });
 
 apiTest('страница с origin самого сервера проходит проверку Origin', async () => {
