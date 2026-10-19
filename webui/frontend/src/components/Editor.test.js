@@ -97,8 +97,8 @@ test('Editor загружает заметку, показывает теги и
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
   await waitFor(() => expect(screen.queryByText(uiText.editor.gatheringThoughts)).toBeNull());
   expect(screen.getByTestId('rich-editor-input').value).toBe('Alpha body');
-  // Теги видны на кнопке нижней панели, связанные заметки — в окошке по её кнопке.
-  expect(within(screen.getByTestId('note-properties')).getByText('#alpha')).toBeTruthy();
+  // Теги названы на кнопке нижней панели, связанные заметки — в окошке по её кнопке.
+  expect(screen.getByTestId('property-tags-button').getAttribute('aria-label')).toContain('#alpha');
   await fireEvent.click(screen.getByTestId('property-related-button'));
   const related = screen.getByTestId('property-panel');
   expect(within(related).getByText(uiText.editor.localNavigation)).toBeTruthy();
@@ -128,12 +128,12 @@ test('Editor показывает breadcrumb без отдельного reveal/
   });
 
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
-  // The folder is in the breadcrumb, and the folder button in the bottom bar names it too.
-  expect(screen.getAllByText('Work').length).toBe(2);
-  expect(screen.getByTestId('property-category-button').textContent).toContain('Work');
+  // The folder is in the breadcrumb, and the path in the bottom bar names the whole way to the note.
+  expect(screen.getAllByText('Work').length).toBe(1);
+  expect(screen.getByTestId('property-category-button').textContent).toContain('Work / Alpha');
   expect(screen.queryByText(uiText.editorHeader.revealInTree)).toBeNull();
   expect(screen.queryByPlaceholderText(uiText.editorHeader.tagPlaceholder)).toBeNull();
-  expect(within(screen.getByTestId('note-properties')).getByText('#release')).toBeTruthy();
+  expect(screen.getByTestId('property-tags-button').getAttribute('aria-label')).toContain('#release');
 });
 
 test('Editor позволяет перекрасить открытую заметку из нижней палитры', async () => {
