@@ -920,7 +920,7 @@
           <svelte:component this={control.icon} size="16" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
         {#if viewPanel === control.id}
-          <div class="absolute right-0 top-full z-30 mt-1 w-56 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={control.label}>
+          <div class="absolute right-0 top-full z-30 mt-1 w-44 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={control.label}>
             {#each control.options as option (option.value)}
               <button
                 type="button"
@@ -1217,10 +1217,10 @@
   /* The toolbar's buttons are TooltipIconButtons, children of this component, so a plain selector never reached
      them and they stayed 28px on a phone. On a phone they are 40px (the strip scrolls sideways, so a larger
      button costs tools on screen: 40 keeps seven in view, 44 would show six); with a pointer they tighten to 28px. */
-  [data-more-tools] :global(button:not([role='menuitem']):not([role='option'])) { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
-  @media (min-width: 640px) { [data-more-tools] :global(button:not([role='menuitem']):not([role='option'])) { min-width: 28px; min-height: 28px; } }
-  button:not([role='menuitem']):not([role='option']) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
-  @media (min-width: 640px) { button:not([role='menuitem']):not([role='option']) { min-width: 28px; min-height: 28px; } }
+  [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
+  @media (min-width: 640px) { [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { min-width: 28px; min-height: 28px; } }
+  button:not([role='menuitem']):not([role='menuitemradio']):not([role='option']) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+  @media (min-width: 640px) { button:not([role='menuitem']):not([role='menuitemradio']):not([role='option']) { min-width: 28px; min-height: 28px; } }
 
   .toolbar-scroll::-webkit-scrollbar { height: 3px; }
   .toolbar-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: var(--radius); }
