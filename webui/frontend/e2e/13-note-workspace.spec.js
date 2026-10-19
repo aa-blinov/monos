@@ -141,7 +141,7 @@ test('панель инструментов: «More tools» открывает �
   await page.setViewportSize({ width: 560, height: 800 });
   await page.getByRole('button', { name: 'More tools' }).click();
 
-  await expect(page.getByRole('menuitem', { name: /strikethrough/i })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /add link/i })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: /insert table/i })).toBeVisible();
   // Настройки вида живут в Настройках, а не в этом меню.
   await expect(page.getByRole('menu').getByRole('combobox')).toHaveCount(0);

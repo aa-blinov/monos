@@ -1,7 +1,7 @@
 <script>
   import { noteSyncStatus } from '../lib/git-conflicts.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
-  import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Trash2 } from 'lucide-svelte';
+  import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
 
@@ -35,7 +35,6 @@
     event.currentTarget.blur();
     onFinishTitle();
   }
-  export let onDelete = () => {};
 
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
   const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
@@ -102,8 +101,8 @@
     {#if focusMode}
       <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
     {/if}
-    <!-- The right column is opened and closed from here, right before the trash: the note's actions sit at
-         one end of one row, and the line under the title stays a sentence. -->
+    <!-- The right column is opened and closed from here: the note's actions sit at one end of one row,
+         and the line under the title stays a sentence. -->
     {#if outlineAvailable && !focusMode}
       <TooltipIconButton
         on:click={onToggleOutline}
@@ -121,16 +120,6 @@
         {/if}
       </TooltipIconButton>
     {/if}
-    <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
-    <TooltipIconButton
-      on:click={onDelete}
-      class="{navButtonClass} hover:!bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:!text-[var(--red)] focus-visible:text-[var(--red)]"
-      label={$localizedText.editor.moveToTrash}
-      tooltip={$localizedText.editor.moveToTrash}
-      tooltipAlign="end"
-    >
-      <Trash2 class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
-    </TooltipIconButton>
   </div>
   <!-- The header does not follow the text width: it is a column of fixed width centred on the same axis as the text below (the Structure column's room is left out). -->
   <div class="ml-[max(0px,calc((100%-var(--outline-inset,0px)-48rem)/2))] max-w-[min(48rem,calc(100%-var(--outline-inset,0px)))] flex w-full flex-col lg:flex-row lg:items-start justify-between gap-4 lg:gap-12" class:hidden={folded}>

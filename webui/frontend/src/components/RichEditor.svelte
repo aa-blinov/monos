@@ -133,12 +133,14 @@
 
   const WIKI_SUGGESTION_LIMIT = 8;
 
+  // The toolbar reads by meaning: what the text looks like, what it is called, what shape it has, and
+  // what is inserted. The rare tools follow the everyday ones and go into "More tools" as the row narrows.
   $: extraTools = [
-    { id: 'strike', icon: Strikethrough, label: $localizedText.richEditor.strikethrough, run: cmd('toggleStrike'), on: active.strike },
-    { id: 'code', icon: Code, label: shortcutLabel($localizedText.richEditor.inlineCode), run: cmd('toggleCode'), on: active.code },
-    { id: 'h4', icon: Heading4, label: $localizedText.richEditor.heading4, run: cmd('toggleHeading', { level: 4 }), on: active.heading === 4 },
+    { id: 'quote', icon: Quote, label: $localizedText.richEditor.blockquote, run: cmd('toggleBlockquote'), on: active.quote },
     { id: 'codeblock', icon: Code2, label: $localizedText.richEditor.codeBlock, run: cmd('toggleCodeBlock'), on: active.codeBlock },
     { id: 'hr', icon: Minus, label: $localizedText.richEditor.horizontalRule, run: cmd('hr'), on: false },
+    { id: 'code', icon: Code, label: shortcutLabel($localizedText.richEditor.inlineCode), run: cmd('toggleCode'), on: active.code },
+    { id: 'link', icon: Link, label: $localizedText.richEditor.addLink, run: cmd('link'), on: false },
     { id: 'table', icon: Table2, label: $localizedText.richEditor.insertTable, run: cmd('table'), on: active.table },
   ];
 
@@ -840,22 +842,18 @@
 
     <TooltipIconButton on:click={cmd('toggleBold')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.bold ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.bold)}><Bold size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleItalic')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.italic ? 'bg-[var(--bg-secondary)]' : ''}" label={shortcutLabel($localizedText.richEditor.italic)}><Italic size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleStrike')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.strike ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.strikethrough}><Strikethrough size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 1 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 1 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading1}><Heading1 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 2 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 2 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading2}><Heading2 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleHeading', { level: 3 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 3 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading3}><Heading3 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
+    <TooltipIconButton on:click={cmd('toggleHeading', { level: 4 })} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.heading === 4 ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.heading4}><Heading4 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
 
     <TooltipIconButton on:click={cmd('toggleBulletList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.bullet ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.bulletList}><List size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleOrderedList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.ordered ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.numberedList}><ListOrdered size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     <TooltipIconButton on:click={cmd('toggleTaskList')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.task ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.checklist}><CheckSquare size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
-    <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
-
-    <TooltipIconButton on:click={cmd('toggleBlockquote')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition {active.quote ? 'bg-[var(--bg-secondary)]' : ''}" label={$localizedText.richEditor.blockquote}><Quote size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
-    <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
-
-    <TooltipIconButton on:click={cmd('link')} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition" label={$localizedText.richEditor.addLink}><Link size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>
     {#if visibleExtras > 0}
       <span class="w-px h-5 bg-[var(--border-subtle)] mx-1.5"></span>
       <div class="flex shrink-0 items-center gap-0.5" bind:this={extrasEl} data-testid="toolbar-extras">

@@ -59,13 +59,17 @@ test('меню слева на телефоне: инструменты в дв�
   await page.getByRole('button', { name: /Open sidebar/ }).first().click();
   const help = page.getByTestId('open-help');
   await expect(help).toBeVisible();
-  const settings = page.getByRole('button', { name: 'Settings', exact: true }).last();
-  const [a, b] = [await help.boundingBox(), await settings.boundingBox()];
-  // Neighbours in a row, each a touch target.
-  expect(Math.abs(a.y - b.y)).toBeLessThan(4);
-  expect(a.height).toBeGreaterThanOrEqual(44);
-  expect(b.height).toBeGreaterThanOrEqual(44);
-  expect(b.x + b.width).toBeLessThanOrEqual(390);
+  // The grid holds as many items as the state asks for, so its last row may stand alone: the check is
+  // that the tools stand in two columns and that each of them is a touch target.
+  const boxes = await page.getByTestId('phone-tools').locator('button').evaluateAll((els) => els.map((el) => {
+    const box = el.getBoundingClientRect();
+    return { x: Math.round(box.x), right: Math.round(box.right), height: Math.round(box.height) };
+  }));
+  expect([...new Set(boxes.map((b) => b.x))].length).toBe(2);
+  for (const box of boxes) {
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.right).toBeLessThanOrEqual(390);
+  }
   const tools = await page.getByTestId('phone-tools').boundingBox();
   // Ten tools stay under a third of the screen, the rest is for the notes.
   expect(tools.height).toBeLessThan(800 * 0.4);
@@ -83,7 +87,7 @@ test('заметка: поле тегов подсказывает «Add a tag»
 });
 
 // On a phone the note's actions share the top row and the date keeps the line under the title to itself.
-test('заметка на телефоне: «Структура» в верхней строке слева от корзины, дата — в мета-строке', async ({ page }) => {
+test('заметка на телефоне: «Структура» в верхней строке, дата — в мета-строке', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 390, height: 800 });
   const title = `Meta line ${Date.now()}`;
@@ -92,10 +96,13 @@ test('заметка на телефоне: «Структура» в верхн
   await page.locator('main [role=list]').getByText(title).first().click();
   const outline = page.getByTestId('outline-toggle');
   await expect(outline).toBeVisible();
-  const trash = page.getByRole('button', { name: 'Move to trash' });
-  const [a, b] = [await outline.boundingBox(), await trash.boundingBox()];
+  const back = page.getByRole('button', { name: 'Back to notes' });
+  const date = page.getByText(/^Modified /).first();
+  const [a, b, c] = [await outline.boundingBox(), await back.boundingBox(), await date.boundingBox()];
+  // The button stands in the row above the title, next to the other actions of that row.
   expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThan(12);
-  expect(a.x).toBeLessThan(b.x);
-  const date = await page.getByText(/^Modified /).first().boundingBox();
-  expect(date.y).toBeGreaterThan(b.y);
+  expect(c.y - a.y).toBeGreaterThan(20);
+  // The bar of a phone has no room for the trash: it waits in the menu of the foot.
+  await page.getByTestId('editor-more').click();
+  await expect(page.getByTestId('menu-trash')).toBeVisible();
 });

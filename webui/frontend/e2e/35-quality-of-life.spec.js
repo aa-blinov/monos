@@ -7,7 +7,7 @@ test('заметка уходит в корзину без вопроса, и е
   await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: 'Не теряй меня' } });
 
   await openNote(page, title);
-  await page.getByRole('button', { name: 'Move to trash', exact: true }).first().click();
+  await page.getByTestId('footer-trash').click();
 
   const notice = page.getByRole('status').filter({ hasText: `“${title}” moved to the trash` });
   await expect(notice).toBeVisible();
