@@ -40,3 +40,12 @@ test('relativeDay: сегодня и вчера словами, в этом го
   assert.match(relativeDay(new Date(2025, 2, 3), 'ru', words, now), /^3 мар\.? 2025/);
   assert.equal(relativeDay('', 'ru', words, now), '');
 });
+
+test('interfaceDateTime: по-русски дата с временем читается как фраза', async () => {
+  const { interfaceDateTime } = await import('./date-format.js');
+  const moment = new Date(2026, 9, 19, 21, 22);
+  assert.equal(interfaceDateTime(moment, 'ru'), '19 окт. в 21:22');
+  assert.equal(interfaceDateTime(moment, 'en'), 'Oct 19, 09:22 PM');
+  assert.equal(interfaceDateTime('', 'ru'), '');
+  assert.equal(interfaceDateTime('not a date', 'ru'), '');
+});

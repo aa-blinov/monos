@@ -1,6 +1,7 @@
 <script>
   import { noteSyncStatus } from '../lib/git-conflicts.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
+  import { interfaceDateTime } from '../lib/date-format.js';
   import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
@@ -39,19 +40,8 @@
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
   const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
 
-  const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   $: syncStatus = noteSyncStatus(syncInfo, currentFile?.path);
-  const formatDateTime = (value) => {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(dateLocale($locale), {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  };
+  const formatDateTime = (value) => interfaceDateTime(value, $locale);
 
   $: breadcrumbParts = currentFile?.path
     ? currentFile.path
