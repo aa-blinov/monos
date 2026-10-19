@@ -530,6 +530,30 @@ apiTest('файловые маршруты отклоняют пути вне no
   assert.equal(fs.existsSync(path.join(tempRoot, 'MovedOut', 'Escaped.md')), false);
 });
 
+apiTest('симлинк внутри notes, ведущий наружу, не отдаёт и не перезаписывает чужой файл', async () => {
+  const target = path.join(tempRoot, 'Link Target.md');
+  const link = path.join(notesDir, 'Escape Link.md');
+  try {
+    fs.writeFileSync(target, 'TARGET-TEXT', 'utf-8');
+    fs.symlinkSync(target, link);
+    const read = await requestJson(buildUrl('/api/file', { path: 'notes/Escape Link.md' }));
+    assert.equal(read.response.status, 403);
+    assert.equal(read.data.detail, 'Path must be inside notes');
+    assert.equal(JSON.stringify(read.data).includes('TARGET-TEXT'), false);
+
+    const write = await requestJson(buildUrl('/api/file', { path: 'notes/Escape Link.md' }), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'OVERWRITTEN' }),
+    });
+    assert.equal(write.response.status, 403);
+    assert.equal(fs.readFileSync(target, 'utf-8'), 'TARGET-TEXT');
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(target, { force: true });
+  }
+});
+
 apiTest('PUT /api/file/metadata и GET /api/tags обновляют title и tags', async () => {
   const metadataUrl = buildUrl('/api/file/metadata', { path: 'notes/Topic/Alpha.md' });
   const update = await requestJson(metadataUrl, {
