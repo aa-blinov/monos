@@ -50,7 +50,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: webui/backend/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            webui/backend/package-lock.json
+      - run: npm ci
       - run: npm ci
         working-directory: webui/backend
       - name: Live sync against GitHub

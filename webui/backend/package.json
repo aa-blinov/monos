@@ -1,21 +1,12 @@
 {
   "name": "monos-backend",
   "version": "1.0.0",
+  "description": "Holds only better-sqlite3, built for plain Node. Every other dependency comes from the root install; scripts/check-backend-deps.mjs checks this.",
   "type": "module",
   "scripts": {
     "test": "node --test './*.test.js' './routes/*.test.js'"
   },
   "dependencies": {
-    "adm-zip": "^0.6.1",
-    "better-sqlite3": "^12.10.0",
-    "cors": "^2.8.5",
-    "express": "^4.21.0",
-    "isomorphic-git": "^1.27.0",
-    "lowlight": "^3.3.0",
-    "marked": "^18.0.0",
-    "multer": "^2.1.1"
-  },
-  "overrides": {
-    "qs": "6.16.0"
+    "better-sqlite3": "^12.10.0"
   }
 }

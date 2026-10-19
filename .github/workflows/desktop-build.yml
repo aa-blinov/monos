@@ -30,6 +30,7 @@ jobs:
         working-directory: webui/backend
       - run: npm ci
         working-directory: webui/frontend
+      - run: npm run check:deps
       - run: npm run check:backend
       - run: npm run test:backend
       - run: npm run test:frontend
