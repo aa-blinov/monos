@@ -1718,7 +1718,7 @@
          относятся к запрошенной заметке, а текст ещё от прежней. -->
     <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
-      <div class="flex min-w-0 flex-1 items-center gap-1 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
+      <div class="flex min-w-0 flex-1 items-center gap-2 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
         <div class="relative min-w-0 sm:flex-1" data-panel-anchor="category">
           <button
             type="button"
@@ -2103,7 +2103,8 @@
           </TooltipIconButton>
         {/if}
 
-        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+        <!-- Пока надписи нет, она не занимает место: пустой элемент в ряду с отступами раздвигает иконки вдвое. -->
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage ? '' : 'sr-only'} {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
         <!-- The terminal next to the note it works on (⌘J does the same). Desktop app only. -->
         {#if terminalBridge}
