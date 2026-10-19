@@ -10,33 +10,20 @@ async function openNote(page, width) {
   await expect(page.getByTestId('rich-editor-surface')).toBeVisible();
 }
 
-// The rarer tools sit in the toolbar while it has room and move into the "More tools" menu as it narrows.
+// The rarer tools sit in the toolbar while it has room. Nothing hidden, no "More tools" button: the menu is
+// only there once the row runs out, and then it carries exactly the tools that did not fit.
 test('панель форматирования: что влезает, то на виду, остальное в меню', async ({ page }) => {
   await prepareMonos(page);
   await openNote(page, 1600);
   const more = page.locator('[data-more-tools] button[aria-haspopup="menu"]');
   await expect(page.getByTestId('toolbar-extras').getByRole('button')).toHaveCount(6);
-  await more.click();
-  await expect(page.getByRole('menuitem')).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await expect(more).toHaveCount(0);
 
   await page.setViewportSize({ width: 560, height: 800 });
   await expect.poll(async () => page.getByTestId('toolbar-extras').getByRole('button').count()).toBeLessThan(6);
   await more.click();
   const shown = await page.getByTestId('toolbar-extras').getByRole('button').count();
   await expect(page.getByRole('menuitem')).toHaveCount(6 - shown);
-});
-
-// In the menu a click anywhere on a row's line opens its list, not only on the icon.
-test('меню «Ещё»: строка настройки открывается по клику в любом месте строки', async ({ page }) => {
-  await prepareMonos(page);
-  await openNote(page, 1000);
-  await page.locator('[data-more-tools] button[aria-haspopup="menu"]').click();
-  const row = page.locator('[role="menu"] label').first();
-  const box = await row.boundingBox();
-  // The right end of the row, far from the icon.
-  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, { x: box.x + box.width - 8, y: box.y + box.height / 2 });
-  expect(hit).toBe('SELECT');
 });
 
 // Pinned notes fold to one row, and a long list scrolls inside a third of the panel instead of taking all of it.

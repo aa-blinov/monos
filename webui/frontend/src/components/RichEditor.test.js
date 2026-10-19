@@ -1,12 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { get } from 'svelte/store';
 import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
 import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
 import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
 import { contentWidthOptions } from '../lib/fonts.js';
 import { locale, uiText } from '../lib/strings.js';
-import { contentWidth, editorFontSize, lineHeight } from '../stores.js';
 import RichEditor from './RichEditor.svelte';
 
 beforeEach(() => {
@@ -138,27 +136,21 @@ test('RichEditor detects markdown clipboard text for paste formatting', () => {
   expect(markdownTextFromClipboard(htmlClipboard)).toBe('');
 });
 
-test('RichEditor exposes dropdowns for editor layout settings', async () => {
+test('RichEditor holds no layout dropdowns: the settings moved to Settings', async () => {
   render(RichEditor, {
     content: 'Line one',
     onUpdate: () => {},
   });
 
-  // Настройки вида лежат в меню «ещё инструменты» на десктопе.
-  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.more }));
-  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.contentWidth }), {
-    target: { value: 'narrow' },
-  });
-  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.lineHeight }), {
-    target: { value: 'relaxed' },
-  });
-  await fireEvent.change(screen.getByRole('combobox', { name: uiText.richEditor.fontSize }), {
-    target: { value: 'xl' },
-  });
+  // В jsdom ширины нет, поэтому «…» открывается: важно, что внутри только кнопки, а не списки настроек вида.
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.contentWidth })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.lineHeight })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.fontSize })).toBeNull();
 
-  expect(get(contentWidth)).toBe('narrow');
-  expect(get(lineHeight)).toBe('relaxed');
-  expect(get(editorFontSize)).toBe('xl');
+  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.more }));
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.contentWidth })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.lineHeight })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: uiText.richEditor.fontSize })).toBeNull();
 });
 
 test('RichEditor wide content width disables max-width centering', () => {
