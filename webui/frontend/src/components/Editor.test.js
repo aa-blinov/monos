@@ -942,3 +942,37 @@ test('экспорт открывается окошком и предлагае
   await fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByTestId('property-panel')).toBeNull();
 });
+
+test('конфликт без git: ответ 400 «Git not initialized» сохраняет разобранный текст и снимает «только чтение»', async () => {
+  const path = 'notes/Inbox.md';
+  const encodedPath = encodeURIComponent(path);
+  const conflicted = 'Начало.\n\n<<<<<<< HEAD\nМоя версия.\n=======\nВерсия с телефона.\n>>>>>>> origin/master\n\nКонец.';
+  const resolved = 'Начало.\n\nМоя версия.\n\nКонец.';
+  // A vault without git: resolve-note refuses before it touches the file, so the editor saves the text itself.
+  const noGitRepo = { ok: false, status: 400, async json() { return { detail: 'Git not initialized' }; } };
+  const fetchMock = installFetchMock(createDefaultResponses(path, {
+    [`/api/file?path=${encodedPath}`]: jsonResponse({ content: conflicted, version: 'v-conflicted' }),
+    '/api/git/status': jsonResponse({ initialized: false }),
+    '/api/git/conflicts': jsonResponse([]),
+    'POST /api/git/resolve-note': noGitRepo,
+    [`POST /api/file?path=${encodedPath}`]: jsonResponse({ message: 'Saved', version: 'v-resolved' }),
+  }));
+  // The bodies of the note's saves, in the order the server received them.
+  const saves = () => fetchMock.mock.calls
+    .filter(([url, init]) => url === `/api/file?path=${encodedPath}` && init?.method === 'POST')
+    .map(([, init]) => JSON.parse(init.body));
+
+  render(Editor, { currentFile: { path, name: 'Inbox.md', isDir: false } });
+  await waitFor(() => expect(screen.getByTestId('conflict-surface')).toBeTruthy());
+
+  await fireEvent.click(screen.getByTestId('conflict-whole-ours'));
+  await waitFor(() => expect(saves()).toEqual([{ content: resolved }]));
+  await waitFor(() => expect(screen.queryByTestId('conflict-surface')).toBeNull());
+  expect(screen.getByTestId('rich-editor-input').value).toBe(resolved);
+
+  // Editable again: the next edit is saved to disk too.
+  vi.useFakeTimers();
+  await fireEvent.input(screen.getByTestId('rich-editor-input'), { target: { value: 'Правка после разбора.' } });
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(saves().at(-1).content).toBe('Правка после разбора.');
+});
