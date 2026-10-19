@@ -1194,6 +1194,20 @@ apiTest('POST /api/directory/icon очищает иконку и цвет', asyn
   assert.equal(topicDir.color, null);
 });
 
+apiTest('POST /api/directory/icon без path отвечает 400 и не добавляет строку в folder_config', async () => {
+  const rowsBefore = getDb().prepare('SELECT count(*) AS n FROM folder_config').get().n;
+
+  const response = await requestJson(buildUrl('/api/directory/icon'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ icon: 'folder-open', color: '#ff9900' }),
+  });
+
+  assert.equal(response.response.status, 400);
+  assert.equal(response.data.detail, 'Path required');
+  assert.equal(getDb().prepare('SELECT count(*) AS n FROM folder_config').get().n, rowsBefore);
+});
+
 apiTest('rename, move и delete обновляют файловое дерево и индекс', async () => {
   const create = await requestJson(buildUrl('/api/notes/create'), {
     method: 'POST',

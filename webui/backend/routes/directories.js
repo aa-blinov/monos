@@ -49,6 +49,9 @@ export function registerDirectoryRoutes(app) {
   app.post('/api/directory/icon', (req, res) => {
     try {
       const { path: itemPath } = req.query;
+      if (typeof itemPath !== 'string' || itemPath.trim() === '') {
+        return res.status(400).json({ detail: 'Path required' });
+      }
       const { icon, color } = req.body || {};
       const db = getDb();
       const existing = db.prepare('SELECT * FROM folder_config WHERE path = ?').get(itemPath);
