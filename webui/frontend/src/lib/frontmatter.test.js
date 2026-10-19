@@ -137,18 +137,24 @@ test('dueLabel собирает понятные подписи', () => {
   assert.equal(dueLabel('', now, strings), '');
 });
 test('переименование заметки не стирает срок', () => {
-  // Регрессия: upsertFrontmatter выбрасывает управляемые ключи, которых нет в
-  // аргументах. Если редактор передаёт только заголовок и теги, `due` исчез бы
-  // из файла при каждом переименовании — вместе с напоминанием.
+  // Регрессия: срок был управляемым ключом, и вызов без него удалял строку.
+  // Редактор передавал срок сам, а любой другой вызов терял его при переименовании.
   const note = '---\ntitle: "Старое"\ndue: 2026-10-20\n---\n\nТело\n';
-  const renamed = upsertFrontmatter(note, { title: 'Новое', tags: ['a'], due: '2026-10-20' });
-  assert.match(renamed, /due: 2026-10-20/);
+  const renamed = upsertFrontmatter(note, { title: 'Новое', tags: ['a'] });
+  assert.match(renamed, /^due: 2026-10-20$/m);
   assert.equal(parseFrontmatter(renamed).due, '2026-10-20');
+});
 
-  // Контроль: без срока в аргументах ключ действительно был бы потерян —
-  // именно поэтому редактор обязан его передавать.
-  const withoutDue = upsertFrontmatter(note, { title: 'Новое', tags: ['a'] });
-  assert.ok(!withoutDue.includes('due:'), 'проверка-контроль: срок должен был бы пропасть');
+test('чужие свойства due и priority переживают переименование и смену тегов', () => {
+  const note = '---\ntitle: "Отчёт"\ntags: ["a"]\ndue: 2026-12-01\npriority: 3\n---\n\nТело\n';
+  const renamed = upsertFrontmatter(note, { title: 'Отчёт за октябрь', tags: ['a'] });
+  const retagged = upsertFrontmatter(renamed, { title: 'Отчёт за октябрь', tags: ['a', 'срочно'] });
+  for (const text of [renamed, retagged]) {
+    assert.equal(text.match(/^due:/gm)?.length, 1, `строка due должна остаться одна: ${text}`);
+    assert.match(text, /^due: 2026-12-01$/m);
+    assert.match(text, /^priority: 3$/m);
+  }
+  assert.equal(parseFrontmatter(retagged).due, '2026-12-01');
 });
 
 test('BOM и CRLF переживают переписывание шапки', () => {
