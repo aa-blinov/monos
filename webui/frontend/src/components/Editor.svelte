@@ -2070,47 +2070,54 @@
 
         <!-- History lives by Export: the browser print view it replaced is the same PDF under Export → PDF. -->
         {#if loadedFilePath && !inConflict}
-          <button
+          <TooltipIconButton
             type="button"
             data-testid="footer-history"
             on:click={() => { showHistory = true; historyNote = visibleFile; }}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] text-[var(--text-secondary)]"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition max-sm:h-11 max-sm:w-11 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
+            label={$localizedText.editor.history}
+            tooltip={$localizedText.editor.history}
+            tooltipPosition="top"
+            tooltipAlign="end"
           >
             <History size="14" strokeWidth="1.7" aria-hidden="true" />
-            <span class="hidden sm:inline">{$localizedText.editor.history}</span>
-          </button>
+          </TooltipIconButton>
         {/if}
 
         <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
         <!-- The terminal next to the note it works on (⌘J does the same). Desktop app only. -->
         {#if terminalBridge}
-          <button
+          <TooltipIconButton
             type="button"
             data-testid="footer-terminal"
             aria-pressed={$terminalOpen}
-            title={$localizedText.terminal.toggleHint}
             on:click={toggleTerminal}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:hidden hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {$terminalOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition max-sm:hidden hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {$terminalOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            label={$localizedText.terminal.open}
+            tooltip={$localizedText.terminal.toggleHint}
+            tooltipPosition="top"
+            tooltipAlign="end"
           >
             <TerminalSquare size="14" strokeWidth="1.7" aria-hidden="true" />
-            <span>{$localizedText.terminal.open}</span>
-          </button>
+          </TooltipIconButton>
         {/if}
         <div class="relative" data-panel-anchor="export">
-          <button
+          <TooltipIconButton
             type="button"
-            bind:this={propertyTriggers.export}
+            bind:buttonEl={propertyTriggers.export}
             data-testid="export-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'export'}
-            aria-label={$localizedText.editor.exportLabel}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('export')}
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition max-sm:h-11 max-sm:w-11 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'export' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            label={$localizedText.editor.exportLabel}
+            tooltip={$localizedText.editor.exportLabel}
+            tooltipPosition="top"
+            tooltipAlign="end"
           >
             <Download size="14" strokeWidth="1.7" aria-hidden="true" />
-            <span class="hidden sm:inline">{$localizedText.editor.exportLabel}</span>
-          </button>
+          </TooltipIconButton>
           {#if propertyPanel === 'export'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.exportLabel} data-testid="property-panel" data-panel="export" class="{panelClass} sm:left-auto sm:right-0">
               <p class={panelLabelClass}>{$localizedText.editor.exportLabel}</p>
@@ -2139,15 +2146,20 @@
         <!-- The trash stands next to the last button of the bar, apart from the ones used all the time.
              Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. On a
              phone the bar has no room for it, so it waits in "More". -->
-        <button
-          type="button"
-          data-testid="footer-trash"
-          on:click={() => void deleteFile()}
-          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] text-[var(--text-secondary)]"
-        >
-          <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
-          <span class="hidden sm:inline">{$localizedText.editor.moveToTrash}</span>
-        </button>
+        <span class="max-sm:hidden">
+          <TooltipIconButton
+            type="button"
+            data-testid="footer-trash"
+            on:click={() => void deleteFile()}
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)]"
+            label={$localizedText.editor.moveToTrash}
+            tooltip={$localizedText.editor.moveToTrash}
+            tooltipPosition="top"
+            tooltipAlign="end"
+          >
+            <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
+          </TooltipIconButton>
+        </span>
         <!-- The ⋯ button also anchors the password panel: locking a note is an action on the note, not one of its fields. -->
         <div class="relative" data-footer-more data-panel-anchor="lock">
           <TooltipIconButton
