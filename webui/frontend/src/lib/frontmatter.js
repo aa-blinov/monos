@@ -5,16 +5,23 @@
  * whatever the UI does with it ends up in git. That shapes two rules here.
  *
  * 1. Unknown keys are never dropped. `upsertFrontmatter` only rewrites the keys
- *    it owns (title, category, tags, due) and passes everything else through
- *    byte-for-byte, so a key someone added by hand survives editing in the app.
+ *    it owns (title, category, tags, pinned, and due when a caller names it) and
+ *    passes everything else through byte-for-byte, so a key someone added by hand
+ *    survives editing in the app.
  * 2. Dates are stored plain (`2026-10-20`) rather than quoted, because that is
  *    what other Markdown tools read and what git diff shows legibly.
  */
 
-/** Keys the UI owns and rewrites. Everything else in the block is preserved. */
+/**
+ * Keys the UI owns and rewrites on every save. This is the same set as RESERVED_KEYS in the
+ * backend's frontmatter.js, which is the reference; everything else in the block is preserved.
+ */
 // `pinned` тоже управляемый: без него setFrontmatterKey возвращал текст
 // без изменений, и закрепление из редактора не записывалось вовсе.
-const MANAGED_KEYS = ['title', 'category', 'tags', 'due', 'pinned'];
+const MANAGED_KEYS = ['title', 'category', 'tags', 'pinned'];
+// Срок не входит в MANAGED_KEYS: он переписывается, только когда его явно передали
+// (кнопка срока идёт через setFrontmatterKey). Сохранение без срока оставляет строку как есть.
+const SETTABLE_KEYS = [...MANAGED_KEYS, 'due'];
 const BOM = '\uFEFF';
 
 function quoteYamlString(value) {
@@ -143,7 +150,7 @@ export function parseFrontmatter(content) {
  * under `due`. Two notes in the corpus still use the inline form, but the
  * properties panel writes tags on every keystroke, so the trap was close.
  */
-function preservedLines(frontmatter) {
+function preservedLines(frontmatter, rewrittenKeys) {
   const kept = [];
   let inManagedBlock = false;
   for (const line of frontmatter.split(/\r?\n/)) {
@@ -163,7 +170,7 @@ function preservedLines(frontmatter) {
       continue;
     }
     const key = line.slice(0, separator).trim().toLowerCase();
-    inManagedBlock = MANAGED_KEYS.includes(key);
+    inManagedBlock = rewrittenKeys.includes(key);
     if (!inManagedBlock) kept.push(line);
   }
   return kept;
@@ -172,10 +179,13 @@ function preservedLines(frontmatter) {
 /**
  * Rewrite the managed keys and keep everything else.
  *
- * Ключ из MANAGED_KEYS, которого нет в `metadata`, считается снятым: именно
- * так пустой срок убирает строку, а не пишет `due: ""`. Поэтому вызывающий
- * обязан передавать все управляемые ключи, а не только изменившиеся — иначе
- * молча теряется, например, закрепление.
+ * Ключ из MANAGED_KEYS, которого нет в `metadata`, считается снятым: так пустое
+ * закрепление убирает строку. Поэтому вызывающий обязан передавать все управляемые
+ * ключи, а не только изменившиеся — иначе молча теряется, например, закрепление.
+ *
+ * Срок — исключение. `due` переписывается только если передан (пустая строка тогда
+ * его убирает). Если не передан, строка остаётся как была: срок, записанный в заметку
+ * вручную, переживает переименование и смену тегов.
  *
  * @param {string} content full note text
  * @param {{title?: string, category?: string, tags?: string[], due?: string, pinned?: boolean}} metadata
@@ -184,6 +194,8 @@ function preservedLines(frontmatter) {
 export function upsertFrontmatter(content, metadata = {}) {
   const { frontmatter, body } = splitFrontmatter(content);
   const { bom, eol } = fileConventions(content);
+  // `due` is rewritten only when the caller names it; a save that leaves it out keeps its line.
+  const rewrittenKeys = metadata.due === undefined ? MANAGED_KEYS : SETTABLE_KEYS;
 
   const lines = [];
   if (metadata.title) lines.push(`title: ${quoteYamlString(metadata.title)}`);
@@ -193,7 +205,7 @@ export function upsertFrontmatter(content, metadata = {}) {
   // An empty value removes the key instead of writing `due: ""`.
   if (metadata.due) lines.push(`due: ${metadata.due}`);
   if (metadata.pinned) lines.push('pinned: true');
-  lines.push(...preservedLines(frontmatter));
+  lines.push(...preservedLines(frontmatter, rewrittenKeys));
 
   return `${bom}---${eol}${lines.join(eol)}${eol}---${eol}${eol}${body.replace(/^\s*\r?\n/, '')}`;
 }
@@ -206,10 +218,11 @@ export function upsertFrontmatter(content, metadata = {}) {
  * @returns {string}
  */
 export function setFrontmatterKey(content, key, value) {
-  const current = parseFrontmatter(content);
-  const next = { ...current };
-  if (!key || !MANAGED_KEYS.includes(String(key).toLowerCase())) return String(content || '');
-  next[key] = value || '';
+  const name = String(key || '').toLowerCase();
+  if (!SETTABLE_KEYS.includes(name)) return String(content || '');
+  // Any other key leaves the due date alone: `undefined` tells upsertFrontmatter to keep its line.
+  const next = { ...parseFrontmatter(content), due: undefined };
+  next[name] = value || '';
   return upsertFrontmatter(content, next);
 }
 

@@ -1284,14 +1284,11 @@
     // A note in conflict is not written: the rewrite would drop the merge markers in its properties.
     if (!currentFile || !fileInfo || !hasMetadataChanges() || inConflict) return;
     if (metadataTimer) clearTimeout(metadataTimer);
+    // Срок не передаём: он уже стоит в тексте, и его строка сохраняется как есть.
     const nextContent = upsertFrontmatter(editedContent, {
       title: editedTitle,
       category: editableCategory,
       tags: editableTags,
-      // Срок живёт в тех же ключах, что и заголовок: если его не передать,
-      // upsertFrontmatter сочтёт его неуправляемым и молча удалит при
-      // переименовании заметки.
-      due: dueDate,
       pinned: noteIsPinned(),
     });
     if (nextContent !== editedContent) editedContent = nextContent;
