@@ -2136,6 +2136,18 @@
             </div>
           {/if}
         </div>
+        <!-- The trash stands next to the last button of the bar, apart from the ones used all the time.
+             Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. On a
+             phone the bar has no room for it, so it waits in "More". -->
+        <button
+          type="button"
+          data-testid="footer-trash"
+          on:click={() => void deleteFile()}
+          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] text-[var(--text-secondary)]"
+        >
+          <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
+          <span class="hidden sm:inline">{$localizedText.editor.moveToTrash}</span>
+        </button>
         <!-- The ⋯ button also anchors the password panel: locking a note is an action on the note, not one of its fields. -->
         <div class="relative" data-footer-more data-panel-anchor="lock">
           <TooltipIconButton
@@ -2195,18 +2207,6 @@
             </div>
           {/if}
         </div>
-        <!-- The trash is the last thing in the bar: it is a note's last resort, so it stands apart from the
-             buttons that are used all the time. Quiet until reached for — a red icon that always glows is the
-             loudest thing on a calm page. On a phone the bar has no room for it, so it waits in "More". -->
-        <button
-          type="button"
-          data-testid="footer-trash"
-          on:click={() => void deleteFile()}
-          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] text-[var(--text-secondary)]"
-        >
-          <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
-          <span class="hidden sm:inline">{$localizedText.editor.moveToTrash}</span>
-        </button>
       </div>
     </div>
   {/if}
