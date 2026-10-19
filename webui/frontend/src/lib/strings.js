@@ -931,6 +931,7 @@ const enText = {
     dueInvalid: 'Not a date. Use 2026-12-24 or 24.12.2026.',
     moreActions: 'More actions',
     exportLabel: 'Export',
+    history: 'History',
     exportMarkdown: 'Markdown',
     exportHtml: 'HTML',
     exportText: 'Plain text',
@@ -1190,8 +1191,6 @@ const enText = {
     },
     tagPlaceholder: '+ tag',
     revealInTree: 'Reveal in tree',
-    historyButton: 'History',
-    print: 'Print',
   },
   sourceEditor: {
     beginWriting: 'Begin writing...',
@@ -2178,6 +2177,7 @@ const ruText = {
     dueInvalid: 'Это не дата. Введите 2026-12-24 или 24.12.2026.',
     moreActions: 'Ещё',
     exportLabel: 'Экспорт',
+    history: 'История',
     exportMarkdown: 'Markdown',
     exportHtml: 'HTML',
     exportText: 'Простой текст',
@@ -2467,8 +2467,6 @@ const ruText = {
     },
     tagPlaceholder: '+ тег',
     revealInTree: 'Показать в дереве',
-    historyButton: 'История',
-    print: 'Печать',
   },
   sourceEditor: {
     beginWriting: 'Начните писать...',

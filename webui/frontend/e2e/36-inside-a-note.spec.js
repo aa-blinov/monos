@@ -78,7 +78,7 @@ test('история без синхронизации ведёт в настр�
   const title = uniqueTitle('History');
   await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: 'x' } });
   await openNote(page, title);
-  await page.locator('[data-testid="editor-shell"] header').getByRole('button', { name: 'History' }).click();
+  await page.getByTestId('footer-history').click();
   const setUp = page.getByTestId('history-open-sync');
   if (await setUp.count()) {
     await setUp.click();
@@ -130,6 +130,26 @@ test('заметка: статус синхронизации по четырё�
   await page.reload();
   await expect(page.getByTestId('editor-shell')).toBeVisible();
   await expect(page.getByTestId('note-sync')).toHaveCount(0);
+});
+
+// With a repository connected the header's line carries date, sync, stats, tasks and the outline at once.
+// Under 48rem they did not fit, so the outline dropped onto a line of its own at every window size.
+test('заметка: мета-строка шапки с синхронизацией и задачами остаётся в одну линию', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const title = uniqueTitle('Header line');
+  const content = `${'слово '.repeat(120)}\n\n- [x] сделана\n- [ ] ждёт`;
+  await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content } });
+  await page.route('**/api/git/status', (route) => route.fulfill({ json: { initialized: true, status: 'clean', repo: 'me/notes', last_sync: null, unsent: [], incoming: [] } }));
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(title).first().click();
+
+  const meta = page.getByTestId('note-meta');
+  await expect(page.getByTestId('task-progress')).toBeVisible();
+  // Every part of the line must sit on the same row: the date, the sync state, the stats, the task
+  // progress and the outline arrow. A second row means the line wrapped.
+  const tops = await meta.evaluate((el) => [...el.children].map((child) => Math.round(child.getBoundingClientRect().top)));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(8);
 });
 
 // The Sync button belongs to a connected repository: it stays when the status check fails, and a repository

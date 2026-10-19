@@ -17,7 +17,7 @@ test('история: версии лежат на таймлайне по дн�
   await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } });
   await page.goto('/');
   await page.locator('main [role=list]').getByText(title).first().click();
-  await page.locator('[data-testid="editor-shell"] header').getByRole('button', { name: 'History' }).click();
+  await page.getByTestId('footer-history').click();
   await expect(page.getByTestId('history-revision')).toHaveCount(4);
   await expect(page.getByTestId('history-day')).toHaveText(['Today', 'Yesterday', /\d{4}/]);
   await expect(page.getByTestId('history-timeline')).toContainText('Newest');
