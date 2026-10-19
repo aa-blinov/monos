@@ -9,6 +9,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-watch-'));
 fs.mkdirSync(path.join(tempRoot, 'notes'), { recursive: true });
 process.env.NOTES_ROOT = tempRoot;
 const { startServer, stopServer } = await import('./index.js');
+const { getDb } = await import('./database.js');
 let base;
 let controller;
 const events = [];
@@ -49,4 +50,27 @@ test('собственное сохранение Monos не объявляет�
   await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: 'Стало.\n' }) });
   await new Promise((r) => setTimeout(r, 900));
   assert.equal(events.filter((e) => e.paths?.includes('notes/Есть.md')).length, 0);
+});
+
+test('сбой индексации после внешней правки не роняет процесс, и наблюдение продолжается', async (t) => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const crashes = [];
+  const onCrash = (error) => crashes.push(error);
+  process.on('uncaughtException', onCrash);
+  const db = getDb();
+  try {
+    // Every write fails from now on, as it does while another backend holds the lock. Reads still work.
+    db.pragma('query_only = ON');
+    fs.writeFileSync(path.join(tempRoot, 'notes', 'Под замком.md'), 'Текст.\n', 'utf-8');
+    assert.ok(await waitFor(() => logged.mock.calls.length > 0 || crashes.length > 0), 'индексация должна была сработать');
+    assert.deepEqual(crashes, [], 'сбой не должен стать необработанным исключением');
+    assert.match(String(logged.mock.calls[0].arguments[0]), /outside Monos/);
+
+    db.pragma('query_only = OFF');
+    fs.writeFileSync(path.join(tempRoot, 'notes', 'После сбоя.md'), 'Текст.\n', 'utf-8');
+    assert.ok(await waitFor(() => events.some((e) => e.paths?.includes('notes/После сбоя.md'))), 'после сбоя наблюдение продолжается');
+  } finally {
+    process.off('uncaughtException', onCrash);
+    db.pragma('query_only = OFF');
+  }
 });

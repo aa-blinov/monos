@@ -31,24 +31,29 @@ function changedOutside(relative) {
 }
 
 function flush() {
-  const paths = [...pending];
-  pending.clear();
-  let outside;
   try {
-    outside = paths.filter(changedOutside);
-  } catch {
-    return; // the database is closing
+    const paths = [...pending];
+    pending.clear();
+    let outside;
+    try {
+      outside = paths.filter(changedOutside);
+    } catch {
+      return; // the database is closing
+    }
+    if (!outside.length) return;
+    // Only what changed: reading every note again for each file an agent writes was seconds on a big vault.
+    indexPaths(outside.map((relative) => path.join(NOTES_DIR, relative)));
+    const notePaths = outside.map((relative) => `notes/${relative}`);
+    broadcast({ type: 'files', paths: notePaths });
+    // Changed outside Monos while an agent session is open: they wait for review (agent-review.js).
+    const files = outside.filter((relative) => {
+      try { return !fs.statSync(path.join(NOTES_DIR, relative)).isDirectory(); } catch { return true; }
+    });
+    if (files.length && recordOutsideChanges(files.map((relative) => `notes/${relative}`))) broadcast({ type: 'agent-review' });
+  } catch (error) {
+    // This runs from a timer, where nothing catches: a lock held by another backend on the same vault would end the app.
+    console.error('Could not index files changed outside Monos; the app keeps running:', error);
   }
-  if (!outside.length) return;
-  // Only what changed: reading every note again for each file an agent writes was seconds on a big vault.
-  indexPaths(outside.map((relative) => path.join(NOTES_DIR, relative)));
-  const notePaths = outside.map((relative) => `notes/${relative}`);
-  broadcast({ type: 'files', paths: notePaths });
-  // Changed outside Monos while an agent session is open: they wait for review (agent-review.js).
-  const files = outside.filter((relative) => {
-    try { return !fs.statSync(path.join(NOTES_DIR, relative)).isDirectory(); } catch { return true; }
-  });
-  if (files.length && recordOutsideChanges(files.map((relative) => `notes/${relative}`))) broadcast({ type: 'agent-review' });
 }
 
 export function broadcast(event) {

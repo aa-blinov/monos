@@ -23,6 +23,11 @@ export function getDb() {
   if (!db) {
     db = new Database(DB_PATH, SQLITE_BINDING ? { nativeBinding: SQLITE_BINDING } : {});
     db.pragma('journal_mode = WAL');
+    // Two backends on one vault share this file. A write that meets the other one's lock waits up to this long before
+    // it fails with SQLITE_BUSY. Kept at 5 s, the better-sqlite3 default, and written here so it does not depend on that
+    // default. The wait blocks the event loop, so it stays short. Not covered: a deferred transaction that reads and then
+    // writes after the other backend committed fails at once (SQLITE_BUSY_SNAPSHOT), whatever this value is.
+    db.pragma('busy_timeout = 5000');
     db.pragma('foreign_keys = ON');
     initTables();
   }
