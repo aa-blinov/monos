@@ -197,6 +197,7 @@
   let autosaveTimer;
   let lastSaved = null;
   let saveMessage = '';
+  let saveFailed = false;
   // Saving, saved, or a failure; a failure is drawn red so it is not mistaken for progress.
   $: saveMessageIsError = Boolean(saveMessage)
     && ![$localizedText.editor.saving, $localizedText.editor.saved].includes(saveMessage);
@@ -684,6 +685,7 @@
         autosaveTimer = null;
       }
       isSaving = true;
+      saveFailed = false;
       saveMessage = $localizedText.editor.saving;
       // The server rewrites the link in the file as well: the two edits are combined, not refused.
       const saved = await saveOrCombine(filePath, nextContent);
@@ -839,6 +841,7 @@
 
     try {
       isSaving = true;
+      saveFailed = false;
       saveMessage = $localizedText.editor.saving;
       const saved = await saveOrCombine(filePath, savedContent);
       if (loadedFilePath === filePath && editedContent === savedContent) content = savedContent;
@@ -846,7 +849,8 @@
     } catch (error) {
       console.error('Save before note switch failed:', error);
       // A failed save stays visible until a later save succeeds: the text is not on disk.
-      saveMessage = $localizedText.editor.saveFailed;
+      saveMessage = saveFailureMessage(error);
+      saveFailed = true;
     } finally {
       isSaving = false;
     }
@@ -1106,6 +1110,12 @@
     }
   }
 
+  // One line for six different refusals said nothing: the server named the reason, and it was thrown away.
+  function saveFailureMessage(error) {
+    const reason = $localizedText.editor.saveFailedReason(error?.status);
+    return reason ? `${$localizedText.editor.saveFailed}: ${reason}` : $localizedText.editor.saveFailed;
+  }
+
   async function saveContent() {
     const filePath = loadedFilePath || currentFile?.path;
     if (!filePath) return;
@@ -1129,6 +1139,7 @@
 
     try {
       isSaving = true;
+      saveFailed = false;
       saveMessage = $localizedText.editor.saving;
       const saved = await saveOrCombine(filePath, savedContent);
 
@@ -1142,7 +1153,8 @@
       }, 3000);
     } catch (error) {
       // Stays on screen until the next save succeeds; the text is still in the editor.
-      saveMessage = $localizedText.editor.saveFailed;
+      saveMessage = saveFailureMessage(error);
+      saveFailed = true;
       console.error('Save failed:', error);
     } finally {
       isSaving = false;
@@ -2059,7 +2071,7 @@
           </div>
         {/if}
 
-        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveMessage === $localizedText.editor.saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
         <!-- The terminal next to the note it works on (⌘J does the same). Desktop app only. -->
         {#if terminalBridge}
