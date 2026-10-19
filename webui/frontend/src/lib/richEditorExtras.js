@@ -336,7 +336,7 @@ function inlineMarkdown(escaped) {
 /** Отрисовка markdown встраиваемой заметки. Намеренно скромно: заголовки и
  *  абзацы, без картинок и без вложенных вставок — иначе кэш разрастается и
  *  один клик тянет за собой половину хранилища. */
-function embedHtml(markdown) {
+export function embedHtml(markdown) {
   const lines = stripFrontmatterAndCode(markdown).split('\n');
   const out = [];
   for (const raw of lines) {
@@ -357,7 +357,7 @@ function embedHtml(markdown) {
       out.push('<blockquote>' + inlineMarkdown(escapeHtml(line.replace(/^\s*>\s?/, ''))) + '</blockquote>');
       continue;
     }
-    out.push('<p>' + inlineMarkdown(line) + '</p>');
+    out.push('<p>' + inlineMarkdown(escapeHtml(line)) + '</p>');
   }
   return out.join('');
 }
