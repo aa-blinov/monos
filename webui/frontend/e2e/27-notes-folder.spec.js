@@ -11,5 +11,5 @@ test('папка заметок: видно, где лежат заметки; �
   await expect(page.getByTestId('storage-reset')).toHaveCount(0);
 
   await page.getByTestId('storage-choose').click();
-  await expect(section.getByRole('alert')).toContainText('The folder can be chosen in the Monos app.');
+  await expect(section.getByRole('alert')).toContainText('The folder can be chosen in the Monos app');
 });

@@ -359,6 +359,31 @@ test('no middle-dot separators in the interface text', () => {
   assert.deepEqual(offenders, []);
 });
 
+// An interface label does not end with a full stop ("Unpinned.", "The map could not be loaded."): a sentence
+// in a label, where nothing follows it, reads as if the text was cut off. An ellipsis is a different mark and
+// stays. The help articles are prose and keep their sentences.
+test('no trailing full stop in the interface text', async () => {
+  const { translations } = await import('./strings.js');
+  const literal = /(['"`])((?:(?!\1)[^\\]|\\.)*?)\1/g;
+  const found = [];
+  const check = (text, key) => {
+    for (const match of text.matchAll(literal)) {
+      const content = match[2];
+      if (content.endsWith('...')) continue;
+      if (content.endsWith('.')) found.push(`${key}: …${content.slice(-40)}`);
+    }
+  };
+  const walk = (value, key) => {
+    if (typeof value === 'string') check(value, key);
+    else if (typeof value === 'function') check(String(value), key);
+    else if (Array.isArray(value)) value.forEach((item, index) => walk(item, `${key}[${index}]`));
+    else if (value && typeof value === 'object') for (const [name, item] of Object.entries(value)) walk(item, `${key}.${name}`);
+  };
+  walk(translations.en, 'en');
+  walk(translations.ru, 'ru');
+  assert.deepEqual(found, []);
+});
+
 // The same rule for the Russian text: no long or short dash as a separator (a colon, a comma or a full stop
 // does that job), checked on every string and help topic of the Russian interface.
 test('no dashes in the Russian interface text', async () => {
