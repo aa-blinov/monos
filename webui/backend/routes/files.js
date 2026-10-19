@@ -4,7 +4,7 @@ import path from 'path';
 import { getDb } from '../database.js';
 import { parseFrontmatterMetadata } from '../search.js';
 import { NOTES_DIR } from '../config.js';
-import { httpError, humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName } from '../utils.js';
+import { httpError, humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName, writeFileAtomic } from '../utils.js';
 import { indexFile, indexAllFiles } from '../indexing.js';
 import { setFrontmatterProperty, upsertFrontmatter } from '../frontmatter.js';
 import { removeNoteFromFts } from '../fts.js';
@@ -70,7 +70,7 @@ function refuseStaleSave(req, res, fullPath, filePath) {
 // Writes an edited note back: sealed again when it is locked, plain otherwise. Returns what the file holds.
 function storeNoteText(fullPath, text, session) {
   const stored = session ? sealWithSession(text, session) : text;
-  fs.writeFileSync(fullPath, stored, 'utf-8');
+  writeFileAtomic(fullPath, stored, 'utf-8');
   return stored;
 }
 

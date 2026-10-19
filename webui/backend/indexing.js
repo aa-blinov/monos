@@ -8,7 +8,7 @@ import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
 import { readProperties } from './properties.js';
 import { isLockedNote } from './note-lock.js';
-import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath } from './utils.js';
+import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath, writeFileAtomic } from './utils.js';
 
 function parseCachedTags(rawTags) {
   if (!rawTags) return [];
@@ -173,7 +173,7 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
     };
 
     if (!metadataEqual(currentMetadata, nextMetadata)) {
-      fs.writeFileSync(fullPath, upsertFrontmatter(content, nextMetadata), 'utf-8');
+      writeFileAtomic(fullPath, upsertFrontmatter(content, nextMetadata), 'utf-8');
     }
   }
 }

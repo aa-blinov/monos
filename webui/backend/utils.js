@@ -172,6 +172,47 @@ export function textFileBuffer(content) {
   return Buffer.from(String(content || ''), 'utf-8');
 }
 
+/**
+ * Writes `data` over `filePath` so that a failed write cannot destroy the old text. The new text goes to
+ * `<file>.tmp` in the same folder (a rename across volumes is not atomic), is flushed to disk, and only then
+ * is renamed over the file. A failure before the rename leaves the old file untouched and removes the temporary one.
+ */
+export function writeFileAtomic(filePath, data, encoding) {
+  // A symlink is written through, as writeFileSync always did: the rename has to replace the file it points to.
+  const target = fs.existsSync(filePath) ? fs.realpathSync(filePath) : filePath;
+  const existing = fs.existsSync(target) ? fs.statSync(target) : null;
+  // A rename needs write access to the folder, not to the file, so a read-only file would be replaced silently. Refuse it here.
+  if (existing) fs.accessSync(target, fs.constants.W_OK);
+  const tempPath = `${target}.tmp`;
+  try {
+    const fd = fs.openSync(tempPath, 'w');
+    try {
+      fs.writeFileSync(fd, data, encoding);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    // A new file would get the default permissions; the old file's are kept.
+    if (existing) fs.chmodSync(tempPath, existing.mode & 0o777);
+    fs.renameSync(tempPath, target);
+  } catch (error) {
+    // Only the temporary file is removed. If it cannot be, the write error is still the one reported.
+    try { fs.unlinkSync(tempPath); } catch { /* nothing to remove */ }
+    throw error;
+  }
+  // fsync of the folder makes the rename itself durable: after a power cut the folder could still list the old file.
+  // It is best effort. Windows cannot open a folder for fsync, and some file systems refuse it. The new text is
+  // already in place by now, so an error here must not be reported as a failed save.
+  try {
+    const dirFd = fs.openSync(path.dirname(target), 'r');
+    try {
+      fs.fsyncSync(dirFd);
+    } finally {
+      fs.closeSync(dirFd);
+    }
+  } catch { /* the rename is done; see above */ }
+}
+
 export function nowISO() {
   return new Date().toISOString();
 }

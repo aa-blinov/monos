@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { indexFile } from './indexing.js';
 import { NOTES_DIR } from './config.js';
-import { readTextFile, relPath, resolveNotesPath, rewriteWikiTargets } from './utils.js';
+import { readTextFile, relPath, resolveNotesPath, rewriteWikiTargets, writeFileAtomic } from './utils.js';
 import { isLockedNote } from './note-lock.js';
 
 // A wiki-link names its note by file name without `.md` (or by the note's title),
@@ -71,7 +71,7 @@ export function rewriteNoteFile(fullPath, transform) {
   const result = transform(text);
   if (result.count === 0) return 0;
   const { atime, mtime } = fs.statSync(fullPath);
-  fs.writeFileSync(fullPath, result.content, 'utf-8');
+  writeFileAtomic(fullPath, result.content, 'utf-8');
   fs.utimesSync(fullPath, atime, mtime);
   return result.count;
 }
