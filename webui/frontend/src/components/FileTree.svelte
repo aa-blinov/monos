@@ -5,9 +5,9 @@
   import { conflictedNotes } from '../lib/git-conflicts.js';
   import { agentTouched } from '../lib/agent-review.js';
   import { NOTE_LINK_DRAG_TYPE, noteLinkPayload } from '../lib/drag-data.js';
+  import { writeNoteDragPayload, readNoteDragPayload } from '../lib/drag-payload.js';
 
   const dispatch = createEventDispatcher();
-  const TREE_NOTE_PATHS_DRAG_TYPE = 'application/x-monos-note-paths';
 
   const iconMap = {
     "folder": Icon.Folder, "folder-open": Icon.FolderOpen, "graduation-cap": Icon.GraduationCap,
@@ -100,14 +100,10 @@
     const dragPaths = !node.is_dir && selectedPaths.has(node.path)
       ? [...selectedPaths]
       : [node.path];
-    e.dataTransfer.setData('text/plain', dragPaths[0]);
-    if (!node.is_dir) {
-      e.dataTransfer.setData(TREE_NOTE_PATHS_DRAG_TYPE, JSON.stringify(dragPaths));
-    }
+    writeNoteDragPayload(e.dataTransfer, dragPaths, node.is_dir ? 'move' : 'copyMove');
     if (!node.is_dir) {
       e.dataTransfer.setData(NOTE_LINK_DRAG_TYPE, JSON.stringify(noteLinkPayload(node)));
     }
-    e.dataTransfer.effectAllowed = node.is_dir ? 'move' : 'copyMove';
   }
 
   function handleDragEnd() {
@@ -131,23 +127,13 @@
       e.preventDefault();
       isDragOver = false;
       const sourcePath = e.dataTransfer.getData('text/plain');
-      const sourcePaths = parseDraggedNotePaths(e.dataTransfer, sourcePath);
+      const sourcePaths = readNoteDragPayload(e.dataTransfer, sourcePath);
       if (sourcePath !== node.path) {
         dispatch('moveFile', { sourcePath, sourcePaths, targetPath: node.path });
       }
     }
   }
 
-  function parseDraggedNotePaths(dataTransfer, fallbackPath) {
-    try {
-      const raw = dataTransfer.getData(TREE_NOTE_PATHS_DRAG_TYPE);
-      const parsed = JSON.parse(raw || '[]');
-      if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    } catch {
-      // Fall back to the plain text path for older drag payloads.
-    }
-    return fallbackPath ? [fallbackPath] : [];
-  }
 </script>
 
 <div class="group text-sm lg:text-xs">

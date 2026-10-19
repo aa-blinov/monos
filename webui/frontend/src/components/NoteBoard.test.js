@@ -239,16 +239,25 @@ test('NoteBoard показывает псевдо-карточку создан�
   expect(createNote).toHaveBeenCalledTimes(1);
 });
 
-test('NoteBoard не использует drag-reorder карточек', async () => {
+test('NoteBoard переносит карточку на папку, но ручной порядок не трогает', async () => {
   render(NoteBoard, { notes });
-  const dataTransfer = { setData: vi.fn(), effectAllowed: '' };
+  const written = {};
+  const dataTransfer = {
+    effectAllowed: '',
+    setData: (type, value) => { written[type] = value; },
+    getData: (type) => written[type] ?? '',
+  };
 
-  expect(screen.getByRole('button', { name: /Alpha/ }).draggable).toBe(false);
-  expect(screen.getByRole('button', { name: /Beta/ }).draggable).toBe(false);
+  expect(screen.getByRole('button', { name: /Alpha/ }).draggable).toBe(true);
+  expect(screen.getByRole('button', { name: /Beta/ }).draggable).toBe(true);
+
   await fireEvent.dragStart(screen.getByRole('button', { name: /Beta/ }), { dataTransfer });
-  await fireEvent.dragOver(screen.getByRole('button', { name: /Alpha/ }), { dataTransfer });
-  await fireEvent.drop(screen.getByRole('button', { name: /Alpha/ }), { dataTransfer });
 
+  // Карточка отдаёт тот же payload, что и строка дерева, иначе папка её не примет.
+  expect(written['text/plain']).toBe('notes/Work/Beta.md');
+  expect(JSON.parse(written['application/x-monos-note-paths'])).toEqual(['notes/Work/Beta.md']);
+
+  // Порядок на доске по-прежнему считает сервер, а не перетаскивание.
   expect(fetch).not.toHaveBeenCalledWith('/api/notes/reorder', expect.anything());
   expect(fetch).not.toHaveBeenCalledWith('/api/notes/touch?path=notes%2FWork%2FBeta.md', expect.anything());
 });
@@ -263,6 +272,7 @@ test('NoteBoard догружает начало контента, если recen
 });
 
 test('NoteBoard отключает перетаскивание в глобальных результатах поиска', () => {
+  // highlight — это то, что ставит SearchResults: глобальный поиск. Обычная доска его не ставит.
   render(NoteBoard, { notes, query: 'alpha', highlight: true });
 
   expect(screen.getByRole('button', { name: /Alpha/ }).draggable).toBe(false);
