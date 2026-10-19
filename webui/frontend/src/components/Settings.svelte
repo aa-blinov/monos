@@ -875,6 +875,9 @@
         {:else if storage.restartRequired}
           <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.storageRestart.replace('{folder}', storage.target)}</p>
         {/if}
+        {#if storage.unreadable?.length}
+          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnreadable.replace('{files}', storage.unreadable.join(', '))}</p>
+        {/if}
         <div class="flex flex-wrap gap-2">
           <button
             type="button"

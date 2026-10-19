@@ -155,7 +155,13 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
 
     if (!fs.existsSync(fullPath)) continue;
 
-    const content = readTextFile(fullPath);
+    let content;
+    try {
+      content = readTextFile(fullPath);
+    } catch {
+      // Unreadable: left alone here. The pass below reads the same file and reports it.
+      continue;
+    }
     // Миграция существует для старых файлов, у которых метаданные жили только в
     // БД. Файл, у которого шапка УЖЕ есть, — не легаси: шапка это источник
     // истины. Раньше здесь бралось `currentMetadata.x || row.x`, и удалённое
@@ -227,10 +233,39 @@ function upsertDirectory(db, fullPath, name) {
   }
 }
 
-/** A note file, read into the index unless the index already holds it exactly. */
-function indexFileIfChanged(db, fullPath) {
-  const text = readTextFile(fullPath);
-  if (indexHolds(contextOf(db).rowOf.get(relPath(fullPath)), fullPath, text, fs.statSync(fullPath))) return;
+// The notes, and the folders, that the last look could not read, by path under the notes folder. Settings lists them.
+const unreadable = new Set();
+
+export function unreadableNotes() {
+  return [...unreadable].sort();
+}
+
+function underNotes(fullPath) {
+  return path.relative(NOTES_DIR, fullPath).split(path.sep).join('/') || fullPath;
+}
+
+// A file or folder that cannot be read is skipped, and the pass goes on. Its rows stay as they were.
+function skipUnreadable(fullPath, error) {
+  const name = underNotes(fullPath);
+  unreadable.add(name);
+  console.warn(`Could not read ${name}, so it was skipped: ${error.message}`);
+}
+
+/**
+ * A note file, read into the index unless the index already holds it exactly. A note that cannot be read is skipped
+ * and the pass goes on; a failure of the index itself is not caught here and ends the pass, as before.
+ */
+function indexNoteSafely(db, fullPath) {
+  let text;
+  let stats;
+  try {
+    text = readTextFile(fullPath);
+    stats = fs.statSync(fullPath);
+  } catch (error) {
+    skipUnreadable(fullPath, error);
+    return;
+  }
+  if (indexHolds(contextOf(db).rowOf.get(relPath(fullPath)), fullPath, text, stats)) return;
   indexFile(fullPath, text);
 }
 
@@ -239,7 +274,16 @@ const isHiddenSegment = (segment) => segment.startsWith('_') || segment.startsWi
 
 /** Everything under a folder; `seen` collects the paths met, for the sweep of what is gone. */
 function indexSubtree(db, dir, seen) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    // Nothing under a folder that cannot be listed is looked at, so its rows are kept: the sweep must not drop them.
+    for (const row of contextOf(db).familyOf.all(relPath(dir), relPath(dir))) seen?.add(row.path);
+    skipUnreadable(dir, error);
+    return;
+  }
+  for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     seen?.add(relPath(fullPath));
 
@@ -252,7 +296,7 @@ function indexSubtree(db, dir, seen) {
 
     // The agent's rule files at the top of the folder (AGENTS.md, CLAUDE.md…) are not notes.
     if (isAgentRuleFile(fullPath)) continue;
-    if (isNoteFile(entry.name)) indexFileIfChanged(db, fullPath);
+    if (isNoteFile(entry.name)) indexNoteSafely(db, fullPath);
   }
 }
 
@@ -260,6 +304,7 @@ export function indexAllFiles() {
   const db = getDb();
   const indexedPaths = new Set();
   let ftsAvailable = true;
+  unreadable.clear();
 
   fs.mkdirSync(NOTES_DIR, { recursive: true });
   try {
@@ -336,6 +381,8 @@ export function indexPaths(fullPaths) {
       const relative = path.relative(notesRoot, absolute);
       if (!relative || relative.startsWith('..')) continue;
       if (relative.split(path.sep).some(isHiddenSegment)) continue;
+      // This look decides again whatever it was before: readable, unreadable, or gone.
+      unreadable.delete(underNotes(absolute));
 
       let stats = null;
       try { stats = fs.statSync(absolute); } catch { /* gone */ }
@@ -348,7 +395,7 @@ export function indexPaths(fullPaths) {
         upsertDirectory(db, absolute, path.basename(absolute));
         indexSubtree(db, absolute, null);
       } else if (!isAgentRuleFile(absolute) && isNoteFile(path.basename(absolute))) {
-        indexFileIfChanged(db, absolute);
+        indexNoteSafely(db, absolute);
       }
     }
     ensureTextIndex(db);
