@@ -102,6 +102,25 @@
     {#if focusMode}
       <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
     {/if}
+    <!-- The right column is opened and closed from here, right before the trash: the note's actions sit at
+         one end of one row, and the line under the title stays a sentence. -->
+    {#if outlineAvailable && !focusMode}
+      <TooltipIconButton
+        on:click={onToggleOutline}
+        class={navButtonClass}
+        label={$localizedText.editor.outline}
+        tooltip={$localizedText.editor.outline}
+        tooltipAlign="end"
+        data-testid="outline-toggle"
+        aria-expanded={outlineOpen}
+      >
+        {#if outlineOpen}
+          <PanelRightClose class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+        {:else}
+          <PanelRightOpen class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
+        {/if}
+      </TooltipIconButton>
+    {/if}
     <!-- Quiet until reached for: a red icon that always glows is the loudest thing on a calm page. -->
     <TooltipIconButton
       on:click={onDelete}
@@ -180,25 +199,6 @@
               </span>
             </span>
           {/if}
-          <!-- The outline is the only thing left on this line, so it is an arrow like the sidebar's,
-               with the word left to the tooltip: three labels did not fit under 48rem. It follows the
-               text instead of sitting at the far edge, so a narrow column does not drop it alone below. -->
-          <div class="ml-2 inline-flex shrink-0 items-center gap-3 sm:gap-4">
-            {#if outlineAvailable}
-            <TooltipIconButton
-              label={$localizedText.editor.outline}
-              on:click={onToggleOutline}
-              data-testid="outline-toggle"
-              aria-expanded={outlineOpen}
-            >
-              {#if outlineOpen}
-                <PanelRightClose size="14" strokeWidth="1.7" aria-hidden="true" />
-              {:else}
-                <PanelRightOpen size="14" strokeWidth="1.7" aria-hidden="true" />
-              {/if}
-            </TooltipIconButton>
-            {/if}
-          </div>
         </div>
       {/if}
     </div>

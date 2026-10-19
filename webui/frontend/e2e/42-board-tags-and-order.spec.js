@@ -82,8 +82,8 @@ test('заметка: поле тегов подсказывает «Add a tag»
   await expect(page.getByTestId('property-tags')).toHaveAttribute('placeholder', 'Add a tag');
 });
 
-// On a phone the date and the note's actions share one line, so the text starts higher.
-test('заметка на телефоне: дата и «Структура/История» в одной строке', async ({ page }) => {
+// On a phone the note's actions share the top row and the date keeps the line under the title to itself.
+test('заметка на телефоне: «Структура» в верхней строке слева от корзины, дата — в мета-строке', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 390, height: 800 });
   const title = `Meta line ${Date.now()}`;
@@ -92,7 +92,10 @@ test('заметка на телефоне: дата и «Структура/И�
   await page.locator('main [role=list]').getByText(title).first().click();
   const outline = page.getByTestId('outline-toggle');
   await expect(outline).toBeVisible();
-  const date = page.getByText(/^Modified /).first();
-  const [a, b] = [await outline.boundingBox(), await date.boundingBox()];
+  const trash = page.getByRole('button', { name: 'Move to trash' });
+  const [a, b] = [await outline.boundingBox(), await trash.boundingBox()];
   expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThan(12);
+  expect(a.x).toBeLessThan(b.x);
+  const date = await page.getByText(/^Modified /).first().boundingBox();
+  expect(date.y).toBeGreaterThan(b.y);
 });

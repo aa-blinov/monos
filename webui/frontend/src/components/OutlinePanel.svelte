@@ -133,11 +133,13 @@
     <h3 class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
       {$localizedText.editor.outline}
     </h3>
+    <!-- The close button is for the phone, where the panel covers the note: on a wide window the column
+         is closed from the note's header, where the button that opened it stands. -->
     <button
       type="button"
       bind:this={closeButton}
       aria-label={$localizedText.editor.closeOutline}
-      class="-my-2 -mr-2 inline-flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:-my-1 lg:-mr-1 lg:h-7 lg:w-7"
+      class="-my-2 -mr-2 inline-flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:hidden"
       on:click={close}
     >
       <X class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
