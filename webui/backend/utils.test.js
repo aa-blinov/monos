@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractWikiLinks } from './utils.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { extractWikiLinks, writeFileAtomic } from './utils.js';
 
 test('extractWikiLinks находит обычные ссылки', () => {
   assert.deepEqual(
@@ -51,4 +54,21 @@ test('extractWikiLinks не теряет ссылки вокруг inline-код
     extractWikiLinks('До [[Раз]] `[[ -n "$X" ]]` после [[Два]]'),
     ['Раз', 'Два'],
   );
+});
+
+test('writeFileAtomic: при сбое записи старый текст остаётся на месте', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-atomic-'));
+  try {
+    const file = path.join(dir, 'Заметка.md');
+    fs.writeFileSync(file, 'старый текст', 'utf-8');
+    // A folder under the temporary file's name makes the write fail every time, without filling a disk.
+    fs.mkdirSync(`${file}.tmp`);
+    assert.throws(
+      () => writeFileAtomic(file, 'новый текст', 'utf-8'),
+      (error) => ['EISDIR', 'EPERM'].includes(error.code),
+    );
+    assert.equal(fs.readFileSync(file, 'utf-8'), 'старый текст');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

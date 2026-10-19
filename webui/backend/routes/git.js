@@ -7,7 +7,7 @@ import { execFile, execFileSync } from 'child_process';
 import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
-import { httpError, notesRelativePath, readTextFile } from '../utils.js';
+import { httpError, notesRelativePath, readTextFile, writeFileAtomic } from '../utils.js';
 import { indexAllFiles, indexPaths } from '../indexing.js';
 import { isLockedNote, rememberSession, sealWithSession, sessionFor, unlockContent } from '../note-lock.js';
 import { pendingReview, takeKeptForSync } from '../agent-review.js';
@@ -1151,7 +1151,7 @@ export function registerGitRoutes(app) {
         // Markers left in the text by an earlier merge, with nothing unmerged in git: the choice is an
         // ordinary edit of the file, and the next sync sends it.
         if (hasConflictMarkers(fs.readFileSync(absolute, 'utf8'))) {
-          fs.writeFileSync(absolute, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+          writeFileAtomic(absolute, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
           indexAllFiles();
           return res.json({ message: 'Markers resolved', resolved: !hasConflictMarkers(content), remaining: [] });
         }
@@ -1168,7 +1168,7 @@ export function registerGitRoutes(app) {
       // Keep a copy of everything involved before the working tree is rewritten.
       archiveConflictVersions(safePath, stages);
       const plain = content.endsWith('\n') ? content : `${content}\n`;
-      fs.writeFileSync(absolute, locked ? sealWithSession(plain, session) : plain, 'utf8');
+      writeFileAtomic(absolute, locked ? sealWithSession(plain, session) : plain, 'utf8');
 
       // Some parts are still undecided: keep what was chosen, but leave the note in conflict. Marking it
       // resolved would commit the remaining markers and send them to the other devices as text.
@@ -1468,7 +1468,7 @@ export function registerGitRoutes(app) {
       }
 
       const absolute = path.join(NOTES_DIR, safePath);
-      fs.writeFileSync(absolute, restored, 'utf8');
+      writeFileAtomic(absolute, restored, 'utf8');
       gitExec(['add', '--', safePath]);
       indexAllFiles();
 

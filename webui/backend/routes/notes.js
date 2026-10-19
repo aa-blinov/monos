@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries, parseSearchQuery } from '../search.js';
 import { searchFts } from '../fts.js';
 import { NOTES_DIR } from '../config.js';
-import { assertFileName, folderLinkPatterns, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertFileName, folderLinkPatterns, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath, writeFileAtomic } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { parseStoredProperties } from '../properties.js';
@@ -69,7 +69,7 @@ export function registerNoteRoutes(app) {
         });
       }
       const noteContent = upsertFrontmatter(content || '', { title, category, tags: tags || [], pinned: false });
-      fs.writeFileSync(filePath, noteContent, 'utf-8');
+      writeFileAtomic(filePath, noteContent, 'utf-8');
 
       const relativePath = relPath(filePath);
       indexFile(filePath, noteContent);
@@ -119,7 +119,7 @@ export function registerNoteRoutes(app) {
         tags: metadata.tags,
         pinned: false,
       });
-      fs.writeFileSync(targetPath, nextContent, 'utf-8');
+      writeFileAtomic(targetPath, nextContent, 'utf-8');
       indexFile(targetPath, nextContent);
 
       res.json({
@@ -177,7 +177,7 @@ export function registerNoteRoutes(app) {
           tags: nextTags,
           pinned: metadata.pinned,
         });
-        fs.writeFileSync(absolute, updated, 'utf-8');
+        writeFileAtomic(absolute, updated, 'utf-8');
         indexFile(absolute, updated);
         changed.push(requestPath);
       }
@@ -756,7 +756,7 @@ export function registerNoteRoutes(app) {
         tags: nextTags,
         pinned: metadata.pinned,
       });
-      fs.writeFileSync(absolute, (hasBom ? '\uFEFF' : '') + updated, 'utf-8');
+      writeFileAtomic(absolute, (hasBom ? '\uFEFF' : '') + updated, 'utf-8');
       indexFile(absolute, updated);
       changed.push(row.path);
     }

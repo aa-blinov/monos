@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { getDb } from '../database.js';
-import { httpError, readTextFile, resolveNotesPath } from '../utils.js';
+import { httpError, readTextFile, resolveNotesPath, writeFileAtomic } from '../utils.js';
 import { indexFile } from '../indexing.js';
 import { rewriteNoteFile } from '../link-rename.js';
 import { forgetSession, isLockedNote, lockContent, rememberSession, unlockContent } from '../note-lock.js';
@@ -26,7 +26,7 @@ function passphraseOf(req) {
 
 function writeKeepingTime(fullPath, text) {
   const { atime, mtime } = fs.statSync(fullPath);
-  fs.writeFileSync(fullPath, text, 'utf-8');
+  writeFileAtomic(fullPath, text, 'utf-8');
   fs.utimesSync(fullPath, atime, mtime);
 }
 
