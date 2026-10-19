@@ -22,6 +22,7 @@
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
   import { pinnedNotes, isPinned, pinNote, unpinNote, forgetPin, pinSyncMark, setPinnedFromTree, migrateLegacyPins } from '../lib/sidebar-pinned.js';
+  import { writeNoteDragPayload } from '../lib/drag-payload.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -1147,6 +1148,8 @@
         {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
           <button
+            draggable="true"
+            on:dragstart={(event) => writeNoteDragPayload(event.dataTransfer, [note.path])}
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
             on:contextmenu|preventDefault={(event) => handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } })}
             class="w-full min-h-10 rounded-ui border border-transparent px-2 py-0.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"

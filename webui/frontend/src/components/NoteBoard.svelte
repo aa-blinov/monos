@@ -4,6 +4,7 @@
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
   import { Copy, ExternalLink, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
   import { pinNote, unpinNote } from '../lib/sidebar-pinned.js';
+  import { writeNoteDragPayload } from '../lib/drag-payload.js';
   import BoardTags from './BoardTags.svelte';
   import NoteCard from './NoteCard.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -207,6 +208,15 @@
     }
   }
 
+  // A card carries its path the way a tree row does, so dropping it on a folder in the
+  // sidebar moves the file. The move itself belongs to the sidebar, which already owns it.
+  // Order is deliberately not a thing here: /api/notes/reorder exists, but a manual order in
+  // the rebuildable index would not follow the note to another device the way a pin does.
+  function handleCardDragStart(event, note) {
+    if (!note?.path) return;
+    writeNoteDragPayload(event.dataTransfer, [note.path]);
+  }
+
   // Pin or unpin from the board itself; the sidebar's list and the card's mark follow through the shared store.
   async function togglePin(note) {
     if (!note?.path) return;
@@ -312,7 +322,8 @@
             {query}
             {highlight}
             compact={mobile}
-            draggable={false}
+            draggable={!highlight}
+            on:dragStart={(event) => handleCardDragStart(event.detail.event, event.detail.note)}
             on:open={(event) => openFull(event.detail)}
             on:context={handleCardContext}
           />

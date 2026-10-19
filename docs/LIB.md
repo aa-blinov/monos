@@ -23,6 +23,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `stores/persisted.test.js` | Migration, corrupt JSON, custom serializer, subscriber notifications |
 | `app-shell.js` | Side-effect wrapper that wires the persisted stores to the document on load (theme application, font size, etc.) |
 | `drag-data.js` | Serialize/deserialize drag payloads for the editor's attachment drag-and-drop |
+| `drag-payload.js` | The payload a dragged note carries, so the file tree can move it wherever the drag started from |
 
 ## Theming and styling
 
