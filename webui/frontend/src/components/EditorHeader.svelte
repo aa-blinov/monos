@@ -38,6 +38,8 @@
 
   $: sidebarToggleLabel = $sidebarOpen ? $localizedText.header.closeSidebar : $localizedText.header.openSidebar;
   const navButtonClass = 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10 lg:w-10';
+  // The outline button keeps its name next to the icon: the panel it opens is not obvious from the picture alone.
+  const outlineButtonClass = 'inline-flex h-11 shrink-0 items-center gap-1.5 rounded-ui px-2 text-xs text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] lg:h-10';
 
   const dateLocale = (current = 'en') => (current === 'ru' ? 'ru-RU' : 'en-US');
   $: syncStatus = noteSyncStatus(syncInfo, currentFile?.path);
@@ -106,7 +108,7 @@
     {#if outlineAvailable && !focusMode}
       <TooltipIconButton
         on:click={onToggleOutline}
-        class={navButtonClass}
+        class={outlineButtonClass}
         label={$localizedText.editor.outline}
         tooltip={$localizedText.editor.outline}
         tooltipAlign="end"
@@ -118,6 +120,7 @@
         {:else}
           <PanelRightOpen class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
         {/if}
+        <span class="hidden whitespace-nowrap sm:inline">{$localizedText.editor.outline}</span>
       </TooltipIconButton>
     {/if}
   </div>
