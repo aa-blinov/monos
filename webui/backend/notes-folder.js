@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { DEFAULT_NOTES_DIR, NOTES_DIR, ROOT_DIR, STORAGE_FILE, UNAVAILABLE_NOTES_FOLDER, readSavedNotesFolder } from './config.js';
 import { httpError, isPathInside } from './utils.js';
+import { unreadableNotes } from './indexing.js';
 
 // The folder the person chose for the notes. It is written to storage.json and opens on the next start:
 // the open index, the watcher and the git repository all belong to the folder that is open now. The
@@ -37,6 +38,8 @@ export function notesFolderState() {
     defaultFolder: DEFAULT_NOTES_DIR,
     // Reported only while the chosen folder is still the one that is missing: a new choice or the default clears it.
     unavailable: saved !== null && saved === UNAVAILABLE_NOTES_FOLDER ? saved : null,
+    // What the last look at the folder could not read: a file without permission, a folder that cannot be listed.
+    unreadable: unreadableNotes(),
     restartRequired: target !== NOTES_DIR,
   };
 }

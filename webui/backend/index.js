@@ -220,7 +220,8 @@ export function startServer({ port = 8000, host } = {}) {
 
   // The assistants' guide to this folder, made once and then left alone (a failure here must not stop the app).
   try { ensureAgentSkill(); } catch (error) { console.error('Could not write the agent skill:', error); }
-  indexAllFiles();
+  // An unreadable note is skipped inside the pass (indexing.js); a failure of the pass itself must not stop the app.
+  try { indexAllFiles(); } catch (error) { console.error('Could not index the notes:', error); }
   startNotesWatcher();
   registerFrontendStatic();
   registerSignalHandlers();
