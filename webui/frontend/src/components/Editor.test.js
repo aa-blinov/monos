@@ -11,10 +11,10 @@ vi.mock('./RichEditor.svelte', async () => ({
   default: (await import('./__mocks__/RichEditorStub.svelte')).default,
 }));
 
-function jsonResponse(data, ok = true) {
+function jsonResponse(data, ok = true, status = ok ? 200 : 404) {
   return {
     ok,
-    status: ok ? 200 : 404,
+    status,
     async json() {
       return data;
     },
@@ -975,4 +975,20 @@ test('конфликт без git: ответ 400 «Git not initialized» сох
   await fireEvent.input(screen.getByTestId('rich-editor-input'), { target: { value: 'Правка после разбора.' } });
   await vi.advanceTimersByTimeAsync(1500);
   expect(saves().at(-1).content).toBe('Правка после разбора.');
+});
+
+test('Editor называет причину отказа в надписи, а не одну строку на все случаи', async () => {
+  const path = 'notes/Alpha.md';
+  installFetchMock({
+    ...createDefaultResponses(path),
+    [`POST /api/file?path=${encodeURIComponent(path)}`]: jsonResponse({ detail: 'File is in trash' }, false, 410),
+  });
+  render(Editor, { currentFile: { path, name: 'Alpha.md', isDir: false } });
+  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
+
+  const editorInput = screen.getByTestId('rich-editor-input');
+  await fireEvent.input(editorInput, { target: { value: 'Changed' } });
+  // Автосохранение срабатывает через 1,25 с — стандартного таймаута waitFor мало.
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.editor.retry })).toBeTruthy(), { timeout: 4000 });
+  expect(screen.getByRole('status').textContent).toContain(uiText.editor.saveFailedReason(410));
 });

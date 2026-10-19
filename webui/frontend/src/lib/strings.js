@@ -946,6 +946,18 @@ const enText = {
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
+    // The server names the reason in every answer; one line for all of them left the person guessing.
+    saveFailedReason(status) {
+      return {
+        0: 'no connection to the app',
+        403: 'the path is outside the notes folder',
+        404: 'the note file is gone',
+        409: 'the note changed elsewhere',
+        410: 'the note is in the trash',
+        423: 'the note is locked',
+        500: 'disk error',
+      }[status] || '';
+    },
     linkedNoteFailed: 'Could not create the linked note',
     retry: 'Retry',
     noteNotFound(target) {
@@ -2181,6 +2193,18 @@ const ruText = {
     saving: 'Сохранение…',
     saved: 'Сохранено',
     saveFailed: 'Не удалось сохранить',
+    // Сервер называет причину в каждом ответе; одна надпись на все случаи заставляла угадывать.
+    saveFailedReason(status) {
+      return {
+        0: 'нет связи с приложением',
+        403: 'путь ведёт за пределы папки с заметками',
+        404: 'файла заметки больше нет',
+        409: 'заметку изменили в другом месте',
+        410: 'заметка в корзине',
+        423: 'заметка заперта',
+        500: 'ошибка записи на диск',
+      }[status] || '';
+    },
     linkedNoteFailed: 'Не удалось создать заметку по ссылке',
     retry: 'Повторить',
     noteNotFound(target) {
