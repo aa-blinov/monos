@@ -1083,12 +1083,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: filePath, content: next }),
       });
-      // 409: git has no conflict for this note, but its text still holds markers (left over from an
-      // earlier merge). The resolved text is then saved as an ordinary edit.
-      if (!response.ok && response.status !== 409) {
-        const detail = await response.json().catch(() => ({}));
-        throw new Error(detail.detail || `HTTP ${response.status}`);
-      }
+      const answer = response.ok ? {} : await response.json().catch(() => ({}));
+      // Git has no say over this note in two cases, and then the resolved text is saved as an ordinary edit.
+      // 409: git has no conflict for this note, but its text still holds markers (left over from an earlier
+      // merge). 400 "Git not initialized": there is no repository at all, the default for a local vault; the
+      // markers were then written by the app itself, when the file changed on disk between reading and saving.
+      const noGitConflict = response.status === 409 || (response.status === 400 && answer.detail === 'Git not initialized');
+      if (!response.ok && !noGitConflict) throw new Error(answer.detail || `HTTP ${response.status}`);
       void refreshConflicts();
       await saveFileContent(filePath, next);
       editedContent = next;
