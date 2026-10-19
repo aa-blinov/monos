@@ -33,6 +33,26 @@ export function isPathInside(parentPath, candidatePath) {
   return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
+// Where a path really is on disk, its symlinks followed. A path that does not exist yet has none, so the nearest
+// folder above it that exists stands in for it: a new file would be created there. Null when nothing exists
+// between the path and the notes folder.
+function nearestRealPath(target, notesRoot) {
+  for (let current = target; ; current = path.dirname(current)) {
+    try {
+      return fs.realpathSync(current);
+    } catch {
+      if (current === notesRoot || path.dirname(current) === current) return null;
+    }
+  }
+}
+
+// The lexical check cannot see a symlink, and a symlink inside the folder can lead out of it.
+function isRealPathInside(notesRoot, fullPath) {
+  const real = nearestRealPath(fullPath, notesRoot);
+  // Nothing exists on the way, so there is no link to follow.
+  return real === null || isPathInside(fs.realpathSync(notesRoot), real);
+}
+
 export function resolveNotesPath(requestPath, { allowRoot = false } = {}) {
   if (typeof requestPath !== 'string' || requestPath.trim() === '') {
     throw httpError(400, 'Path required');
@@ -46,6 +66,10 @@ export function resolveNotesPath(requestPath, { allowRoot = false } = {}) {
   const notesRoot = path.resolve(NOTES_DIR);
 
   if (!isPathInside(notesRoot, fullPath) || (!allowRoot && fullPath === notesRoot)) {
+    throw httpError(403, 'Path must be inside notes');
+  }
+
+  if (!isRealPathInside(notesRoot, fullPath)) {
     throw httpError(403, 'Path must be inside notes');
   }
 
