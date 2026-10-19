@@ -15,7 +15,7 @@ test('телефон и другие устройства: доступ вклю
   // A new address works only after a restart, and the page says so.
   await toggle.check();
   await expect(toggle).toBeChecked();
-  await expect(section.getByText('Restart Monos for the change to take effect.')).toBeVisible();
+  await expect(section.getByText('Restart Monos for the change to take effect')).toBeVisible();
   await expect(page.getByTestId('lan-renew')).toBeVisible();
 
   await page.getByTestId('lan-renew').click();

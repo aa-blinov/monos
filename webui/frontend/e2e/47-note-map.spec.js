@@ -113,7 +113,7 @@ test('пустая карта и ошибка загрузки говорят, �
   await page.unroute('**/api/graph**');
   await page.route('**/api/graph**', (route) => route.fulfill({ status: 500, json: { detail: 'boom' } }));
   await page.goto('/map');
-  await expect(page.getByRole('alert')).toContainText('The map could not be loaded.');
+  await expect(page.getByRole('alert')).toContainText('The map could not be loaded');
   await page.unroute('**/api/graph**');
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByTestId('map-counts')).toBeVisible();
