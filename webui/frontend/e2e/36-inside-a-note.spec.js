@@ -132,8 +132,8 @@ test('заметка: статус синхронизации по четырё�
   await expect(page.getByTestId('note-sync')).toHaveCount(0);
 });
 
-// With a repository connected the header's line carries date, sync, stats, tasks and the outline at once.
-// Under 48rem they did not fit, so the outline dropped onto a line of its own at every window size.
+// With a repository connected the header's line carries date, sync, stats and tasks at once. It is a
+// sentence and nothing else: the buttons stand in the row above, so the line never drops a part of its own.
 test('заметка: мета-строка шапки с синхронизацией и задачами остаётся в одну линию', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -146,8 +146,9 @@ test('заметка: мета-строка шапки с синхронизац
 
   const meta = page.getByTestId('note-meta');
   await expect(page.getByTestId('task-progress')).toBeVisible();
-  // Every part of the line must sit on the same row: the date, the sync state, the stats, the task
-  // progress and the outline arrow. A second row means the line wrapped.
+  await expect(meta.locator('button')).toHaveCount(0);
+  // Every part of the line must sit on the same row: the date, the sync state, the stats and the task
+  // progress. A second row means the line wrapped.
   const tops = await meta.evaluate((el) => [...el.children].map((child) => Math.round(child.getBoundingClientRect().top)));
   expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(8);
 });

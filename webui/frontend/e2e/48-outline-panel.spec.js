@@ -38,8 +38,23 @@ test('структура: ширина тянется, запоминается,
   expect(Math.abs((await panel.boundingBox()).width - wider)).toBeLessThan(2);
   await handle.dblclick();
   expect(Math.abs((await panel.boundingBox()).width - 224)).toBeLessThan(2);
-  await panel.getByRole('button', { name: 'Close outline' }).click();
+  // On a wide window the column folds away from the note's header: the panel's own button is for the phone.
+  await page.getByTestId('outline-toggle').click();
   await expect(panel).toBeHidden();
   await page.getByTestId('outline-toggle').click();
   await expect(panel).toBeVisible();
+});
+
+// On a phone the panel covers the note, so it keeps a close button of its own.
+test('структура на телефоне: панель закрывается своей кнопкой', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.request.post('/api/notes/create', { data: { title: `Outline phone ${Date.now()}`, category: 'Board', tags: [], content: body } });
+  await page.goto('/');
+  await page.locator('main [role=list]').getByText(`Outline phone`).first().click();
+  await page.getByTestId('outline-toggle').click();
+  const panel = page.getByTestId('outline-panel');
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Close outline' }).click();
+  await expect(panel).toBeHidden();
 });
