@@ -1106,8 +1106,9 @@
   }
 
   // One line for six different refusals said nothing: the server named the reason, and it was thrown away.
+  // The code in the answer says which 403 it is, so a request from another address is not blamed on the path.
   function saveFailureMessage(error) {
-    const reason = $localizedText.editor.saveFailedReason(error?.status);
+    const reason = $localizedText.editor.saveFailedReason(error?.status, error?.body?.code);
     return reason ? `${$localizedText.editor.saveFailed}: ${reason}` : $localizedText.editor.saveFailed;
   }
 

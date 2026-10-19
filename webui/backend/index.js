@@ -59,7 +59,7 @@ function isAllowedOrigin(origin) {
 // carries no Origin header to refuse.
 function rejectForeignHosts(req, res, next) {
   if (!hostAllowed(req.hostname, readLanConfig().enabled)) {
-    return res.status(403).json({ detail: 'Host not allowed' });
+    return res.status(403).json({ detail: 'Host not allowed', code: 'host' });
   }
   next();
 }
@@ -86,7 +86,7 @@ function rejectCrossOriginRequests(req, res, next) {
   }
   const origin = req.get('Origin');
   if (!isOwnOrigin(req) && !isAllowedOrigin(origin)) {
-    return res.status(403).json({ detail: 'Origin not allowed' });
+    return res.status(403).json({ detail: 'Origin not allowed', code: 'origin' });
   }
   next();
 }
