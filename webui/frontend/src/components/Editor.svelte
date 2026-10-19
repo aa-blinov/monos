@@ -1587,7 +1587,6 @@
     onTitleInput={() => { titleTouched = true; }}
     onCommitTitle={commitTitle}
     onFinishTitle={finishTitle}
-    onDelete={() => void deleteFile()}
   />
 
   {#if showHistory && historyNote?.path}
@@ -2184,6 +2183,10 @@
               <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
                 <Palette size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.noteColor}
               </button>
+              <!-- The trash goes last here, like everywhere: it is the one action that is not worth a misclick. -->
+              <button type="button" role="menuitem" data-testid="menu-trash" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] sm:hidden" on:click={() => { footerMoreOpen = false; void deleteFile(); }}>
+                <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.moveToTrash}
+              </button>
             </div>
           {/if}
           {#if propertyPanel === 'lock'}
@@ -2192,6 +2195,18 @@
             </div>
           {/if}
         </div>
+        <!-- The trash is the last thing in the bar: it is a note's last resort, so it stands apart from the
+             buttons that are used all the time. Quiet until reached for — a red icon that always glows is the
+             loudest thing on a calm page. On a phone the bar has no room for it, so it waits in "More". -->
+        <button
+          type="button"
+          data-testid="footer-trash"
+          on:click={() => void deleteFile()}
+          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)] text-[var(--text-secondary)]"
+        >
+          <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
+          <span class="hidden sm:inline">{$localizedText.editor.moveToTrash}</span>
+        </button>
       </div>
     </div>
   {/if}
