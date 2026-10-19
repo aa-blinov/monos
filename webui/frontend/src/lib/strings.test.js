@@ -191,3 +191,34 @@ test('в strings.js нет повторяющихся ключей', () => {
   const duplicates = ['enText', 'ruText'].flatMap((name) => scanDuplicates(source, name));
   assert.deepEqual(duplicates, [], `повторяющиеся ключи: ${duplicates.join(', ')}`);
 });
+
+// Русский счёт требует падежа: без него «1 мин чтения» читается как «мин» в записи сокращения.
+test('ru склоняет слово, минуты и колонки по числу', () => {
+  const { stats } = translations.ru.editorHeader;
+  const { columns } = translations.ru.app.board;
+  assert.equal(stats.words(1), '1 слово');
+  assert.equal(stats.words(3), '3 слова');
+  assert.equal(stats.words(11), '11 слов');
+  assert.equal(stats.words(21), '21 слово');
+
+  assert.equal(stats.readingMinutes(1), '1 минута чтения');
+  assert.equal(stats.readingMinutes(3), '3 минуты чтения');
+  assert.equal(stats.readingMinutes(11), '11 минут чтения');
+  assert.equal(stats.readingMinutes(21), '21 минута чтения');
+  assert.equal(stats.readingMinutes(0), '0 минут чтения');
+
+  assert.equal(columns(1), '1 колонка');
+  assert.equal(columns(2), '2 колонки');
+  assert.equal(columns(5), '5 колонок');
+  assert.equal(columns(11), '11 колонок');
+  assert.equal(columns(21), '21 колонка');
+});
+
+test('ru склоняет «Тег для N заметки» — «для» требует родительного', () => {
+  const { tagSelected } = translations.ru.sidebar.context;
+  assert.equal(tagSelected(1), 'Тег для 1 заметки');
+  assert.equal(tagSelected(3), 'Тег для 3 заметки');
+  assert.equal(tagSelected(5), 'Тег для 5 заметок');
+  assert.equal(tagSelected(11), 'Тег для 11 заметок');
+  assert.equal(tagSelected(21), 'Тег для 21 заметки');
+});
