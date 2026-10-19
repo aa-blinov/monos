@@ -189,6 +189,31 @@ apiTest('заметка длиннее 100 kB сохраняется, а не о
   assert.equal(removed.status, 200);
 });
 
+apiTest('битое JSON и слишком большое тело отвечают JSON с detail, без путей и стека', async () => {
+  const broken = await requestJson(buildUrl('/api/search'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{query:}',
+  });
+
+  // index.js caps JSON bodies at 20 MB, so this one is over the limit.
+  const oversized = await requestJson(buildUrl('/api/file', { path: 'notes/Huge.md' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: `{"content":"${'x'.repeat(21 * 1024 * 1024)}"}`,
+  });
+
+  const assertJsonError = ({ response, data }, status) => {
+    assert.equal(response.status, status);
+    assert.match(response.headers.get('content-type'), /application\/json/);
+    assert.equal(typeof data?.detail, 'string');
+    // Neither an absolute path nor a stack frame may reach the client.
+    assert.doesNotMatch(JSON.stringify(data), /\/[\w.-]+\/[\w.-]+|[A-Za-z]:\\|node_modules|\.js:\d+/);
+  };
+  assertJsonError(broken, 400);
+  assertJsonError(oversized, 413);
+});
+
 apiTest('создание заметки с занятым именем не перезаписывает существующую', async () => {
   const create = (content) => requestJson(buildUrl('/api/notes/create'), {
     method: 'POST',

@@ -133,6 +133,27 @@ function requireAccessToken(req, res, next) {
   next();
 }
 
+// Errors Express passes on (a broken JSON body, a body over the limit, a sync throw in a
+// route) go out as the same {"detail"} JSON as other API errors instead of Express's HTML
+// page with a stack trace. The stack of a server error goes to the server log instead.
+const BODY_ERROR_DETAILS = new Map([
+  ['entity.parse.failed', 'Request body is not valid JSON'],
+  ['entity.too.large', 'Request body is too large'],
+]);
+
+function sendJsonError(err, req, res, next) {
+  // A response that has already started cannot take a JSON body; hand it to Express.
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status = [err.status, err.statusCode]
+    .find((code) => Number.isInteger(code) && code >= 400 && code <= 599) ?? 500;
+  if (status >= 500) console.error('Request failed:', err);
+  const fallback = status >= 500 ? 'Internal server error' : 'Bad request';
+  res.status(status).json({ detail: BODY_ERROR_DETAILS.get(err.type) ?? fallback });
+}
+
 const app = express();
 app.use(rejectForeignHosts);
 app.use(rejectCrossOriginRequests);
@@ -179,6 +200,8 @@ registerLanRoutes(app, { listening: currentListening });
 registerStorageRoutes(app);
 registerEventRoutes(app);
 registerAgentRoutes(app);
+// Last, so it catches errors from every route registered above.
+app.use(sendJsonError);
 
 function registerFrontendStatic() {
   if (frontendStaticRegistered) return;
