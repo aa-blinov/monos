@@ -2141,7 +2141,7 @@
           <TooltipIconButton
             type="button"
             data-testid="editor-more"
-            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] max-sm:h-11 max-sm:w-11 transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-primary)] max-sm:h-11 max-sm:w-11 transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] focus-visible:outline-none {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
             label={$localizedText.editor.moreActions}
             tooltip={$localizedText.editor.moreActions}
             tooltipPosition="top"
