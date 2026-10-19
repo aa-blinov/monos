@@ -2110,6 +2110,17 @@ apiTest('сохранение в несуществующий путь без cr
   assert.equal(fs.existsSync(path.join(notesDir, 'Gone Note.md')), false);
 });
 
+apiTest('создание заметки в отсутствующей папке отвечает 404, не создаёт папку и не называет путь на диске', async () => {
+  const response = await requestJson(buildUrl('/api/file', { path: 'notes/NoSuchFolder/Deep.md', create: '1' }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: 'Глубокая.' }),
+  });
+  assert.equal(response.response.status, 404);
+  assert.equal(JSON.stringify(response.data).includes(tempRoot), false);
+  assert.equal(fs.existsSync(path.join(notesDir, 'NoSuchFolder')), false);
+});
+
 const postJson = (url, body) => requestJson(url, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
