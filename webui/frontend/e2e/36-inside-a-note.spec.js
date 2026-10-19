@@ -175,8 +175,9 @@ test('боковая панель: «Синхронизировать» не м�
   await expect(sync).toHaveCount(0);
 });
 
-// The width setting changes the text column only: the title and the header keep their place, and the text starts
-// at the same left edge as the title; only the right edge of the lines moves.
+// The width setting changes the text column only: the title and the header keep their own column of 48rem, so
+// the text edges move away from the centre while the title stays where it is. Both columns are centred on the
+// same axis, but they are not the same width, so the title does not stand on the text's left edge.
 test('ширина контента: заголовок и шапка не двигаются, поля текста меняются с обеих сторон', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1500, height: 900 });
