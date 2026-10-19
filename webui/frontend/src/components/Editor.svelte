@@ -1752,6 +1752,12 @@
           {/if}
         </div>
 
+        <!-- Надпись о сохранении стоит слева от иконок, а не между ними: она длинная и в ряд с кнопками
+             раздвигала их. Пока надписи нет, она не занимает место: пустой элемент в ряду с отступами
+             раздвигает иконки вдвое. На телефоне места в ряду нет вовсе — там надпись ложится полосой
+             над нижней панелью, как окошки свойств. -->
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage ? '' : 'sr-only'} {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'} max-sm:absolute max-sm:inset-x-2 max-sm:bottom-full max-sm:mb-1 max-sm:whitespace-normal max-sm:rounded-ui max-sm:border max-sm:border-[var(--border-subtle)] max-sm:bg-[var(--note-page-panel)] max-sm:px-2 max-sm:py-1">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+
         <div class="relative" data-panel-anchor="tags">
           <TooltipIconButton
             type="button"
@@ -2102,9 +2108,6 @@
             <History size="14" strokeWidth="1.7" aria-hidden="true" />
           </TooltipIconButton>
         {/if}
-
-        <!-- Пока надписи нет, она не занимает место: пустой элемент в ряду с отступами раздвигает иконки вдвое. -->
-        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage ? '' : 'sr-only'} {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
 
         <!-- The terminal next to the note it works on (⌘J does the same). Desktop app only. -->
         {#if terminalBridge}
