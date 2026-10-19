@@ -64,7 +64,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, Star, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, History, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, Star, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -1576,8 +1576,6 @@
     syncInfo={$syncState}
     {wordCharStats}
     {taskProgress}
-    historyAvailable={Boolean(loadedFilePath) && !inConflict}
-    onOpenHistory={() => { showHistory = true; historyNote = visibleFile; }}
     outlineOpen={wideWindow ? outlineColumnShown : outlineOpen}
     onToggleOutline={toggleOutline}
     outlineAvailable={!inConflict}
@@ -2069,6 +2067,19 @@
               </div>
             </div>
           </div>
+        {/if}
+
+        <!-- History lives by Export: the browser print view it replaced is the same PDF under Export → PDF. -->
+        {#if loadedFilePath && !inConflict}
+          <button
+            type="button"
+            data-testid="footer-history"
+            on:click={() => { showHistory = true; historyNote = visibleFile; }}
+            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] text-[var(--text-secondary)]"
+          >
+            <History size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="hidden sm:inline">{$localizedText.editor.history}</span>
+          </button>
         {/if}
 
         <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'}">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>

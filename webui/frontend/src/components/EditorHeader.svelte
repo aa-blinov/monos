@@ -1,8 +1,7 @@
 <script>
   import { noteSyncStatus } from '../lib/git-conflicts.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
-  import { openPrintView } from '../lib/print.js';
-  import { ArrowLeft, History, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-svelte';
+  import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Trash2 } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
 
@@ -13,8 +12,6 @@
   /** { connected, lastSync } of the repository; the line shows when it last synced and whether this note waits. */
   export let syncInfo = null;
   export let taskProgress = null;
-  export let historyAvailable = false;
-  export let onOpenHistory = () => {};
   export let outlineOpen = false;
   export let onToggleOutline = () => {};
   /** False while the note is in a sync conflict: there is no outline to show then. */
@@ -56,11 +53,6 @@
       minute: '2-digit',
     }).format(date);
   };
-
-  function browserPrint() {
-    if (!currentFile?.path) return;
-    openPrintView({ scope: 'note', path: currentFile.path });
-  }
 
   $: breadcrumbParts = currentFile?.path
     ? currentFile.path
@@ -140,15 +132,17 @@
         class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
       />
       {#if fileInfo}
-        <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-4 text-[length:var(--text-whisper)] sm:gap-x-6 lg:gap-y-1 lg:text-[length:var(--text-whisper-lg)]">
-          <!-- One date on the line; when the note was made is in the tooltip. Items are set apart by even space, not by dots. -->
-          <p class="text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
+        <!-- One sentence: the parts follow each other separated by commas. As plain text the line wraps
+             like a sentence, so a narrow column never scatters the parts over several rows. -->
+        <div class="mt-1.5 min-w-0 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)]" data-testid="note-meta">
+          <!-- The date comes first and is always there; when the note was made is in the tooltip. -->
+          <span class="meta-part inline text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
-          </p>
+          </span>
           {#if syncStatus !== 'none'}
             <!-- The place of sync in the note: beside its own date, only when a repository is connected. -->
             <span
-              class="hidden tabular-nums sm:inline {syncStatus === 'synced' ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]'}"
+              class="meta-part inline tabular-nums {syncStatus === 'synced' ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]'}"
               data-testid="note-sync"
               data-state={syncStatus}
               title={syncStatus === 'synced' ? undefined : $localizedText.editorHeader[`sync${syncStatus[0].toUpperCase()}${syncStatus.slice(1)}Hint`]}
@@ -157,11 +151,11 @@
             </span>
           {/if}
           {#if wordCharStats}
-            <span class="hidden tabular-nums text-[var(--text-tertiary)] sm:inline">{wordCharStats}</span>
+            <span class="meta-part inline tabular-nums text-[var(--text-tertiary)]">{wordCharStats}</span>
           {/if}
           {#if taskProgress && taskProgress.total > 0}
             <span
-              class="hidden items-center gap-2 text-[var(--text-tertiary)] sm:inline-flex"
+              class="meta-part inline-flex items-center gap-2 text-[var(--text-tertiary)]"
               data-testid="task-progress"
               title={taskProgress.isComplete
                 ? $localizedText.editorHeader.taskProgress.complete
@@ -186,39 +180,38 @@
               </span>
             </span>
           {/if}
-          <!-- Actions on the note read like the bottom bar's, in sentence case; capitals are kept for labels. -->
-          <span class="ml-auto flex items-center gap-3 sm:gap-4">
+          <!-- The outline is the only thing left on this line, so it is an arrow like the sidebar's,
+               with the word left to the tooltip: three labels did not fit under 48rem. It follows the
+               text instead of sitting at the far edge, so a narrow column does not drop it alone below. -->
+          <div class="ml-2 inline-flex shrink-0 items-center gap-3 sm:gap-4">
             {#if outlineAvailable}
-            <button
-              type="button"
-              aria-expanded={outlineOpen}
-              data-testid="outline-toggle"
+            <TooltipIconButton
+              label={$localizedText.editor.outline}
               on:click={onToggleOutline}
-              class="-my-4 py-4 text-xs transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1 {outlineOpen ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              data-testid="outline-toggle"
+              aria-expanded={outlineOpen}
             >
-              {$localizedText.editor.outline}
-            </button>
+              {#if outlineOpen}
+                <PanelRightClose size="14" strokeWidth="1.7" aria-hidden="true" />
+              {:else}
+                <PanelRightOpen size="14" strokeWidth="1.7" aria-hidden="true" />
+              {/if}
+            </TooltipIconButton>
             {/if}
-            {#if historyAvailable}
-              <button
-                type="button"
-                on:click={onOpenHistory}
-                class="-my-4 inline-flex items-center gap-1.5 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1"
-              >
-                <History size="12" strokeWidth="1.7" aria-hidden="true" />
-                {$localizedText.editorHeader.historyButton}
-              </button>
-            {/if}
-            <button
-              type="button"
-              on:click={browserPrint}
-              class="hidden sm:inline -my-4 py-4 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:my-0 lg:py-1"
-            >
-              {$localizedText.editorHeader.print}
-            </button>
-          </span>
+          </div>
         </div>
       {/if}
     </div>
   </div>
 </header>
+
+<style>
+  /* The meta line is one sentence: the parts follow each other separated by commas. The date is always
+     there and always first, so every part after it ends with a comma and the last one does not. */
+  .meta-part::after {
+    content: ',';
+  }
+  .meta-part:last-of-type::after {
+    content: none;
+  }
+</style>
