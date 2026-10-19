@@ -12,7 +12,8 @@
 ## Запуск
 
 ```bash
-# Backend
+# Backend (сначала корень: бэкенд берёт зависимости из корневого node_modules)
+npm install
 cd webui/backend && npm install && node index.js
 
 # Frontend (dev)
@@ -34,6 +35,7 @@ cd webui/frontend && npm run build
 # Backend
 cd webui/backend && npm test
 cd webui/backend && node --check index.js search.js database.js
+npm run check:deps  # из корня: бэкенд тестируется на тех же версиях, что уезжают в сборку
 ```
 
 ## Структура
