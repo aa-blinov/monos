@@ -4,7 +4,7 @@ import path from 'path';
 import { getDb } from '../database.js';
 import { parseFrontmatterMetadata } from '../search.js';
 import { NOTES_DIR } from '../config.js';
-import { httpError, humanSize, nowISO, readTextFile, relPath, resolveNotesPath, safePathName, writeFileAtomic } from '../utils.js';
+import { httpError, humanSize, isPathInside, nowISO, readTextFile, relPath, resolveNotesPath, safePathName, writeFileAtomic } from '../utils.js';
 import { indexFile, indexAllFiles } from '../indexing.js';
 import { setFrontmatterProperty, upsertFrontmatter } from '../frontmatter.js';
 import { removeNoteFromFts } from '../fts.js';
@@ -110,6 +110,12 @@ export function registerFileRoutes(app) {
       if (!fs.existsSync(fullPath) && req.query.create !== '1') {
         return res.status(404).json({ detail: 'File not found' });
       }
+      // A new note is written into its folder, which has to exist already: saving does not make folders.
+      if (!fs.existsSync(fullPath)) {
+        const folder = path.dirname(fullPath);
+        if (!fs.existsSync(folder)) return res.status(404).json({ detail: 'Folder not found' });
+        if (!fs.statSync(folder).isDirectory()) return res.status(400).json({ detail: 'Parent is not a folder' });
+      }
       const locked = fs.existsSync(fullPath) && isLockedNote(readTextFile(fullPath));
       const session = locked ? sessionFor(filePath) : null;
       if (locked && !session) return res.status(423).json({ detail: 'This note is locked', locked: true });
@@ -186,6 +192,13 @@ export function registerFileRoutes(app) {
       const { source, target } = req.query;
       const sourceFull = resolveNotesPath(source);
       const targetDir = target === 'notes' ? NOTES_DIR : resolveNotesPath(target, { allowRoot: true });
+      if (!fs.existsSync(sourceFull)) return res.status(404).json({ detail: 'File not found' });
+      if (!fs.existsSync(targetDir)) return res.status(404).json({ detail: 'Folder not found' });
+      if (!fs.statSync(targetDir).isDirectory()) return res.status(400).json({ detail: 'Target is not a folder' });
+      // rename() cannot move a folder into itself, and its error would name both paths: refuse it here.
+      if (fs.statSync(sourceFull).isDirectory() && isPathInside(sourceFull, targetDir)) {
+        return res.status(400).json({ detail: 'A folder cannot be moved into itself' });
+      }
       const destination = path.join(targetDir, path.basename(sourceFull));
       // rename() would silently replace a note with the same name in the target folder.
       if (path.resolve(destination) !== path.resolve(sourceFull) && fs.existsSync(destination)) {
@@ -291,6 +304,8 @@ export function registerFileRoutes(app) {
       const { title, tags, category, content, pinned } = req.body;
       const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
       if (note?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
+      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
       const editable = noteTextForEdit(fullPath, filePath);
       if (refuseStaleSave(req, res, fullPath, filePath)) return;
       const originalContent = typeof content === 'string'

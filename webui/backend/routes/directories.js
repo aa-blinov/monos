@@ -5,6 +5,13 @@ import { NOTES_DIR } from '../config.js';
 import { assertFileName, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
 
+// The item at fullPath, or the nearest one above it that exists. mkdir cannot make folders through a file.
+function nearestExisting(fullPath) {
+  let current = fullPath;
+  while (!fs.existsSync(current) && path.dirname(current) !== current) current = path.dirname(current);
+  return current;
+}
+
 export function registerDirectoryRoutes(app) {
   app.get('/api/directories', (req, res) => {
     try {
@@ -38,11 +45,22 @@ export function registerDirectoryRoutes(app) {
       const fullPath = dirPath.startsWith('notes/')
         ? resolveNotesPath(dirPath, { allowRoot: true })
         : resolveNotesChildPath(dirPath);
+      // mkdir would fail on a file in the way and name the path in its error, so such a request is refused here.
+      const nearest = nearestExisting(fullPath);
+      if (!fs.statSync(nearest).isDirectory()) {
+        if (nearest === fullPath) return res.status(409).json({ detail: 'Target already exists' });
+        return res.status(400).json({ detail: 'Parent is not a folder' });
+      }
       fs.mkdirSync(fullPath, { recursive: true });
       indexAllFiles();
       res.json({ message: 'Directory created' });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      // Only errors the app raises on purpose have a message to send; fs errors name a folder on this computer, so they are logged.
+      if (!error.statusCode) {
+        console.error('/api/directory/create error:', error);
+        return res.status(500).json({ detail: 'Internal server error' });
+      }
+      res.status(error.statusCode).json({ detail: error.message });
     }
   });
 
