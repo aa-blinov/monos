@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, test, expect, vi } from 'vitest';
+import { get } from 'svelte/store';
 import Settings from './Settings.svelte';
 import { locale, uiText } from '../lib/strings.js';
-import { editorState, themeMode } from '../stores.js';
+import { contentWidth, editorState, lineHeight, themeMode } from '../stores.js';
 import appPackage from '../../../../package.json';
 
 function jsonResponse(data, ok = true) {
@@ -471,4 +472,18 @@ test('Settings: отказ GitHub в записи объясняется сло�
   await waitFor(() => expect(connectStatus().dataset.phase).toBe('error'));
   expect(connectStatus().textContent).toBe(uiText.settings.gitReasons['token-read-only']);
   expect(connectStatus().textContent).not.toContain('raw git words');
+});
+
+test('Settings: ширина контента и межстрочный интервал редактируются здесь, а не в панели', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+  render(Settings);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/settings'));
+
+  await fireEvent.change(screen.getByLabelText(uiText.richEditor.contentWidth), { target: { value: 'narrow' } });
+  await fireEvent.change(screen.getByLabelText(uiText.richEditor.lineHeight), { target: { value: 'relaxed' } });
+
+  expect(get(contentWidth)).toBe('narrow');
+  expect(get(lineHeight)).toBe('relaxed');
 });

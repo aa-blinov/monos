@@ -11,9 +11,9 @@
   import Checkbox from './Checkbox.svelte';
   import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
-  import { fontOptions, fontSizeOptions, editorFontSizeOptions } from '../lib/fonts.js';
+  import { fontOptions, fontSizeOptions, editorFontSizeOptions, lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection, tabsToSpaces } from '../stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection, tabsToSpaces, lineHeight, contentWidth } from '../stores.js';
   import ConnectStatus from './ConnectStatus.svelte';
   import SettingsNav from './SettingsNav.svelte';
   import { formFieldClass } from '../lib/form-field.js';
@@ -69,6 +69,14 @@
   $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
     ...option,
     label: $localizedText.optionLabels.fontSize[option.value] || option.name,
+  }));
+  $: localizedContentWidthOptions = contentWidthOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.contentWidth[option.value] || option.name,
+  }));
+  $: localizedLineHeightOptions = lineHeightOptions.map(option => ({
+    ...option,
+    label: $localizedText.optionLabels.lineHeight[option.value] || option.name,
   }));
 
   let settings = {
@@ -860,6 +868,34 @@
           <option value="4">{$localizedText.settings.tabs4}</option>
         </select>
         <p class="mt-1.5 text-xs text-[var(--text-tertiary)]">{$localizedText.settings.tabsToSpacesHint}</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="min-w-0">
+          <label for="content-width" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.richEditor.contentWidth}</label>
+          <select
+            id="content-width"
+            value={$contentWidth}
+            on:change={(e) => { $contentWidth = e.target.value; saveSettings(); }}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+          >
+            {#each localizedContentWidthOptions as option}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="min-w-0">
+          <label for="line-height" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.richEditor.lineHeight}</label>
+          <select
+            id="line-height"
+            value={$lineHeight}
+            on:change={(e) => { $lineHeight = e.target.value; saveSettings(); }}
+            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
+          >
+            {#each localizedLineHeightOptions as option}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </select>
+        </div>
       </div>
     </section>
 

@@ -4,8 +4,6 @@
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { lineHeight, contentWidth, editorFontSize, tabsToSpaces } from '../stores.js';
-  import { lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
   import { unescapeCalloutMarkers } from '../lib/callouts.js';
@@ -22,7 +20,7 @@
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
-    Maximize2, WrapText, Type, ArrowRightToLine, MoreHorizontal, ArrowUpRight, FilePlus
+    MoreHorizontal, ArrowUpRight, FilePlus
   } from 'lucide-svelte';
   import { externalLinkAt, wikiLinksKey } from '../lib/richEditorExtras.js';
   import { isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
@@ -50,6 +48,11 @@
     const next = Math.max(0, Math.min(extraTools.length, Math.floor(room / EXTRA_BUTTON_WIDTH)));
     if (next !== visibleExtras) visibleExtras = next;
   }
+  // The menu holds what the row had no room for. Nothing hidden, no button: the text settings it used to
+  // carry live in Settings now, so a dots-only menu on a wide window was a button that opened four choices.
+  $: hiddenTools = extraTools.length - visibleExtras;
+  // Widening the window takes the last tool out of the menu; its trigger goes with it, so the open menu closes.
+  $: if (!hiddenTools) moreOpen = false;
   onMount(() => {
     if (typeof ResizeObserver === 'undefined' || !toolbarEl) return undefined;
     const observer = new ResizeObserver(() => fitExtras());
@@ -138,18 +141,6 @@
     { id: 'hr', icon: Minus, label: $localizedText.richEditor.horizontalRule, run: cmd('hr'), on: false },
     { id: 'table', icon: Table2, label: $localizedText.richEditor.insertTable, run: cmd('table'), on: active.table },
   ];
-  $: localizedContentWidthOptions = contentWidthOptions.map(option => ({
-    ...option,
-    label: $localizedText.optionLabels.contentWidth[option.value] || option.name,
-  }));
-  $: localizedLineHeightOptions = lineHeightOptions.map(option => ({
-    ...option,
-    label: $localizedText.optionLabels.lineHeight[option.value] || option.name,
-  }));
-  $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
-    ...option,
-    label: $localizedText.optionLabels.fontSize[option.value] || option.name,
-  }));
 
   const slashCommands = [
     // `markdown`: what typed at the start of a line makes the same block, shown beside the item so the menu
@@ -902,17 +893,19 @@
     {/if}
     </div>
 
-    <button
-      type="button"
-      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
-      aria-label={$localizedText.richEditor.more}
-      title={$localizedText.richEditor.more}
-      aria-haspopup="menu"
-      aria-expanded={moreOpen}
-      on:click={() => moreOpen = !moreOpen}
-    >
-      <MoreHorizontal size="16" strokeWidth="1.7" aria-hidden="true" />
-    </button>
+    {#if hiddenTools > 0}
+      <button
+        type="button"
+        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+        aria-label={$localizedText.richEditor.more}
+        title={$localizedText.richEditor.more}
+        aria-haspopup="menu"
+        aria-expanded={moreOpen}
+        on:click={() => moreOpen = !moreOpen}
+      >
+        <MoreHorizontal size="16" strokeWidth="1.7" aria-hidden="true" />
+      </button>
+    {/if}
 
     {#if moreOpen}
       <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
@@ -923,43 +916,6 @@
             </button>
           {/if}
         {/each}
-        <div class="mt-1 flex flex-col border-t border-[var(--border-subtle)] pt-1">
-          <!-- The whole row is the control: the select lies transparent over it, so a click anywhere opens the list. -->
-          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
-            <Maximize2 size="16" strokeWidth="1.7" aria-hidden="true" />
-            <span class="flex-1">{$localizedText.richEditor.contentWidth}</span>
-            <span class="text-xs text-[var(--text-secondary)]">{localizedContentWidthOptions.find((option) => option.value === $contentWidth)?.label}</span>
-            <select aria-label={$localizedText.richEditor.contentWidth} bind:value={$contentWidth} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
-              {#each localizedContentWidthOptions as option}<option value={option.value}>{option.label}</option>{/each}
-            </select>
-          </label>
-          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
-            <WrapText size="16" strokeWidth="1.7" aria-hidden="true" />
-            <span class="flex-1">{$localizedText.richEditor.lineHeight}</span>
-            <span class="text-xs text-[var(--text-secondary)]">{localizedLineHeightOptions.find((option) => option.value === $lineHeight)?.label}</span>
-            <select aria-label={$localizedText.richEditor.lineHeight} bind:value={$lineHeight} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
-              {#each localizedLineHeightOptions as option}<option value={option.value}>{option.label}</option>{/each}
-            </select>
-          </label>
-          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
-            <Type size="16" strokeWidth="1.7" aria-hidden="true" />
-            <span class="flex-1">{$localizedText.richEditor.fontSize}</span>
-            <span class="text-xs text-[var(--text-secondary)]">{localizedEditorFontSizeOptions.find((option) => option.value === $editorFontSize)?.label}</span>
-            <select aria-label={$localizedText.richEditor.fontSize} bind:value={$editorFontSize} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
-              {#each localizedEditorFontSizeOptions as option}<option value={option.value}>{option.label}</option>{/each}
-            </select>
-          </label>
-          <label class="relative flex w-full cursor-pointer items-center gap-3 rounded-ui px-3 py-2 text-sm hover:bg-[var(--bg-secondary)] focus-within:bg-[var(--bg-secondary)]">
-            <ArrowRightToLine size="16" strokeWidth="1.7" aria-hidden="true" />
-            <span class="flex-1">{$localizedText.settings.tabsToSpaces}</span>
-            <span class="text-xs text-[var(--text-secondary)]">{$tabsToSpaces === 'off' ? $localizedText.settings.tabsOff : $tabsToSpaces}</span>
-            <select aria-label={$localizedText.settings.tabsToSpaces} bind:value={$tabsToSpaces} class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 outline-none" on:pointerdown|stopPropagation on:mousedown|stopPropagation on:click|stopPropagation>
-              <option value="off">{$localizedText.settings.tabsOff}</option>
-              <option value="2">{$localizedText.settings.tabs2}</option>
-              <option value="4">{$localizedText.settings.tabs4}</option>
-            </select>
-          </label>
-        </div>
       </div>
     {/if}
   </div>

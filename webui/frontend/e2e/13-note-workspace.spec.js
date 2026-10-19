@@ -133,7 +133,7 @@ test('структура появляется сама от трёх загол�
   await expect(panel).toBeVisible();
 });
 
-test('панель инструментов: «More tools» открывает таблицу, зачёркивание и настройки вида', async ({ page }) => {
+test('панель инструментов: «More tools» открывает то, что не влезло в строку', async ({ page }) => {
   const title = uniqueTitle('Toolbar More Note');
 
   await createBlankNote(page, title);
@@ -143,10 +143,22 @@ test('панель инструментов: «More tools» открывает �
 
   await expect(page.getByRole('menuitem', { name: /strikethrough/i })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: /insert table/i })).toBeVisible();
-  await expect(page.getByRole('combobox', { name: /content width/i })).toBeVisible();
+  // Настройки вида живут в Настройках, а не в этом меню.
+  await expect(page.getByRole('menu').getByRole('combobox')).toHaveCount(0);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menuitem', { name: /insert table/i })).toHaveCount(0);
+});
+
+test('на широком окне «More tools» не появляется: в строке всё помещается', async ({ page }) => {
+  const title = uniqueTitle('Toolbar Wide Note');
+
+  await createBlankNote(page, title);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(300);
+
+  await expect(page.getByTestId('toolbar-extras')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'More tools' })).toHaveCount(0);
 });
 
 test('на телефоне свойства остаются в нижней панели, окошко не выходит за экран', async ({ page }) => {
