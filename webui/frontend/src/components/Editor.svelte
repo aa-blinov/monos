@@ -412,11 +412,6 @@
     tick().then(() => (node.querySelector('input') || node.querySelector('button'))?.focus());
   }
 
-  function tagsSummaryText(tags, emptyLabel) {
-    if (!tags.length) return emptyLabel;
-    return tags.length > 1 ? `#${tags[0]} +${tags.length - 1}` : `#${tags[0]}`;
-  }
-
   // Окошко над нижней панелью. На телефоне это широкая шторка над той же панелью.
   const panelClass = 'absolute bottom-full left-0 z-30 mb-2 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 shadow-2xl max-sm:fixed max-sm:inset-x-3 max-sm:bottom-14 max-sm:w-auto';
   const panelLabelClass = 'mb-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]';
@@ -1246,6 +1241,24 @@
     : $localizedText.editor.noFolder);
   $: currentFolder = folderOf(loadedFilePath || currentFile?.path);
   $: currentFolderLabel = folderLabel(currentFolder);
+
+  // The path of the document itself: the folders it lies in and the note at the end of them.
+  const pathLabel = (notePath, text) => {
+    const parts = String(notePath || '').replace(/^notes\//, '').split('/').filter(Boolean);
+    const name = (parts.pop() || '').replace(/\.md$/, '');
+    const folder = parts.map((part, index) => (index === 0 ? displayFolderName(part, text) : part)).join(' / ');
+    return folder ? `${folder} / ${name}` : name;
+  };
+  $: currentPathLabel = pathLabel(loadedFilePath || currentFile?.path, $localizedText);
+
+  // The hints of the property buttons: the name of the field and, if it has one, its value.
+  $: tagsLabel = editableTags.length
+    ? `${$localizedText.editor.propertyTags}: ${editableTags.map((tag) => `#${tag}`).join(' ')}`
+    : $localizedText.editor.propertyTags;
+  $: dueFieldLabel = dueDate ? `${$localizedText.editor.propertyDue}: ${dueLabelOf}` : $localizedText.editor.propertyDue;
+  $: propertiesLabel = customProperties.length
+    ? `${$localizedText.properties.title}: ${customProperties.length}`
+    : $localizedText.properties.title;
   let folderOptions = [];
 
   async function loadFolderOptions() {
@@ -1705,21 +1718,21 @@
          относятся к запрошенной заметке, а текст ещё от прежней. -->
     <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
-      <div class="flex min-w-0 items-center gap-1 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
-        <div class="relative" data-panel-anchor="category">
+      <div class="flex min-w-0 flex-1 items-center gap-1 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
+        <div class="relative min-w-0 sm:flex-1" data-panel-anchor="category">
           <button
             type="button"
             bind:this={propertyTriggers.category}
             data-testid="property-category-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
-            aria-label={`${$localizedText.editor.propertyCategory}: ${currentFolderLabel}`}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            aria-label={`${$localizedText.editor.propertyCategory}: ${currentPathLabel}`}
+            class="inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
-            <span class="hidden max-w-[9rem] truncate sm:inline">{currentFolderLabel}</span>
+            <span class="hidden min-w-0 truncate sm:inline">{currentPathLabel}</span>
           </button>
           {#if propertyPanel === 'category'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>
@@ -1740,22 +1753,24 @@
         </div>
 
         <div class="relative" data-panel-anchor="tags">
-          <button
+          <TooltipIconButton
             type="button"
-            bind:this={propertyTriggers.tags}
+            bind:buttonEl={propertyTriggers.tags}
             data-testid="property-tags-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'tags'}
-            aria-label={editableTags.length ? `${$localizedText.editor.propertyTags}: ${editableTags.map((tag) => `#${tag}`).join(' ')}` : $localizedText.editor.propertyTags}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            label={tagsLabel}
+            tooltip={tagsLabel}
+            tooltipPosition="top"
+            tooltipAlign="end"
             on:click={() => togglePropertyPanel('tags')}
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition max-sm:h-auto max-sm:w-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'tags' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
           >
             <Tag size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.tags}{editableTags.length ? ` ${editableTags.length}` : ''}</span>
-            <span class="hidden max-w-[9rem] truncate sm:inline">{tagsSummaryText(editableTags, $localizedText.editor.propertyTags)}</span>
-                      </button>
+          </TooltipIconButton>
           {#if propertyPanel === 'tags'}
-            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyTags} data-testid="property-panel" data-panel="tags" class={panelClass}>
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyTags} data-testid="property-panel" data-panel="tags" class="{panelClass} sm:left-auto sm:right-0">
               <p class={panelLabelClass}>{$localizedText.editor.propertyTags}</p>
               <div class="flex flex-wrap gap-1.5">
                 {#each editableTags as tag (tag)}
@@ -1799,22 +1814,24 @@
         </div>
 
         <div class="relative" data-panel-anchor="due">
-          <button
+          <TooltipIconButton
             type="button"
-            bind:this={propertyTriggers.due}
+            bind:buttonEl={propertyTriggers.due}
             data-testid="property-due-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'due'}
-            aria-label={dueDate ? `${$localizedText.editor.propertyDue}: ${dueLabelOf}` : $localizedText.editor.propertyDue}
-            class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            label={dueFieldLabel}
+            tooltip={dueFieldLabel}
+            tooltipPosition="top"
+            tooltipAlign="end"
             on:click={() => togglePropertyPanel('due')}
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition max-sm:h-auto max-sm:w-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'due' ? 'bg-[var(--bg-secondary)]' : ''} {dueStatusOf === 'overdue' ? 'text-[var(--red)]' : dueStatusOf === 'today' ? 'text-[var(--yellow)]' : propertyPanel === 'due' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
           >
             <CalendarDays size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.due}</span>
-            <span class="hidden sm:inline">{dueDate ? dueLabelOf : $localizedText.editor.propertyDue}</span>
-          </button>
+          </TooltipIconButton>
           {#if propertyPanel === 'due'}
-            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyDue} data-testid="property-panel" data-panel="due" class={panelClass}>
+            <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyDue} data-testid="property-panel" data-panel="due" class="{panelClass} sm:left-auto sm:right-0">
               <p class={panelLabelClass}>{$localizedText.editor.propertyDue}</p>
               <div class="flex items-center gap-2">
                 <div class="relative flex items-center">
@@ -1895,25 +1912,26 @@
 
         {#if loadedFilePath && !currentFile?.isDir}
           <div class="relative" data-panel-anchor="properties">
-            <button
+            <TooltipIconButton
               type="button"
-              bind:this={propertyTriggers.properties}
+              bind:buttonEl={propertyTriggers.properties}
               data-testid="property-properties-button"
-              title={$localizedText.properties.hint}
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'properties'}
-              aria-label={`${$localizedText.properties.title}: ${customProperties.length}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              label={propertiesLabel}
+              tooltip={propertiesLabel}
+              tooltipPosition="top"
+              tooltipAlign="end"
               on:click={() => togglePropertyPanel('properties')}
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition max-sm:h-auto max-sm:w-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'properties' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             >
               <SlidersHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
               <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.properties}{customProperties.length ? ` ${customProperties.length}` : ''}</span>
-              <span class="hidden sm:inline">{$localizedText.properties.title}</span>
-              {#if customProperties.length}<span class="tabular-nums max-sm:hidden">{customProperties.length}</span>{/if}
-            </button>
+            </TooltipIconButton>
             {#if propertyPanel === 'properties'}
-              <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:!w-96 max-h-[70vh] overflow-y-auto">
+              <div use:focusFirstControl role="dialog" aria-label={$localizedText.properties.title} data-testid="property-panel" data-panel="properties" class="{panelClass} sm:left-auto sm:right-0 sm:!w-96 max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.properties.title}</p>
+                <p class="mb-2 max-w-[16rem] text-[length:var(--text-whisper)] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.properties.hint}</p>
                 <NoteProperties filePath={loadedFilePath} properties={customProperties} on:changed={() => { propertiesChanged.update((n) => n + 1); loadFile(); }} />
               </div>
             {/if}
@@ -2023,18 +2041,19 @@
           </div>
         {/if}
 
-        <button
+        <TooltipIconButton
           type="button"
           data-testid="property-pin"
           aria-pressed={pinnedNow}
-          aria-label={$localizedText.editor.pinDo}
-          class="max-sm:!hidden inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {pinnedNow ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+          label={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+          tooltip={pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
+          tooltipPosition="top"
+          tooltipAlign="end"
           on:click={togglePinned}
+          class="max-sm:!hidden inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {pinnedNow ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
         >
           <Pin size="14" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />
-          <!-- A toggle keeps its name; being pinned shows as the pressed state and the filled pin. -->
-          <span class="hidden sm:inline">{$localizedText.editor.pinDo}</span>
-        </button>
+        </TooltipIconButton>
       </div>
 
       <div class="ml-auto flex shrink-0 items-center gap-2">
