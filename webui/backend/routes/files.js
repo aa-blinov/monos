@@ -120,9 +120,18 @@ export function registerFileRoutes(app) {
       const session = locked ? sessionFor(filePath) : null;
       if (locked && !session) return res.status(423).json({ detail: 'This note is locked', locked: true });
       if (refuseStaleSave(req, res, fullPath, filePath)) return;
-      indexFile(fullPath, storeNoteText(fullPath, content, session));
-      const updated = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath);
-      res.json({ message: 'Saved', modified: updated?.modified_at || fs.statSync(fullPath).mtime.toISOString(), version: textVersion(content) });
+      const stored = storeNoteText(fullPath, content, session);
+      // The text is on disk from here on, and the file is the source of truth (the index is derived from it).
+      // An index left behind makes search lag, not the save fail: answering 500 would say the text is lost
+      // when it is not, and the person would keep re-saving a note that is already written.
+      let modified = fs.statSync(fullPath).mtime.toISOString();
+      try {
+        indexFile(fullPath, stored);
+        modified = getDb().prepare('SELECT modified_at FROM notes_index WHERE path = ?').get(filePath)?.modified_at || modified;
+      } catch (error) {
+        console.error('Note saved, index not updated:', error);
+      }
+      res.json({ message: 'Saved', modified, version: textVersion(content) });
     } catch (error) {
       res.status(error.statusCode || 500).json({ detail: error.message });
     }

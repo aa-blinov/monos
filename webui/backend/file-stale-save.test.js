@@ -10,6 +10,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monos-stale-save-'));
 fs.mkdirSync(path.join(tempRoot, 'notes'), { recursive: true });
 process.env.NOTES_ROOT = tempRoot;
 const { startServer, stopServer } = await import('./index.js');
+const { getDb } = await import('./database.js');
 const notePath = path.join(tempRoot, 'notes', 'Планы.md');
 let base;
 
@@ -68,4 +69,22 @@ test('отказ называет устройство, которое изме�
   assert.equal(sides.ours.device, 'Ноутбук');
   assert.equal(sides.theirs.device, 'Телефон');
   assert.ok(!Number.isNaN(Date.parse(sides.theirs.date)));
+});
+
+// The text is on disk before the index is touched, and the file is the source of truth. An index left
+// behind made search lag; answering 500 said the text was lost when the file already held it, and the
+// person kept re-saving a note that was written.
+test('сохранение отвечает успехом, когда текст записан, а индекс не обновился', async () => {
+  const loaded = await (await fetch(url())).json();
+  const db = getDb();
+  db.pragma('query_only = ON');
+  let response;
+  try {
+    response = await save('Первая строка.\nПравка, которую индекс не увидит.\n', loaded.version);
+  } finally {
+    db.pragma('query_only = OFF');
+  }
+
+  assert.equal(response.status, 200);
+  assert.equal(fs.readFileSync(notePath, 'utf-8'), 'Первая строка.\nПравка, которую индекс не увидит.\n');
 });
