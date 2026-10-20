@@ -22,7 +22,7 @@ import { get } from 'svelte/store';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText, locale } from './lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand, menuState, updateMenuState } from './stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand, editorAction, menuState, updateMenuState } from './stores.js';
   import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
@@ -258,6 +258,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'focus') editorViewCommand.set({ kind: 'focus', id: Date.now() });
     else if (command === 'outline') editorViewCommand.set({ kind: 'outline', id: Date.now() });
     else if (command === 'settings') openSettings();
+    else if (command === 'save') editorAction.set('save');
     else if (command === 'help') openHelp();
     else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
   }

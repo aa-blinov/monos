@@ -36,7 +36,7 @@ let notesDir = '';
 let killTerminals = () => {};
 let menuLocale = 'en';
 // What the window shows right now: the menu draws its checkmarks from this.
-let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false };
+let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false, notePath: '' };
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
@@ -74,6 +74,12 @@ function applyApplicationMenu() {
 }
 
 function sendMenuCommand(command) {
+  // «Показать в Finder» — дело оболочки: путь к заметке она уже знает.
+  if (command === 'reveal-in-finder') {
+    const notePath = String(menuState.notePath || '');
+    if (notePath.startsWith('notes/')) shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
+    return;
+  }
   mainWindow?.webContents.send('menu:command', command);
 }
 
