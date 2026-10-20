@@ -237,6 +237,16 @@ unambiguous. What matters is that the number is on this list.
 
 ### Corner radius
 
+The check in `lib/design-tokens.test.js` finds this section by the heading it
+spells like this:
+
+```markdown
+  ### Corner Radius
+```
+
+It compares the tokens in the table with the scales in the code, so the
+spelling of the heading above and the one in the test have to stay in step.
+
 | Token | px | Role |
 |---|---|---|
 | `none` | 0px | cancelling an inherited radius, e.g. `code` inside `pre`, and field underlines, which are a single border line |
