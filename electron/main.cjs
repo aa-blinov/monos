@@ -3,6 +3,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
+const { buildMenuTemplate } = require('./menu.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
@@ -31,6 +32,7 @@ let appOrigin = '';
 // The folder the terminal opens in: the notes folder the backend uses (it may be one chosen in Settings).
 let notesDir = '';
 let killTerminals = () => {};
+let menuLocale = 'en';
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
@@ -54,7 +56,21 @@ function runtimeIconPath() {
 function configureApplicationMenu() {
   if (process.platform !== 'darwin') {
     Menu.setApplicationMenu(null);
+    return;
   }
+  // The menu speaks the interface language. The system language is the first guess; the page
+  // sends the language it actually uses, so a choice made in Settings wins.
+  menuLocale = String(app.getLocale() || '').slice(0, 2) === 'ru' ? 'ru' : 'en';
+  applyApplicationMenu();
+}
+
+// The menu bar. Every command it carries goes to the page, which owns the actions.
+function applyApplicationMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate(menuLocale, sendMenuCommand)));
+}
+
+function sendMenuCommand(command) {
+  mainWindow?.webContents.send('menu:command', command);
 }
 
 function prepareUserNotesRoot() {
@@ -201,6 +217,14 @@ async function boot() {
 
 // One running copy per notes folder: a second copy would index the same database.
 // The second launch hands its focus to the window that is already open.
+// The page knows the language it is in; the menu follows it.
+ipcMain.on('menu:locale', (_event, locale) => {
+  const next = locale === 'ru' ? 'ru' : 'en';
+  if (next === menuLocale) return;
+  menuLocale = next;
+  if (process.platform === 'darwin') applyApplicationMenu();
+});
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

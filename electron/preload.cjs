@@ -17,3 +17,10 @@ contextBridge.exposeInMainWorld('monosTerminal', {
   onData: (callback) => listen('terminal:data', callback),
   onExit: (callback) => listen('terminal:exit', callback),
 });
+
+// The native menu bar: the shell asks the page to do the work, and tells it which language
+// the menu should speak.
+contextBridge.exposeInMainWorld('monosMenu', {
+  onCommand: (callback) => listen('menu:command', callback),
+  setLocale: (locale) => ipcRenderer.send('menu:locale', locale),
+});
