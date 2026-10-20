@@ -245,13 +245,16 @@
     tick().then(() => { findInput?.focus(); findInput?.select(); });
   }
 
-  export function closeFind() {
+  export function closeFind({ focus = false } = {}) {
     findOpen = false;
     findTerm = '';
     findTotal = 0;
     findAt = 0;
-    const view = editor?.view;
+    const view = editor?.isDestroyed ? null : editor?.view;
     if (view) view.dispatch(setSearchState(view.state.tr, new SearchQuery({ search: '' })));
+    // Как в macOS: панель закрылась — каретка снова в тексте, можно печатать дальше.
+    // Фокус возвращается после того, как поле убрано из страницы: иначе он уйдёт вместе с ним.
+    if (focus) tick().then(() => { if (editor && !editor.isDestroyed) editor.view?.focus?.(); });
   }
 
   function findKeydown(event) {
@@ -260,7 +263,7 @@
       stepFind(event.shiftKey);
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      closeFind();
+      closeFind({ focus: true });
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'g') {
       event.preventDefault();
       stepFind(event.shiftKey);
@@ -944,7 +947,7 @@
       <span class="shrink-0 text-xs tabular-nums text-[var(--text-tertiary)]" data-testid="note-find-count">{findLabel}</span>
       <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findPrevious} on:click={() => stepFind(true)}><ChevronUp size={14} strokeWidth="1.7" aria-hidden="true" /></button>
       <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findNext} on:click={() => stepFind(false)}><ChevronDown size={14} strokeWidth="1.7" aria-hidden="true" /></button>
-      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findClose} on:click={closeFind}><X size={14} strokeWidth="1.7" aria-hidden="true" /></button>
+      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findClose} on:click={() => closeFind({ focus: true })}><X size={14} strokeWidth="1.7" aria-hidden="true" /></button>
     </div>
   {/if}
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
