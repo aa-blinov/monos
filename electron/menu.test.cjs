@@ -12,7 +12,7 @@ test('the menu speaks the interface language', () => {
 test('the menu is the one a desktop app is expected to have', () => {
   const template = buildMenuTemplate('ru', () => {});
   assert.deepEqual(template.map((menu) => menu.label), [
-    'Monos', 'Заметка', 'Правка', 'Вид', 'Окно', 'Справка Monos',
+    'Monos', 'Заметка', 'Правка', 'Вид', 'Окно', 'Справка',
   ]);
 });
 
