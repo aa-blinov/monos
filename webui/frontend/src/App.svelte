@@ -21,7 +21,7 @@ import { get } from 'svelte/store';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
-  import { localizedText } from './lib/strings.js';
+  import { localizedText, locale } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
   import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
@@ -238,6 +238,25 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     }
   }
 
+  // The native menu bar of the desktop app: the shell sends a command, the page does the work.
+  const menuBridge = typeof window !== 'undefined' ? window.monosMenu : null;
+  // The menu speaks the interface language.
+  $: menuBridge?.setLocale($locale);
+  // The Help takes its topic from the address when it opens; asking for a topic while it is open
+  // remounts it, so the topic is applied.
+  let helpRequest = 0;
+
+  function runMenuCommand(command) {
+    if (command === 'new-note') openNewNoteFlow();
+    else if (command === 'open-note') openCommandPalette('notes');
+    else if (command === 'palette') openCommandPalette('commands');
+    else if (command === 'terminal') toggleTerminal();
+    else if (command === 'toggle-sidebar') toggleSidebar();
+    else if (command === 'settings') openSettings();
+    else if (command === 'help') openHelp();
+    else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
+  }
+
   /**
    * A background pull must never steal focus or interrupt typing, so it only
    * refreshes the board and raises a badge. Conflicts are surfaced where the
@@ -245,10 +264,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
    */
   let stopNoteChanges = () => {};
   let stopNoteLinks = () => {};
+  let stopMenuCommands = () => {};
   onDestroy(() => {
     stopAutoSync();
     stopNoteChanges();
     stopNoteLinks();
+    stopMenuCommands();
   });
 
   /**
@@ -321,6 +342,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         void refreshConflicts();
       },
     });
+    stopMenuCommands = menuBridge?.onCommand?.(runMenuCommand) || (() => {});
     void applyShellSettings();
     void loadTemplateSettings();
     // Pull on launch and every few minutes. Uploads stay manual; a stale device
@@ -598,10 +620,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     settingsSection.set(section);
     openSettings();
   }
-  function openHelp() {
+  function openHelp(topic = '') {
+    // The address of a topic, when one is asked for; as an event handler it gets the event, not a topic.
+    const wanted = typeof topic === 'string' ? topic : '';
     setRoutePath('/help');
     clearSearch();
-    navigate('/help');
+    navigate(wanted ? `/help?topic=${wanted}` : '/help');
   }
   function openTrash() {
     setRoutePath('/trash');
@@ -1004,9 +1028,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         </Route>
         <Route path="/help">
           <!-- Loaded when opened: a long text no other page needs. -->
-          {#await import('./components/HelpView.svelte') then helpModule}
-            <svelte:component this={helpModule.default} />
-          {/await}
+          {#key helpRequest}
+            {#await import('./components/HelpView.svelte') then helpModule}
+              <svelte:component this={helpModule.default} />
+            {/await}
+          {/key}
         </Route>
         <Route path="/trash">
           <TrashView on:restored={handleTrashRestored} on:deleted={refreshAfterTrashChange} />
