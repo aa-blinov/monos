@@ -35,6 +35,8 @@ let appOrigin = '';
 let notesDir = '';
 let killTerminals = () => {};
 let menuLocale = 'en';
+// What the window shows right now: the menu draws its checkmarks from this.
+let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false };
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
@@ -68,7 +70,7 @@ function configureApplicationMenu() {
 
 // The menu bar. Every command it carries goes to the page, which owns the actions.
 function applyApplicationMenu() {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate(menuLocale, sendMenuCommand)));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate(menuLocale, sendMenuCommand, menuState)));
 }
 
 function sendMenuCommand(command) {
@@ -244,6 +246,14 @@ ipcMain.on('menu:locale', (_event, locale) => {
   const next = locale === 'ru' ? 'ru' : 'en';
   if (next === menuLocale) return;
   menuLocale = next;
+  if (process.platform === 'darwin') applyApplicationMenu();
+});
+
+// The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
+ipcMain.on('menu:state', (_event, state) => {
+  const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
+  if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
+  menuState = next;
   if (process.platform === 'darwin') applyApplicationMenu();
 });
 

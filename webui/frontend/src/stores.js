@@ -27,6 +27,14 @@ export const editorFontSize = persisted('editorFontSize', 'md');
 export const noteView = persisted('noteView', 'board');
 // The native menu asks the open note to change its view: focus mode and the structure column.
 export const editorViewCommand = writable(null);
+// What the window shows right now: the native menu draws its checkmarks from this and greys out
+// the items that need an open note.
+export const menuState = writable({ hasNote: false, outline: false, focus: false, sidebar: false, terminal: false });
+
+/** Report a part of the window's state to the menu. */
+export function updateMenuState(patch) {
+  menuState.update((state) => ({ ...state, ...patch }));
+}
 export const boardColumns = persisted('boardColumns', '3');
 export const boardGroupByColor = persisted('boardGroupByColor', false, {
   serialize: (v) => String(v),

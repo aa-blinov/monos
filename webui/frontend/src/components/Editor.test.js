@@ -2,7 +2,7 @@ import { get } from 'svelte/store';
 import { trashedNotice } from '../lib/trash-undo.js';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { editorAction, outlineHidden } from '../stores.js';
+import { editorAction, outlineHidden, menuState } from '../stores.js';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Editor from './Editor.svelte';
 import { locale, uiText } from '../lib/strings.js';
@@ -111,6 +111,21 @@ test('Editor загружает заметку, показывает теги и
   expect(fileOpenedHandler).toHaveBeenCalledWith(
     expect.objectContaining({ detail: 'notes/Work/Alpha.md' })
   );
+});
+
+test('Editor сообщает меню, что показывает: заметка открыта и режим фокуса включён', async () => {
+  installFetchMock(createDefaultResponses('notes/Work/Alpha.md', {
+    '/api/file?path=notes%2FWork%2FAlpha.md': jsonResponse({ content: 'Alpha body' }),
+  }));
+
+  const { component } = render(Editor, {
+    currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
+    editorCommand: null,
+  });
+
+  await waitFor(() => expect(get(menuState).hasNote).toBe(true));
+  await component.$set({ editorCommand: { kind: 'focus', id: 1 } });
+  await waitFor(() => expect(get(menuState).focus).toBe(true));
 });
 
 test('Editor показывает breadcrumb без отдельного reveal/tag toolbar', async () => {
