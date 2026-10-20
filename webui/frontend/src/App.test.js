@@ -621,3 +621,16 @@ test('App показывает ошибку загрузки доски с по�
     expect(callsAfter).toBeGreaterThan(callsBefore);
   });
 }, 20000);
+
+test('App говорит на языке интерфейса: язык документа следует за выбором', async () => {
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  locale.set('ru');
+  await tick();
+  expect(document.documentElement.lang).toBe('ru');
+
+  locale.set('en');
+  await tick();
+  expect(document.documentElement.lang).toBe('en');
+});
