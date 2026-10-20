@@ -154,14 +154,24 @@ await step('the native Format menu makes the text bold', async () => {
   await poll(async () => (await win.locator('.ProseMirror strong').count()) > 0, 'the new text is bold');
 });
 
-await step('the tree offers to show a note in Finder (desktop app only)', async () => {
+await step('the tree and the board card offer to show a note in Finder (desktop app only)', async () => {
   const treeNote = win.locator('[data-testid="sidebar-shell"] button').filter({ hasText: 'Acceptance note' }).first();
   await treeNote.click({ button: 'right' });
   await win.getByTestId('show-in-finder').waitFor({ timeout: 5000 });
   await win.keyboard.press('Escape');
+  // The same item sits in the card menu on the board.
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.waitForSelector('main [role=list]');
+  const boardCard = win.locator('main [role=list] button').filter({ hasText: 'Acceptance note' }).first();
+  await boardCard.click({ button: 'right' });
+  await win.getByTestId('card-show-in-finder').waitFor({ timeout: 5000 });
+  await win.keyboard.press('Escape');
 });
 
 await step('the native Select All selects the text of the note, not the whole window', async () => {
+  // Предыдущий шаг оставил доску открытой: заметку открываем снова.
+  await card('Acceptance note').click();
+  await win.locator('.ProseMirror').waitFor();
   await win.locator('.ProseMirror').click();
   await app.evaluate(({ Menu }) => {
     const menu = Menu.getApplicationMenu();

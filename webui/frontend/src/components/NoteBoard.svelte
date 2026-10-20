@@ -2,7 +2,7 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
-  import { Copy, ExternalLink, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
+  import { Copy, ExternalLink, FolderOpen, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
   import { pinNote, unpinNote } from '../lib/sidebar-pinned.js';
   import { writeNoteDragPayload } from '../lib/drag-payload.js';
   import BoardTags from './BoardTags.svelte';
@@ -195,6 +195,14 @@
     await navigator.clipboard?.writeText?.(note.path);
   }
 
+  // «Показать в Finder» есть только в приложении для компьютера: там оболочка умеет открыть папку.
+  const canRevealInFinder = typeof window !== 'undefined' && Boolean(window.monosMenu?.reveal);
+
+  function revealInFinder(path) {
+    closeContextMenu();
+    window.monosMenu?.reveal?.(path);
+  }
+
   async function recolorNote(note, color) {
     if (!note?.path) return;
     try {
@@ -361,6 +369,11 @@
     <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => copyPath(contextMenu.note)}>
       <Copy size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.copyPath}
     </button>
+    {#if canRevealInFinder}
+      <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" data-testid="card-show-in-finder" on:click={() => revealInFinder(contextMenu.note?.path)}>
+        <FolderOpen size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.showInFinder}
+      </button>
+    {/if}
     <div class="mt-1 border-t border-[var(--border-subtle)] px-3 py-2">
       <div class="mb-2 flex items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
         <Palette size="12" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.color}
