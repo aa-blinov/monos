@@ -88,6 +88,11 @@ function sendMenuCommand(command, payload) {
     if (notePath.startsWith('notes/')) shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
     return;
   }
+  // «Печать…» — тоже дело оболочки: путь к заметке она знает и системный диалог печати открывает она.
+  if (command === 'print') {
+    void printCurrentNote();
+    return;
+  }
   // The Dock menu's own commands: the app hides and shows itself.
   if (command === 'hide-app') {
     app.hide();
@@ -169,6 +174,41 @@ function focusMainWindow() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.focus();
+}
+
+// The note goes to the printer as a document of its own: a hidden window loads the printed
+// version of the note and hands it to the system print dialog.
+async function printCurrentNote() {
+  const notePath = String(menuState.notePath || '');
+  const address = backendServer?.address?.();
+  if (!notePath || !address) return;
+  const url = `http://${APP_HOST}:${address.port}/api/print/note?path=${encodeURIComponent(notePath)}`;
+  // A sealed note answers with an error: the print dialog must not open on that page.
+  const response = await fetch(url).catch(() => null);
+  if (!response?.ok) {
+    const detail = response ? (await response.json().catch(() => ({}))).detail : null;
+    reportPrintFailure(detail || response?.status || 'no answer');
+    return;
+  }
+  const printer = new BrowserWindow({ show: false, webPreferences: { javascript: false, sandbox: true } });
+  try {
+    await printer.loadURL(url);
+    printer.webContents.print({ printBackground: true }, (ok, reason) => {
+      printer.destroy();
+      // The person closing the print panel is not a failure; anything else is.
+      if (!ok && !/cancel/i.test(reason || '')) reportPrintFailure(reason);
+    });
+  } catch (error) {
+    printer.destroy();
+    reportPrintFailure(error?.message);
+  }
+}
+
+function reportPrintFailure(reason) {
+  const text = /no printers/i.test(reason || '')
+    ? (menuLocale === 'ru' ? 'не найден ни один принтер' : 'no printer found')
+    : String(reason || '');
+  dialog.showErrorBox(APP_NAME, menuLocale === 'ru' ? `Не удалось напечатать заметку: ${text}` : `Could not print the note: ${text}`);
 }
 
 function createWindow(port) {

@@ -26,7 +26,7 @@ test('every accelerated item hands its work to the page', () => {
     .filter((item) => item.accelerator && item.click);
   assert.ok(accelerated.length > 0);
   for (const item of accelerated) item.click();
-  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'close-note', 'palette', 'terminal', 'help']);
+  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'print', 'close-note', 'palette', 'terminal', 'help']);
 });
 
 test('the labels of the menu do not end with a full stop', () => {
@@ -93,12 +93,23 @@ test('the note menu saves and reveals the open note', () => {
   assert.deepEqual(sent, ['save', 'reveal-in-finder']);
 });
 
+test('the note menu prints the open note', () => {
+  const sent = [];
+  const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
+  const note = template.find((menu) => menu.label === 'Заметка');
+  const print = note.submenu.find((entry) => entry.label === 'Печать…');
+  assert.equal(print.accelerator, 'Cmd+P');
+  print.click();
+  assert.deepEqual(sent, ['print']);
+});
+
 test('saving and revealing need an open note', () => {
   const template = buildMenuTemplate('ru', () => {}, { hasNote: false });
   const note = template.find((menu) => menu.label === 'Заметка');
   const item = (label) => note.submenu.find((entry) => entry.label === label);
   assert.equal(item('Сохранить').enabled, false);
   assert.equal(item('Показать в Finder').enabled, false);
+  assert.equal(item('Печать…').enabled, false);
 });
 
 test('the note menu closes the note, the window menu closes the window', () => {

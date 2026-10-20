@@ -47,7 +47,7 @@ test('горячие клавиши: те же строки на обоих яз
   const en = keyRows(helpSections('en'));
   assert.deepEqual(ru, en);
   const joined = ru.join(' ');
-  for (const key of ['⌘K', '⌘O', '⌘N', '⌘B', '⌘J', 'Esc', '⌘⇧F', '⌘S', '⌘W', '⌘,', '⌘/', '⌘Z', '⌘⇧Z', '⌘I', '⌘E', '⌘Enter', '⌘-', 'Shift+F10', '⌘F']) {
+  for (const key of ['⌘K', '⌘O', '⌘N', '⌘B', '⌘J', 'Esc', '⌘⇧F', '⌘S', '⌘P', '⌘W', '⌘,', '⌘/', '⌘Z', '⌘⇧Z', '⌘I', '⌘E', '⌘Enter', '⌘-', 'Shift+F10', '⌘F']) {
     assert.ok(joined.includes(key), `в таблице нет ${key}`);
   }
   const groups = (sections) => sections.flatMap((s) => s.items).find((i) => i.id === 'shortcuts').body.match(/^\*\*.+\*\*$/gm);
