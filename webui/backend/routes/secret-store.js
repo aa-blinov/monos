@@ -10,9 +10,10 @@
  * is no keychain to talk to, so the token stays plaintext and is marked as
  * such, rather than being silently wrapped in something that protects nothing.
  *
- * The keychain asks for a password and waits for it. That wait holds the thread that asked, and
- * in the desktop app that thread is the main process: the window and the server would stop until
- * the person types the password. So the decryption happens in a separate process and the app keeps
+ * The keychain asks for a password and waits for it. On macOS that wait holds the thread that
+ * asked, and in the desktop app the backend runs on that thread: the server would stop answering
+ * and the window would sit empty until the person types the password. So the app never touches the
+ * keychain itself — it asks a separate process (electron/secret-worker.cjs), and the app keeps
  * working while the system dialog is open.
  */
 
@@ -30,7 +31,7 @@ let decryptBridge = null;
 
 let workerPromise = null;
 let workerSeq = 0;
-const pendingDecryptions = new Map();
+const pendingCalls = new Map();
 
 /** Supply a keychain implementation directly. Used by tests. */
 export function setStorageOverride(storage) {
@@ -49,32 +50,8 @@ async function loadElectron() {
   return electronPromise;
 }
 
-/** A keychain that is present and unlocked, or null. */
-async function usableSafeStorage() {
-  if (storageOverride) {
-    return typeof storageOverride.isEncryptionAvailable === 'function'
-      && storageOverride.isEncryptionAvailable()
-      ? storageOverride
-      : null;
-  }
-  const electron = await loadElectron();
-  const storage = electron?.safeStorage;
-  if (!storage || typeof storage.isEncryptionAvailable !== 'function') return null;
-  try {
-    return storage.isEncryptionAvailable() ? storage : null;
-  } catch {
-    return null;
-  }
-}
-
-/** True when a keychain is available to protect the token. */
-export async function secretStorageAvailable() {
-  return Boolean(await usableSafeStorage());
-}
-
 /**
- * The worker that decrypts in its own process. One worker serves every request; it dies with the
- * app.
+ * The worker that talks to the keychain. One worker serves every request; it dies with the app.
  */
 function startWorker(electron) {
   if (!workerPromise) {
@@ -87,15 +64,15 @@ function startWorker(electron) {
         return;
       }
       child.on('message', (message) => {
-        const entry = pendingDecryptions.get(message.id);
+        const entry = pendingCalls.get(message.id);
         if (!entry) return;
-        pendingDecryptions.delete(message.id);
+        pendingCalls.delete(message.id);
         entry.resolve(message.error ? null : message.value);
       });
       child.on('exit', () => {
         // The worker is gone: nothing can be decrypted any more, and the waiters must not hang.
-        for (const entry of pendingDecryptions.values()) entry.resolve(null);
-        pendingDecryptions.clear();
+        for (const entry of pendingCalls.values()) entry.resolve(null);
+        pendingCalls.clear();
         workerPromise = null;
       });
       resolve(child);
@@ -104,14 +81,28 @@ function startWorker(electron) {
   return workerPromise;
 }
 
-/** Decrypt in the worker process; the main process keeps running while the keychain asks. */
-async function decryptInWorker(electron, raw) {
+/** One call to the keychain, from the worker process. */
+async function keychainCall(electron, message) {
   const child = await startWorker(electron);
   const id = ++workerSeq;
   return new Promise((resolve) => {
-    pendingDecryptions.set(id, { resolve });
-    child.postMessage({ id, blob: raw.toString('base64') });
+    pendingCalls.set(id, { resolve });
+    child.postMessage({ id, ...message });
   });
+}
+
+/** True when a keychain is available to protect the token. */
+export async function secretStorageAvailable() {
+  if (storageOverride) {
+    try {
+      return Boolean(storageOverride.isEncryptionAvailable?.());
+    } catch {
+      return false;
+    }
+  }
+  const electron = await loadElectron();
+  if (electron?.utilityProcess) return Boolean(await keychainCall(electron, { op: 'available' }));
+  return false;
 }
 
 /**
@@ -122,15 +113,24 @@ export async function protectSecret(plain) {
   const text = String(plain ?? '');
   if (!text) return { value: '', protectedAtRest: false };
 
-  const storage = await usableSafeStorage();
-  if (!storage) return { value: text, protectedAtRest: false };
-
-  try {
-    const encrypted = storage.encryptString(text).toString('base64');
-    return { value: `${TOKEN_PREFIX}${encrypted}`, protectedAtRest: true };
-  } catch {
-    return { value: text, protectedAtRest: false };
+  if (storageOverride) {
+    try {
+      if (!storageOverride.isEncryptionAvailable?.()) return { value: text, protectedAtRest: false };
+      const encrypted = storageOverride.encryptString(text).toString('base64');
+      return { value: `${TOKEN_PREFIX}${encrypted}`, protectedAtRest: true };
+    } catch {
+      return { value: text, protectedAtRest: false };
+    }
   }
+
+  const electron = await loadElectron();
+  if (electron?.utilityProcess) {
+    const encrypted = await keychainCall(electron, { op: 'encrypt', text });
+    if (!encrypted) return { value: text, protectedAtRest: false };
+    return { value: `${TOKEN_PREFIX}${encrypted}`, protectedAtRest: true };
+  }
+  // Outside Electron there is no keychain: the token stays readable and is marked as such.
+  return { value: text, protectedAtRest: false };
 }
 
 /**
@@ -147,23 +147,23 @@ export async function revealSecret(stored) {
   if (!text) return { value: '', protectedAtRest: false };
   if (!text.startsWith(TOKEN_PREFIX)) return { value: text, protectedAtRest: false };
 
-  const storage = await usableSafeStorage();
-  if (!storage) return { value: '', protectedAtRest: true };
-
   try {
     const raw = Buffer.from(text.slice(TOKEN_PREFIX.length), 'base64');
     if (decryptBridge) {
       const value = await decryptBridge(raw);
       return { value: value || '', protectedAtRest: true };
     }
+    if (storageOverride) {
+      if (!storageOverride.isEncryptionAvailable?.()) return { value: '', protectedAtRest: true };
+      return { value: storageOverride.decryptString(raw), protectedAtRest: true };
+    }
     const electron = await loadElectron();
-    // In the desktop app the keychain dialog would freeze the whole app while it waits for the
-    // password, so the work goes to the worker process.
     if (electron?.utilityProcess) {
-      const value = await decryptInWorker(electron, raw);
+      const value = await keychainCall(electron, { op: 'decrypt', blob: raw.toString('base64') });
       return { value: value || '', protectedAtRest: true };
     }
-    return { value: storage.decryptString(raw), protectedAtRest: true };
+    // Without Electron there is no keychain to open: the wrapped token reads as no token.
+    return { value: '', protectedAtRest: true };
   } catch {
     return { value: '', protectedAtRest: true };
   }
