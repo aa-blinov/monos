@@ -12,6 +12,8 @@
 // the page performs. Keys that mean different things depending on the focus (⌘B is bold in a
 // note and hides the sidebar elsewhere) are left without an accelerator: the page decides.
 
+const APP_NAME = 'Monos';
+
 const LABELS = {
   en: {
     about: 'About Monos',
@@ -117,7 +119,7 @@ function buildMenuTemplate(locale, send, state = {}) {
   const recent = Array.isArray(state.recent) ? state.recent : [];
   return [
     {
-      label: 'Monos',
+      label: APP_NAME,
       submenu: [
         { role: 'about', label: t.about },
         { type: 'separator' },
@@ -204,4 +206,4 @@ function buildMenuTemplate(locale, send, state = {}) {
   ];
 }
 
-module.exports = { LABELS, menuLabels, buildMenuTemplate };
+module.exports = { APP_NAME, LABELS, menuLabels, buildMenuTemplate };
