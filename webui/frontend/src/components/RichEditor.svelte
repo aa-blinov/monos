@@ -15,13 +15,16 @@
   import { firstImageFileFromDataTransfer, firstPdfFileFromDataTransfer, imageDisplayName, markdownLinkPath } from '../lib/attachments.js';
   import { NOTE_LINK_DRAG_TYPE, wikiLinkForNote } from '../lib/drag-data.js';
   import { fitMenuHeight } from '../lib/context-menu-position.js';
+  import { SEARCH_BUTTON_COMPACT_CLASS, SEARCH_ICON_COMPACT_CLASS, SEARCH_INPUT_COMPACT_CLASS } from '../lib/search-field.js';
+  import { SearchQuery, setSearchState, getSearchState, findNext as searchNextMatch, findPrev as searchPrevMatch } from 'prosemirror-search';
   import { localizedText } from '../lib/strings.js';
   import {
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
     MoreHorizontal, ArrowUpRight, FilePlus,
-    Maximize2, WrapText, ALargeSmall, Check
+    Maximize2, WrapText, ALargeSmall, Check,
+    Search, ChevronUp, ChevronDown, X
   } from 'lucide-svelte';
   import { contentWidth, lineHeight, editorFontSize } from '../stores.js';
   import { contentWidthOptions, lineHeightOptions, editorFontSizeOptions } from '../lib/fonts.js';
@@ -203,6 +206,74 @@
     onUpdate(md);
   }
 
+  // Поиск по тексту заметки. Плагин prosemirror-search считает совпадения и подсвечивает их;
+  // панель показывает, сколько их и где каретка.
+  let findOpen = false;
+  let findTerm = '';
+  let findTotal = 0;
+  let findAt = 0;
+  let findInput;
+  let findNotePath = '';
+
+  function updateFindState() {
+    const view = editor?.view;
+    if (!view) return;
+    const matches = getSearchState(view.state)?.deco?.find() || [];
+    findTotal = matches.length;
+    const { from, to } = view.state.selection;
+    const index = matches.findIndex((match) => match.from === from && match.to === to);
+    findAt = index < 0 ? 0 : index + 1;
+  }
+
+  function applyFindTerm() {
+    const view = editor?.view;
+    if (!view) return;
+    view.dispatch(setSearchState(view.state.tr, new SearchQuery({ search: findTerm })));
+    updateFindState();
+  }
+
+  function stepFind(backwards) {
+    const view = editor?.view;
+    if (!view || !findTerm) return;
+    const command = backwards ? searchPrevMatch : searchNextMatch;
+    command(view.state, view.dispatch);
+    updateFindState();
+  }
+
+  export function openFind() {
+    findOpen = true;
+    tick().then(() => { findInput?.focus(); findInput?.select(); });
+  }
+
+  export function closeFind() {
+    findOpen = false;
+    findTerm = '';
+    findTotal = 0;
+    findAt = 0;
+    const view = editor?.view;
+    if (view) view.dispatch(setSearchState(view.state.tr, new SearchQuery({ search: '' })));
+  }
+
+  function findKeydown(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      stepFind(event.shiftKey);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeFind();
+    } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'g') {
+      event.preventDefault();
+      stepFind(event.shiftKey);
+    }
+  }
+
+  $: findLabel = $localizedText.richEditor.findCount(findAt, findTotal);
+  // Другая заметка: искать в ней нечего, панель закрывается.
+  $: if (notePath !== findNotePath) {
+    findNotePath = notePath;
+    closeFind();
+  }
+
   function createEditor() {
     if (editor) return;
     editor = new Editor({
@@ -223,8 +294,12 @@
           flushMarkdown();
         }, MARKDOWN_FLUSH_DELAY);
         updateActive(ed);
+        updateFindState();
       },
-      onSelectionUpdate: ({ editor: ed }) => updateActive(ed),
+      onSelectionUpdate: ({ editor: ed }) => {
+        updateActive(ed);
+        updateFindState();
+      },
       onTransaction: () => updateWikiLinkHere(),
       onFocus: () => updateWikiLinkHere(),
       onBlur: () => updateWikiLinkHere(),
@@ -850,6 +925,28 @@
 
 <svelte:window on:click={closeMoreOnOutsideClick} on:keydown={closeMoreOnEscape} on:resize={() => { if (slashMenuOpen) placeSlashMenu(); if (wikiSuggestionsOpen) placeWikiMenu(); }} />
 <div class="flex flex-col flex-1 min-h-0">
+  <!-- Поиск по тексту заметки: поле, счётчик совпадений и шаги по ним. -->
+  {#if findOpen}
+    <div class="flex items-center gap-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] px-4 py-1.5 lg:py-2" data-testid="note-find">
+      <div class="relative w-64 max-w-full">
+        <Search size={14} strokeWidth="1.7" class={SEARCH_ICON_COMPACT_CLASS} aria-hidden="true" />
+        <input
+          bind:this={findInput}
+          value={findTerm}
+          on:input={(event) => { findTerm = event.currentTarget.value; applyFindTerm(); }}
+          on:keydown={findKeydown}
+          placeholder={$localizedText.richEditor.findPlaceholder}
+          aria-label={$localizedText.richEditor.find}
+          class="h-8 {SEARCH_INPUT_COMPACT_CLASS} pr-2"
+          data-testid="note-find-input"
+        />
+      </div>
+      <span class="shrink-0 text-xs tabular-nums text-[var(--text-tertiary)]" data-testid="note-find-count">{findLabel}</span>
+      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findPrevious} on:click={() => stepFind(true)}><ChevronUp size={14} strokeWidth="1.7" aria-hidden="true" /></button>
+      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findNext} on:click={() => stepFind(false)}><ChevronDown size={14} strokeWidth="1.7" aria-hidden="true" /></button>
+      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findClose} on:click={closeFind}><X size={14} strokeWidth="1.7" aria-hidden="true" /></button>
+    </div>
+  {/if}
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
   <div class="relative flex items-center gap-1 px-4 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
     <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0" bind:this={toolbarEl}>
@@ -1133,6 +1230,9 @@
   /* flow-root keeps the paragraphs' margins inside the editor: a collapsed margin would stick out past min-height and show a scrollbar on a short note. */
   :global(.ProseMirror) { --editor-caret: color-mix(in srgb, var(--text-primary) 82%, var(--yellow) 18%); display: flow-root; min-height: 100%; outline: none; caret-color: var(--editor-caret); }
   :global(.ProseMirror ::selection) { background: color-mix(in srgb, var(--editor-caret) 18%, transparent); color: var(--text-primary); }
+  /* Совпадения поиска по заметке: тем же жёлтым, что и в справке. */
+  :global(.ProseMirror-search-match) { background: color-mix(in srgb, var(--yellow) 35%, transparent); }
+  :global(.ProseMirror-active-search-match) { background: color-mix(in srgb, var(--yellow) 60%, transparent); }
   :global(.ProseMirror hr) { border: none; border-top: 1px solid var(--border-subtle); margin: 1.5rem 0; }
   :global(.ProseMirror ul[data-type='taskList'] > li[data-checked]) {
     /* TipTap puts data-type on the <ul> and only data-checked on the <li>;
