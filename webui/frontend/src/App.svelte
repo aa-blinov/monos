@@ -258,13 +258,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     ? { hasNote: false, editable: false, sidebar: false, terminal: false }
     : { sidebar: $sidebarOpen, terminal: $terminalOpen });
   $: menuBridge?.setState($menuState);
-  // The window came to the front: the menu must show this window's state again.
-  function reportWindowState() {
-    updateMenuState(isSettingsWindow
-      ? { hasNote: false, editable: false, sidebar: false, terminal: false }
-      : { sidebar: $sidebarOpen, terminal: $terminalOpen });
-    menuBridge?.setState($menuState);
-  }
   // The Help takes its topic from the address when it opens; asking for a topic while it is open
   // remounts it, so the topic is applied.
   let helpRequest = 0;
@@ -326,7 +319,6 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     }
     editorAction.set('delete-selection');
   }
-
 
   /**
    * The menu's «Недавние заметки»: the notes opened last, as in any desktop app.
@@ -1006,7 +998,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
 </script>
 
-<svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} on:focus={reportWindowState} />
+<svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} />
 
 <Router>
   <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">
