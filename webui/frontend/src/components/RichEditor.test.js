@@ -6,7 +6,7 @@ import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
 import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
 import { contentWidthOptions } from '../lib/fonts.js';
 import { locale, uiText } from '../lib/strings.js';
-import { contentWidth, lineHeight } from '../stores.js';
+import { contentWidth, lineHeight, editorFontSize } from '../stores.js';
 import RichEditor from './RichEditor.svelte';
 
 beforeEach(() => {
@@ -153,6 +153,17 @@ test('RichEditor holds the view settings in the panel: width and line spacing', 
   await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.lineHeight }));
   await fireEvent.click(screen.getByRole('menuitemradio', { name: 'Compact' }));
   expect(get(lineHeight)).toBe('compact');
+});
+
+test('RichEditor changes the size of the note text from the panel', async () => {
+  render(RichEditor, {
+    content: 'Line one',
+    onUpdate: () => {},
+  });
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.richEditor.fontSize }));
+  await fireEvent.click(screen.getByRole('menuitemradio', { name: uiText.optionLabels.fontSize.lg }));
+  expect(get(editorFontSize)).toBe('lg');
 });
 
 test('RichEditor wide content width disables max-width centering', () => {
