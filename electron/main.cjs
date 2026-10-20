@@ -35,6 +35,8 @@ let appOrigin = '';
 let notesDir = '';
 let killTerminals = () => {};
 let menuLocale = 'en';
+// The settings window: a separate window, as on macOS.
+let settingsWindow = null;
 // A command that came when there was no window: it waits for the page of the new one.
 let pendingMenuCommand = null;
 // What the window shows right now: the menu draws its checkmarks from this.
@@ -99,6 +101,17 @@ function revealInFinder(relativePath) {
 }
 
 function sendMenuCommand(command, payload) {
+  // «Настройки…» открывают отдельное окно, как в macOS.
+  if (command === 'settings') {
+    openSettingsWindow();
+    return;
+  }
+  // «Закрыть заметку» в окне настроек закрывает само окно: заметки там нет.
+  if (command === 'close-note' && settingsWindow && !settingsWindow.isDestroyed()
+    && BrowserWindow.getFocusedWindow() === settingsWindow) {
+    settingsWindow.close();
+    return;
+  }
   // «Показать в Finder» — дело оболочки: путь к заметке она уже знает.
   if (command === 'reveal-in-finder') {
     revealInFinder(menuState.notePath);
@@ -243,6 +256,44 @@ function reportPrintFailure(reason) {
   dialog.showErrorBox(APP_NAME, menuLocale === 'ru' ? `Не удалось напечатать заметку: ${text}` : `Could not print the note: ${text}`);
 }
 
+/**
+ * The settings window: a separate window, as on macOS. The notes stay in the main window.
+ */
+function openSettingsWindow() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
+    settingsWindow.focus();
+    return;
+  }
+  const icon = runtimeIconPath();
+  settingsWindow = new BrowserWindow({
+    width: 780,
+    height: 640,
+    minWidth: 520,
+    minHeight: 420,
+    ...(icon ? { icon } : {}),
+    show: false,
+    backgroundColor: '#282828',
+    title: settingsWindowTitle(),
+    webPreferences: { ...SECURE_WEB_PREFERENCES, preload: path.join(__dirname, 'preload.cjs') },
+  });
+  settingsWindow.once('ready-to-show', () => {
+    settingsWindow?.setTitle(settingsWindowTitle());
+    settingsWindow?.show();
+  });
+  settingsWindow.on('closed', () => { settingsWindow = null; });
+  // The page's own title would replace ours.
+  settingsWindow.webContents.on('page-title-updated', (event) => {
+    event.preventDefault();
+    settingsWindow?.setTitle(settingsWindowTitle());
+  });
+  settingsWindow.loadURL(`${appOrigin}/settings?window=1`);
+}
+
+function settingsWindowTitle() {
+  return menuLocale === 'ru' ? `Настройки — ${APP_NAME}` : `Settings — ${APP_NAME}`;
+}
+
 function createWindow(port) {
   const icon = runtimeIconPath();
   appOrigin = `http://${APP_HOST}:${port}`;
@@ -356,12 +407,18 @@ ipcMain.on('menu:locale', (_event, locale) => {
   const next = locale === 'ru' ? 'ru' : 'en';
   if (next === menuLocale) return;
   menuLocale = next;
+  if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.setTitle(settingsWindowTitle());
   if (process.platform === 'darwin') applyApplicationMenu();
 });
 
 // The page asks to show a note or a folder in Finder (the tree's context menu).
 ipcMain.handle('reveal-in-finder', (_event, notePath) => {
   revealInFinder(notePath);
+});
+
+// The page asks for the settings window (the sidebar's "Settings").
+ipcMain.handle('open-settings', () => {
+  openSettingsWindow();
 });
 
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.

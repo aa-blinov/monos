@@ -634,3 +634,15 @@ test('App говорит на языке интерфейса: язык доку
   await tick();
   expect(document.documentElement.lang).toBe('en');
 });
+
+test('В окне настроек нет боковой панели и верхней панели', async () => {
+  window.history.pushState({}, '', '/settings?window=1');
+  const { default: App } = await import('./App.svelte');
+  render(App);
+  // Маршрут читается по событию браузера: сообщаем приложению, что адрес сменился.
+  window.dispatchEvent(new PopStateEvent('popstate'));
+
+  await waitFor(() => expect(screen.getByTestId('settings-stub')).toBeTruthy());
+  expect(screen.queryByTestId('sidebar-shell')).toBeNull();
+  expect(screen.queryByTestId('header-stub')).toBeNull();
+});
