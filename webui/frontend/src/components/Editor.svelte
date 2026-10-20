@@ -163,7 +163,7 @@
   $: outlineColumnShown = outlineRevealed || (!$outlineHidden && headingCount >= OUTLINE_MIN_HEADINGS);
   $: outlineCollapsed = !outlineColumnShown;
   // The native menu draws its checkmarks from this.
-  $: updateMenuState({ hasNote: Boolean(currentFile?.path), focus: focusMode, outline: outlineColumnShown || outlineOpen, notePath: currentFile?.path || '', noteTitle: title || currentFile?.name || '' });
+  $: updateMenuState({ hasNote: Boolean(currentFile?.path), editable: !lockedFilePath && !inConflict, focus: focusMode, outline: outlineColumnShown || outlineOpen, notePath: currentFile?.path || '', noteTitle: title || currentFile?.name || '' });
   let title = '';
   let editedTitle = '';
   let fileInfo = null;

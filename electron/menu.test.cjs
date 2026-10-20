@@ -29,6 +29,10 @@ test('the format menu asks the editor to format the text', () => {
   const withoutNote = buildMenuTemplate('ru', () => {}, { hasNote: false });
   const closed = withoutNote.find((menu) => menu.label === 'Формат');
   assert.equal(closed.submenu.find((entry) => entry.label === 'Жирный').enabled, false);
+  // В запертой заметке и в конфликте текст не редактируется — пункты серые.
+  const locked = buildMenuTemplate('ru', () => {}, { hasNote: true, editable: false });
+  const lockedFormat = locked.find((menu) => menu.label === 'Формат');
+  assert.equal(lockedFormat.submenu.find((entry) => entry.label === 'Жирный').enabled, false);
 });
 
 test('every accelerated item hands its work to the page', () => {
