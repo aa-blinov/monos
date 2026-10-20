@@ -14,6 +14,7 @@
     "test:frontend": "npm --prefix webui/frontend test",
     "test:backend": "npm --prefix webui/backend test",
     "test:electron": "node --test electron/*.test.cjs",
+    "test:docs": "node --test docs/docs-freshness.test.js",
     "test:e2e": "npm --prefix webui/frontend run test:e2e",
     "acceptance": "node scripts/acceptance.mjs",
     "test:scale": "npm --prefix webui/frontend run test:e2e -- e2e/04-scale-boundaries.spec.js",
