@@ -12,6 +12,8 @@ test('переключение языка в настройках меняет �
   // Подпись в футере — проверка, что интерфейс перерисован без перезагрузки.
   await expect(page.getByRole('button', { name: 'Настройки', exact: true }).first()).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('locale'))).toBe('ru');
+  // Язык документа следует за языком интерфейса: так его читает синтезатор речи.
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
 
   const settings = await (await page.request.get('/api/settings')).json();
   expect(settings.locale).toBe('ru');

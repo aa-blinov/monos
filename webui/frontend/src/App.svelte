@@ -248,6 +248,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   const menuBridge = typeof window !== 'undefined' ? window.monosMenu : null;
   // The menu speaks the interface language.
   $: menuBridge?.setLocale($locale);
+  // The document speaks it too: a screen reader reads the page with the right voice.
+  $: document.documentElement.lang = $locale;
   // The menu also shows what the window shows: the checkmarks and the items that need a note.
   $: updateMenuState({ sidebar: $sidebarOpen, terminal: $terminalOpen });
   $: menuBridge?.setState($menuState);
