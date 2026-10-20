@@ -26,7 +26,7 @@ test('every accelerated item hands its work to the page', () => {
     .filter((item) => item.accelerator && item.click);
   assert.ok(accelerated.length > 0);
   for (const item of accelerated) item.click();
-  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'print', 'close-window', 'palette', 'terminal', 'help']);
+  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'close-window', 'save', 'print', 'palette', 'terminal', 'help']);
 });
 
 test('the labels of the menu do not end with a full stop', () => {
@@ -130,15 +130,31 @@ test('⌘W closes the note, and the window when there is no note', () => {
   assert.deepEqual(sent, ['close-note', 'close-window']);
 });
 
-test('the note menu closes the note, the window menu closes the window', () => {
+test('the note menu closes the note, and the window menu keeps the window commands', () => {
   const sent = [];
   const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
   const note = template.find((menu) => menu.label === 'Заметка');
   const window = template.find((menu) => menu.label === 'Окно');
   note.submenu.find((entry) => entry.label === 'Закрыть заметку').click();
   assert.equal(note.submenu.find((entry) => entry.label === 'Закрыть заметку').accelerator, 'Cmd+W');
-  assert.equal(window.submenu.find((entry) => entry.label === 'Закрыть окно').accelerator, 'Shift+Cmd+W');
+  // Окно закрывает ⌘W без заметки, а меню «Окно» на macOS окна не закрывает (HIG).
+  assert.equal(window.submenu.find((entry) => entry.label === 'Закрыть окно'), undefined);
   assert.deepEqual(sent, ['close-note']);
+});
+
+test('the menus keep the order macOS expects', () => {
+  const template = buildMenuTemplate('en', () => {}, { hasNote: true });
+  const note = template.find((menu) => menu.label === 'Note');
+  // New, Open, Open Recent, Close, Save, Print — так и ждут в меню «Файл».
+  assert.deepEqual(
+    note.submenu.filter((item) => item.label).map((item) => item.label),
+    ['New Note', 'Open Note…', 'Open Recent', 'Close Note', 'Save', 'Print…', 'Reveal in Finder'],
+  );
+  const window = template.find((menu) => menu.label === 'Window');
+  assert.deepEqual(
+    window.submenu.filter((item) => item.label).map((item) => item.label),
+    ['Minimize', 'Zoom', 'Bring All to Front'],
+  );
 });
 
 test('the edit menu finds in the note, and the key stays with the page', () => {

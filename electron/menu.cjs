@@ -152,12 +152,12 @@ function buildMenuTemplate(locale, send, state = {}) {
           })),
         },
         { type: 'separator' },
+        // ⌘W закрывает то, что открыто: заметку, а без заметки — окно, как на macOS.
+        { label: hasNote ? t.closeNote : t.closeWindow, accelerator: 'Cmd+W', click: () => send(hasNote ? 'close-note' : 'close-window') },
+        { type: 'separator' },
         { label: t.save, accelerator: 'Cmd+S', enabled: hasNote, click: () => send('save') },
         { label: t.print, accelerator: 'Cmd+P', enabled: hasNote, click: () => send('print') },
         { label: t.reveal, enabled: hasNote, click: () => send('reveal-in-finder') },
-        { type: 'separator' },
-        // ⌘W закрывает то, что открыто: заметку, а без заметки — окно, как на macOS.
-        { label: hasNote ? t.closeNote : t.closeWindow, accelerator: 'Cmd+W', click: () => send(hasNote ? 'close-note' : 'close-window') },
       ],
     },
     {
@@ -198,8 +198,6 @@ function buildMenuTemplate(locale, send, state = {}) {
       submenu: [
         { role: 'minimize', label: t.minimize },
         { role: 'zoom', label: t.zoom },
-        { type: 'separator' },
-        { role: 'close', label: t.closeWindow, accelerator: 'Shift+Cmd+W' },
         { type: 'separator' },
         { role: 'front', label: t.front },
       ],
