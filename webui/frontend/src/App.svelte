@@ -440,7 +440,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       const state = get(editorState);
       return Boolean(state?.saving || state?.dirty);
     });
-    void startAutoSyncWithSavedChoices();
+    // Окно настроек не занимается фоновой работой: автосинхронизацию ведёт окно с заметками.
+    if (!isSettingsWindow) void startAutoSyncWithSavedChoices();
     restoreSearchFromUrl();
     searchUrlReady.set(true);
     const handlePopState = () => {
