@@ -114,7 +114,21 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete window.monosMenu;
 });
+
+test('App сообщает оболочке, что показывает окно: меню рисует по этому состоянию', async () => {
+  const setState = vi.fn();
+  window.monosMenu = { setLocale: vi.fn(), setState, onCommand: () => () => {} };
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(setState).toHaveBeenCalled());
+  const state = setState.mock.calls.at(-1)[0];
+  expect(state).toMatchObject({ hasNote: false, focus: false, outline: false });
+  expect(state).toHaveProperty('sidebar');
+  expect(state).toHaveProperty('terminal');
+}, 20000);
 
 test('App загружает shell главной страницы', async () => {
   const { default: App } = await import('./App.svelte');

@@ -56,3 +56,27 @@ test('the view menu asks the open note to change its view', () => {
   }
   assert.deepEqual(sent, ['outline', 'focus']);
 });
+
+test('the view menu shows what the window shows', () => {
+  const template = buildMenuTemplate('en', () => {}, {
+    hasNote: true, outline: true, focus: false, sidebar: true, terminal: false,
+  });
+  const view = template.find((menu) => menu.label === 'View');
+  const item = (label) => view.submenu.find((entry) => entry.label === label);
+  assert.equal(item('Toggle Sidebar').type, 'checkbox');
+  assert.equal(item('Toggle Sidebar').checked, true);
+  assert.equal(item('Outline').checked, true);
+  assert.equal(item('Focus Mode').checked, false);
+  assert.equal(item('Terminal').checked, false);
+});
+
+test('the items that need a note are greyed out when there is none', () => {
+  const template = buildMenuTemplate('en', () => {}, { hasNote: false });
+  const view = template.find((menu) => menu.label === 'View');
+  const item = (label) => view.submenu.find((entry) => entry.label === label);
+  assert.equal(item('Outline').enabled, false);
+  assert.equal(item('Focus Mode').enabled, false);
+  // The window-wide items stay available without a note.
+  assert.notEqual(item('Toggle Sidebar').enabled, false);
+  assert.notEqual(item('Terminal').enabled, false);
+});

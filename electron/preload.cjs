@@ -23,4 +23,5 @@ contextBridge.exposeInMainWorld('monosTerminal', {
 contextBridge.exposeInMainWorld('monosMenu', {
   onCommand: (callback) => listen('menu:command', callback),
   setLocale: (locale) => ipcRenderer.send('menu:locale', locale),
+  setState: (state) => ipcRenderer.send('menu:state', state),
 });

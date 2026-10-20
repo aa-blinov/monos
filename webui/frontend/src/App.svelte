@@ -22,7 +22,7 @@ import { get } from 'svelte/store';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText, locale } from './lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand } from './stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand, menuState, updateMenuState } from './stores.js';
   import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
@@ -242,6 +242,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   const menuBridge = typeof window !== 'undefined' ? window.monosMenu : null;
   // The menu speaks the interface language.
   $: menuBridge?.setLocale($locale);
+  // The menu also shows what the window shows: the checkmarks and the items that need a note.
+  $: updateMenuState({ sidebar: $sidebarOpen, terminal: $terminalOpen });
+  $: menuBridge?.setState($menuState);
   // The Help takes its topic from the address when it opens; asking for a topic while it is open
   // remounts it, so the topic is applied.
   let helpRequest = 0;

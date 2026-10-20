@@ -98,11 +98,14 @@ function menuLabels(locale) {
 
 /**
  * The menu bar. `send(command)` hands a command to the page, which performs it.
+ * `state` is what the window shows right now: the toggles carry a checkmark and the
+ * items that need an open note are greyed out without one.
  * The roles do what the system expects of them and carry their own labels, so the menu
  * speaks one language from top to bottom.
  */
-function buildMenuTemplate(locale, send) {
+function buildMenuTemplate(locale, send, state = {}) {
   const t = menuLabels(locale);
+  const hasNote = state.hasNote === true;
   return [
     {
       label: 'Monos',
@@ -145,12 +148,12 @@ function buildMenuTemplate(locale, send) {
     {
       label: t.view,
       submenu: [
-        { label: t.toggleSidebar, click: () => send('toggle-sidebar') },
-        { label: t.outline, click: () => send('outline') },
-        { label: t.focus, click: () => send('focus') },
+        { label: t.toggleSidebar, type: 'checkbox', checked: state.sidebar === true, click: () => send('toggle-sidebar') },
+        { label: t.outline, type: 'checkbox', checked: state.outline === true, enabled: hasNote, click: () => send('outline') },
+        { label: t.focus, type: 'checkbox', checked: state.focus === true, enabled: hasNote, click: () => send('focus') },
         { type: 'separator' },
         { label: t.palette, accelerator: 'Cmd+K', click: () => send('palette') },
-        { label: t.terminal, accelerator: 'Cmd+J', click: () => send('terminal') },
+        { label: t.terminal, type: 'checkbox', checked: state.terminal === true, accelerator: 'Cmd+J', click: () => send('terminal') },
         { type: 'separator' },
         { role: 'resetZoom', label: t.actualSize },
         { role: 'zoomIn', label: t.zoomIn },
