@@ -36,7 +36,7 @@ let notesDir = '';
 let killTerminals = () => {};
 let menuLocale = 'en';
 // What the window shows right now: the menu draws its checkmarks from this.
-let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false, notePath: '' };
+let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false, notePath: '', noteTitle: '', recent: [] };
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
@@ -73,14 +73,14 @@ function applyApplicationMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate(menuLocale, sendMenuCommand, menuState)));
 }
 
-function sendMenuCommand(command) {
+function sendMenuCommand(command, payload) {
   // «Показать в Finder» — дело оболочки: путь к заметке она уже знает.
   if (command === 'reveal-in-finder') {
     const notePath = String(menuState.notePath || '');
     if (notePath.startsWith('notes/')) shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
     return;
   }
-  mainWindow?.webContents.send('menu:command', command);
+  mainWindow?.webContents.send('menu:command', command, payload);
 }
 
 function prepareUserNotesRoot() {
@@ -258,6 +258,8 @@ ipcMain.on('menu:locale', (_event, locale) => {
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
 ipcMain.on('menu:state', (_event, state) => {
   const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
+  const title = next.noteTitle ? `${next.noteTitle} — ${app.getName()}` : app.getName();
+  if (mainWindow && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
   if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
   menuState = next;
   if (process.platform === 'darwin') applyApplicationMenu();

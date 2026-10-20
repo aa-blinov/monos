@@ -26,7 +26,7 @@ test('every accelerated item hands its work to the page', () => {
     .filter((item) => item.accelerator && item.click);
   assert.ok(accelerated.length > 0);
   for (const item of accelerated) item.click();
-  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'palette', 'terminal', 'help']);
+  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'close-note', 'palette', 'terminal', 'help']);
 });
 
 test('the labels of the menu do not end with a full stop', () => {
@@ -99,4 +99,35 @@ test('saving and revealing need an open note', () => {
   const item = (label) => note.submenu.find((entry) => entry.label === label);
   assert.equal(item('Сохранить').enabled, false);
   assert.equal(item('Показать в Finder').enabled, false);
+});
+
+test('the note menu closes the note, the window menu closes the window', () => {
+  const sent = [];
+  const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
+  const note = template.find((menu) => menu.label === 'Заметка');
+  const window = template.find((menu) => menu.label === 'Окно');
+  note.submenu.find((entry) => entry.label === 'Закрыть заметку').click();
+  assert.equal(note.submenu.find((entry) => entry.label === 'Закрыть заметку').accelerator, 'Cmd+W');
+  assert.equal(window.submenu.find((entry) => entry.label === 'Закрыть окно').accelerator, 'Shift+Cmd+W');
+  assert.deepEqual(sent, ['close-note']);
+});
+
+test('the recent notes are listed in their own submenu', () => {
+  const sent = [];
+  const template = buildMenuTemplate('en', (command, payload) => sent.push([command, payload]), {
+    recent: [{ path: 'notes/A.md', name: 'Alpha', label: 'Alpha' }],
+  });
+  const note = template.find((menu) => menu.label === 'Note');
+  const recent = note.submenu.find((entry) => entry.label === 'Open Recent');
+  assert.equal(recent.enabled, true);
+  recent.submenu[0].click();
+  assert.deepEqual(sent, [['open-recent', { path: 'notes/A.md', name: 'Alpha' }]]);
+});
+
+test('the recent notes submenu is empty and disabled without notes', () => {
+  const template = buildMenuTemplate('en', () => {}, {});
+  const note = template.find((menu) => menu.label === 'Note');
+  const recent = note.submenu.find((entry) => entry.label === 'Open Recent');
+  assert.equal(recent.enabled, false);
+  assert.deepEqual(recent.submenu, []);
 });
