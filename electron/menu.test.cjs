@@ -46,3 +46,13 @@ test('the items of a menu do not repeat their labels', () => {
     }
   }
 });
+
+test('the view menu asks the open note to change its view', () => {
+  const sent = [];
+  const template = buildMenuTemplate('en', (command) => sent.push(command));
+  const view = template.find((menu) => menu.label === 'View');
+  for (const item of view.submenu) {
+    if (item.label === 'Outline' || item.label === 'Focus Mode') item.click();
+  }
+  assert.deepEqual(sent, ['outline', 'focus']);
+});

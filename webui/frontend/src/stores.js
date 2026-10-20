@@ -25,6 +25,8 @@ export const fontSize = persisted('fontSize', 'medium');
 export const lineHeight = persisted('lineHeight', 'normal');
 export const editorFontSize = persisted('editorFontSize', 'md');
 export const noteView = persisted('noteView', 'board');
+// The native menu asks the open note to change its view: focus mode and the structure column.
+export const editorViewCommand = writable(null);
 export const boardColumns = persisted('boardColumns', '3');
 export const boardGroupByColor = persisted('boardGroupByColor', false, {
   serialize: (v) => String(v),

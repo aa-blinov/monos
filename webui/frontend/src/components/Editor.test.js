@@ -136,6 +136,18 @@ test('Editor показывает breadcrumb без отдельного reveal/
   expect(screen.getByTestId('property-tags-button').getAttribute('aria-label')).toContain('#release');
 });
 
+test('Editor выполняет команду вида из нативного меню', async () => {
+  installFetchMock(createDefaultResponses('notes/Work/Alpha.md'));
+  const { component } = render(Editor, {
+    currentFile: { path: 'notes/Work/Alpha.md', name: 'Alpha.md', isDir: false },
+  });
+
+  await waitFor(() => expect(screen.getByDisplayValue('Inbox')).toBeTruthy());
+  // Меню «Вид» просит заметку сменить вид: режим фокуса и колонка структуры.
+  component.$set({ editorCommand: { kind: 'focus', id: 1 } });
+  await waitFor(() => expect(screen.getByTestId('exit-focus')).toBeTruthy());
+});
+
 test('Editor позволяет перекрасить открытую заметку из нижней палитры', async () => {
   const fetchMock = installFetchMock(createDefaultResponses('notes/Inbox.md', {
     '/api/file-info?path=notes%2FInbox.md': jsonResponse({
