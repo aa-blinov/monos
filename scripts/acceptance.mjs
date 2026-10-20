@@ -382,6 +382,22 @@ await step('the settings open in their own window, like on macOS', async () => {
   await poll(async () => (await app.windows()).length === before, 'the settings window closes');
 });
 
+await step('a theme change in the settings window reaches the notes window', async () => {
+  const background = () => win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bg-primary').trim());
+  const before = await background();
+  await app.evaluate(({ Menu }) => {
+    const appMenu = Menu.getApplicationMenu().items[0];
+    appMenu.submenu.items.find((item) => item.label === 'Settings…' || item.label === 'Настройки…').click();
+  });
+  await poll(async () => (await app.windows()).length > 1, 'the settings window opens');
+  const windows = await app.windows();
+  const settings = windows.find((w) => w.url().includes('/settings')) || windows[windows.length - 1];
+  await settings.getByRole('button', { name: 'GitHub' }).click();
+  await poll(async () => (await background()) !== before, 'the notes window changes the theme');
+  await settings.close();
+  await poll(async () => (await app.windows()).length === 1, 'the settings window closes');
+});
+
 await step('the Format menu is grey in a locked note: its text cannot be edited', async () => {
   // Обычная заметка: её состояние снимает серость, оставшуюся от окна настроек.
   await card('Acceptance note').click();
