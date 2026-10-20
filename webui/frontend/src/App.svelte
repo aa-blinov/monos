@@ -253,9 +253,18 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   // The document speaks it too: a screen reader reads the page with the right voice.
   $: document.documentElement.lang = $locale;
   // The menu also shows what the window shows: the checkmarks and the items that need a note.
-  // The settings window has no note of its own, so it does not report: the menu follows the notes window.
-  $: if (!isSettingsWindow) updateMenuState({ sidebar: $sidebarOpen, terminal: $terminalOpen });
-  $: if (!isSettingsWindow) menuBridge?.setState($menuState);
+  // The settings window has no note of its own, so it reports an empty state.
+  $: updateMenuState(isSettingsWindow
+    ? { hasNote: false, editable: false, sidebar: false, terminal: false }
+    : { sidebar: $sidebarOpen, terminal: $terminalOpen });
+  $: menuBridge?.setState($menuState);
+  // The window came to the front: the menu must show this window's state again.
+  function reportWindowState() {
+    updateMenuState(isSettingsWindow
+      ? { hasNote: false, editable: false, sidebar: false, terminal: false }
+      : { sidebar: $sidebarOpen, terminal: $terminalOpen });
+    menuBridge?.setState($menuState);
+  }
   // The Help takes its topic from the address when it opens; asking for a topic while it is open
   // remounts it, so the topic is applied.
   let helpRequest = 0;
@@ -997,7 +1006,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
 </script>
 
-<svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} />
+<svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} on:focus={reportWindowState} />
 
 <Router>
   <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">

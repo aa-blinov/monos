@@ -106,8 +106,9 @@ function sendMenuCommand(command, payload) {
     openSettingsWindow();
     return;
   }
-  // «Закрыть заметку» в окне настроек закрывает само окно: заметки там нет.
-  if (command === 'close-note' && settingsWindow && !settingsWindow.isDestroyed()
+  // В окне настроек ⌘W закрывает это окно, а не заметку или окно с заметками.
+  if ((command === 'close-note' || command === 'close-window')
+    && settingsWindow && !settingsWindow.isDestroyed()
     && BrowserWindow.getFocusedWindow() === settingsWindow) {
     settingsWindow.close();
     return;
@@ -424,6 +425,7 @@ ipcMain.handle('open-settings', () => {
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
 ipcMain.on('menu:state', (_event, state) => {
   const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
+  // The title belongs to the notes window; the settings window has its own.
   const title = next.noteTitle ? `${next.noteTitle} — ${APP_NAME}` : APP_NAME;
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
   if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
