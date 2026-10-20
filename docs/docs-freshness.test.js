@@ -65,8 +65,8 @@ test('docs/LIB.md упоминает каждый модуль из lib/ (без
   );
 });
 
-test('docs/ARCHITECTURE.md упоминает ключевые системы', () => {
-  const arch = readFileSync(join(repoRoot, 'docs/ARCHITECTURE.md'), 'utf8');
+test('docs/architecture.md упоминает ключевые системы', () => {
+  const arch = readFileSync(join(repoRoot, 'docs/architecture.md'), 'utf8');
   for (const keyword of ['Theme System', 'Internationalization', 'stores.js', 'node:test', 'vitest', 'TDD']) {
     assert.match(arch, new RegExp(keyword, 'i'), `ARCHITECTURE.md должен упоминать «${keyword}»`);
   }
@@ -89,7 +89,7 @@ test('docs/STATE.md описывает 3 уровня state', () => {
 
 test('README ссылается на все docs/ файлы', () => {
   const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
-  for (const doc of ['ARCHITECTURE.md', 'STATE.md', 'LIB.md', 'FRONTMATTER.md', 'CONTRIBUTING.md', 'PUBLISHING.md']) {
+  for (const doc of ['architecture.md', 'STATE.md', 'LIB.md', 'FRONTMATTER.md', 'CONTRIBUTING.md', 'PUBLISHING.md']) {
     assert.ok(
       readme.includes(doc),
       `README.md должен ссылаться на ${doc}`,
