@@ -277,6 +277,26 @@ await step('a phone-sized window stays usable: board, a note, no sideways scroll
   await size(1360, 880);
 });
 
+await step('the native Delete removes the selected text', async () => {
+  await win.locator('.ProseMirror').click();
+  // Пауза, как в шаге с «Форматом»: клик только что сменил каретку.
+  await win.waitForTimeout(300);
+  // Выделение берём пунктом меню, как в соседнем шаге.
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const edit = menu.items.find((item) => item.label === 'Edit');
+    edit.submenu.items.find((item) => item.label === 'Select All').click();
+  });
+  await poll(async () => ((await win.evaluate(() => window.getSelection()?.toString() || '')).length > 0), 'the text is selected');
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const edit = menu.items.find((item) => item.label === 'Edit');
+    edit.submenu.items.find((item) => item.label === 'Delete').click();
+  });
+  // В редакторе остаётся пустой абзац, поэтому проверяем, что текста больше нет.
+  await poll(async () => !(await win.locator('.ProseMirror').innerText()).includes('Hello'), 'the text is deleted');
+});
+
 // The native menu item that closes what is open (⌘W). The key itself is the system's: a synthetic
 // key never gets to the menu, so the item is pressed instead.
 const pressClose = () => app.evaluate(({ Menu }) => {

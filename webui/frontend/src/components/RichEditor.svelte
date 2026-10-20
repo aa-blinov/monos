@@ -511,6 +511,13 @@
     editor.chain().focus().selectAll().run();
   }
 
+  // «Удалить» из меню «Правка»: удаляет выделенное в тексте. Нативная роль браузера в редакторе
+  // ничего не удаляет, поэтому удаляем сами.
+  export function deleteSelectionText() {
+    if (!editor) return;
+    editor.chain().focus().deleteSelection().run();
+  }
+
   export async function insertImageFile(file) {
     if (!file || !onImageFile || !editor) return false;
     const image = await onImageFile(file);
