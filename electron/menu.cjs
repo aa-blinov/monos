@@ -24,8 +24,10 @@ const LABELS = {
     note: 'Note',
     newNote: 'New Note',
     openNote: 'Open Note…',
+    recent: 'Open Recent',
     save: 'Save',
     reveal: 'Reveal in Finder',
+    closeNote: 'Close Note',
     closeWindow: 'Close Window',
     edit: 'Edit',
     undo: 'Undo',
@@ -64,8 +66,10 @@ const LABELS = {
     note: 'Заметка',
     newNote: 'Новая заметка',
     openNote: 'Открыть заметку…',
+    recent: 'Недавние заметки',
     save: 'Сохранить',
     reveal: 'Показать в Finder',
+    closeNote: 'Закрыть заметку',
     closeWindow: 'Закрыть окно',
     edit: 'Правка',
     undo: 'Отменить',
@@ -110,6 +114,7 @@ function menuLabels(locale) {
 function buildMenuTemplate(locale, send, state = {}) {
   const t = menuLabels(locale);
   const hasNote = state.hasNote === true;
+  const recent = Array.isArray(state.recent) ? state.recent : [];
   return [
     {
       label: 'Monos',
@@ -132,11 +137,19 @@ function buildMenuTemplate(locale, send, state = {}) {
       submenu: [
         { label: t.newNote, accelerator: 'Cmd+N', click: () => send('new-note') },
         { label: t.openNote, accelerator: 'Cmd+O', click: () => send('open-note') },
+        {
+          label: t.recent,
+          enabled: recent.length > 0,
+          submenu: recent.map((note) => ({
+            label: note.label,
+            click: () => send('open-recent', { path: note.path, name: note.name }),
+          })),
+        },
         { type: 'separator' },
         { label: t.save, accelerator: 'Cmd+S', enabled: hasNote, click: () => send('save') },
         { label: t.reveal, enabled: hasNote, click: () => send('reveal-in-finder') },
         { type: 'separator' },
-        { role: 'close', label: t.closeWindow },
+        { label: t.closeNote, accelerator: 'Cmd+W', enabled: hasNote, click: () => send('close-note') },
       ],
     },
     {
@@ -174,6 +187,8 @@ function buildMenuTemplate(locale, send, state = {}) {
       submenu: [
         { role: 'minimize', label: t.minimize },
         { role: 'zoom', label: t.zoom },
+        { type: 'separator' },
+        { role: 'close', label: t.closeWindow, accelerator: 'Shift+Cmd+W' },
         { type: 'separator' },
         { role: 'front', label: t.front },
       ],

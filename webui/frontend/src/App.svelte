@@ -249,7 +249,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   // remounts it, so the topic is applied.
   let helpRequest = 0;
 
-  function runMenuCommand(command) {
+  function runMenuCommand(command, payload) {
     if (command === 'new-note') openNewNoteFlow();
     else if (command === 'open-note') openCommandPalette('notes');
     else if (command === 'palette') openCommandPalette('commands');
@@ -259,8 +259,32 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'outline') editorViewCommand.set({ kind: 'outline', id: Date.now() });
     else if (command === 'settings') openSettings();
     else if (command === 'save') editorAction.set('save');
+    // ⌘W closes the note, not the window: the app stays open on the board.
+    else if (command === 'close-note') showDashboard();
+    else if (command === 'open-recent' && payload?.path) {
+      handleNavigate({ detail: { path: payload.path, name: payload.name || payload.path.split('/').pop(), isDir: false } });
+    }
     else if (command === 'help') openHelp();
     else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
+  }
+
+  /**
+   * The menu's «Недавние заметки»: the notes opened last, as in any desktop app.
+   */
+  async function loadMenuRecentNotes() {
+    try {
+      const response = await fetch('/api/notes/recent?limit=5&sort=opened');
+      const list = response.ok ? await response.json() : [];
+      const recent = (Array.isArray(list) ? list : [])
+        .filter((note) => note?.path)
+        .map((note) => {
+          const label = note.title || note.name || note.path.split('/').pop();
+          return { path: note.path, name: label, label };
+        });
+      updateMenuState({ recent });
+    } catch {
+      updateMenuState({ recent: [] });
+    }
   }
 
   /**
@@ -330,6 +354,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     // remembered view is still the board.
     if (routePath.startsWith('/notes/')) $noteView = 'list';
     void loadHomeRecentNotes();
+    void loadMenuRecentNotes();
     void refreshConflicts();
     // Files changed outside Monos (an agent in the terminal): the board and the tree follow; the open note
     // reads its file again by itself (lib/notes-events.js).
@@ -775,6 +800,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
     if (isMobile && !event.detail.isDir) setSidebarOpen(false);
     clearSearch();
+    // The note just opened: the menu's «Недавние заметки» follows.
+    void loadMenuRecentNotes();
   }
 
   async function handleOpenQuickNote(event) {
