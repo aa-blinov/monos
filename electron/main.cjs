@@ -276,7 +276,7 @@ function createWindow(port) {
   mainWindow.webContents.on('context-menu', (event, params) => {
     event.preventDefault();
     if (!params.isEditable) return;
-    Menu.buildFromTemplate(buildContextMenuTemplate(menuLocale)).popup();
+    Menu.buildFromTemplate(buildContextMenuTemplate(menuLocale, sendMenuCommand)).popup();
   });
   // The window keeps its size and place for the next launch. The writes are held back while the
   // window is being dragged or resized, and happen once when it settles.
