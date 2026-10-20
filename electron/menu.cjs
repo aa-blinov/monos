@@ -45,6 +45,7 @@ const LABELS = {
     minimize: 'Minimize',
     zoom: 'Zoom',
     front: 'Bring All to Front',
+    helpMenu: 'Help',
     help: 'Monos Help',
     shortcuts: 'Keyboard Shortcuts',
   },
@@ -80,6 +81,7 @@ const LABELS = {
     minimize: 'Свернуть',
     zoom: 'Развернуть',
     front: 'Передвинуть всё на передний план',
+    helpMenu: 'Справка',
     help: 'Справка Monos',
     shortcuts: 'Горячие клавиши',
   },
@@ -161,7 +163,7 @@ function buildMenuTemplate(locale, send) {
     },
     {
       role: 'help',
-      label: t.help,
+      label: t.helpMenu,
       submenu: [
         { label: t.help, accelerator: 'Cmd+/', click: () => send('help') },
         { label: t.shortcuts, click: () => send('shortcuts') },
