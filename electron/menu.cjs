@@ -194,8 +194,7 @@ function buildMenuTemplate(locale, send, state = {}) {
         { role: 'copy', label: t.copy },
         { role: 'paste', label: t.paste },
         { role: 'pasteAndMatchStyle', label: t.pasteAndMatchStyle },
-        // Не роль браузера: в редакторе она ничего не удаляла.
-        { label: t.delete, click: () => send('delete-selection') },
+        { role: 'delete', label: t.delete },
         // Не роль браузера: она выделила бы всю страницу, а не текст там, где стоит каретка.
         { label: t.selectAll, click: () => send('select-all') },
         { type: 'separator' },
@@ -292,7 +291,7 @@ function buildContextMenuTemplate(locale, send) {
     { role: 'cut', label: t.cut },
     { role: 'copy', label: t.copy },
     { role: 'paste', label: t.paste },
-    { label: t.delete, click: () => send('delete-selection') },
+    { role: 'delete', label: t.delete },
     // Как и в меню «Правка»: выделяет страница, а не роль браузера (та выделила бы всё окно).
     { label: t.selectAll, click: () => send('select-all') },
   ];

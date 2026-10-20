@@ -250,17 +250,13 @@ test('the right-click menu in the text is the system one, in the interface langu
   const sent = [];
   const template = buildContextMenuTemplate('ru', (command) => sent.push(command));
   // The roles act on the field that holds the cursor.
-  assert.deepEqual(template.slice(0, 3).map((item) => item.role), ['cut', 'copy', 'paste']);
+  assert.deepEqual(template.slice(0, 4).map((item) => item.role), ['cut', 'copy', 'paste', 'delete']);
   assert.deepEqual(template.map((item) => item.label), ['Вырезать', 'Копировать', 'Вставить', 'Удалить', 'Выделить всё']);
   // «Выделить всё» спрашивает страницу: роль браузера выделила бы всё окно.
   const selectAll = template.find((item) => item.label === 'Выделить всё');
   assert.equal(selectAll.role, undefined);
   selectAll.click();
-  // «Удалить» тоже: роль браузера в редакторе ничего не удаляла.
-  const remove = template.find((item) => item.label === 'Удалить');
-  assert.equal(remove.role, undefined);
-  remove.click();
-  assert.deepEqual(sent, ['select-all', 'delete-selection']);
+  assert.deepEqual(sent, ['select-all']);
   assert.deepEqual(
     buildContextMenuTemplate('en', () => {}).map((item) => item.label),
     ['Cut', 'Copy', 'Paste', 'Delete', 'Select All'],
