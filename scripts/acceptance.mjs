@@ -383,11 +383,25 @@ await step('the settings open in their own window, like on macOS', async () => {
 });
 
 await step('the Format menu is grey in a locked note: its text cannot be edited', async () => {
+  // Обычная заметка: её состояние снимает серость, оставшуюся от окна настроек.
+  await card('Acceptance note').click();
+  await win.locator('.ProseMirror').waitFor();
+  await poll(async () => {
+    const enabled = await app.evaluate(({ Menu }) => {
+      const format = Menu.getApplicationMenu().items.find((item) => item.label === 'Format' || item.label === 'Формат');
+      if (!format) return null;
+      const bold = format.submenu.items.find((item) => item.label === 'Bold' || item.label === 'Жирный');
+      return bold ? bold.enabled : null;
+    });
+    return enabled === true;
+  }, 'the format items are live in a normal note');
   // Запертую заметку пишем прямо в папку: её текст не грузится, значит редактора нет.
   fs.writeFileSync(
     path.join(notesDir, 'Locked.md'),
     '---\nmonos-locked: true\n---\n-----BEGIN MONOS LOCKED NOTE-----\nAAAA\n-----END MONOS LOCKED NOTE-----\n',
   );
+  // На доску: после перезагрузки приложение возвращается в последнюю заметку, а не в список.
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
   await win.reload();
   await win.waitForSelector('main [role=list]');
   await card('Locked').waitFor({ timeout: 10000 });
