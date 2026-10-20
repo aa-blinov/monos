@@ -237,4 +237,18 @@ function buildDockTemplate(locale, send, state = {}) {
   ];
 }
 
-module.exports = { APP_NAME, LABELS, menuLabels, buildMenuTemplate, buildDockTemplate };
+/**
+ * The menu that opens on a right-click inside the text. macOS expects its own menu
+ * there: the roles act on the field that holds the cursor.
+ */
+function buildContextMenuTemplate(locale) {
+  const t = menuLabels(locale);
+  return [
+    { role: 'cut', label: t.cut },
+    { role: 'copy', label: t.copy },
+    { role: 'paste', label: t.paste },
+    { role: 'selectAll', label: t.selectAll },
+  ];
+}
+
+module.exports = { APP_NAME, LABELS, menuLabels, buildMenuTemplate, buildDockTemplate, buildContextMenuTemplate };

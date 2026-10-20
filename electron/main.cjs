@@ -3,7 +3,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
-const { APP_NAME, buildMenuTemplate, buildDockTemplate } = require('./menu.cjs');
+const { APP_NAME, buildMenuTemplate, buildDockTemplate, buildContextMenuTemplate } = require('./menu.cjs');
 const {
   MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
   readWindowState, writeWindowState, boundsOnScreen,
@@ -252,6 +252,13 @@ function createWindow(port) {
     }
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
+  });
+  // Правый клик: в тексте — родное меню macOS, в остальном — меню приложения (оно нарисовано в странице).
+  // Меню Chromium с пунктами «Reload» и «Inspect» в приложении не появляется никогда.
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    event.preventDefault();
+    if (!params.isEditable) return;
+    Menu.buildFromTemplate(buildContextMenuTemplate(menuLocale)).popup();
   });
   // The window keeps its size and place for the next launch. The writes are held back while the
   // window is being dragged or resized, and happen once when it settles.

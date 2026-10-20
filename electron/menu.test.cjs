@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { menuLabels, buildMenuTemplate, buildDockTemplate } = require('./menu.cjs');
+const { menuLabels, buildMenuTemplate, buildDockTemplate, buildContextMenuTemplate } = require('./menu.cjs');
 
 test('the menu speaks the interface language', () => {
   assert.equal(menuLabels('ru').newNote, 'Новая заметка');
@@ -181,4 +181,15 @@ test('the dock menu without notes keeps only the app commands', () => {
   assert.deepEqual(recent.submenu, []);
   assert.ok(template.some((item) => item.label === 'Hide Monos'));
   assert.ok(template.some((item) => item.label === 'Show All'));
+});
+
+test('the right-click menu in the text is the system one, in the interface language', () => {
+  const template = buildContextMenuTemplate('ru');
+  // The roles act on the field that holds the cursor.
+  assert.deepEqual(template.map((item) => item.role), ['cut', 'copy', 'paste', 'selectAll']);
+  assert.deepEqual(template.map((item) => item.label), ['Вырезать', 'Копировать', 'Вставить', 'Выделить всё']);
+  assert.deepEqual(
+    buildContextMenuTemplate('en').map((item) => item.label),
+    ['Cut', 'Copy', 'Paste', 'Select All'],
+  );
 });
