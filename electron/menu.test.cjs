@@ -243,12 +243,18 @@ test('the dock menu without notes keeps only the app commands', () => {
 });
 
 test('the right-click menu in the text is the system one, in the interface language', () => {
-  const template = buildContextMenuTemplate('ru');
+  const sent = [];
+  const template = buildContextMenuTemplate('ru', (command) => sent.push(command));
   // The roles act on the field that holds the cursor.
-  assert.deepEqual(template.map((item) => item.role), ['cut', 'copy', 'paste', 'selectAll']);
+  assert.deepEqual(template.slice(0, 3).map((item) => item.role), ['cut', 'copy', 'paste']);
   assert.deepEqual(template.map((item) => item.label), ['Вырезать', 'Копировать', 'Вставить', 'Выделить всё']);
+  // «Выделить всё» спрашивает страницу: роль браузера выделила бы всё окно.
+  const selectAll = template.find((item) => item.label === 'Выделить всё');
+  assert.equal(selectAll.role, undefined);
+  selectAll.click();
+  assert.deepEqual(sent, ['select-all']);
   assert.deepEqual(
-    buildContextMenuTemplate('en').map((item) => item.label),
+    buildContextMenuTemplate('en', () => {}).map((item) => item.label),
     ['Cut', 'Copy', 'Paste', 'Select All'],
   );
 });

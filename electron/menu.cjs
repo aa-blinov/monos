@@ -280,13 +280,14 @@ function buildDockTemplate(locale, send, state = {}) {
  * The menu that opens on a right-click inside the text. macOS expects its own menu
  * there: the roles act on the field that holds the cursor.
  */
-function buildContextMenuTemplate(locale) {
+function buildContextMenuTemplate(locale, send) {
   const t = menuLabels(locale);
   return [
     { role: 'cut', label: t.cut },
     { role: 'copy', label: t.copy },
     { role: 'paste', label: t.paste },
-    { role: 'selectAll', label: t.selectAll },
+    // Как и в меню «Правка»: выделяет страница, а не роль браузера (та выделила бы всё окно).
+    { label: t.selectAll, click: () => send('select-all') },
   ];
 }
 
