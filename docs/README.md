@@ -15,7 +15,7 @@ plain Markdown file on the computer of the person who wrote it.
 | [ACCESS.md](ACCESS.md) | How to open Monos from a phone or another computer. |
 | [RELEASE-QA.md](RELEASE-QA.md) | The list of checks that has to pass before a release goes out. |
 | [screenshots/README.md](screenshots/README.md) | The eight pictures of the interface and how each one was taken. |
-| [index.html](index.html) | The landing page. |
+| [index.html](../site/index.html) | The landing page. |
 | [../README.md](../README.md) | The front door: what it does and how to run it. |
 | [../AGENTS.md](../AGENTS.md) | The commands, the layout of the tree, and the traps. |
 | [../PRODUCT.md](../PRODUCT.md) | The product truth: the users, the constraints and the principles. |
