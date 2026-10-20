@@ -21,10 +21,10 @@
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
     MoreHorizontal, ArrowUpRight, FilePlus,
-    Maximize2, WrapText, Check
+    Maximize2, WrapText, ALargeSmall, Check
   } from 'lucide-svelte';
-  import { contentWidth, lineHeight } from '../stores.js';
-  import { contentWidthOptions, lineHeightOptions } from '../lib/fonts.js';
+  import { contentWidth, lineHeight, editorFontSize } from '../stores.js';
+  import { contentWidthOptions, lineHeightOptions, editorFontSizeOptions } from '../lib/fonts.js';
   import { externalLinkAt, wikiLinksKey } from '../lib/richEditorExtras.js';
   import { isOpenableUrl, wikiLinkAt, wikiLinkKey, wikiLinkStatus } from '../lib/wiki-link-decorations.js';
   import { newNoteForWikiLink } from '../lib/wiki-links.js';
@@ -155,7 +155,9 @@
 
   $: localizedWidthOptions = contentWidthOptions.map((option) => ({ ...option, label: $localizedText.optionLabels.contentWidth[option.value] || option.name }));
   $: localizedSpacingOptions = lineHeightOptions.map((option) => ({ ...option, label: $localizedText.optionLabels.lineHeight[option.value] || option.name }));
+  $: localizedFontSizeOptions = editorFontSizeOptions.map((option) => ({ ...option, label: $localizedText.optionLabels.fontSize[option.value] || option.name }));
   $: viewControls = [
+    { id: 'fontSize', icon: ALargeSmall, label: $localizedText.richEditor.fontSize, value: $editorFontSize, store: editorFontSize, options: localizedFontSizeOptions },
     { id: 'width', icon: Maximize2, label: $localizedText.richEditor.contentWidth, value: $contentWidth, store: contentWidth, options: localizedWidthOptions },
     { id: 'spacing', icon: WrapText, label: $localizedText.richEditor.lineHeight, value: $lineHeight, store: lineHeight, options: localizedSpacingOptions },
   ];
