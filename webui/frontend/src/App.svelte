@@ -268,6 +268,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'settings') openSettings();
     else if (command === 'save') editorAction.set('save');
     else if (command === 'find' && $menuState.hasNote) editorAction.set('find');
+    // Команды форматирования из родного меню «Формат» уходят в редактор.
+    else if (command?.startsWith('format-') && $menuState.hasNote) editorAction.set(command);
     // ⌘W closes the note, not the window: the app stays on the board. With no note the shell closes the window.
     else if (command === 'close-note') showDashboard();
     else if (command === 'open-recent' && payload?.path) {

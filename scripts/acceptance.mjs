@@ -141,6 +141,19 @@ await step('write a first note: it is created, typed into, and saved by itself',
   await shot('02-first-note');
 });
 
+await step('the native Format menu makes the text bold', async () => {
+  await win.locator('.ProseMirror').click();
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const format = menu.items.find((item) => item.label === 'Format');
+    format.submenu.items.find((item) => item.label === 'Bold').click();
+  });
+  // The command reaches the editor over IPC: a person types much later than that.
+  await win.waitForTimeout(300);
+  await win.keyboard.type('X');
+  await poll(async () => (await win.locator('.ProseMirror strong').count()) > 0, 'the new text is bold');
+});
+
 await step('two notes that link to each other: relations, and the map shows both', async () => {
   const second = await makeNote('Linked note', 'Points back: [[Acceptance note]]');
   assert.equal(second.status, 200);

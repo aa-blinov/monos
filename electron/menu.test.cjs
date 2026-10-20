@@ -12,8 +12,23 @@ test('the menu speaks the interface language', () => {
 test('the menu is the one a desktop app is expected to have', () => {
   const template = buildMenuTemplate('ru', () => {});
   assert.deepEqual(template.map((menu) => menu.label), [
-    'Monos', 'Заметка', 'Правка', 'Вид', 'Окно', 'Справка',
+    'Monos', 'Заметка', 'Правка', 'Формат', 'Вид', 'Окно', 'Справка',
   ]);
+});
+
+test('the format menu asks the editor to format the text', () => {
+  const sent = [];
+  const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
+  const format = template.find((menu) => menu.label === 'Формат');
+  for (const item of format.submenu.filter((entry) => entry.label)) item.click();
+  assert.deepEqual(sent, [
+    'format-bold', 'format-italic', 'format-strikethrough', 'format-code',
+    'format-heading-1', 'format-heading-2', 'format-bullet-list', 'format-numbered-list', 'format-task-list',
+  ]);
+  // Без заметки форматировать нечего.
+  const withoutNote = buildMenuTemplate('ru', () => {}, { hasNote: false });
+  const closed = withoutNote.find((menu) => menu.label === 'Формат');
+  assert.equal(closed.submenu.find((entry) => entry.label === 'Жирный').enabled, false);
 });
 
 test('every accelerated item hands its work to the page', () => {

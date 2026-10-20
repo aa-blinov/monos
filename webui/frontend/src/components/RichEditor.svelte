@@ -486,6 +486,25 @@
     };
   }
 
+  // Команды форматирования из родного меню «Формат»: те же, что и на панели над текстом.
+  const FORMAT_COMMANDS = {
+    bold: ['toggleBold'],
+    italic: ['toggleItalic'],
+    strikethrough: ['toggleStrike'],
+    code: ['toggleCode'],
+    'heading-1': ['toggleHeading', { level: 1 }],
+    'heading-2': ['toggleHeading', { level: 2 }],
+    'bullet-list': ['toggleBulletList'],
+    'numbered-list': ['toggleOrderedList'],
+    'task-list': ['toggleTaskList'],
+  };
+
+  export function runFormat(name) {
+    const command = FORMAT_COMMANDS[name];
+    if (!command) return;
+    cmd(command[0], command[1])();
+  }
+
   export async function insertImageFile(file) {
     if (!file || !onImageFile || !editor) return false;
     const image = await onImageFile(file);
