@@ -30,7 +30,10 @@ function fakeKeychain() {
 
 const store = await import('./secret-store.js');
 
-test.afterEach(() => store.setStorageOverride(null));
+test.afterEach(() => {
+  store.setStorageOverride(null);
+  store.setDecryptBridge(null);
+});
 
 test('вне keychain токен остаётся читаемым, но помечается незащищённым', async () => {
   const result = await store.protectSecret('ghp_example');
@@ -104,4 +107,29 @@ test('поломка keychain не роняет сохранение, но че�
   const result = await store.protectSecret('ghp_still_saved');
   assert.equal(result.protectedAtRest, false, 'сбой должен быть виден, а не замаскирован');
   assert.equal(result.value, 'ghp_still_saved', 'сохранение продолжает работать');
+});
+
+test('расшифровка уходит в отдельный процесс, а не в этот же поток', async () => {
+  store.setStorageOverride(fakeKeychain());
+  const { value } = await store.protectSecret('ghp_worker');
+
+  const seen = [];
+  store.setDecryptBridge(async (raw) => {
+    seen.push(raw);
+    return 'ghp_decrypted';
+  });
+
+  const result = await store.revealSecret(value);
+  assert.equal(result.value, 'ghp_decrypted');
+  assert.equal(seen.length, 1, 'мост должен позвать один раз');
+  // The bridge gets the encrypted blob, not the open token.
+  assert.ok(!seen[0].toString('utf8').includes('ghp_worker'));
+});
+
+test('значение без обёртки мост не зовёт — расшифровывать нечего', async () => {
+  let called = false;
+  store.setDecryptBridge(async () => { called = true; return 'ghp_never'; });
+  const result = await store.revealSecret('ghp_legacy_plaintext');
+  assert.equal(result.value, 'ghp_legacy_plaintext');
+  assert.equal(called, false);
 });

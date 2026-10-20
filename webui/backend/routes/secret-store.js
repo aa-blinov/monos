@@ -9,16 +9,37 @@
  * Windows, libsecret on Linux) and adds no dependency. Outside Electron there
  * is no keychain to talk to, so the token stays plaintext and is marked as
  * such, rather than being silently wrapped in something that protects nothing.
+ *
+ * The keychain asks for a password and waits for it. That wait holds the thread that asked, and
+ * in the desktop app that thread is the main process: the window and the server would stop until
+ * the person types the password. So the decryption happens in a separate process and the app keeps
+ * working while the system dialog is open.
  */
+
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const TOKEN_PREFIX = 'enc:v1:';
 
+// The worker lives with the rest of the shell code; the backend reaches it by the path.
+const WORKER_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'electron', 'secret-worker.cjs');
+
 let electronPromise = null;
 let storageOverride = null;
+let decryptBridge = null;
+
+let workerPromise = null;
+let workerSeq = 0;
+const pendingDecryptions = new Map();
 
 /** Supply a keychain implementation directly. Used by tests. */
 export function setStorageOverride(storage) {
   storageOverride = storage;
+}
+
+/** Supply the decryption directly. Used by tests. */
+export function setDecryptBridge(bridge) {
+  decryptBridge = bridge;
 }
 
 /** Lazily resolve Electron; it only exists when hosted by the main process. */
@@ -49,6 +70,48 @@ async function usableSafeStorage() {
 /** True when a keychain is available to protect the token. */
 export async function secretStorageAvailable() {
   return Boolean(await usableSafeStorage());
+}
+
+/**
+ * The worker that decrypts in its own process. One worker serves every request; it dies with the
+ * app.
+ */
+function startWorker(electron) {
+  if (!workerPromise) {
+    workerPromise = new Promise((resolve, reject) => {
+      let child;
+      try {
+        child = electron.utilityProcess.fork(WORKER_PATH, [], { stdio: 'inherit' });
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      child.on('message', (message) => {
+        const entry = pendingDecryptions.get(message.id);
+        if (!entry) return;
+        pendingDecryptions.delete(message.id);
+        entry.resolve(message.error ? null : message.value);
+      });
+      child.on('exit', () => {
+        // The worker is gone: nothing can be decrypted any more, and the waiters must not hang.
+        for (const entry of pendingDecryptions.values()) entry.resolve(null);
+        pendingDecryptions.clear();
+        workerPromise = null;
+      });
+      resolve(child);
+    });
+  }
+  return workerPromise;
+}
+
+/** Decrypt in the worker process; the main process keeps running while the keychain asks. */
+async function decryptInWorker(electron, raw) {
+  const child = await startWorker(electron);
+  const id = ++workerSeq;
+  return new Promise((resolve) => {
+    pendingDecryptions.set(id, { resolve });
+    child.postMessage({ id, blob: raw.toString('base64') });
+  });
 }
 
 /**
@@ -89,6 +152,17 @@ export async function revealSecret(stored) {
 
   try {
     const raw = Buffer.from(text.slice(TOKEN_PREFIX.length), 'base64');
+    if (decryptBridge) {
+      const value = await decryptBridge(raw);
+      return { value: value || '', protectedAtRest: true };
+    }
+    const electron = await loadElectron();
+    // In the desktop app the keychain dialog would freeze the whole app while it waits for the
+    // password, so the work goes to the worker process.
+    if (electron?.utilityProcess) {
+      const value = await decryptInWorker(electron, raw);
+      return { value: value || '', protectedAtRest: true };
+    }
     return { value: storage.decryptString(raw), protectedAtRest: true };
   } catch {
     return { value: '', protectedAtRest: true };
