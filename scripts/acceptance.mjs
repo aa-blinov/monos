@@ -227,6 +227,13 @@ await step('the terminal opens (⌘J), runs a command and shows its answer', asy
   await win.keyboard.type('echo ACCEPT_$((20+22))\n');
   await poll(async () => /ACCEPT_42/.test((await panel.innerText().catch(() => '')) + (await win.locator('.xterm-rows').innerText().catch(() => ''))), 'the shell answers', 20000);
   await shot('06-terminal');
+  // A right-click in the terminal opens the app's own menu: the browser's menu never appears in the app.
+  const termBox = await panel.boundingBox();
+  await win.mouse.click(termBox.x + 40, termBox.y + termBox.height - 40, { button: 'right' });
+  await win.getByTestId('terminal-paste').waitFor({ timeout: 5000 });
+  await win.getByTestId('terminal-select-all').waitFor();
+  await win.keyboard.press('Escape');
+  await poll(async () => (await win.getByTestId('terminal-paste').count()) === 0, 'the menu closes');
   await win.keyboard.press(`${mod}+j`);
 });
 

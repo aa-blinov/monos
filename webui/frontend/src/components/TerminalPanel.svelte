@@ -19,6 +19,7 @@
   import { localizedText } from '../lib/strings.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
   import { findNoteLinks, notePathsOf } from '../lib/terminal-links.js';
+  import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import { NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import {
     agentLabel,
@@ -68,6 +69,67 @@
   function fitTab(tab) {
     if (!tab?.term || !tab.fit || !tab.host?.offsetWidth) return;
     try { tab.fit.fit(); } catch { /* hidden */ }
+  }
+
+  // Правый клик в терминале: своё меню, как в системном терминале. Меню браузера в приложении не появляется.
+  let termMenu = { show: false, x: 0, y: 0, canCopy: false };
+  let termMenuEl;
+  let termMenuPos = { x: 0, y: 0 };
+
+  function openTermMenu(event) {
+    event.preventDefault();
+    termMenu = { show: true, x: event.clientX, y: event.clientY, canCopy: Boolean(active?.term?.getSelection?.()) };
+    void tick().then(() => {
+      const rect = termMenuEl?.getBoundingClientRect();
+      termMenuPos = computeContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+        menuWidth: rect?.width || 0,
+        menuHeight: rect?.height || 0,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
+    });
+  }
+
+  function closeTermMenu() {
+    termMenu = { show: false, x: 0, y: 0, canCopy: false };
+  }
+
+  function handleTermMenuKeys(event) {
+    const items = [...(termMenuEl?.querySelectorAll('[role="menuitem"]') ?? [])].filter((item) => !item.disabled);
+    if (!items.length) return;
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length].focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length].focus();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeTermMenu();
+    }
+  }
+
+  async function copySelection() {
+    const text = active?.term?.getSelection?.() || '';
+    closeTermMenu();
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); } catch { /* the clipboard may be closed */ }
+  }
+
+  async function pasteClipboard() {
+    closeTermMenu();
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) active?.term?.paste?.(text);
+    } catch { /* the clipboard may be closed */ }
+  }
+
+  function selectAllOutput() {
+    closeTermMenu();
+    active?.term?.selectAll?.();
   }
 
   async function loadKnownNotes() {
@@ -474,7 +536,7 @@
         <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchClose} on:click={closeSearch}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
       </div>
     {/if}
-    <div class="relative min-h-0 flex-1">
+    <div class="relative min-h-0 flex-1" role="presentation" on:contextmenu={openTermMenu}>
       {#each tabs as tab (tab.key)}
         <div
           class="absolute inset-0 px-3 pb-2"
@@ -485,6 +547,22 @@
         ></div>
       {/each}
     </div>
+    {#if termMenu.show}
+      <div
+        bind:this={termMenuEl}
+        role="menu"
+        tabindex="-1"
+        aria-label={$localizedText.terminal.title}
+        on:click|stopPropagation
+        on:keydown={handleTermMenuKeys}
+        class="fixed z-[130] w-44 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-2xl"
+        style="left: {termMenuPos.x}px; top: {termMenuPos.y}px;"
+      >
+        <button type="button" role="menuitem" data-testid="terminal-copy" disabled={!termMenu.canCopy} class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)] disabled:opacity-40 disabled:hover:bg-transparent" on:click={copySelection}>{$localizedText.terminal.copy}</button>
+        <button type="button" role="menuitem" data-testid="terminal-paste" class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)]" on:click={pasteClipboard}>{$localizedText.terminal.paste}</button>
+        <button type="button" role="menuitem" data-testid="terminal-select-all" class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)]" on:click={selectAllOutput}>{$localizedText.terminal.selectAll}</button>
+      </div>
+    {/if}
   </section>
 {/if}
 
