@@ -40,6 +40,7 @@ const LABELS = {
     paste: 'Paste',
     pasteAndMatchStyle: 'Paste and Match Style',
     selectAll: 'Select All',
+    find: 'Find…',
     view: 'View',
     toggleSidebar: 'Toggle Sidebar',
     outline: 'Outline',
@@ -83,6 +84,7 @@ const LABELS = {
     paste: 'Вставить',
     pasteAndMatchStyle: 'Вставить по образцу',
     selectAll: 'Выделить всё',
+    find: 'Найти…',
     view: 'Вид',
     toggleSidebar: 'Боковая панель',
     outline: 'Структура',
@@ -168,6 +170,9 @@ function buildMenuTemplate(locale, send, state = {}) {
         { role: 'paste', label: t.paste },
         { role: 'pasteAndMatchStyle', label: t.pasteAndMatchStyle },
         { role: 'selectAll', label: t.selectAll },
+        { type: 'separator' },
+        // Клавиша ⌘F без ускорителя: в терминале она ищет по выводу, в заметке — по её тексту.
+        { label: t.find, enabled: hasNote, click: () => send('find') },
       ],
     },
     {

@@ -1582,6 +1582,7 @@
     editorAction.set(null);
     if (action === 'delete') void deleteFile();
     else if (action === 'save') void flushPendingEdits();
+    else if (action === 'find') richEditor?.openFind?.();
   }
 </script>
 

@@ -236,6 +236,12 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       e.preventDefault();
       headerComponent?.openSearch?.();
     }
+    // ⌘F ищет по тексту заметки; в терминале та же клавиша ищет по выводу.
+    const inTerminal = Boolean(target?.closest?.('[data-testid="terminal-panel"]'));
+    if ((e.metaKey || e.ctrlKey) && key === 'f' && !e.shiftKey && !inTerminal && $menuState.hasNote) {
+      e.preventDefault();
+      editorAction.set('find');
+    }
   }
 
   // The native menu bar of the desktop app: the shell sends a command, the page does the work.
@@ -259,6 +265,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'outline') editorViewCommand.set({ kind: 'outline', id: Date.now() });
     else if (command === 'settings') openSettings();
     else if (command === 'save') editorAction.set('save');
+    else if (command === 'find' && $menuState.hasNote) editorAction.set('find');
     // ⌘W closes the note, not the window: the app stays open on the board.
     else if (command === 'close-note') showDashboard();
     else if (command === 'open-recent' && payload?.path) {

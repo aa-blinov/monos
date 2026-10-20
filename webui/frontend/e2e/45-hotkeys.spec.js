@@ -109,6 +109,22 @@ test.describe('in a note', () => {
     await waitForSavedContent(page, path, 'first second');
   });
 
+  test('⌘F finds in the note, Enter steps through the matches', async ({ page }) => {
+    await noteWith(page, 'one match here and another match\n');
+    await page.locator('.ProseMirror').click();
+    await page.keyboard.press(`${MOD}+f`);
+    const find = page.getByTestId('note-find-input');
+    await expect(find).toBeFocused();
+    await find.fill('match');
+    await expect(page.getByTestId('note-find-count')).toHaveText('2 matches');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('note-find-count')).toHaveText('1 of 2');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('note-find-count')).toHaveText('2 of 2');
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('note-find')).toHaveCount(0);
+  });
+
   test('/ at the start of a line opens the block menu, Esc closes it', async ({ page }) => {
     await noteWith(page, '\n');
     await page.locator('.ProseMirror').click();

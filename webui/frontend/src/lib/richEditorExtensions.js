@@ -1,4 +1,4 @@
-import { mergeAttributes } from '@tiptap/core';
+import { mergeAttributes, Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
@@ -12,6 +12,7 @@ import { Callouts, ExternalLinks, InlineMath, MathBlock, MermaidBlock, NoteEmbed
 import { SoftBreak } from './soft-break.js';
 import { EditableParagraph } from './blank-line.js';
 import { Markdown } from 'tiptap-markdown';
+import { search } from 'prosemirror-search';
 
 // 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
 // а редактор их игнорировал. `common` покрывает 11 языков из 12 встречающихся;
@@ -68,6 +69,15 @@ const AttachmentImage = Image.extend({
   },
 });
 
+// Поиск по тексту заметки. Плагин prosemirror-search считает совпадения и подсвечивает их;
+// клавиша ⌘F остаётся без ускорителя в меню — в терминале она ищет по выводу.
+const FindInNote = Extension.create({
+  name: 'findInNote',
+  addProseMirrorPlugins() {
+    return [search()];
+  },
+});
+
 export function createRichEditorExtensions(placeholder, {
   resolveImageSrc = (src) => src,
   resolveImagePath = () => '',
@@ -108,6 +118,7 @@ export function createRichEditorExtensions(placeholder, {
     WikiLinks.configure({ onActivate: onWikiLinkActivate }),
     ExternalLinks,
     SoftBreak,
+    FindInNote,
     Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
   ];
 }

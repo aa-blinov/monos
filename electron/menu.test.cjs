@@ -123,6 +123,24 @@ test('the note menu closes the note, the window menu closes the window', () => {
   assert.deepEqual(sent, ['close-note']);
 });
 
+test('the edit menu finds in the note, and the key stays with the page', () => {
+  const sent = [];
+  const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
+  const edit = template.find((menu) => menu.label === 'Правка');
+  const find = edit.submenu.find((entry) => entry.label === 'Найти…');
+  assert.equal(find.enabled, true);
+  // ⌘F остаётся без ускорителя: в терминале она ищет по выводу, в заметке — по её тексту.
+  assert.equal(find.accelerator, undefined);
+  find.click();
+  assert.deepEqual(sent, ['find']);
+});
+
+test('finding in a note needs an open note', () => {
+  const template = buildMenuTemplate('ru', () => {}, { hasNote: false });
+  const edit = template.find((menu) => menu.label === 'Правка');
+  assert.equal(edit.submenu.find((entry) => entry.label === 'Найти…').enabled, false);
+});
+
 test('the recent notes are listed in their own submenu', () => {
   const sent = [];
   const template = buildMenuTemplate('en', (command, payload) => sent.push([command, payload]), {
