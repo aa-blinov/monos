@@ -329,7 +329,8 @@ async function boot() {
     });
     createWindow(port);
   } catch (error) {
-    dialog.showErrorBox('Monos failed to start', error?.stack || error?.message || String(error));
+    // Приложение ещё не поднялось — язык интерфейса известен только по системе.
+    dialog.showErrorBox(menuLocale === 'ru' ? 'Monos не запустился' : 'Monos failed to start', error?.stack || error?.message || String(error));
     app.quit();
   }
 }
