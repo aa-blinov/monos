@@ -232,4 +232,3 @@
   /* Selected note with a color: the inline style already sets a tinted
      background. Nothing extra to do here. */
 </style>
-
