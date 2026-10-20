@@ -1,4 +1,5 @@
 import { derived, writable } from 'svelte/store';
+import { syncedWithStorage } from './stores/persisted.js';
 
 export const localeOptions = [
   { value: 'en', label: 'English' },
@@ -43,6 +44,12 @@ locale.subscribe(value => {
   if (isSupportedLocale(value)) {
     globalThis.localStorage?.setItem('locale', value);
   }
+});
+
+// Окно настроек живёт отдельно: смена языка в нём должна менять язык и в окне с заметками.
+syncedWithStorage('locale', locale, () => {
+  const saved = globalThis.localStorage?.getItem('locale');
+  return isSupportedLocale(saved) ? saved : defaultLocale;
 });
 
 const enColorNames = {

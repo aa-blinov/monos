@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { persisted } from './lib/stores/persisted.js';
+import { persisted, syncedWithStorage } from './lib/stores/persisted.js';
 import { clampOutlineWidth } from './lib/outline.js';
 export { tabsToSpaces } from './lib/tabs.js';
 
@@ -93,4 +93,10 @@ themeMode.subscribe(value => {
   localStorage.setItem('themeMode', mode);
   if (mode === 'system') localStorage.removeItem('darkMode');
   else localStorage.setItem('darkMode', mode === 'dark' ? 'true' : 'false');
+});
+
+// Окно настроек живёт отдельно: смена темы в нём должна менять тему и в окне с заметками.
+syncedWithStorage('themeMode', themeMode, () => {
+  const saved = localStorage.getItem('themeMode');
+  return isThemeMode(saved) ? saved : 'system';
 });
