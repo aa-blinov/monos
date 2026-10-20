@@ -163,7 +163,7 @@
   $: outlineColumnShown = outlineRevealed || (!$outlineHidden && headingCount >= OUTLINE_MIN_HEADINGS);
   $: outlineCollapsed = !outlineColumnShown;
   // The native menu draws its checkmarks from this.
-  $: updateMenuState({ hasNote: Boolean(currentFile?.path), focus: focusMode, outline: outlineColumnShown || outlineOpen });
+  $: updateMenuState({ hasNote: Boolean(currentFile?.path), focus: focusMode, outline: outlineColumnShown || outlineOpen, notePath: currentFile?.path || '' });
   let title = '';
   let editedTitle = '';
   let fileInfo = null;
@@ -1475,7 +1475,7 @@
   onDestroy(() => {
     flushEditorMarkdown();
     // The note is gone: the menu must not keep its checkmarks.
-    updateMenuState({ hasNote: false, focus: false, outline: false });
+    updateMenuState({ hasNote: false, focus: false, outline: false, notePath: '' });
     // Leaving the note in focus mode gives the sidebar back as it was.
     if (focusMode && sidebarBeforeFocus !== null) setSidebarOpen(sidebarBeforeFocus);
     if (autosaveTimer) {
@@ -1581,6 +1581,7 @@
     const action = $editorAction;
     editorAction.set(null);
     if (action === 'delete') void deleteFile();
+    else if (action === 'save') void flushPendingEdits();
   }
 </script>
 

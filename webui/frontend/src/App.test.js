@@ -4,7 +4,7 @@ import { tick } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { navigate } from 'svelte-routing';
 import { locale, uiText } from './lib/strings.js';
-import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults } from './stores.js';
+import { activeTheme, themeMode, isSearching, noteSaveSignal, noteView, searchQuery, searchResults, editorAction } from './stores.js';
 import { homeRecentNotes, homeRecentError, homeRecentLoading } from './lib/dashboard.js';
 
 // The board loads its notes when the app opens. A load already running ignores a second one and its answer
@@ -117,8 +117,18 @@ afterEach(() => {
   delete window.monosMenu;
 });
 
-test('App сообщает оболочке, что показывает окно: меню рисует по этому состоянию', async () => {
-  const setState = vi.fn();
+test('App выполняет команду меню «Сохранить»', async () => {
+  let command = null;
+  window.monosMenu = { setLocale: vi.fn(), setState: vi.fn(), onCommand: (cb) => { command = cb; return () => {}; } };
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(typeof command).toBe('function'));
+  command('save');
+  await waitFor(() => expect(get(editorAction)).toBe('save'));
+}, 20000);
+
+test('App сообщает оболочке, что показывает окно: меню рисует по этому состоянию', async () => {  const setState = vi.fn();
   window.monosMenu = { setLocale: vi.fn(), setState, onCommand: () => () => {} };
   const { default: App } = await import('./App.svelte');
   render(App);
