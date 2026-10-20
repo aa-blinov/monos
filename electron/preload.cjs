@@ -24,4 +24,6 @@ contextBridge.exposeInMainWorld('monosMenu', {
   onCommand: (callback) => listen('menu:command', callback),
   setLocale: (locale) => ipcRenderer.send('menu:locale', locale),
   setState: (state) => ipcRenderer.send('menu:state', state),
+  // Show a note or a folder in Finder: the page asks, the shell opens (macOS only).
+  reveal: (path) => ipcRenderer.invoke('reveal-in-finder', path),
 });

@@ -505,6 +505,7 @@ const enText = {
       addTag: 'Add a tag',
       tagSelected: (count) => `Tag ${count} notes`,
       duplicate: 'Duplicate',
+      showInFinder: 'Show in Finder',
     },
     modals: {
       renameTitle(kind) {
@@ -1755,6 +1756,7 @@ const ruText = {
         return `Тег для ${count} ${few ? 'заметки' : 'заметок'}`;
       },
       duplicate: 'Дублировать',
+      showInFinder: 'Показать в Finder',
     },
     modals: {
       renameTitle(kind) {

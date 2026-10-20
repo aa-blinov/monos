@@ -83,11 +83,25 @@ function applyDockMenu() {
   app.dock.setMenu(Menu.buildFromTemplate(template));
 }
 
+/**
+ * Show a note or a folder in Finder. The path comes from the page (the tree) or from the menu
+ * (the open note); both are relative to the notes folder.
+ */
+function revealInFinder(relativePath) {
+  const notePath = String(relativePath || '');
+  // The notes folder itself opens; a note or a folder inside it is shown in its parent.
+  if (notePath === 'notes') {
+    shell.openPath(notesDir);
+    return;
+  }
+  if (!notePath.startsWith('notes/')) return;
+  shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
+}
+
 function sendMenuCommand(command, payload) {
   // «Показать в Finder» — дело оболочки: путь к заметке она уже знает.
   if (command === 'reveal-in-finder') {
-    const notePath = String(menuState.notePath || '');
-    if (notePath.startsWith('notes/')) shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
+    revealInFinder(menuState.notePath);
     return;
   }
   // «Печать…» — тоже дело оболочки: путь к заметке она знает и системный диалог печати открывает она.
@@ -343,6 +357,11 @@ ipcMain.on('menu:locale', (_event, locale) => {
   if (next === menuLocale) return;
   menuLocale = next;
   if (process.platform === 'darwin') applyApplicationMenu();
+});
+
+// The page asks to show a note or a folder in Finder (the tree's context menu).
+ipcMain.handle('reveal-in-finder', (_event, notePath) => {
+  revealInFinder(notePath);
 });
 
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
