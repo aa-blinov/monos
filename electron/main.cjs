@@ -37,6 +37,26 @@ let killTerminals = () => {};
 let menuLocale = 'en';
 // The settings window: a separate window, as on macOS.
 let settingsWindow = null;
+// What each window shows, by window. The menu follows the window that is in front.
+const windowStates = new Map();
+
+/** Show the menu of the window that is in front. */
+function applyWindowState(sender) {
+  if (!sender || sender.isDestroyed()) return;
+  const state = windowStates.get(sender.id);
+  if (!state) return;
+  menuState = { ...menuState, ...state };
+  if (process.platform === 'darwin') applyApplicationMenu();
+}
+
+/**
+ * The menu shows the state of the window in front. When the app is in the background and no
+ * window is focused, the notes window decides: it is the one the person will come back to.
+ */
+function applyMenuState() {
+  const focused = BrowserWindow.getFocusedWindow();
+  applyWindowState(focused || mainWindow);
+}
 // A command that came when there was no window: it waits for the page of the new one.
 let pendingMenuCommand = null;
 // What the window shows right now: the menu draws its checkmarks from this.
@@ -282,6 +302,7 @@ function openSettingsWindow() {
     settingsWindow?.setTitle(settingsWindowTitle());
     settingsWindow?.show();
   });
+  settingsWindow.on('focus', () => applyMenuState());
   settingsWindow.on('closed', () => { settingsWindow = null; });
   // The page's own title would replace ours.
   settingsWindow.webContents.on('page-title-updated', (event) => {
@@ -371,6 +392,8 @@ function createWindow(port) {
   });
   // A closed window's shells end with it.
   mainWindow.on('closed', () => killTerminals());
+  // The window came to the front: the menu shows its state again.
+  mainWindow.on('focus', () => applyMenuState());
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   // The command that came while there was no window goes to the page that has just loaded.
   mainWindow.webContents.on('did-finish-load', () => {
@@ -423,14 +446,18 @@ ipcMain.handle('open-settings', () => {
 });
 
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
-ipcMain.on('menu:state', (_event, state) => {
-  const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
+// Every window keeps its own state, and the menu shows the state of the window that is in front.
+ipcMain.on('menu:state', (event, state) => {
+  const sender = BrowserWindow.fromWebContents(event.sender);
+  const patch = state && typeof state === 'object' ? state : {};
+  if (!sender) return;
+  windowStates.set(sender.id, { ...(windowStates.get(sender.id) || {}), ...patch });
   // The title belongs to the notes window; the settings window has its own.
-  const title = next.noteTitle ? `${next.noteTitle} — ${APP_NAME}` : APP_NAME;
-  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
-  if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
-  menuState = next;
-  if (process.platform === 'darwin') applyApplicationMenu();
+  if (sender === mainWindow) {
+    const title = patch.noteTitle ? `${patch.noteTitle} — ${APP_NAME}` : APP_NAME;
+    if (!sender.isDestroyed() && sender.getTitle() !== title) sender.setTitle(title);
+  }
+  applyMenuState();
 });
 
 if (!app.requestSingleInstanceLock()) {
