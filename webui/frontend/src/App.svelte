@@ -332,8 +332,13 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       void refreshAgentReview();
       return;
     }
+    if (result.ok === false) {
+      // A background round that failed: the sidebar row says so. No window over the text being written.
+      autoPullState = { conflicts: false, received: 0, error: { reason: result.reason || '', detail: result.detail || '' } };
+      return;
+    }
     syncBlockedByReview.set([]);
-    autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0 };
+    autoPullState = { conflicts: Boolean(result.conflicts), received: result.received || 0, error: null };
     void refreshConflicts();
     if (result.received > 0) {
       void loadHomeRecentNotes();
@@ -1004,6 +1009,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           on:quickNoteSaved={(e) => { savedQuickNote = e.detail; promoteRecentNote(e.detail); if (isMobile) setSidebarOpen(false); }}
           on:quickNoteIssue={(e) => { quickNoteIssue = e.detail; if (isMobile) setSidebarOpen(false); }}
           on:syncError={(e) => { syncError = e.detail; if (isMobile) setSidebarOpen(false); }}
+          on:syncOk={() => { autoPullState = { ...autoPullState, error: null }; }}
           mobile={isMobile}
           autoPullState={autoPullState}
           gitConfigured={$gitConnected}

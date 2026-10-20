@@ -485,6 +485,7 @@ const enText = {
     },
     dropToRoot: 'Drop to root',
     syncWithGit: 'Sync now',
+    syncFailed: 'Sync failed',
     conflictNotice: (count) => `Conflict in ${count} ${count === 1 ? 'note' : 'notes'} — open`,
     conflictFilesNotice: (count) => `Conflict in ${count} ${count === 1 ? 'file' : 'files'} — resolve`,
     quickNoteFromClipboard: 'Create note from clipboard',
@@ -1713,6 +1714,7 @@ const ruText = {
     },
     dropToRoot: 'Переместить в корень',
     syncWithGit: 'Синхронизировать',
+    syncFailed: 'Синхронизация не удалась',
     conflictNotice: (count) => {
       const one = count % 10 === 1 && count % 100 !== 11;
       return `Конфликт в ${count} ${one ? 'заметке' : 'заметках'}: открыть`;

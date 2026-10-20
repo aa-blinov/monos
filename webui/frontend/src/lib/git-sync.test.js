@@ -176,3 +176,20 @@ test('раунд, остановленный из-за непроверенны�
     globalThis.fetch = originalFetch;
   }
 });
+
+test('упавший раунд сообщает приложению причину: молча синхронизация не восстановится', async () => {
+  const results = [];
+  globalThis.fetch = async () => answer(403, { reason: 'token-rejected', detail: 'GitHub did not accept the token' });
+  try {
+    stopAutoSync();
+    startAutoSync({ onResult: (result) => results.push(result), intervalMs: 3_600_000 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(results.length, 1);
+    assert.equal(results[0].ok, false);
+    assert.equal(results[0].reason, 'token-rejected');
+    assert.equal(results[0].detail, 'GitHub did not accept the token');
+  } finally {
+    stopAutoSync();
+    globalThis.fetch = originalFetch;
+  }
+});
