@@ -26,4 +26,6 @@ contextBridge.exposeInMainWorld('monosMenu', {
   setState: (state) => ipcRenderer.send('menu:state', state),
   // Show a note or a folder in Finder: the page asks, the shell opens (macOS only).
   reveal: (path) => ipcRenderer.invoke('reveal-in-finder', path),
+  // The settings live in their own window, as on macOS.
+  openSettings: () => ipcRenderer.invoke('open-settings'),
 });

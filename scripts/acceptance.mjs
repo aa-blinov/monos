@@ -361,6 +361,23 @@ if (process.platform === 'darwin') {
   });
 }
 
+await step('the settings open in their own window, like on macOS', async () => {
+  const before = (await app.windows()).length;
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const appMenu = menu.items[0];
+    appMenu.submenu.items.find((item) => item.label === 'Settings…' || item.label === 'Настройки…').click();
+  });
+  await poll(async () => (await app.windows()).length > before, 'the settings window opens');
+  const windows = await app.windows();
+  const settings = windows.find((w) => w.url().includes('/settings')) || windows[windows.length - 1];
+  await settings.waitForSelector('[data-testid="appearance-section"]', { timeout: 15000 });
+  // The notes stay in their own window.
+  assert.equal((await app.windows()).length, before + 1);
+  await settings.close();
+  await poll(async () => (await app.windows()).length === before, 'the settings window closes');
+});
+
 await step('the Format menu is grey in a locked note: its text cannot be edited', async () => {
   // Запертую заметку пишем прямо в папку: её текст не грузится, значит редактора нет.
   fs.writeFileSync(

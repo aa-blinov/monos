@@ -63,6 +63,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   let tagPanelOpen = false;
   let isDarkMode = false;
   let isMobile = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+  // Окно настроек: отдельное окно приложения (как в macOS), без боковой панели и верхней панели.
+  const isSettingsWindow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('window');
   let headerComponent;
   let sidebarComponent;
   let linksNotice = '';
@@ -251,8 +253,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   // The document speaks it too: a screen reader reads the page with the right voice.
   $: document.documentElement.lang = $locale;
   // The menu also shows what the window shows: the checkmarks and the items that need a note.
-  $: updateMenuState({ sidebar: $sidebarOpen, terminal: $terminalOpen });
-  $: menuBridge?.setState($menuState);
+  // The settings window has no note of its own, so it does not report: the menu follows the notes window.
+  $: if (!isSettingsWindow) updateMenuState({ sidebar: $sidebarOpen, terminal: $terminalOpen });
+  $: if (!isSettingsWindow) menuBridge?.setState($menuState);
   // The Help takes its topic from the address when it opens; asking for a topic while it is open
   // remounts it, so the topic is applied.
   let helpRequest = 0;
@@ -695,6 +698,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   }
   function goHome() { showDashboard({ closeSidebar: false }); }
   function openSettings() {
+    // В приложении для компьютера настройки открываются отдельным окном, как в macOS.
+    if (typeof window !== 'undefined' && window.monosMenu?.openSettings) {
+      window.monosMenu.openSettings();
+      return;
+    }
     setRoutePath('/settings');
     clearSearch();
     navigate('/settings');
@@ -1019,7 +1027,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     {/if}
 
     <div class="flex flex-1 overflow-hidden relative">
-      {#if isMobile && $sidebarOpen}
+      {#if isMobile && $sidebarOpen && !isSettingsWindow}
         <button
           class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
           on:click={toggleSidebar}
@@ -1027,6 +1035,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
         ></button>
       {/if}
 
+      {#if !isSettingsWindow}
       <nav
         aria-label={$localizedText.app.sidebarLabel}
         class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full flex flex-col' : 'relative shrink-0 flex flex-col'}
@@ -1078,12 +1087,13 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           </TooltipIconButton>
         {/if}
       </nav>
+      {/if}
 
       <!-- The sidebar runs the full height on every page; the bar above the content belongs to the content
            column, so opening a note (which brings its own header) does not shift the tree. -->
       <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
         <!-- A note brings its own header (back, sidebar, trash beside the folder path); the app bar is for the rest. -->
-        {#if !isNoteOpen}
+        {#if !isNoteOpen && !isSettingsWindow}
         <Header
           bind:this={headerComponent}
           on:toggleSidebar={toggleSidebar}
