@@ -2,6 +2,29 @@
 
 Monos is a local-first desktop application built from a web frontend, a local HTTP API, and a filesystem-backed note store.
 
+## The shape
+
+| Module | What it is responsible for |
+| --- | --- |
+| `electron/main.cjs` | The window, the backend process, the port, the flush on close and the quit sequence. |
+| `electron/terminal.cjs` | The node-pty shells and the IPC the page may use. |
+| `electron/preload.cjs` | The only bridge to the terminal. Sandboxed, with no Node of its own. |
+| `webui/backend/index.js` | The Express app, the route registration and the origin check. |
+| `webui/backend/routes/` | One file per group of endpoints: notes, files, tree, git, print, clip, attachments, templates, publish, locks, storage. |
+| `webui/backend/database.js` | The SQLite schema and the connection. |
+| `webui/backend/indexing.js` | The walk over the folder that fills the index. |
+| `webui/backend/fts.js` | The FTS5 index over the notes, with a trigram tokenizer. |
+| `webui/backend/search.js` | The ranking, the excerpts and the parsing of a query. |
+| `webui/backend/watcher.js` | Watches the folder and announces what changed over `GET /api/events`. |
+| `webui/backend/notes-folder.js` | The folder the person chose, and the index that belongs to it. |
+| `webui/backend/lan-access.js` | The optional serving of the notes to the network. |
+| `webui/frontend/src/App.svelte` | The composition root and the cross-feature state. |
+| `webui/frontend/src/stores.js` | The global stores: the theme, the view mode, the board. |
+| `webui/frontend/src/components/` | One component per concern. |
+| `webui/frontend/src/lib/` | The pure helpers, the API client, the strings and the themes. |
+| `clipper/` | The browser extension that posts a page into the notes folder. |
+| `scripts/` | The checks, the icon generator, the acceptance run and the screenshot capture. |
+
 ## System overview
 
 ```text
@@ -105,6 +128,51 @@ notes/
 ```
 
 The notes folder is `notes/` unless the person chose another one (Settings → Notes folder). The choice is kept in `.data/storage.json` and opens on the next start; a folder outside `MonosData` can be an Obsidian vault or a folder a cloud service syncs. Monos never moves notes between folders. Each folder has its own index (`.data/notes.db` for the default folder, `.data/notes-<hash>.db` for a chosen one). Whatever folder is open, the app names a note as `notes/…` from the data root, so links, the API and the database keep one form. `config.js` reads the choice once at start; `notes-folder.js` writes it.
+
+## The data flow
+
+A note is a file, and every write ends in the file.
+
+```
+the editor
+  |
+  |  POST /api/notes, with the path and the body
+  v
+the backend
+  |  the path is checked against the notes root
+  |  the Markdown is written first
+  v
+the file on disk
+  |
+  |  the index follows, and the watcher sees the change
+  v
+GET /api/events
+  |
+  v
+the open window
+```
+
+The frontend never opens a file. It calls the API, and the backend announces
+every change over `GET /api/events`, so a note touched by the agent in the
+terminal, by another editor on the same disk or by a `git pull` appears in
+the open window without a reload.
+
+The terminal is the one path that does not go through the API:
+
+```
+the terminal panel
+  |
+  |  window.monosTerminal, the preload bridge
+  v
+electron/terminal.cjs
+  |  a shell with the notes folder as its working directory
+  v
+the files change
+  |
+  |  the watcher sees them
+  v
+GET /api/events -> the open window
+```
 
 ## Backend boundaries
 
@@ -479,3 +547,22 @@ Core checks run on every PR and on every push to master:
 - Electron packaging in CI
 
 The scale-boundary suite verifies that the layout remains usable at narrow, short, desktop, and ultrawide window sizes.
+
+## Boundaries
+
+- **The backend owns the filesystem.** It checks every path against the notes
+  root before it touches it, writes the Markdown through the same functions
+  the editor uses, and keeps `notes.db` as an index over the folder.
+- **The frontend talks to `/api/*` and nothing else.** It never opens a file
+  and never runs a command.
+- **The terminal is reachable only through the preload bridge.** The bridge is
+  sandboxed, and the backend has no route for it.
+- **The index may be deleted.** Nothing in the interface depends on it, and
+  the folder is the only copy.
+- **The notes folder may be a git repository.** The history holds the
+  Markdown and the attachments, and the index never enters it.
+- **One route is open to a browser extension.** `POST /api/clip/notes` is
+  gated by a bearer token and by the origin, and the global origin filter
+  exempts `/api/clip/` and nothing else.
+- **The strings live in one file.** A new label goes into `lib/strings.js` in
+  both blocks, and nowhere else.
