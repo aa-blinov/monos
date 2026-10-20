@@ -140,6 +140,8 @@ function menuLabels(locale) {
 function buildMenuTemplate(locale, send, state = {}) {
   const t = menuLabels(locale);
   const hasNote = state.hasNote === true;
+  // Форматировать можно только обычную заметку: в запертой или в конфликте текст не редактируется.
+  const canFormat = hasNote && state.editable !== false;
   const recent = Array.isArray(state.recent) ? state.recent : [];
   return [
     {
@@ -203,17 +205,17 @@ function buildMenuTemplate(locale, send, state = {}) {
       // и меню забрало бы эту клавишу себе.
       label: t.format,
       submenu: [
-        { label: t.bold, enabled: hasNote, click: () => send('format-bold') },
-        { label: t.italic, enabled: hasNote, click: () => send('format-italic') },
-        { label: t.strikethrough, enabled: hasNote, click: () => send('format-strikethrough') },
-        { label: t.inlineCode, enabled: hasNote, click: () => send('format-code') },
+        { label: t.bold, enabled: canFormat, click: () => send('format-bold') },
+        { label: t.italic, enabled: canFormat, click: () => send('format-italic') },
+        { label: t.strikethrough, enabled: canFormat, click: () => send('format-strikethrough') },
+        { label: t.inlineCode, enabled: canFormat, click: () => send('format-code') },
         { type: 'separator' },
-        { label: t.heading1, enabled: hasNote, click: () => send('format-heading-1') },
-        { label: t.heading2, enabled: hasNote, click: () => send('format-heading-2') },
+        { label: t.heading1, enabled: canFormat, click: () => send('format-heading-1') },
+        { label: t.heading2, enabled: canFormat, click: () => send('format-heading-2') },
         { type: 'separator' },
-        { label: t.bulletList, enabled: hasNote, click: () => send('format-bullet-list') },
-        { label: t.numberedList, enabled: hasNote, click: () => send('format-numbered-list') },
-        { label: t.checklist, enabled: hasNote, click: () => send('format-task-list') },
+        { label: t.bulletList, enabled: canFormat, click: () => send('format-bullet-list') },
+        { label: t.numberedList, enabled: canFormat, click: () => send('format-numbered-list') },
+        { label: t.checklist, enabled: canFormat, click: () => send('format-task-list') },
       ],
     },
     {

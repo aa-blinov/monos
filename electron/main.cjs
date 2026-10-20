@@ -38,7 +38,7 @@ let menuLocale = 'en';
 // A command that came when there was no window: it waits for the page of the new one.
 let pendingMenuCommand = null;
 // What the window shows right now: the menu draws its checkmarks from this.
-let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false, notePath: '', noteTitle: '', recent: [] };
+let menuState = { hasNote: false, editable: true, outline: false, focus: false, sidebar: false, terminal: false, notePath: '', noteTitle: '', recent: [] };
 
 function copyDirectoryIfMissing(source, target) {
   if (!source || !fs.existsSync(source) || fs.existsSync(target)) return;
