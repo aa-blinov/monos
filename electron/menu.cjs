@@ -194,8 +194,8 @@ function buildMenuTemplate(locale, send, state = {}) {
         { role: 'copy', label: t.copy },
         { role: 'paste', label: t.paste },
         { role: 'pasteAndMatchStyle', label: t.pasteAndMatchStyle },
-        { role: 'delete', label: t.delete },
-        // Не роль браузера: она выделила бы всю страницу, а не текст там, где стоит каретка.
+        // Не роль браузера: в редакторе она ничего не удаляла.
+        { label: t.delete, click: () => send('delete-selection') },
         { label: t.selectAll, click: () => send('select-all') },
         { type: 'separator' },
         // Клавиша ⌘F без ускорителя: в терминале она ищет по выводу, в заметке — по её тексту.
@@ -291,7 +291,7 @@ function buildContextMenuTemplate(locale, send) {
     { role: 'cut', label: t.cut },
     { role: 'copy', label: t.copy },
     { role: 'paste', label: t.paste },
-    { role: 'delete', label: t.delete },
+    { label: t.delete, click: () => send('delete-selection') },
     // Как и в меню «Правка»: выделяет страница, а не роль браузера (та выделила бы всё окно).
     { label: t.selectAll, click: () => send('select-all') },
   ];
