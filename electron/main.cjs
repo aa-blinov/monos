@@ -1,14 +1,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
 const { buildMenuTemplate } = require('./menu.cjs');
+const {
+  MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
+  readWindowState, writeWindowState, boundsOnScreen,
+} = require('./window-state.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
-const MIN_WIDTH = 360;
-const MIN_HEIGHT = 640;
 // How long a closing window may take to save its last edits before it closes anyway.
 const FLUSH_TIMEOUT_MS = 3000;
 const SECURE_WEB_PREFERENCES = Object.freeze({
@@ -149,9 +151,15 @@ function createWindow(port) {
   appOrigin = `http://${APP_HOST}:${port}`;
   if (icon && app.dock) app.dock.setIcon(icon);
 
+  // The window opens where it was left. A window saved on a monitor that is now gone would open
+  // outside the desktop, so it opens at the usual size instead.
+  const saved = readWindowState(app.getPath('userData'));
+  const bounds = saved && boundsOnScreen(saved, screen.getAllDisplays())
+    ? saved
+    : { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 840,
+    ...bounds,
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
     ...(icon ? { icon } : {}),
@@ -180,11 +188,25 @@ function createWindow(port) {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
+  // The window keeps its size and place for the next launch. The writes are held back while the
+  // window is being dragged or resized, and happen once when it settles.
+  let rememberTimer = null;
+  const rememberWindow = () => {
+    clearTimeout(rememberTimer);
+    rememberTimer = setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        writeWindowState(app.getPath('userData'), mainWindow.getNormalBounds());
+      }
+    }, 500);
+  };
+  mainWindow.on('resize', rememberWindow);
+  mainWindow.on('move', rememberWindow);
   // Closing the window must not drop the last edits: the page saves first, then the
   // window closes. Components are not destroyed on close, so the page cannot do this itself.
   // During a quit the flush already happened (see before-quit), so the close is not held.
   windowFlushed = false;
   mainWindow.on('close', (event) => {
+    writeWindowState(app.getPath('userData'), mainWindow.getNormalBounds());
     if (quitFlushed || windowFlushed) return;
     event.preventDefault();
     windowFlushed = true;
