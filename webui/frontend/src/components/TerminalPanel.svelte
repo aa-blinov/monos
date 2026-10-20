@@ -89,11 +89,15 @@
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
       });
+      // The menu takes the focus, so the arrows and Esc reach it.
+      termMenuEl?.focus({ preventScroll: true });
     });
   }
 
   function closeTermMenu() {
     termMenu = { show: false, x: 0, y: 0, canCopy: false };
+    // The caret goes back to the shell.
+    active?.term?.focus?.();
   }
 
   function handleTermMenuKeys(event) {
