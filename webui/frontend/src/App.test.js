@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -116,6 +116,67 @@ afterEach(() => {
   cleanup();
   delete window.monosMenu;
 });
+
+test('App открывает заметку, брошенную в окно', async () => {
+  const openDroppedNote = vi.fn(async () => ({ ok: true, path: 'notes/Work/Alpha.md' }));
+  window.monosMenu = {
+    setLocale: vi.fn(),
+    setState: vi.fn(),
+    onCommand: () => () => {},
+    pathForFile: (file) => `/notes/${file.name}`,
+    openDroppedNote,
+  };
+  const { default: App } = await import('./App.svelte');
+  const { container } = render(App);
+
+  await fireEvent.drop(container.firstElementChild, {
+    dataTransfer: { files: [{ name: 'Alpha.md' }], types: ['Files'] },
+  });
+
+  await waitFor(() => expect(openDroppedNote).toHaveBeenCalledWith('/notes/Alpha.md'));
+  await waitFor(() => expect(window.location.pathname).toBe('/notes/Work/Alpha.md'));
+}, 20000);
+
+test('App говорит, что брошенный файл не в папке заметок', async () => {
+  const openDroppedNote = vi.fn(async () => ({ ok: false, code: 'outside-notes' }));
+  window.monosMenu = {
+    setLocale: vi.fn(),
+    setState: vi.fn(),
+    onCommand: () => () => {},
+    pathForFile: () => '/elsewhere/Alpha.md',
+    openDroppedNote,
+  };
+  const { default: App } = await import('./App.svelte');
+  const { container } = render(App);
+
+  await fireEvent.drop(container.firstElementChild, {
+    dataTransfer: { files: [{ name: 'Alpha.md' }], types: ['Files'] },
+  });
+
+  await waitFor(() => expect(screen.getByText('This file is not in the notes folder')).toBeTruthy());
+  expect(window.location.pathname).toBe('/');
+}, 20000);
+
+test('App не трогает дроп, который уже взял редактор', async () => {
+  const openDroppedNote = vi.fn(async () => ({ ok: true, path: 'notes/Work/Alpha.md' }));
+  window.monosMenu = {
+    setLocale: vi.fn(),
+    setState: vi.fn(),
+    onCommand: () => () => {},
+    pathForFile: () => '/notes/Alpha.md',
+    openDroppedNote,
+  };
+  const { default: App } = await import('./App.svelte');
+  const { container } = render(App);
+
+  const event = createEvent.drop(container.firstElementChild, {
+    dataTransfer: { files: [{ name: 'Alpha.md' }], types: ['Files'] },
+  });
+  event.preventDefault();
+  await fireEvent(container.firstElementChild, event);
+
+  expect(openDroppedNote).not.toHaveBeenCalled();
+}, 20000);
 
 test('App выполняет команду меню «Сохранить»', async () => {
   let command = null;

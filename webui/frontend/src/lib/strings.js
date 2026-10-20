@@ -224,6 +224,7 @@ const enText = {
     linksNotUpdated(count) {
       return `Notes not updated: ${count}`;
     },
+    droppedOutsideNotes: 'This file is not in the notes folder',
     closeMenu: 'Close menu',
     sidebarLabel: 'Sidebar',
     skipToContent: 'Skip to content',
@@ -1451,6 +1452,7 @@ const ruText = {
     linksNotUpdated(count) {
       return `Заметок не обновлено: ${count}`;
     },
+    droppedOutsideNotes: 'Этот файл не в папке заметок',
     closeMenu: 'Закрыть меню',
     sidebarLabel: 'Боковая панель',
     skipToContent: 'К содержимому',

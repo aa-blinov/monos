@@ -1,6 +1,6 @@
-// The page's only way to a shell: four calls and two listeners, nothing of Node or Electron besides.
-// Sandboxed preload: just contextBridge and ipcRenderer.
-const { contextBridge, ipcRenderer } = require('electron');
+// The page's only way to a shell: the calls below and two listeners, nothing of Node or Electron besides.
+// Sandboxed preload: just contextBridge, ipcRenderer and webUtils.
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 function listen(channel, callback) {
   const handler = (_event, ...args) => callback(...args);
@@ -28,4 +28,14 @@ contextBridge.exposeInMainWorld('monosMenu', {
   reveal: (path) => ipcRenderer.invoke('reveal-in-finder', path),
   // The settings live in their own window, as on macOS.
   openSettings: () => ipcRenderer.invoke('open-settings'),
+  // The path of a file the person dropped into the window.
+  pathForFile: (file) => {
+    try {
+      return webUtils.getPathForFile(file);
+    } catch {
+      return '';
+    }
+  },
+  // Open the dropped file, if it is a note in the notes folder.
+  openDroppedNote: (path) => ipcRenderer.invoke('open-dropped-note', path),
 });

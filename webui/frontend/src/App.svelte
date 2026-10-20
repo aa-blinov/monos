@@ -67,8 +67,15 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
   const isSettingsWindow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('window');
   let headerComponent;
   let sidebarComponent;
-  let linksNotice = '';
-  let linksNoticeTimer;
+  // Подсказка в углу: она говорит, что произошло, и молчит через несколько секунд.
+  let notice = '';
+  let noticeTimer;
+
+  function showNotice(text) {
+    notice = text;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => { notice = ''; }, 4000);
+  }
 
   function showLinksNotice(event) {
     const { updatedLinks, failedPaths = [] } = event.detail;
@@ -76,9 +83,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     if (updatedLinks) parts.push($localizedText.app.linksUpdated(updatedLinks));
     if (failedPaths.length) parts.push($localizedText.app.linksNotUpdated(failedPaths.length));
     if (!parts.length) return;
-    linksNotice = parts.join(', ');
-    clearTimeout(linksNoticeTimer);
-    linksNoticeTimer = setTimeout(() => { linksNotice = ''; }, 4000);
+    showNotice(parts.join(', '));
   }
 
   onMount(() => window.addEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
@@ -286,6 +291,35 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     }
     else if (command === 'help') openHelp();
     else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
+  }
+
+  /**
+   * A file dropped into the window opens the note, if it is one of the notes folder.
+   * The editor and the tree handle their own drops and mark them handled.
+   */
+  async function handleDrop(event) {
+    // The flag is read before the default is prevented: a descendant that already took the drop
+    // has set it.
+    const taken = event.defaultPrevented;
+    event.preventDefault();
+    if (taken || isSettingsWindow) return;
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+    const filePath = menuBridge?.pathForFile?.(file);
+    if (!filePath) return;
+    const result = await menuBridge?.openDroppedNote?.(filePath);
+    if (result?.ok) {
+      handleNavigate({ detail: { path: result.path, name: result.path.split('/').pop(), isDir: false } });
+      return;
+    }
+    if (result?.code === 'outside-notes') showNotice($localizedText.app.droppedOutsideNotes);
+  }
+
+  // Only a file from the system: drags inside the app keep their own behaviour.
+  function handleDragOver(event) {
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
   }
 
   /**
@@ -1002,7 +1036,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 <svelte:window on:resize={updateMobileState} on:keydown={handleKeydown} />
 
 <Router>
-  <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden">
+  <div class="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased overflow-hidden"
+    role="presentation"
+    on:dragover={handleDragOver}
+    on:drop={handleDrop}
+  >
     <!-- The first Tab stop: past the sidebar straight to the content. -->
     <a
       href="#main-content"
@@ -1314,9 +1352,9 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       </div>
     </div>
   {/if}
-  {#if linksNotice}
+  {#if notice}
     <div class="fixed bottom-6 left-6 z-[200] animate-toast-in" role="status">
-      <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">{linksNotice}</div>
+      <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">{notice}</div>
     </div>
   {/if}
 </Router>
