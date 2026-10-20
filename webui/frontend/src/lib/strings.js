@@ -1145,6 +1145,9 @@ const enText = {
     launchCommandDetail: 'Runs the agent chosen in Settings in the terminal, in the notes folder',
     rulesCreate: 'Add rules for the agent',
     rulesHint: 'Adds AGENTS.md and CLAUDE.md to the notes folder: how notes are written here, so the agent keeps them intact. They are not shown as notes',
+    copy: 'Copy',
+    paste: 'Paste',
+    selectAll: 'Select all',
   },
   history: {
     title: 'Note history',
@@ -2434,6 +2437,9 @@ const ruText = {
     launchCommandDetail: 'Запускает в терминале агента из настроек, в папке заметок',
     rulesCreate: 'Добавить правила для агента',
     rulesHint: 'Добавит в папку заметок AGENTS.md и CLAUDE.md: как здесь устроены заметки, чтобы агент их не ломал. Заметками они не показываются',
+    copy: 'Копировать',
+    paste: 'Вставить',
+    selectAll: 'Выделить всё',
   },
   history: {
     title: 'История заметки',
