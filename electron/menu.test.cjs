@@ -36,3 +36,13 @@ test('the labels of the menu do not end with a full stop', () => {
     }
   }
 });
+
+test('the items of a menu do not repeat their labels', () => {
+  // Two items with the same name in one menu: the person cannot tell them apart.
+  for (const language of ['en', 'ru']) {
+    for (const menu of buildMenuTemplate(language, () => {})) {
+      const labels = menu.submenu.filter((item) => item.label).map((item) => item.label);
+      assert.equal(new Set(labels).size, labels.length, `${language}: ${menu.label}`);
+    }
+  }
+});
