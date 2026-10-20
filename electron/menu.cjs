@@ -206,4 +206,27 @@ function buildMenuTemplate(locale, send, state = {}) {
   ];
 }
 
-module.exports = { APP_NAME, LABELS, menuLabels, buildMenuTemplate };
+/**
+ * The menu under the Dock icon. macOS apps put their own commands there — a new
+ * document and the notes opened last — so the Dock icon is a way in, not a dead end.
+ */
+function buildDockTemplate(locale, send, state = {}) {
+  const t = menuLabels(locale);
+  const recent = Array.isArray(state.recent) ? state.recent : [];
+  return [
+    { label: t.newNote, click: () => send('new-note') },
+    {
+      label: t.recent,
+      enabled: recent.length > 0,
+      submenu: recent.map((note) => ({
+        label: note.label,
+        click: () => send('open-recent', { path: note.path, name: note.name }),
+      })),
+    },
+    { type: 'separator' },
+    { label: t.hide, click: () => send('hide-app') },
+    { label: t.showAll, click: () => send('show-app') },
+  ];
+}
+
+module.exports = { APP_NAME, LABELS, menuLabels, buildMenuTemplate, buildDockTemplate };

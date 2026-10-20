@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { menuLabels, buildMenuTemplate } = require('./menu.cjs');
+const { menuLabels, buildMenuTemplate, buildDockTemplate } = require('./menu.cjs');
 
 test('the menu speaks the interface language', () => {
   assert.equal(menuLabels('ru').newNote, 'Новая заметка');
@@ -130,4 +130,26 @@ test('the recent notes submenu is empty and disabled without notes', () => {
   const recent = note.submenu.find((entry) => entry.label === 'Open Recent');
   assert.equal(recent.enabled, false);
   assert.deepEqual(recent.submenu, []);
+});
+
+test('the dock menu offers a new note and the notes opened last', () => {
+  const sent = [];
+  const template = buildDockTemplate('ru', (command, payload) => sent.push([command, payload]), {
+    recent: [{ path: 'notes/A.md', name: 'Alpha', label: 'Alpha' }],
+  });
+  assert.equal(template[0].label, 'Новая заметка');
+  template[0].click();
+  const recent = template.find((item) => item.label === 'Недавние заметки');
+  assert.equal(recent.enabled, true);
+  recent.submenu[0].click();
+  assert.deepEqual(sent, [['new-note', undefined], ['open-recent', { path: 'notes/A.md', name: 'Alpha' }]]);
+});
+
+test('the dock menu without notes keeps only the app commands', () => {
+  const template = buildDockTemplate('en', () => {}, {});
+  const recent = template.find((item) => item.label === 'Open Recent');
+  assert.equal(recent.enabled, false);
+  assert.deepEqual(recent.submenu, []);
+  assert.ok(template.some((item) => item.label === 'Hide Monos'));
+  assert.ok(template.some((item) => item.label === 'Show All'));
 });
