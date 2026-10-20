@@ -1585,6 +1585,7 @@
     else if (action === 'find') richEditor?.openFind?.();
     else if (action?.startsWith('format-')) richEditor?.runFormat?.(action.slice('format-'.length));
     else if (action === 'select-all') richEditor?.selectAllText?.();
+    else if (action === 'delete-selection') richEditor?.deleteSelectionText?.();
   }
 </script>
 
