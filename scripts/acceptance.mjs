@@ -154,6 +154,13 @@ await step('the native Format menu makes the text bold', async () => {
   await poll(async () => (await win.locator('.ProseMirror strong').count()) > 0, 'the new text is bold');
 });
 
+await step('the tree offers to show a note in Finder (desktop app only)', async () => {
+  const treeNote = win.locator('[data-testid="sidebar-shell"] button').filter({ hasText: 'Acceptance note' }).first();
+  await treeNote.click({ button: 'right' });
+  await win.getByTestId('show-in-finder').waitFor({ timeout: 5000 });
+  await win.keyboard.press('Escape');
+});
+
 await step('the native Select All selects the text of the note, not the whole window', async () => {
   await win.locator('.ProseMirror').click();
   await app.evaluate(({ Menu }) => {

@@ -822,6 +822,14 @@
     contextMenu.show = false;
   }
 
+  // «Показать в Finder» есть только в приложении для компьютера: там оболочка умеет открыть папку.
+  const canRevealInFinder = typeof window !== 'undefined' && Boolean(window.monosMenu?.reveal);
+
+  function revealInFinder(path) {
+    closeContextMenu();
+    window.monosMenu?.reveal?.(path);
+  }
+
   function handleContextAction(action) {
     const path = contextMenu.targetPath;
     const name = contextMenu.targetName;
@@ -1494,6 +1502,18 @@
           class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
         >
           {$localizedText.sidebar.context.duplicate}
+        </button>
+        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+      {/if}
+      {#if canRevealInFinder}
+        <button
+          type="button"
+          data-testid="show-in-finder"
+          role="menuitem"
+          on:click={() => revealInFinder(contextMenu.targetPath)}
+          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
+        >
+          {$localizedText.sidebar.context.showInFinder}
         </button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
