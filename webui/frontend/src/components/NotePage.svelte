@@ -13,7 +13,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import Editor from './Editor.svelte';
-  
+
   const dispatch = createEventDispatcher();
 
   export let path = "";
