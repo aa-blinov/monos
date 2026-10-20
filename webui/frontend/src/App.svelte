@@ -272,6 +272,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command?.startsWith('format-') && $menuState.hasNote) editorAction.set(command);
     // «Выделить всё» выделяет то, где стоит каретка: текст поля или текст заметки.
     else if (command === 'select-all') selectAllInFocus();
+    // «Удалить» удаляет выделенное там же.
+    else if (command === 'delete-selection') deleteSelectionInFocus();
     // ⌘W closes the note, not the window: the app stays on the board. With no note the shell closes the window.
     else if (command === 'close-note') showDashboard();
     else if (command === 'open-recent' && payload?.path) {
@@ -293,6 +295,24 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
       return;
     }
     editorAction.set('select-all');
+  }
+
+  /**
+   * «Удалить» из меню «Правка»: удаляет выделенное там, где стоит каретка. В терминале своё удаление,
+   * а в полях и в заметке — своё.
+   */
+  function deleteSelectionInFocus() {
+    const active = document.activeElement;
+    if (active?.closest?.('[data-testid="terminal-panel"]')) return;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.setRangeText === 'function') {
+      const start = active.selectionStart;
+      const end = active.selectionEnd;
+      if (start === end) return;
+      active.setRangeText('', start, end, 'end');
+      active.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    editorAction.set('delete-selection');
   }
 
   /**
