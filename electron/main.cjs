@@ -3,7 +3,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
-const { APP_NAME, buildMenuTemplate } = require('./menu.cjs');
+const { APP_NAME, buildMenuTemplate, buildDockTemplate } = require('./menu.cjs');
 const {
   MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
   readWindowState, writeWindowState, boundsOnScreen,
@@ -71,6 +71,14 @@ function configureApplicationMenu() {
 // The menu bar. Every command it carries goes to the page, which owns the actions.
 function applyApplicationMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate(menuLocale, sendMenuCommand, menuState)));
+  applyDockMenu();
+}
+
+// The menu under the Dock icon: the same commands, in the place macOS puts them.
+function applyDockMenu() {
+  if (!app.dock) return;
+  const template = buildDockTemplate(menuLocale, sendMenuCommand, menuState);
+  app.dock.setMenu(Menu.buildFromTemplate(template));
 }
 
 function sendMenuCommand(command, payload) {
@@ -78,6 +86,15 @@ function sendMenuCommand(command, payload) {
   if (command === 'reveal-in-finder') {
     const notePath = String(menuState.notePath || '');
     if (notePath.startsWith('notes/')) shell.showItemInFolder(path.join(notesDir, notePath.slice('notes/'.length)));
+    return;
+  }
+  // The Dock menu's own commands: the app hides and shows itself.
+  if (command === 'hide-app') {
+    app.hide();
+    return;
+  }
+  if (command === 'show-app') {
+    app.show();
     return;
   }
   mainWindow?.webContents.send('menu:command', command, payload);
