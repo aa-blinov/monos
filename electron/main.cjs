@@ -3,7 +3,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
-const { buildMenuTemplate } = require('./menu.cjs');
+const { APP_NAME, buildMenuTemplate } = require('./menu.cjs');
 const {
   MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
   readWindowState, writeWindowState, boundsOnScreen,
@@ -258,7 +258,7 @@ ipcMain.on('menu:locale', (_event, locale) => {
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
 ipcMain.on('menu:state', (_event, state) => {
   const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
-  const title = next.noteTitle ? `${next.noteTitle} — ${app.getName()}` : app.getName();
+  const title = next.noteTitle ? `${next.noteTitle} — ${APP_NAME}` : APP_NAME;
   if (mainWindow && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
   if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
   menuState = next;
