@@ -93,6 +93,11 @@ function sendMenuCommand(command, payload) {
     void printCurrentNote();
     return;
   }
+  // «Закрыть окно» — дело оболочки: окно её. Правки страницы она сольёт сама (см. обработчик close).
+  if (command === 'close-window') {
+    mainWindow?.close();
+    return;
+  }
   // The Dock menu's own commands: the app hides and shows itself.
   if (command === 'hide-app') {
     app.hide();
