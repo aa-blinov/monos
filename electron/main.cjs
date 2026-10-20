@@ -8,6 +8,7 @@ const {
   MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
   readWindowState, writeWindowState, boundsOnScreen,
 } = require('./window-state.cjs');
+const { resolveDroppedNote } = require('./dropped-note.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
@@ -444,6 +445,10 @@ ipcMain.handle('reveal-in-finder', (_event, notePath) => {
 ipcMain.handle('open-settings', () => {
   openSettingsWindow();
 });
+
+// A file dropped into the window opens the note, if it is one of the notes folder.
+// The page gets the answer and shows it there: a window over the text is not this app's style.
+ipcMain.handle('open-dropped-note', (_event, filePath) => resolveDroppedNote(notesDir, filePath));
 
 // The page reports what the window shows: the menu answers with checkmarks and greyed-out items.
 // Every window keeps its own state, and the menu shows the state of the window that is in front.
