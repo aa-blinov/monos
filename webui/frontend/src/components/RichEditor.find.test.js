@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, expect, test } from 'vitest';
 import { Editor } from '@tiptap/core';
 import { SearchQuery, getSearchState, setSearchState } from 'prosemirror-search';
@@ -45,4 +45,6 @@ test('поиск по заметке: панель считает совпаде
   expect(screen.getByTestId('note-find-count').textContent).toContain('No matches');
   await fireEvent.keyDown(input, { key: 'Escape' });
   expect(screen.queryByTestId('note-find')).toBeNull();
+  // Каретка вернулась в текст — как в macOS после Esc в поле поиска.
+  await waitFor(() => expect(document.activeElement?.closest('[data-testid="rich-editor-input"]')).toBeTruthy());
 });

@@ -125,6 +125,25 @@ test.describe('in a note', () => {
     await expect(page.getByTestId('note-find')).toHaveCount(0);
   });
 
+  // На телефоне панель поиска не должна вылезать за экран.
+  test('поиск по заметке на телефоне: панель помещается в экран', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await prepareMonos(page);
+    const title = uniqueTitle('Find Phone');
+    const created = await (await page.request.post('/api/notes/create', { data: { title, category: '', tags: [], content: 'one match here\n' } })).json();
+    // На телефоне доска не помещается в экран, поэтому заметку открывают адресом.
+    await page.goto(`/notes/${encodeURIComponent(created.path.replace(/^notes\//, ''))}`);
+    await expect(page.locator('.ProseMirror')).toBeVisible();
+    await page.keyboard.press(`${MOD}+f`);
+    const bar = page.getByTestId('note-find');
+    await expect(bar).toBeVisible();
+    const box = await bar.boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    // Поле должно остаться пригодным для набора, а не сжаться в строчку.
+    const field = await page.getByTestId('note-find-input').boundingBox();
+    expect(field.width).toBeGreaterThanOrEqual(100);
+  });
+
   test('/ at the start of a line opens the block menu, Esc closes it', async ({ page }) => {
     await noteWith(page, '\n');
     await page.locator('.ProseMirror').click();
