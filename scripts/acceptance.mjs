@@ -361,6 +361,29 @@ if (process.platform === 'darwin') {
   });
 }
 
+await step('the Format menu is grey in a locked note: its text cannot be edited', async () => {
+  // Запертую заметку пишем прямо в папку: её текст не грузится, значит редактора нет.
+  fs.writeFileSync(
+    path.join(notesDir, 'Locked.md'),
+    '---\nmonos-locked: true\n---\n-----BEGIN MONOS LOCKED NOTE-----\nAAAA\n-----END MONOS LOCKED NOTE-----\n',
+  );
+  await win.reload();
+  await win.waitForSelector('main [role=list]');
+  await card('Locked').waitFor({ timeout: 10000 });
+  await card('Locked').click();
+  await win.getByTestId('locked-overlay').waitFor({ timeout: 10000 });
+  await poll(async () => {
+    // Меню могло ещё не переключиться на язык интерфейса, поэтому ищем оба названия.
+    const enabled = await app.evaluate(({ Menu }) => {
+      const format = Menu.getApplicationMenu().items.find((item) => item.label === 'Format' || item.label === 'Формат');
+      if (!format) return null;
+      const bold = format.submenu.items.find((item) => item.label === 'Bold' || item.label === 'Жирный');
+      return bold ? bold.enabled : null;
+    });
+    return enabled === false;
+  }, 'the format items are greyed out');
+});
+
 await step('no error reached the console during the whole run', async () => {
   const real = errors.filter((line) => !/favicon|DevTools|Autofill/i.test(line));
   assert.deepEqual(real, [], `console errors:\n${real.join('\n')}`);
