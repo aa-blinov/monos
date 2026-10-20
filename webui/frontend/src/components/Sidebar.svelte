@@ -230,7 +230,7 @@
   }
   let isDragOverRoot = false;
   let isSyncing = false;
-  export let autoPullState = { conflicts: false, received: 0 };
+  export let autoPullState = { conflicts: false, received: 0, error: null };
   let syncError = '';
 
   let selectedPaths = new Set();
@@ -1010,8 +1010,17 @@
     }
   }
 
-  async function handleSync() {
-    if (isSyncing) return;
+  // The sync row says what happened: a failed background round is named here, with the reason in the tooltip.
+  $: syncRowLabel = $editorState.saving || $editorState.dirty
+    ? $localizedText.sidebar.saveBeforeSync
+    : autoPullState?.error
+      ? $localizedText.sidebar.syncFailed
+      : $localizedText.sidebar.syncWithGit;
+  $: syncRowTooltip = autoPullState?.error
+    ? ($localizedText.settings.gitReasons[autoPullState.error.reason] || autoPullState.error.detail || '')
+    : '';
+
+  async function handleSync() {    if (isSyncing) return;
     if ($editorState.saving || $editorState.dirty) {
       syncError = $editorState.saving
         ? $localizedText.sidebar.waitForSaveBeforeSync
@@ -1028,6 +1037,8 @@
       announceNotesPulled();
       await loadDirectories();
       gitConfigured = true;
+      // The sync worked: an earlier failure no longer tells the truth.
+      dispatch('syncOk');
     } catch (e) {
       if (e?.body?.reason === 'agent-review') {
         // Not a failure to retry: the agent's edits here wait for review and changed elsewhere too.
@@ -1243,10 +1254,12 @@
         <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
           {#if isSyncing}
             <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
+          {:else if autoPullState?.error}
+            <Icon.AlertTriangle size="20" strokeWidth="1.7" />
           {:else}
             <Icon.RefreshCw size="20" strokeWidth="1.7" />
           {/if}
-          <span>{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
+          <span>{syncRowLabel}</span>
         </button>
       {/if}
       <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
@@ -1333,18 +1346,18 @@
             on:click={handleSync}
             disabled={isSyncing || $editorState.saving || $editorState.dirty}
             class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] disabled:opacity-30"
-            label={$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}
-            tooltip=""
+            label={syncRowLabel}
+            tooltip={syncRowTooltip}
             tooltipAlign="end"
           >
             {#if isSyncing}
               <span class="block w-3 h-3 rounded-full border border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
-            {:else if autoPullState?.conflicts}
+            {:else if autoPullState?.error || autoPullState?.conflicts}
               <Icon.AlertTriangle class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {:else}
               <Icon.RefreshCw class="w-4 h-4" strokeWidth="1.7" aria-hidden="true" />
             {/if}
-            <span class="truncate">{$editorState.saving || $editorState.dirty ? $localizedText.sidebar.saveBeforeSync : $localizedText.sidebar.syncWithGit}</span>
+            <span class="truncate">{syncRowLabel}</span>
           </TooltipIconButton>
         {/if}
         <!-- The places opened now and then (templates, saved searches, tags, the notes table) share one row, so

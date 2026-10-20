@@ -609,3 +609,20 @@ test('Sidebar при открытии заметки не пересоздаёт
   expect(screen.getByText('Alpha').closest('button')).toBe(rowBefore);
   expect(screen.getByText('Nested')).toBe(nestedBefore);
 });
+
+test('Sidebar называет упавшую фоновую синхронизацию', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Sidebar, {
+    autoPullState: { conflicts: false, received: 0, error: { reason: 'token-rejected', detail: 'GitHub did not accept the token' } },
+  });
+  await treeLoaded();
+
+  const row = await screen.findByRole('button', { name: uiText.sidebar.syncFailed });
+  expect(row).toBeTruthy();
+  // The reason waits in the tooltip: the row itself stays short.
+  await fireEvent.mouseEnter(row);
+  await waitFor(() => expect(screen.getByText(uiText.settings.gitReasons['token-rejected'])).toBeTruthy());
+});

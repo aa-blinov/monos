@@ -62,7 +62,10 @@ export async function runSyncRound() {
         onRoundResult?.(result);
         return result;
       }
-      return { ok: false, detail: data.detail };
+      // A failed round is told about: the notes stop coming, and the person must know why.
+      const result = { ok: false, detail: data.detail, reason: data.reason };
+      onRoundResult?.(result);
+      return result;
     }
     if (data.skipped) return null;
     // The pull route counts the commits that arrived as `received`, the sync route as `pulled`.
