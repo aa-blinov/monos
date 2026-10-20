@@ -1,482 +1,79 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Monos keeps your notes as plain Markdown files on your own computer, with links, search, and optional Git sync."
-    />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#fbf1c7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#282828" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" href="media/icon.svg" type="image/svg+xml" />
-    <title>Monos: a calm notes app that does not trap your knowledge</title>
-    <style>
-      @font-face {
-        font-family: "JetBrains Mono";
-        font-style: normal;
-        font-weight: 100 800;
-        font-display: swap;
-        src: url("fonts/jetbrains-mono-latin.woff2") format("woff2");
-        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-      }
-      @font-face {
-        font-family: "JetBrains Mono";
-        font-style: normal;
-        font-weight: 100 800;
-        font-display: swap;
-        src: url("fonts/jetbrains-mono-latin-ext.woff2") format("woff2");
-        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F;
-      }
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monos: every note is a plain Markdown file</title>
+  <meta name="description" content="Monos keeps your notes as plain Markdown files on your own computer, with wiki links, search, and optional Git sync.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#1d2021" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fbf1c7" media="(prefers-color-scheme: light)">
+  <meta property="og:title" content="Monos">
+  <meta property="og:description" content="Every note is a plain Markdown file on your own computer.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="media/monos-dashboard.png">
+  <link rel="icon" href="media/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-      /* Palette from DESIGN.md: warm paper and ink. Secondary text uses #665c54 because
-         the app's ink-soft (#7c6f64) measures 4.3:1 on paper, below AA for body text. */
-      :root {
-        color-scheme: light dark;
-        --paper: #fbf1c7;
-        --band: #ebdbb2;
-        --rule: #d5c4a1;
-        --ink: #3c3836;
-        --ink-2: #665c54;
-        --select: #d5c4a1;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-          --paper: #282828;
-          --band: #282828;
-          --rule: #504945;
-          --ink: #ebdbb2;
-          --ink-2: #a89984;
-          --select: #504945;
-        }
-      }
-      :root[data-theme="dark"] {
-        --paper: #282828;
-        --band: #282828;
-        --rule: #504945;
-        --ink: #ebdbb2;
-        --ink-2: #a89984;
-        --select: #504945;
-      }
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top" aria-label="Monos, back to the top">
+        <img class="brand-mark" src="media/icon.svg" alt="" width="22" height="22">
+        <span>Monos</span>
+      </a>
+      <nav class="site-nav" aria-label="Sections">
+        <a href="#files">Files</a>
+        <a href="#writing">Writing</a>
+        <a href="#find">Search</a>
+        <a href="#recovery">Sync</a>
+        <a href="#install">Install</a>
+      </nav>
+      <a class="header-github" href="https://github.com/aa-blinov/monos">GitHub</a>
+    </div>
+  </header>
 
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
+  <main id="main">
 
-      html {
-        scrollbar-color: var(--rule) var(--paper);
-        -webkit-text-size-adjust: 100%;
-      }
-
-      body {
-        margin: 0;
-        background: var(--paper);
-        color: var(--ink);
-        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 17px;
-        line-height: 1.65;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-      }
-
-      ::selection {
-        background: var(--select);
-        color: var(--ink);
-      }
-
-      :focus-visible {
-        outline: 2px solid var(--ink);
-        outline-offset: 3px;
-      }
-
-      a {
-        color: inherit;
-      }
-
-      img {
-        display: block;
-        max-width: 100%;
-        height: auto;
-      }
-
-      h1,
-      h2,
-      p,
-      dl,
-      dd,
-      ul,
-      figure,
-      pre {
-        margin: 0;
-      }
-
-      .skip-link {
-        position: absolute;
-        left: -999px;
-        top: 12px;
-        padding: 8px 12px;
-        background: var(--paper);
-        border: 1px solid var(--ink);
-      }
-      .skip-link:focus {
-        left: 12px;
-        z-index: 10;
-      }
-
-      .wrap {
-        width: min(1200px, 100% - 2.5rem);
-        margin-inline: auto;
-      }
-
-      /* Header */
-      .site-header {
-        border-bottom: 1px solid var(--rule);
-      }
-      .header-inner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        min-height: 64px;
-      }
-      .wordmark {
-        font-size: 1.05rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        text-decoration: none;
-      }
-      .site-nav {
-        display: flex;
-        gap: 1.1rem;
-        font-size: 0.9rem;
-      }
-      .site-nav a {
-        color: var(--ink-2);
-        text-decoration: none;
-      }
-      .site-nav a:hover {
-        color: var(--ink);
-        text-decoration: underline;
-        text-decoration-thickness: 1px;
-        text-underline-offset: 0.3em;
-      }
-
-      /* Hero */
-      .hero {
-        padding: clamp(3rem, 7vw, 6rem) 0 clamp(3rem, 6vw, 5rem);
-      }
-      .hero-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-        align-items: center;
-        gap: clamp(2.5rem, 5vw, 4rem);
-      }
-      h1 {
-        max-width: 15ch;
-        font-size: clamp(2.1rem, 1.2rem + 3.6vw, 3.9rem);
-        font-weight: 700;
-        line-height: 1.06;
-        letter-spacing: -0.035em;
-        text-wrap: balance;
-      }
-      .lead {
-        margin-top: 1.5rem;
-        max-width: 46ch;
-        color: var(--ink-2);
-        font-size: 1.02rem;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-top: 2rem;
-      }
-      .button {
-        display: inline-flex;
-        align-items: center;
-        min-height: 44px;
-        padding: 0 1.1rem;
-        border: 1px solid var(--ink);
-        border-radius: 4px;
-        color: var(--ink);
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        text-decoration: none;
-        transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-      }
-      .button:hover {
-        background: var(--ink);
-        color: var(--paper);
-      }
-      .button.quiet {
-        border-color: var(--rule);
-        color: var(--ink-2);
-      }
-      .button.quiet:hover {
-        background: transparent;
-        border-color: var(--ink);
-        color: var(--ink);
-      }
-      .build-note {
-        margin-top: 1rem;
-        max-width: 50ch;
-        color: var(--ink-2);
-        font-size: 0.82rem;
-        line-height: 1.55;
-      }
-
-      /* Screenshots sit on the paper like cards on a desk: a flat band, a rule, no shadow. */
-      .frame {
-        padding: 0.75rem;
-        background: var(--band);
-        border: 1px solid var(--rule);
-        border-radius: 8px;
-      }
-      .frame img {
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-      }
-      .frame figcaption {
-        padding: 0.75rem 0.25rem 0.25rem;
-        color: var(--ink-2);
-        font-size: 0.85rem;
-        line-height: 1.5;
-      }
-      .hero-frame {
-        animation: rise 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
-      }
-      @keyframes rise {
-        from {
-          opacity: 0;
-          transform: translateY(14px);
-        }
-        to {
-          opacity: 1;
-          transform: none;
-        }
-      }
-
-      /* Sections */
-      .section {
-        padding: clamp(4.5rem, 9vw, 7.5rem) 0;
-        border-top: 1px solid var(--rule);
-      }
-      h2 {
-        max-width: 22ch;
-        font-size: clamp(1.6rem, 1.1rem + 1.6vw, 2.35rem);
-        font-weight: 700;
-        line-height: 1.15;
-        letter-spacing: -0.03em;
-        text-wrap: balance;
-      }
-      .section-text {
-        margin-top: 1.25rem;
-        max-width: 62ch;
-        color: var(--ink-2);
-      }
-      .split {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-        align-items: start;
-        gap: clamp(2rem, 5vw, 4.5rem);
-      }
-      .pair {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1.5rem;
-        margin-top: 3rem;
-        align-items: start;
-      }
-      .pair .narrow {
-        max-width: 340px;
-        justify-self: start;
-      }
-      .wide-frame {
-        margin-top: 3rem;
-      }
-
-      /* Ruled facts, not cards */
-      .facts {
-        list-style: none;
-        margin-top: 2rem;
-        padding: 0;
-        color: var(--ink-2);
-      }
-      .facts li {
-        padding: 1rem 0;
-        border-top: 1px solid var(--rule);
-      }
-      .facts li:last-child {
-        border-bottom: 1px solid var(--rule);
-      }
-      .facts strong {
-        color: var(--ink);
-        font-weight: 700;
-      }
-
-      .sample figcaption {
-        margin-bottom: 0.75rem;
-        color: var(--ink-2);
-        font-size: 0.85rem;
-      }
-      .sample pre {
-        padding: 1.5rem;
-        overflow-x: auto;
-        background: var(--band);
-        border: 1px solid var(--rule);
-        border-radius: 8px;
-        color: var(--ink);
-        font-family: inherit;
-        font-size: 0.92rem;
-        line-height: 1.75;
-        white-space: pre;
-      }
-
-      .rows {
-        margin-top: 2.5rem;
-      }
-      .rows > div {
-        display: grid;
-        grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
-        gap: 1.5rem;
-        padding: 1.1rem 0;
-        border-top: 1px solid var(--rule);
-      }
-      .rows > div:last-child {
-        border-bottom: 1px solid var(--rule);
-      }
-      .rows dt {
-        font-weight: 700;
-      }
-      .rows dd {
-        color: var(--ink-2);
-      }
-
-      /* Footer */
-      .site-footer {
-        padding: 2.5rem 0 3rem;
-        border-top: 1px solid var(--rule);
-        color: var(--ink-2);
-        font-size: 0.9rem;
-      }
-      .site-footer p + p {
-        margin-top: 0.5rem;
-      }
-      .site-footer a {
-        color: var(--ink);
-        text-decoration-thickness: 1px;
-        text-underline-offset: 0.25em;
-      }
-
-      @media (max-width: 900px) {
-        .hero-grid,
-        .split {
-          grid-template-columns: minmax(0, 1fr);
-        }
-      }
-      @media (max-width: 760px) {
-        body {
-          font-size: 16px;
-        }
-        .pair {
-          grid-template-columns: minmax(0, 1fr);
-        }
-        .pair .narrow {
-          max-width: 300px;
-        }
-        .rows > div {
-          grid-template-columns: minmax(0, 1fr);
-          gap: 0.25rem;
-        }
-      }
-      @media (max-width: 420px) {
-        .site-nav {
-          gap: 0.85rem;
-        }
-      }
-      @media (prefers-reduced-motion: no-preference) {
-        html {
-          scroll-behavior: smooth;
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .hero-frame {
-          animation: none;
-        }
-        .button {
-          transition: none;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-
-    <header class="site-header">
-      <div class="wrap header-inner">
-        <a class="wordmark" href="#top">Monos</a>
-        <nav class="site-nav" aria-label="Primary">
-          <a href="#files">Files</a>
-          <a href="#writing">Screens</a>
-          <a href="https://github.com/aa-blinov/monos">Source</a>
-        </nav>
-      </div>
-    </header>
-
-    <main id="main">
-      <section class="hero" id="top">
-        <div class="wrap hero-grid">
-          <div>
-            <h1>A calm notes app that does not trap your knowledge.</h1>
-            <p class="lead">
-              Monos keeps every note as a plain Markdown file on your own computer. Link notes, search across them, and
-              keep your place on a board that stays out of the way. Git sync is there when you want history, and it is
-              never required.
-            </p>
-            <div class="actions">
-              <a class="button" href="https://github.com/aa-blinov/monos/releases/latest">Download the latest release</a>
-              <a class="button quiet" href="https://github.com/aa-blinov/monos">Read the source</a>
-            </div>
-            <p class="build-note">
-              Free and MIT-licensed. Builds for macOS, Windows, and Linux. The macOS and Windows builds are not notarized
-              or code-signed yet, so the first launch needs one extra confirmation.
-            </p>
-          </div>
-
-          <figure class="frame hero-frame">
-            <img
-              src="media/monos-dashboard.png"
-              width="1200"
-              height="904"
-              alt="The Monos board: recent notes as cards, each with its category, tags, a snippet, and the date it was last changed."
-            />
-          </figure>
+    <section class="hero wrap" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Every note is a plain Markdown file on your own computer.</h1>
+        <p class="lede">Link notes with double brackets, search across titles, tags and bodies, and keep your place on a board that stays out of the way. Git sync is there when you want history, and it is never required. There is no account and no service in the middle: the folder of files is the product, and the index beside it can be deleted at any moment.</p>
+        <div class="actions">
+          <a class="button" href="https://github.com/aa-blinov/monos/releases/latest">Download the latest release</a>
+          <a class="button button-ghost" href="#install">How to install</a>
         </div>
-      </section>
+        <p class="fine">Free and MIT licensed. Builds for macOS, Windows, and Linux. The macOS and Windows builds are not notarized or code-signed yet, so the first launch needs one extra confirmation.</p>
+      </div>
 
-      <section class="section" id="files" aria-labelledby="files-title">
-        <div class="wrap split">
-          <div>
-            <h2 id="files-title">Your notes are plain files.</h2>
-            <p class="section-text">
-              Each note is a Markdown file in a folder on your computer. Open it in any editor, keep it under version
-              control, or copy the whole folder somewhere else. Monos reads the same file you would.
-            </p>
-            <ul class="facts">
-              <li><strong>The file is the only copy.</strong> The search index is a cache, and it can be rebuilt at any time.</li>
-              <li><strong>Attachments stay with your notes.</strong> Images and files go to an _attachments folder beside them.</li>
-              <li><strong>Everything can leave.</strong> Export a ZIP backup, or print the whole folder as one PDF.</li>
-            </ul>
-          </div>
+      <figure class="shot">
+        <img src="media/monos-dashboard.png" width="1200" height="904" alt="The Monos board: recent notes as cards, each with its category, tags, a snippet, and the date it was last changed.">
+      </figure>
+    </section>
 
-          <figure class="sample">
-            <figcaption>A note on disk, as Monos stores it. Sample content.</figcaption>
-            <pre><code>---
+    <section class="section wrap" id="files" aria-labelledby="files-title">
+      <h2 id="files-title">Your notes are plain files.</h2>
+      <p>Each note is a Markdown file in a folder on your computer. Open it in any editor, keep it under version control, or copy the whole folder somewhere else. Monos reads the same file you would.</p>
+      <ul class="rail">
+        <li>
+          <h3>The file is the only copy.</h3>
+          <p>The search index is a cache, and it can be rebuilt at any time.</p>
+        </li>
+        <li>
+          <h3>Attachments stay with your notes.</h3>
+          <p>Images and files go to an <code>_attachments</code> folder beside them.</p>
+        </li>
+        <li>
+          <h3>Everything can leave.</h3>
+          <p>Export a ZIP backup, or print the whole folder as one PDF.</p>
+        </li>
+      </ul>
+      <figure class="sample">
+        <figcaption>A note on disk, as Monos stores it. Sample content.</figcaption>
+        <pre><code>---
 title: Reading list
 tags: [books, 2026]
 category: Personal
@@ -486,181 +83,113 @@ category: Personal
 
 - [x] The Pragmatic Programmer
 - [ ] Thinking, Fast and Slow, see [[Ideas]]</code></pre>
-          </figure>
-        </div>
-      </section>
+      </figure>
+    </section>
 
-      <section class="section" id="writing" aria-labelledby="writing-title">
-        <div class="wrap">
-          <h2 id="writing-title">Write in one place, and link as you go.</h2>
-          <p class="section-text">
-            A rich editor with Markdown underneath. Link another note with double brackets, and the note you link to
-            lists the link back as a backlink. The outline shows the headings of the open note, and it folds away on
-            desktop when you want the full width.
-          </p>
-          <figure class="frame wide-frame">
-            <img
-              src="media/monos-editor.png"
-              width="1440"
-              height="960"
-              loading="lazy"
-              alt="The editor open on a note called Launch Plan, with its category and tags, a formatting toolbar, the note text, and the outline on the right."
-            />
-            <figcaption>The editor with its outline. Category, tags, and the due date sit above the text.</figcaption>
-          </figure>
-        </div>
-      </section>
+    <section class="section wrap" id="writing" aria-labelledby="writing-title">
+      <h2 id="writing-title">Write in one place, and link as you go.</h2>
+      <p>A rich editor with Markdown underneath. Link another note with double brackets, and the note you link to lists the link back as a backlink. The outline shows the headings of the open note, and it folds away on desktop when you want the full width.</p>
+      <figure class="shot">
+        <img src="media/monos-editor.png" width="1440" height="960" loading="lazy" alt="The editor open on a note called Launch Plan, with its category and tags, a formatting toolbar, the note text, and the outline on the right.">
+        <figcaption>The editor with its outline. Category, tags, and the due date sit above the text.</figcaption>
+      </figure>
+      <h3>Templates for the notes you write again and again.</h3>
+      <p>Start from a built-in template, hide the ones you never use, or save your own. Placeholders such as <code>{{title}}</code> and <code>{{date}}</code> are filled in when you create the note.</p>
+      <figure class="shot">
+        <img src="media/monos-templates.png" width="1440" height="960" loading="lazy" alt="The templates manager with a custom template at the top and the built-in library below it.">
+        <figcaption>Your templates first, then the built-in library.</figcaption>
+      </figure>
+    </section>
 
-      <section class="section" id="find" aria-labelledby="find-title">
-        <div class="wrap">
-          <h2 id="find-title">Find a note by what you remember.</h2>
-          <p class="section-text">
-            Search titles, tags, and note bodies from the header. Open any note by its title with Cmd or Ctrl and O, and
-            narrow the list with filters such as tag: and path:.
-          </p>
-          <div class="pair">
-            <figure class="frame">
-              <img
-                src="media/monos-search.png"
-                width="1440"
-                height="960"
-                loading="lazy"
-                alt="Search results for the word sync, with the matching word highlighted in each note."
-              />
-              <figcaption>Search highlights the words that matched.</figcaption>
-            </figure>
-            <figure class="frame">
-              <img
-                src="media/monos-quick-switcher.png"
-                width="1440"
-                height="960"
-                loading="lazy"
-                alt="The quick switcher with the word launch typed in, listing the Launch Plan note and matching templates."
-              />
-              <figcaption>The quick switcher lists notes and templates as you type.</figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="recovery" aria-labelledby="recovery-title">
-        <div class="wrap split">
-          <figure class="frame">
-            <img
-              src="media/monos-conflicts.png"
-              width="1440"
-              height="960"
-              loading="lazy"
-              alt="The conflict dialog comparing the local and the remote version of one note side by side, with a choice to keep each."
-            />
-            <figcaption>Both versions side by side. You choose what to keep.</figcaption>
-          </figure>
-          <div>
-            <h2 id="recovery-title">When two copies disagree, you choose.</h2>
-            <p class="section-text">
-              Git sync is optional. If the same note changes on two devices, Monos shows both versions and asks which
-              one to keep. Deleted notes wait in the trash until you restore them, and an archive can be merged into
-              your notes without overwriting what is already there.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="templates" aria-labelledby="templates-title">
-        <div class="wrap split">
-          <div>
-            <h2 id="templates-title">Templates for the notes you write again and again.</h2>
-            <p class="section-text">
-              Start from a built-in template, hide the ones you never use, or save your own. Placeholders such as
-              {{title}} and {{date}} are filled in when you create the note.
-            </p>
-          </div>
-          <figure class="frame">
-            <img
-              src="media/monos-templates.png"
-              width="1440"
-              height="960"
-              loading="lazy"
-              alt="The templates manager with a custom template at the top and the built-in library below it."
-            />
-            <figcaption>Your templates first, then the built-in library.</figcaption>
-          </figure>
-        </div>
-      </section>
-
-      <section class="section" id="everywhere" aria-labelledby="everywhere-title">
-        <div class="wrap">
-          <h2 id="everywhere-title">Light or dark, English or Russian, and a layout for narrow windows.</h2>
-          <p class="section-text">
-            Six color palettes come in light and dark variants. Both languages are complete, with no fallback between
-            them. On a narrow window the board becomes a compact list of cards that you can still search and create
-            notes from.
-          </p>
-          <div class="pair">
-            <figure class="frame">
-              <img
-                src="media/monos-settings.png"
-                width="1440"
-                height="960"
-                loading="lazy"
-                alt="The settings screen with backup, language, and theme choices, including the six color themes."
-              />
-              <figcaption>Theme, language, and typography live in Settings.</figcaption>
-            </figure>
-            <figure class="frame narrow">
-              <img
-                src="media/monos-mobile.png"
-                width="390"
-                height="844"
-                loading="lazy"
-                alt="The board in a phone-sized window, with cards in two columns."
-              />
-              <figcaption>The board on a narrow window.</figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="facts" aria-labelledby="facts-title">
-        <div class="wrap">
-          <h2 id="facts-title">What you get, and where it lives.</h2>
-          <dl class="rows">
-            <div>
-              <dt>Platforms</dt>
-              <dd>macOS on Apple Silicon and Intel, Windows, and Linux as an AppImage or a .deb package.</dd>
-            </div>
-            <div>
-              <dt>Where notes live</dt>
-              <dd>A notes folder plus a rebuildable index, both inside your operating system's application data folder.</dd>
-            </div>
-            <div>
-              <dt>Git sync</dt>
-              <dd>Optional. It uses a repository you choose, and it never touches the Monos source code.</dd>
-            </div>
-            <div>
-              <dt>Languages</dt>
-              <dd>English and Russian.</dd>
-            </div>
-            <div>
-              <dt>License</dt>
-              <dd>MIT. Read the source, report a problem, or build it yourself.</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="wrap">
-        <p>Monos is free and open source under the MIT license. Your notes are files you can take with you.</p>
-        <p>
-          <a href="https://github.com/aa-blinov/monos/releases">Releases</a>
-          &middot;
-          <a href="https://github.com/aa-blinov/monos">Source</a>
-          &middot;
-          <a href="https://github.com/aa-blinov/monos/issues">Issues</a>
-        </p>
+    <section class="section wrap" id="find" aria-labelledby="find-title">
+      <h2 id="find-title">Find a note by what you remember.</h2>
+      <p>Search titles, tags, and note bodies from the header. Open any note by its title with Cmd or Ctrl and O, and narrow the list with filters such as <code>tag:</code> and <code>path:</code>.</p>
+      <div class="pair">
+        <figure class="shot">
+          <img src="media/monos-search.png" width="1440" height="960" loading="lazy" alt="Search results for the word sync, with the matching word highlighted in each note.">
+          <figcaption>Search highlights the words that matched.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="media/monos-quick-switcher.png" width="1440" height="960" loading="lazy" alt="The quick switcher with the word launch typed in, listing the Launch Plan note and matching templates.">
+          <figcaption>The quick switcher lists notes and templates as you type.</figcaption>
+        </figure>
       </div>
-    </footer>
-  </body>
+    </section>
+
+    <section class="section wrap" id="recovery" aria-labelledby="recovery-title">
+      <h2 id="recovery-title">When two copies disagree, you choose.</h2>
+      <p>Git sync is optional. If the same note changes on two devices, Monos shows both versions and asks which one to keep. Deleted notes wait in the trash until you restore them, and an archive can be merged into your notes without overwriting what is already there.</p>
+      <figure class="shot">
+        <img src="media/monos-conflicts.png" width="1440" height="960" loading="lazy" alt="The conflict dialog comparing the local and the remote version of one note side by side, with a choice to keep each.">
+        <figcaption>Both versions side by side. You choose what to keep.</figcaption>
+      </figure>
+    </section>
+
+    <section class="section wrap" id="everywhere" aria-labelledby="everywhere-title">
+      <h2 id="everywhere-title">Light or dark, English or Russian, and a layout for narrow windows.</h2>
+      <p>Six color palettes come in light and dark variants. Both languages are complete, with no fallback between them. On a narrow window the board becomes a compact list of cards that you can still search and create notes from.</p>
+      <div class="pair">
+        <figure class="shot">
+          <img src="media/monos-settings.png" width="1440" height="960" loading="lazy" alt="The settings screen with backup, language, and theme choices, including the six color themes.">
+          <figcaption>Theme, language, and typography live in Settings.</figcaption>
+        </figure>
+        <figure class="shot narrow">
+          <img src="media/monos-mobile.png" width="390" height="844" loading="lazy" alt="The board in a phone-sized window, with cards in two columns.">
+          <figcaption>The board on a narrow window.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section wrap" id="install" aria-labelledby="install-title">
+      <h2 id="install-title">Install</h2>
+      <p class="lede">Download the installer for your system from the <a href="https://github.com/aa-blinov/monos/releases/latest">latest release</a>. The notes stay in the app data folder, and they are kept when a new version is installed over an older one.</p>
+      <div class="table-wrap" role="region" aria-label="Download artefacts" tabindex="0">
+        <table>
+          <thead>
+            <tr><th scope="col">Platform</th><th scope="col">Artefact</th><th scope="col">First launch</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">macOS</th><td><code>.dmg</code>, Apple silicon and Intel</td><td>The app is not notarized, so macOS asks once.</td></tr>
+            <tr><th scope="row">Windows</th><td>NSIS installer, <code>.exe</code></td><td>SmartScreen asks once.</td></tr>
+            <tr><th scope="row">Linux</th><td><code>.AppImage</code> and <code>.deb</code></td><td>Nothing to confirm.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>On macOS, try to open Monos, close the warning, then open System Settings, Privacy and Security, and click <strong>Open Anyway</strong> next to the message about Monos. Confirm with your password and later launches open normally. The same thing from a terminal:</p>
+      <div class="command">
+        <pre><code>xattr -dr com.apple.quarantine /Applications/Monos.app</code></pre>
+        <button class="button button-ghost" type="button" data-copy="xattr -dr com.apple.quarantine /Applications/Monos.app">Copy the command</button>
+      </div>
+      <p>On Windows, click <strong>More info</strong> and then <strong>Run anyway</strong>.</p>
+      <h3>What you get, and where it lives.</h3>
+      <div class="table-wrap" role="region" aria-label="What you get and where it lives" tabindex="0">
+        <table>
+          <tbody>
+            <tr><th scope="row">Platforms</th><td>macOS on Apple Silicon and Intel, Windows, and Linux as an AppImage or a <code>.deb</code> package.</td></tr>
+            <tr><th scope="row">Where notes live</th><td>A notes folder plus a rebuildable index, both inside your operating system's application data folder.</td></tr>
+            <tr><th scope="row">Git sync</th><td>Optional. It uses a repository you choose, and it never touches the Monos source code.</td></tr>
+            <tr><th scope="row">Languages</th><td>English and Russian.</td></tr>
+            <tr><th scope="row">Licence</th><td>MIT. Read the source, report a problem, or build it yourself.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>Monos is free and open source, MIT licensed. © 2026 aa-blinov. Version 1.4.10. Your notes are files you can take with you.</p>
+      <nav class="footer-nav" aria-label="Project links">
+        <a href="https://github.com/aa-blinov/monos">Source</a>
+        <a href="https://github.com/aa-blinov/monos#readme">README</a>
+        <a href="https://github.com/aa-blinov/monos/blob/master/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/aa-blinov/monos/releases">Releases</a>
+        <a href="https://github.com/aa-blinov/monos/issues">Issues</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="site.js" defer></script>
+</body>
 </html>
