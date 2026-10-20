@@ -369,8 +369,9 @@ await step('the settings open in their own window, like on macOS', async () => {
     appMenu.submenu.items.find((item) => item.label === 'Settings…' || item.label === 'Настройки…').click();
   });
   await poll(async () => (await app.windows()).length > before, 'the settings window opens');
-  const windows = await app.windows();
-  const settings = windows.find((w) => w.url().includes('/settings')) || windows[windows.length - 1];
+  // Ждём, пока окно настроек загрузит свой адрес: иначе его легко спутать с окном заметок.
+  await poll(async () => (await app.windows()).some((w) => w.url().includes('/settings')), 'the settings window is loaded');
+  const settings = (await app.windows()).find((w) => w.url().includes('/settings'));
   await settings.waitForSelector('[data-testid="appearance-section"]', { timeout: 15000 });
   // The notes stay in their own window.
   assert.equal((await app.windows()).length, before + 1);
@@ -390,8 +391,8 @@ await step('a theme change in the settings window reaches the notes window', asy
     appMenu.submenu.items.find((item) => item.label === 'Settings…' || item.label === 'Настройки…').click();
   });
   await poll(async () => (await app.windows()).length > 1, 'the settings window opens');
-  const windows = await app.windows();
-  const settings = windows.find((w) => w.url().includes('/settings')) || windows[windows.length - 1];
+  await poll(async () => (await app.windows()).some((w) => w.url().includes('/settings')), 'the settings window is loaded');
+  const settings = (await app.windows()).find((w) => w.url().includes('/settings'));
   await settings.getByRole('button', { name: 'GitHub' }).click();
   await poll(async () => (await background()) !== before, 'the notes window changes the theme');
   await settings.close();
