@@ -35,6 +35,8 @@ let appOrigin = '';
 let notesDir = '';
 let killTerminals = () => {};
 let menuLocale = 'en';
+// A command that came when there was no window: it waits for the page of the new one.
+let pendingMenuCommand = null;
 // What the window shows right now: the menu draws its checkmarks from this.
 let menuState = { hasNote: false, outline: false, focus: false, sidebar: false, terminal: false, notePath: '', noteTitle: '', recent: [] };
 
@@ -95,7 +97,7 @@ function sendMenuCommand(command, payload) {
   }
   // «Закрыть окно» — дело оболочки: окно её. Правки страницы она сольёт сама (см. обработчик close).
   if (command === 'close-window') {
-    mainWindow?.close();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
     return;
   }
   // The Dock menu's own commands: the app hides and shows itself.
@@ -107,7 +109,14 @@ function sendMenuCommand(command, payload) {
     app.show();
     return;
   }
-  mainWindow?.webContents.send('menu:command', command, payload);
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) {
+    // Окна нет: команда ждёт нового окна, иначе она упала бы в закрытый webContents.
+    pendingMenuCommand = { command, payload };
+    if (backendServer?.address?.()) createWindow(backendServer.address().port);
+    return;
+  }
+  win.webContents.send('menu:command', command, payload);
 }
 
 function prepareUserNotesRoot() {
@@ -176,7 +185,11 @@ function flushPendingEdits(win) {
 }
 
 function focusMainWindow() {
-  if (!mainWindow) return;
+  // The window may be closed while the app is still running: then a new one opens.
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    if (backendServer?.address?.()) createWindow(backendServer.address().port);
+    return;
+  }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.focus();
 }
@@ -293,6 +306,13 @@ function createWindow(port) {
   // A closed window's shells end with it.
   mainWindow.on('closed', () => killTerminals());
   mainWindow.once('ready-to-show', () => mainWindow?.show());
+  // The command that came while there was no window goes to the page that has just loaded.
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!pendingMenuCommand) return;
+    const { command, payload } = pendingMenuCommand;
+    pendingMenuCommand = null;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('menu:command', command, payload);
+  });
   mainWindow.loadURL(`${appOrigin}/`);
 }
 
@@ -328,7 +348,7 @@ ipcMain.on('menu:locale', (_event, locale) => {
 ipcMain.on('menu:state', (_event, state) => {
   const next = { ...menuState, ...(state && typeof state === 'object' ? state : {}) };
   const title = next.noteTitle ? `${next.noteTitle} — ${APP_NAME}` : APP_NAME;
-  if (mainWindow && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.getTitle() !== title) mainWindow.setTitle(title);
   if (Object.keys(next).every((key) => next[key] === menuState[key])) return;
   menuState = next;
   if (process.platform === 'darwin') applyApplicationMenu();
