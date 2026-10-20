@@ -74,6 +74,9 @@
   const dispatch = createEventDispatcher();
 
   export let currentFile;
+  // A command from the native menu: focus mode and the structure column live here, not in the app.
+  export let editorCommand = null;
+  let lastEditorCommandId = null;
 
   let content = '';
   let editedContent = '';
@@ -119,6 +122,12 @@
       outlineHidden.set(false);
       outlineRevealed = true;
     }
+  }
+  // The native menu asked for the view to change. The id keeps the same command from running twice.
+  $: if (editorCommand && editorCommand.id !== lastEditorCommandId) {
+    lastEditorCommandId = editorCommand.id;
+    if (editorCommand.kind === 'focus') setFocusMode(true);
+    else if (editorCommand.kind === 'outline') toggleOutline();
   }
   // Дедлайн заметки живёт в YAML-шапке и потому переживает перезагрузку,
   // экспорт в PDF и попадает в git как обычная строка. В поле его можно печатать

@@ -22,7 +22,7 @@ import { get } from 'svelte/store';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { localizedText, locale } from './lib/strings.js';
-  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal } from './stores.js';
+  import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand } from './stores.js';
   import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
@@ -252,6 +252,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'palette') openCommandPalette('commands');
     else if (command === 'terminal') toggleTerminal();
     else if (command === 'toggle-sidebar') toggleSidebar();
+    else if (command === 'focus') editorViewCommand.set({ kind: 'focus', id: Date.now() });
+    else if (command === 'outline') editorViewCommand.set({ kind: 'outline', id: Date.now() });
     else if (command === 'settings') openSettings();
     else if (command === 'help') openHelp();
     else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
@@ -1021,7 +1023,7 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
           />
         {:else}
         <Route path="/notes/*" let:params>
-          <NotePage path={params['*']} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} on:showOnMap={(e) => openMap(e.detail.path)} />
+          <NotePage path={params['*']} editorCommand={$editorViewCommand} on:navigate={handleNavigate} on:goHome={goHome} on:renamed={handleNoteRenamed} on:openSettings={openSettings} on:fileDeleted={() => showDashboard({ refreshTree: true, replace: true, closeSidebar: false })} on:fileOpened={(e) => { if (sidebarComponent) sidebarComponent.setSelected(e.detail); }} on:fileSaved={handleNoteSaved} on:noteColorChanged={handleNoteColorChanged} on:revealInTree={revealInTree} on:showOnMap={(e) => openMap(e.detail.path)} />
         </Route>
         <Route path="/settings">
           <Settings on:openAttachments={openAttachments} on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} on:openHelp={openHelp} />

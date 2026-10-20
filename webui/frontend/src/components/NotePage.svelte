@@ -17,6 +17,8 @@
   const dispatch = createEventDispatcher();
 
   export let path = "";
+  // A command from the native menu: the open note changes its view.
+  export let editorCommand = null;
   let currentFile = null;
 
   $: currentFile = getFileFromCleanPath(path);
@@ -26,6 +28,7 @@
   <div class="h-full">
     <Editor
       {currentFile}
+      {editorCommand}
       on:navigate={(e) => dispatch('navigate', e.detail)}
       on:goHome={() => dispatch('goHome')}
       on:openSettings={() => dispatch('openSettings')}
