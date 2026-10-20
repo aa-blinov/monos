@@ -243,6 +243,25 @@ await step('a phone-sized window stays usable: board, a note, no sideways scroll
   await size(1360, 880);
 });
 
+// The native menu item that closes what is open (⌘W). The key itself is the system's: a synthetic
+// key never gets to the menu, so the item is pressed instead.
+const pressClose = () => app.evaluate(({ Menu }) => {
+  const menu = Menu.getApplicationMenu();
+  const close = menu.items.flatMap((item) => item.submenu?.items || []).find((item) => item.accelerator === 'Cmd+W');
+  close.click();
+});
+
+// The native menu bar lives on macOS only; elsewhere there is no menu to press.
+if (process.platform === 'darwin') {
+  await step('the native menu closes the note, and the window stays', async () => {
+    await pressClose();
+    await poll(async () => (await win.locator('.ProseMirror').count()) === 0, 'the note closes');
+    await poll(async () => (await win.locator('main [role=list]').count()) > 0, 'the board is back');
+    assert.equal(win.isClosed(), false, 'the window stays');
+    await shot('07b-cmd-w-note');
+  });
+}
+
 await step('quit and start again: the notes are where they were, links and map intact', async () => {
   await app.close();
   await launch();
@@ -256,6 +275,20 @@ await step('quit and start again: the notes are where they were, links and map i
   assert.equal(notesOnDisk().length, 2);
   await shot('08-after-restart');
 });
+
+if (process.platform === 'darwin') {
+  await step('without a note the same menu closes the window, and the app opens a new one', async () => {
+    await pressClose();
+    await poll(() => win.isClosed(), 'the window closes');
+    // The app lives on: the next window opens by itself, the way a Mac app does.
+    await app.evaluate(({ app }) => app.emit('activate'));
+    await poll(async () => (await app.windows()).length > 0, 'a new window opens');
+    const [reopened] = await app.windows();
+    win = reopened;
+    await win.waitForSelector('main [role=list]', { timeout: 30000 });
+    await shot('09-window-reopened');
+  });
+}
 
 await step('no error reached the console during the whole run', async () => {
   const real = errors.filter((line) => !/favicon|DevTools|Autofill/i.test(line));
