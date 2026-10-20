@@ -156,7 +156,8 @@ function buildMenuTemplate(locale, send, state = {}) {
         { label: t.print, accelerator: 'Cmd+P', enabled: hasNote, click: () => send('print') },
         { label: t.reveal, enabled: hasNote, click: () => send('reveal-in-finder') },
         { type: 'separator' },
-        { label: t.closeNote, accelerator: 'Cmd+W', enabled: hasNote, click: () => send('close-note') },
+        // ⌘W закрывает то, что открыто: заметку, а без заметки — окно, как на macOS.
+        { label: hasNote ? t.closeNote : t.closeWindow, accelerator: 'Cmd+W', click: () => send(hasNote ? 'close-note' : 'close-window') },
       ],
     },
     {

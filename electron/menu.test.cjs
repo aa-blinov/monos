@@ -26,7 +26,7 @@ test('every accelerated item hands its work to the page', () => {
     .filter((item) => item.accelerator && item.click);
   assert.ok(accelerated.length > 0);
   for (const item of accelerated) item.click();
-  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'print', 'close-note', 'palette', 'terminal', 'help']);
+  assert.deepEqual(sent, ['settings', 'new-note', 'open-note', 'save', 'print', 'close-window', 'palette', 'terminal', 'help']);
 });
 
 test('the labels of the menu do not end with a full stop', () => {
@@ -110,6 +110,24 @@ test('saving and revealing need an open note', () => {
   assert.equal(item('Сохранить').enabled, false);
   assert.equal(item('Показать в Finder').enabled, false);
   assert.equal(item('Печать…').enabled, false);
+});
+
+test('⌘W closes the note, and the window when there is no note', () => {
+  const sent = [];
+  const withNote = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
+  const noteMenu = withNote.find((menu) => menu.label === 'Заметка');
+  const closeNote = noteMenu.submenu.find((entry) => entry.label === 'Закрыть заметку');
+  assert.equal(closeNote.accelerator, 'Cmd+W');
+  closeNote.click();
+
+  // Без заметки ⌘W закрывает окно: на macOS он всегда что-то закрывает.
+  const withoutNote = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: false });
+  const noteMenuWithout = withoutNote.find((menu) => menu.label === 'Заметка');
+  const closeWindow = noteMenuWithout.submenu.find((entry) => entry.label === 'Закрыть окно');
+  assert.equal(closeWindow.accelerator, 'Cmd+W');
+  closeWindow.click();
+
+  assert.deepEqual(sent, ['close-note', 'close-window']);
 });
 
 test('the note menu closes the note, the window menu closes the window', () => {
