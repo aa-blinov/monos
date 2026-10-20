@@ -190,7 +190,8 @@ function buildMenuTemplate(locale, send, state = {}) {
         { role: 'copy', label: t.copy },
         { role: 'paste', label: t.paste },
         { role: 'pasteAndMatchStyle', label: t.pasteAndMatchStyle },
-        { role: 'selectAll', label: t.selectAll },
+        // Не роль браузера: она выделила бы всю страницу, а не текст там, где стоит каретка.
+        { label: t.selectAll, click: () => send('select-all') },
         { type: 'separator' },
         // Клавиша ⌘F без ускорителя: в терминале она ищет по выводу, в заметке — по её тексту.
         { label: t.find, enabled: hasNote, click: () => send('find') },

@@ -270,6 +270,8 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     else if (command === 'find' && $menuState.hasNote) editorAction.set('find');
     // Команды форматирования из родного меню «Формат» уходят в редактор.
     else if (command?.startsWith('format-') && $menuState.hasNote) editorAction.set(command);
+    // «Выделить всё» выделяет то, где стоит каретка: текст поля или текст заметки.
+    else if (command === 'select-all') selectAllInFocus();
     // ⌘W closes the note, not the window: the app stays on the board. With no note the shell closes the window.
     else if (command === 'close-note') showDashboard();
     else if (command === 'open-recent' && payload?.path) {
@@ -277,6 +279,20 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
     }
     else if (command === 'help') openHelp();
     else if (command === 'shortcuts') { helpRequest += 1; openHelp('settings/shortcuts'); }
+  }
+
+  /**
+   * «Выделить всё» из меню «Правка»: как ⌘A — то, где стоит каретка. В терминале своё выделение (⌘A),
+   * а в полях — текст поля, в заметке — весь текст.
+   */
+  function selectAllInFocus() {
+    const active = document.activeElement;
+    if (active?.closest?.('[data-testid="terminal-panel"]')) return;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.select === 'function') {
+      active.select();
+      return;
+    }
+    editorAction.set('select-all');
   }
 
   /**

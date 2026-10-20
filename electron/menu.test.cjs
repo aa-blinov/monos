@@ -157,6 +157,17 @@ test('the note menu closes the note, and the window menu keeps the window comman
   assert.deepEqual(sent, ['close-note']);
 });
 
+test('the edit menu asks the page to select all, not the browser', () => {
+  // Роль браузера выделила бы всю страницу, а не текст там, где стоит каретка.
+  const sent = [];
+  const template = buildMenuTemplate('ru', (command) => sent.push(command));
+  const edit = template.find((menu) => menu.label === 'Правка');
+  const selectAll = edit.submenu.find((entry) => entry.label === 'Выделить всё');
+  assert.equal(selectAll.role, undefined);
+  selectAll.click();
+  assert.deepEqual(sent, ['select-all']);
+});
+
 test('the menus keep the order macOS expects', () => {
   const template = buildMenuTemplate('en', () => {}, { hasNote: true });
   const note = template.find((menu) => menu.label === 'Note');
@@ -172,8 +183,7 @@ test('the menus keep the order macOS expects', () => {
   );
 });
 
-test('the edit menu finds in the note, and the key stays with the page', () => {
-  const sent = [];
+test('the edit menu finds in the note, and the key stays with the page', () => {  const sent = [];
   const template = buildMenuTemplate('ru', (command) => sent.push(command), { hasNote: true });
   const edit = template.find((menu) => menu.label === 'Правка');
   const find = edit.submenu.find((entry) => entry.label === 'Найти…');

@@ -154,6 +154,20 @@ await step('the native Format menu makes the text bold', async () => {
   await poll(async () => (await win.locator('.ProseMirror strong').count()) > 0, 'the new text is bold');
 });
 
+await step('the native Select All selects the text of the note, not the whole window', async () => {
+  await win.locator('.ProseMirror').click();
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const edit = menu.items.find((item) => item.label === 'Edit');
+    edit.submenu.items.find((item) => item.label === 'Select All').click();
+  });
+  await poll(async () => {
+    const picked = await win.evaluate(() => window.getSelection()?.toString() || '');
+    // Выделен текст заметки, а не окно: в боковой панели та же заметка осталась невыделенной.
+    return picked.includes('Hello from the acceptance run') && !picked.includes('Acceptance note');
+  }, 'the text of the note is selected, not the whole window');
+});
+
 await step('two notes that link to each other: relations, and the map shows both', async () => {
   const second = await makeNote('Linked note', 'Points back: [[Acceptance note]]');
   assert.equal(second.status, 200);

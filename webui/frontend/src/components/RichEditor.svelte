@@ -505,6 +505,12 @@
     cmd(command[0], command[1])();
   }
 
+  // «Выделить всё» из меню «Правка»: текст заметки, а не страница.
+  export function selectAllText() {
+    if (!editor) return;
+    editor.chain().focus().selectAll().run();
+  }
+
   export async function insertImageFile(file) {
     if (!file || !onImageFile || !editor) return false;
     const image = await onImageFile(file);

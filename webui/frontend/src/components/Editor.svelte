@@ -1584,6 +1584,7 @@
     else if (action === 'save') void flushPendingEdits();
     else if (action === 'find') richEditor?.openFind?.();
     else if (action?.startsWith('format-')) richEditor?.runFormat?.(action.slice('format-'.length));
+    else if (action === 'select-all') richEditor?.selectAllText?.();
   }
 </script>
 
