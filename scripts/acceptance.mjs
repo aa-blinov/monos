@@ -374,7 +374,11 @@ await step('the settings open in their own window, like on macOS', async () => {
   await settings.waitForSelector('[data-testid="appearance-section"]', { timeout: 15000 });
   // The notes stay in their own window.
   assert.equal((await app.windows()).length, before + 1);
-  await settings.close();
+  // ⌘W in the settings window closes that window, not the notes.
+  await app.evaluate(({ Menu }) => {
+    const noteMenu = Menu.getApplicationMenu().items.find((item) => item.label === 'Note' || item.label === 'Заметка');
+    noteMenu.submenu.items.find((item) => item.accelerator === 'Cmd+W').click();
+  });
   await poll(async () => (await app.windows()).length === before, 'the settings window closes');
 });
 
