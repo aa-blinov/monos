@@ -1,5 +1,6 @@
 @import './fonts.css';
 @import 'katex/dist/katex.min.css';
+@import '@monos/ui/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -13,6 +14,25 @@
   --radius: 6px;
   --text-whisper: 11px;
   --text-whisper-lg: 12px;
+
+  /* The kit owns the semantic stack. Monos keeps its own names while the
+     product components move over; the --ui- roles are aliases of them. */
+  --ui-bg: var(--bg-primary);
+  --ui-surface: var(--bg-secondary);
+  --ui-surface-2: var(--bg-tertiary);
+  --ui-ink: var(--text-primary);
+  --ui-ink-soft: var(--text-secondary);
+  --ui-ink-faint: var(--text-tertiary);
+  --ui-ink-muted: var(--text-muted);
+  --ui-line: var(--border-subtle);
+  --ui-accent: var(--blue);
+  --ui-danger: var(--red);
+  --ui-warning: var(--orange);
+  --ui-success: var(--green);
+  --ui-info: var(--blue);
+  --ui-radius: var(--radius);
+  --ui-text-whisper: var(--text-whisper);
+  --ui-text-whisper-lg: var(--text-whisper-lg);
 }
 
 @layer base {

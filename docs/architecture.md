@@ -217,6 +217,7 @@ src/
 The split rule:
 
 - **components/**: anything that renders pixels and dispatches events. Test with `vitest`.
+- **UI kit**: `@monos/ui` owns the semantic `--ui-*` tokens and the Tailwind bridge; `app.css` aliases Monos's palette variables to them, and product components move to the kit one primitive at a time.
 - **lib/**: pure functions, parsers, formatters, API wrappers, class-string builders. Test with `node:test`.
 - **stores.js**: global state shared across components. Each store is either `writable()` or a `persisted()` wrapper.
 - **App.svelte**: only cross-cutting state lives here; per-feature state stays in the component that owns it (e.g. `Sidebar.svelte` keeps the tree, the editor keeps draft content).

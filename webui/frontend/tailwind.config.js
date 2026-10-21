@@ -1,9 +1,13 @@
+import monosPreset from '@monos/ui/tailwind-preset';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{svelte,js,ts}"
+    "./src/**/*.{svelte,js,ts}",
+    "./node_modules/@monos/ui/src/**/*.{svelte,js}"
   ],
+  presets: [monosPreset],
   theme: {
     extend: {
       // One corner for every rectangle (DESIGN.md → Corner Radius). Change --radius in app.css to change them all.

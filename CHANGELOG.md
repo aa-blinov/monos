@@ -17,6 +17,23 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.6.0 — 2026-10-22
+
+### Added
+
+- The UI token layer now comes from [`@monos/ui`](https://github.com/aa-blinov/monos-ui)
+  `1.0.3`: its `tokens.css`, Tailwind preset and semantic `--ui-*` roles are wired
+  into the app, with Monos's existing theme variables as the aliases.
+- The Settings Help action and the notes-folder actions use the kit's `Button`.
+  The rest of the product components stay in Monos and move one primitive at a
+  time, as the kit's migration guide describes.
+- Site screenshots were taken again from the current app.
+
+### Changed
+
+- `@monos/ui` is a Git dependency pinned to the `v1.0.3` tag; the kit source is
+  compiled by the same Vite pipeline as the app.
+
 ## 1.5.1 — 2026-10-22
 
 ### Added

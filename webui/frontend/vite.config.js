@@ -30,6 +30,9 @@ export default defineConfig({
   // be found on first use, the dev server bundles them then and reloads the page, which drops what was on screen.
   optimizeDeps: {
     include: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-search', '@xterm/addon-web-links', 'd3-force'],
+    // The kit ships Svelte source; the Svelte plugin compiles it, so Vite must
+    // not pre-bundle it as plain JavaScript.
+    exclude: ['@monos/ui'],
   },
   server: {
     // Loopback only: the API has no authentication, so the dev server must not be
