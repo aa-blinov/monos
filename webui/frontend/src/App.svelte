@@ -244,8 +244,10 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
       headerComponent?.openSearch?.();
     }
     // ⌘F ищет по тексту заметки; в терминале та же клавиша ищет по выводу.
+    // ⌃⌘F — полный экран: системная клавиша macOS, ищет страница в этом случае нет.
     const inTerminal = Boolean(target?.closest?.('[data-testid="terminal-panel"]'));
-    if ((e.metaKey || e.ctrlKey) && key === 'f' && !e.shiftKey && !inTerminal && $menuState.hasNote) {
+    const fullScreenKey = e.metaKey && e.ctrlKey;
+    if ((e.metaKey || e.ctrlKey) && key === 'f' && !e.shiftKey && !fullScreenKey && !inTerminal && $menuState.hasNote) {
       e.preventDefault();
       editorAction.set('find');
     }
@@ -286,6 +288,8 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     else if (command === 'delete-selection') deleteSelectionInFocus();
     // ⌘W closes the note, not the window: the app stays on the board. With no note the shell closes the window.
     else if (command === 'close-note') showDashboard();
+    // A click on the notification about the notes that arrived shows the board with them.
+    else if (command === 'open-board') showDashboard();
     else if (command === 'open-recent' && payload?.path) {
       handleNavigate({ detail: { path: payload.path, name: payload.name || payload.path.split('/').pop(), isDir: false } });
     }
@@ -416,7 +420,9 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     const event = backgroundEvent(result, autoPullState);
     if (event) {
       const text = $localizedText.app.notifications[event.kind];
-      menuBridge?.notify?.(text.title, typeof text.body === 'function' ? text.body(event.count) : text.body);
+      // A click on the notification shows what it is about: the board with the notes that arrived.
+      const action = event.kind === 'notes-pulled' ? 'board' : '';
+      menuBridge?.notify?.(text.title, typeof text.body === 'function' ? text.body(event.count) : text.body, action);
     }
     if (result.reviewBlocked) {
       syncBlockedByReview.set(result.reviewBlocked);

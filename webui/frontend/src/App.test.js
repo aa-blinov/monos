@@ -178,6 +178,19 @@ test('App не трогает дроп, который уже взял реда�
   expect(openDroppedNote).not.toHaveBeenCalled();
 }, 20000);
 
+test('App открывает доску, когда оболочка зовёт по клику на уведомление', async () => {
+  let command = null;
+  window.monosMenu = { setLocale: vi.fn(), setState: vi.fn(), onCommand: (cb) => { command = cb; return () => {}; } };
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await waitFor(() => expect(typeof command).toBe('function'));
+  command('open-recent', { path: 'notes/Work/Alpha.md', name: 'Alpha' });
+  await waitFor(() => expect(window.location.pathname).toContain('Work/Alpha'));
+  command('open-board');
+  await waitFor(() => expect(window.location.pathname).toBe('/'));
+}, 20000);
+
 test('App выполняет команду меню «Сохранить»', async () => {
   let command = null;
   window.monosMenu = { setLocale: vi.fn(), setState: vi.fn(), onCommand: (cb) => { command = cb; return () => {}; } };
