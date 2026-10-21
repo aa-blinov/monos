@@ -4,6 +4,7 @@
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { Button } from '@monos/ui';
   import ConflictResolver from './ConflictResolver.svelte';
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
@@ -916,21 +917,9 @@
           <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnreadable.replace('{files}', storage.unreadable.join(', '))}</p>
         {/if}
         <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={storageBusy}
-            data-testid="storage-choose"
-            on:click={chooseStorage}
-            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          >{$localizedText.settings.storageChoose}</button>
+          <Button variant="secondary" size="sm" disabled={storageBusy} data-testid="storage-choose" on:click={chooseStorage}>{$localizedText.settings.storageChoose}</Button>
           {#if storage.target !== storage.defaultFolder}
-            <button
-              type="button"
-              disabled={storageBusy}
-              data-testid="storage-reset"
-              on:click={useDefaultStorage}
-              class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-            >{$localizedText.settings.storageReset}</button>
+            <Button variant="secondary" size="sm" disabled={storageBusy} data-testid="storage-reset" on:click={useDefaultStorage}>{$localizedText.settings.storageReset}</Button>
           {/if}
         </div>
       {/if}
@@ -1527,7 +1516,7 @@
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.helpTitle}</h2>
         <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.helpText}</p>
       </div>
-      <button type="button" data-testid="settings-open-help" on:click={() => dispatch('openHelp')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.helpOpen}</button>
+      <Button variant="text" size="sm" data-testid="settings-open-help" on:click={() => dispatch('openHelp')}>{$localizedText.settings.helpOpen}</Button>
     </section>
 
     <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-secondary)]">

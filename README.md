@@ -57,13 +57,25 @@ The same board in a narrow window:
 
 ![The board on a phone-sized window](site/media/monos-mobile.png)
 
+## UI stack
+
+The UI is moving onto [`@monos/ui`](https://github.com/aa-blinov/monos-ui). The
+kit owns the token layer, the Tailwind bridge and the `--ui-*` semantic roles;
+Monos keeps its palette names as aliases while the product components move over
+one primitive at a time. The Settings Help action and the notes-folder actions
+already use the kit's `Button`; a note card, the tree, the editor and the rest of
+the product stay in the app.
+
+![Settings with the kit buttons](site/media/monos-settings.png)
+
 ## How it works
 
 ```
 Electron main process (electron/main.cjs)
   starts the Express backend on 127.0.0.1 and serves the built Svelte app
 Svelte frontend (webui/frontend)
-  the editor, the board, the search and the settings; it talks to /api/*
+  the editor, the board, the search and the settings; @monos/ui supplies
+  the token layer and the first migrated primitives; it talks to /api/*
 Express backend (webui/backend)
   reads and writes Markdown, keeps the SQLite index, runs git
 notes/           Markdown files and their attachments
