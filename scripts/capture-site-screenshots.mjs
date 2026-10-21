@@ -275,8 +275,8 @@ async function main() {
     });
 
     await page.goto(frontendUrl);
-    await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByRole('button', { name: /^\+\s*New$/i }).waitFor();
     // The board is the subject: close the sidebar so the grid takes the full width, and crop
     // only the empty margins around it.
     await page.getByRole('button', { name: 'Close sidebar' }).first().click();
@@ -289,8 +289,8 @@ async function main() {
     });
     // Reload so the sidebar is back to its default for the screenshots that follow.
     await page.reload();
-    await page.waitForLoadState('networkidle');
-    await page.getByRole('button', { name: /^\+\s*New note$/i }).waitFor();
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByRole('button', { name: /^\+\s*New$/i }).waitFor();
 
     await page.getByPlaceholder('Search').fill('sync');
     await page.getByText('Search Results').waitFor();
@@ -311,32 +311,36 @@ async function main() {
 
     const openSidebar = page.getByRole('button', { name: 'Open sidebar' });
     if (await openSidebar.isVisible()) await openSidebar.click();
-    await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Product/i }).first().click();
-    await page.getByTestId('tree-drop-zone').getByRole('button', { name: /Launch Plan/i }).first().click();
+    // The note opens by its own address: the tree changes from release to release.
+    await page.goto(`${frontendUrl}/notes/Product/Launch%20Plan.md`);
+    await page.waitForLoadState('domcontentloaded');
     await page.locator('input[placeholder="Note Title"]').waitFor();
+    // The note's text arrives after the title: without it the screenshot catches an empty note.
+    await page.getByRole('heading', { name: 'Monos desktop builds' }).waitFor({ timeout: 30000 });
     await page.screenshot({ path: path.join(outputDir, 'monos-editor.png'), fullPage: false });
 
     await page.goto(`${frontendUrl}/templates`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.getByRole('heading', { name: 'Templates', exact: true }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-templates.png'), fullPage: false });
 
     await page.goto(`${frontendUrl}/settings`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'View Conflicts' }).waitFor();
-    await page.getByRole('button', { name: 'View Conflicts' }).click();
-    await page.getByRole('button', { name: 'Resolve Conflicts' }).waitFor();
-    await page.getByRole('button', { name: 'Resolve Conflicts' }).click();
-    await page.getByRole('dialog').getByText('Research/Sync Conflict.md').waitFor();
-    await page.screenshot({ path: path.join(outputDir, 'monos-conflicts.png'), fullPage: false });
-    await page.keyboard.press('Escape');
     await page.getByText('Backup', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(outputDir, 'monos-settings.png'), fullPage: false });
 
+    // The conflict is resolved in the note itself: open the note and show both versions.
+    await page.goto(frontendUrl);
+    await page.waitForLoadState('domcontentloaded');
+    await page.goto(`${frontendUrl}/notes/Research/Sync%20Conflict.md`);
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByTestId('conflict-ours-cell').waitFor({ timeout: 30000 });
+    await page.screenshot({ path: path.join(outputDir, 'monos-conflicts.png'), fullPage: false });
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(frontendUrl);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.getByRole('button', { name: 'Group by color' }).waitFor();
     await page.screenshot({ path: path.join(outputDir, 'monos-mobile.png'), fullPage: false });
 
