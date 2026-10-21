@@ -36,10 +36,10 @@
     hiddenLibraryTemplateIds,
   } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
-  
+
   export let mobile = false;
   export let gitConfigured = true;
-  
+
   import {
     createFolderRequest,
     createNoteRequest,
@@ -837,7 +837,7 @@
     if (path !== "notes") {
       categoryPath = path.startsWith('notes/') ? path.slice(6) : path;
     }
-    
+
     if (action === 'newNote') {
       newNoteCategory = categoryPath;
       dispatch('openCreateNote', { category: categoryPath });
@@ -891,11 +891,11 @@
       const data = await renameItemRequest(target.path, requestName);
       announceNoteLinksUpdated(data);
       closeRenameModal();
-      
+
       const affectedSelectedPath = selectedPath && isSameOrDescendant(selectedPath, target.path)
         ? replacePathPrefix(selectedPath, target.path, data.path)
         : null;
-      
+
       if (affectedSelectedPath) {
         navigateToPath(affectedSelectedPath, target.isDir && affectedSelectedPath === data.path);
       }
@@ -1229,14 +1229,14 @@
         <!-- Render children directly to hide 'notes' root node -->
         {#key treeKey}
         {#each filteredTree.children || [] as node (node.path)}
-          <FileTree 
-            {node} 
-            {selectedPath} 
+          <FileTree
+            {node}
+            {selectedPath}
             {selectedPaths}
             {expandedPaths}
             searchMode={false}
             expanded={expandedPaths.has(node.path)}
-            on:navigate={handleSelectFile} 
+            on:navigate={handleSelectFile}
             on:toggleSelect={handleToggleSelectFile}
             on:toggleExpand={handleToggleExpand}
             on:rightClick={handleRightClick}
@@ -1422,7 +1422,7 @@
             </div>
           {/if}
         </div>
-        
+
         <TooltipIconButton
           on:click={() => dispatch('openTrash')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"

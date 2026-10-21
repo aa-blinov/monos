@@ -203,4 +203,3 @@ test('RichEditor renders attachment image caption without file extension', () =>
   expect(html[2][1]['data-attachment-path']).toBe('notes/_attachments/image.webp');
   expect(html[3]).toEqual(['span', { class: 'editor-image-caption' }, 'image']);
 });
-

@@ -29,7 +29,7 @@ test('returns empty metadata when template has only H1 + sections', () => {
   const md = `# Topic / MOC
 
 ## Overview
-- 
+-
 `;
   const { metadata, rest } = extractTemplateMetadata(md);
   assert.equal(metadata.length, 0);
@@ -95,7 +95,7 @@ test('tolerates missing H1', () => {
 Status: Draft
 
 ## Outcome
-- 
+-
 `;
   const { metadata, rest } = extractTemplateMetadata(md);
   assert.equal(metadata.length, 2);
