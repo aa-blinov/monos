@@ -100,6 +100,26 @@ export function startAutoSync({ onResult, intervalMs } = {}) {
   void runSyncRound();
 }
 
+/**
+ * What a round says to the system, or null when there is nothing new to say.
+ *
+ * The window shows the state of the sync while the person is looking at it. In the background the
+ * system says it instead, and it says it once: the same failure every round and the same conflict
+ * every round are one event, not a new one.
+ *
+ * `previous` is the state of the round before this one.
+ */
+export function backgroundEvent(result, previous = {}) {
+  if (!result || result.reviewBlocked) return null;
+  if (result.ok === false) {
+    if (previous.error) return null;
+    return { kind: 'sync-failed' };
+  }
+  if (result.received > 0) return { kind: 'notes-pulled', count: result.received };
+  if (result.conflicts && !previous.conflicts) return { kind: 'conflicts' };
+  return null;
+}
+
 /** Whether a sync round also sends this device's changes, as chosen in Settings. */
 export function uploadsChanges() {
   return policy.upload;

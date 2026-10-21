@@ -49,6 +49,9 @@ async function launch() {
 }
 
 async function size(width, height) {
+  // The pointer away from the window buttons: macOS opens the green button's own menu under it, and
+  // that menu holds the app, so the quit would wait for it.
+  await win.mouse.move(700, 500);
   await app.evaluate(({ BrowserWindow }, [w, h]) => BrowserWindow.getAllWindows()[0].setSize(w, h), [width, height]);
   await win.waitForTimeout(700);
 }
@@ -168,6 +171,50 @@ await step('the tree and the board card offer to show a note in Finder (desktop 
   await win.keyboard.press('Escape');
 });
 
+// A file dropped into the window, the way a person drags it from Finder. The system gives the path,
+// so the drag is a real one: the shell's debugger dispatches it with the file on disk.
+const dropFile = async (file) => {
+  const point = await win.evaluate(() => {
+    const root = document.querySelector('[role="presentation"].h-screen') || document.body;
+    const r = root.getBoundingClientRect();
+    // The top strip of the content: the board and the cards take drops of their own.
+    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + 30) };
+  });
+  await app.evaluate(async ({ BrowserWindow }, [target, where]) => {
+    const window = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+    if (!window.webContents.debugger.isAttached()) window.webContents.debugger.attach('1.3');
+    const send = (method, params) => window.webContents.debugger.sendCommand(method, params);
+    const data = {
+      items: [{ mimeType: 'text/plain', data: target, title: target.split('/').pop() }],
+      files: [target],
+      dragOperationsMask: 1,
+    };
+    for (const type of ['dragEnter', 'dragOver', 'drop']) {
+      await send('Input.dispatchDragEvent', { type, x: where.x, y: where.y, data });
+    }
+  }, [file, point]);
+};
+
+await step('a file dropped into the window opens the note', async () => {
+  const file = await poll(() => notesOnDisk().find((f) => /Acceptance note/.test(f)), 'the note is on disk');
+  await dropFile(file);
+  await win.locator('.ProseMirror').waitFor({ timeout: 10000 });
+  await poll(async () => /Hello from the acceptance run/.test(await win.locator('.ProseMirror').innerText()), 'the dropped note is open');
+  await shot('02b-dropped-note');
+});
+
+await step('a file from outside the notes folder is refused, and the app says so', async () => {
+  const outside = path.join(userData, 'outside.md');
+  fs.writeFileSync(outside, '# Outside\n');
+  await dropFile(outside);
+  await win.getByText('This file is not in the notes folder').waitFor({ timeout: 10000 });
+  // The note stays open: the app did not leave what the person was reading.
+  assert.match(await win.locator('.ProseMirror').innerText(), /Hello from the acceptance run/);
+  // На доску: следующий шаг ждёт карточку, а не открытую заметку.
+  await win.evaluate(() => { history.pushState({}, '', '/'); dispatchEvent(new PopStateEvent('popstate')); });
+  await win.waitForSelector('main [role=list]');
+});
+
 await step('the native Select All selects the text of the note, not the whole window', async () => {
   // Предыдущий шаг оставил доску открытой: заметку открываем снова.
   await card('Acceptance note').click();
@@ -200,13 +247,16 @@ await step('two notes that link to each other: relations, and the map shows both
   await win.getByTestId('show-on-map').click();
   await win.getByTestId('map-counts').waitFor({ timeout: 15000 });
   assert.match(await win.getByTestId('map-counts').innerText(), /2 notes, 1 link$/);
-  const painted = await win.getByTestId('map-canvas').evaluate((canvas) => {
-    const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    let count = 0;
-    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) count += 1;
-    return count;
-  });
-  assert.ok(painted > 100, `the map is drawn (${painted} pixels)`);
+  // The map draws itself a moment after it appears.
+  await poll(async () => {
+    const painted = await win.getByTestId('map-canvas').evaluate((canvas) => {
+      const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      let count = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) count += 1;
+      return count;
+    });
+    return painted > 100;
+  }, 'the map is drawn');
   await shot('03-map');
 });
 
@@ -218,7 +268,8 @@ await step('search finds the note by name, from anywhere (⌘K)', async () => {
   await box.fill('Linked');
   await win.getByRole('option', { name: /Linked note/ }).first().click();
   await win.locator('input[placeholder="Note Title"]').waitFor();
-  assert.equal(await win.locator('input[placeholder="Note Title"]').inputValue(), 'Linked note');
+  // Заметка открывается не мгновенно: ждём, пока в поле будет её название.
+  await poll(async () => (await win.locator('input[placeholder="Note Title"]').inputValue()) === 'Linked note', 'the note opens');
 });
 
 await step('keys: ⌘N opens a new note, Esc closes it, ⌘B hides the sidebar and brings it back', async () => {
@@ -334,7 +385,18 @@ if (process.platform === 'darwin') {
 }
 
 await step('quit and start again: the notes are where they were, links and map intact', async () => {
-  await app.close();
+  // The pointer away from the window buttons: macOS opens the green button's own menu under it, and
+  // that menu holds the app, so the quit would wait for it.
+  await win.mouse.move(700, 500);
+  // The app quits by itself. A system menu of the window buttons can hold it in an automated run:
+  // then the quit waits for a timer that never comes, and the app is killed instead.
+  const quit = app.close().catch(() => {});
+  const held = await Promise.race([
+    quit.then(() => false),
+    new Promise((resolve) => setTimeout(() => resolve(true), 15000)),
+  ]);
+  if (held) app.process().kill('SIGKILL');
+  await quit;
   await launch();
   await win.waitForSelector('main [role=list]', { timeout: 30000 });
   const list = await win.locator('main [role=list]').innerText();

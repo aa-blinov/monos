@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, dialog, ipcMain, screen, session, shell } = require('electron');
 const { registerTerminal } = require('./terminal.cjs');
 const { APP_NAME, buildMenuTemplate, buildDockTemplate, buildContextMenuTemplate } = require('./menu.cjs');
 const {
@@ -9,6 +9,7 @@ const {
   readWindowState, writeWindowState, boundsOnScreen,
 } = require('./window-state.cjs');
 const { resolveDroppedNote } = require('./dropped-note.cjs');
+const { backgroundNotice } = require('./notify.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
@@ -444,6 +445,20 @@ ipcMain.handle('reveal-in-finder', (_event, notePath) => {
 // The page asks for the settings window (the sidebar's "Settings").
 ipcMain.handle('open-settings', () => {
   openSettingsWindow();
+});
+
+// A background event the person cannot see from the window: the system says it, not the app.
+// The window in front means the person sees it already, so the system stays quiet.
+ipcMain.handle('notify', (_event, payload) => {
+  const notice = backgroundNotice(payload, {
+    focused: Boolean(BrowserWindow.getFocusedWindow()),
+    supported: Notification.isSupported(),
+  });
+  if (!notice) return false;
+  const notification = new Notification(notice);
+  notification.on('click', focusMainWindow);
+  notification.show();
+  return true;
 });
 
 // A file dropped into the window opens the note, if it is one of the notes folder.

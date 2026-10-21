@@ -225,6 +225,20 @@ const enText = {
       return `Notes not updated: ${count}`;
     },
     droppedOutsideNotes: 'This file is not in the notes folder',
+    notifications: {
+      'notes-pulled': {
+        title: 'Notes updated',
+        body: (count) => `Notes received: ${count}`,
+      },
+      'sync-failed': {
+        title: 'Sync failed',
+        body: 'The notes stopped syncing',
+      },
+      conflicts: {
+        title: 'Conflicts in notes',
+        body: 'Some notes need to be merged',
+      },
+    },
     closeMenu: 'Close menu',
     sidebarLabel: 'Sidebar',
     skipToContent: 'Skip to content',
@@ -1453,6 +1467,20 @@ const ruText = {
       return `Заметок не обновлено: ${count}`;
     },
     droppedOutsideNotes: 'Этот файл не в папке заметок',
+    notifications: {
+      'notes-pulled': {
+        title: 'Заметки обновились',
+        body: (count) => `Заметок получено: ${count}`,
+      },
+      'sync-failed': {
+        title: 'Синхронизация не удалась',
+        body: 'Заметки перестали синхронизироваться',
+      },
+      conflicts: {
+        title: 'Конфликты в заметках',
+        body: 'Часть заметок нужно объединить',
+      },
+    },
     closeMenu: 'Закрыть меню',
     sidebarLabel: 'Боковая панель',
     skipToContent: 'К содержимому',

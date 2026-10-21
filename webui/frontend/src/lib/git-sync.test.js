@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_SYNC_MINUTES,
+  backgroundEvent,
   isSyncInFlight,
   normalizeSyncMinutes,
   runSyncRound,
@@ -192,4 +193,21 @@ test('упавший раунд сообщает приложению причи
     stopAutoSync();
     globalThis.fetch = originalFetch;
   }
+});
+
+test('фоновое событие: пришли заметки, упал раунд, появились конфликты', () => {
+  assert.deepEqual(backgroundEvent({ ok: true, received: 2 }), { kind: 'notes-pulled', count: 2 });
+  assert.deepEqual(backgroundEvent({ ok: false, detail: 'no network' }), { kind: 'sync-failed' });
+  assert.deepEqual(backgroundEvent({ ok: true, conflicts: true }), { kind: 'conflicts' });
+});
+
+test('тихий раунд не говорит ничего', () => {
+  assert.equal(backgroundEvent(null), null);
+  assert.equal(backgroundEvent({ ok: true, received: 0, conflicts: false }), null);
+  assert.equal(backgroundEvent({ ok: true, reviewBlocked: ['План.md'] }), null);
+});
+
+test('одно и то же событие не повторяется каждым раундом', () => {
+  assert.equal(backgroundEvent({ ok: false, detail: 'no network' }, { error: { detail: 'no network' } }), null);
+  assert.equal(backgroundEvent({ ok: true, conflicts: true }, { conflicts: true }), null);
 });
