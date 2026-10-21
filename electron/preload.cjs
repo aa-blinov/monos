@@ -39,5 +39,5 @@ contextBridge.exposeInMainWorld('monosMenu', {
   // Open the dropped file, if it is a note in the notes folder.
   openDroppedNote: (path) => ipcRenderer.invoke('open-dropped-note', path),
   // A background event: the system tells the person, the window cannot.
-  notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
+  notify: (title, body, action) => ipcRenderer.invoke('notify', { title, body, action }),
 });

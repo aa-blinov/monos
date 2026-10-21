@@ -235,7 +235,9 @@ function buildMenuTemplate(locale, send, state = {}) {
         { role: 'zoomIn', label: t.zoomIn },
         { role: 'zoomOut', label: t.zoomOut },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: t.fullScreen },
+        // ⌃⌘F — как на macOS. В заметке эта клавиша ищет по тексту, поэтому страница
+        // отдаёт ⌃⌘F системе, а не ищет.
+        { role: 'togglefullscreen', label: t.fullScreen, accelerator: 'Cmd+Ctrl+F' },
       ],
     },
     {

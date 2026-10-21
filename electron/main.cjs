@@ -456,7 +456,11 @@ ipcMain.handle('notify', (_event, payload) => {
   });
   if (!notice) return false;
   const notification = new Notification(notice);
-  notification.on('click', focusMainWindow);
+  // A click on the notification brings the app forward and shows what the event was about.
+  notification.on('click', () => {
+    focusMainWindow();
+    if (payload?.action === 'board') sendMenuCommand('open-board');
+  });
   notification.show();
   return true;
 });
