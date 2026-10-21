@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { prepareMonos } from './support/monos.js';
 
-// Favorites are their own list under Tools, apart from the pinned notes: marked from the note's ··· menu,
+// Favorites are their own list under Other, apart from the pinned notes: marked from the note's ··· menu,
 // opened from the list, taken off with the star.
 test('избранное: пометка в меню заметки, отдельный список, снятие звездой', async ({ page }) => {
   await prepareMonos(page);
@@ -25,6 +25,29 @@ test('избранное: пометка в меню заметки, отдел�
   await expect(row).toHaveCount(0);
 });
 
+// The same mark from the sidebar: a note in the pinned list is right-clicked, and "Add to favorites" writes the
+// property into the file and puts the note into the list under Other.
+test('избранное: ПКМ по заметке в боковой панели добавляет её в список', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1400, height: 800 });
+  const title = `Sidebar fav ${Date.now()}`;
+  const created = await (await page.request.post('/api/notes/create', { data: { title, category: 'Board', tags: [], content: 'text' } })).json();
+  await page.request.put(`/api/file/metadata?path=${encodeURIComponent(created.path)}`, { data: { pinned: true } });
+  await page.goto('/');
+
+  const item = page.getByTestId('pinned-list').getByRole('button', { name: new RegExp(title) });
+  await expect(item).toBeVisible();
+  await item.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
+
+  // The mark is in the note itself, not in the browser.
+  await expect.poll(async () => String((await (await page.request.get(`/api/file?path=${encodeURIComponent(created.path)}`)).json()).content)).toContain('monos-favorite');
+
+  await page.getByTestId('open-more').click();
+  await page.getByTestId('open-favorites').click();
+  await expect(page.getByTestId('favorite-row').filter({ hasText: title })).toHaveCount(1);
+});
+
 // A note is unpinned from the main board itself: right click on its card, and the sidebar's list follows.
 test('доска: ПКМ по карточке открепляет заметку и в боковой панели тоже', async ({ page }) => {
   await prepareMonos(page);
@@ -43,7 +66,7 @@ test('доска: ПКМ по карточке открепляет заметк
   await expect(marks).toHaveCount(before - 1);
 });
 
-// The Properties table appears in Tools as soon as a note has a property of its own.
+// The Properties table appears in Other as soon as a note has a property of its own.
 test('инструменты: таблица свойств появляется, когда у заметки есть своё свойство', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1400, height: 800 });
@@ -54,8 +77,8 @@ test('инструменты: таблица свойств появляется
   await expect(page.getByTestId('open-properties')).toBeVisible();
 });
 
-// The Tools menu has many items now: on a short window it scrolls inside itself instead of leaving the screen.
-test('меню «Инструменты» на низком окне не выходит за экран', async ({ page }) => {
+// The Other menu has many items now: on a short window it scrolls inside itself instead of leaving the screen.
+test('меню «Прочее» на низком окне не выходит за экран', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 1300, height: 520 });
   await page.goto('/');

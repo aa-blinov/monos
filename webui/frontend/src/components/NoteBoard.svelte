@@ -2,7 +2,7 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
-  import { Copy, ExternalLink, FolderOpen, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
+  import { Check, ChevronDown, Copy, ExternalLink, FolderOpen, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
   import { pinNote, unpinNote } from '../lib/sidebar-pinned.js';
   import { writeNoteDragPayload } from '../lib/drag-payload.js';
   import BoardTags from './BoardTags.svelte';
@@ -105,9 +105,84 @@
     void loadHomeRecentNotes({ queueIfBusy: true });
   }
 
-  function chooseSort(event) {
-    $boardSort = event.currentTarget.value;
+  function chooseSort(value) {
+    $boardSort = value;
+    closeSortMenu();
+    sortTriggerEl?.focus();
     void loadHomeRecentNotes({ queueIfBusy: true });
+  }
+
+  // The order is a menu, not a native select: the system draws its own popup (another accent colour, another
+  // font) and a select also takes the keyboard focus ring from a mouse click, which nothing else here does.
+  let sortMenuOpen = false;
+  let sortMenuLeft = 0;
+  let sortMenuEl = null;
+  let sortTriggerEl = null;
+  let toolbarEl = null;
+
+  $: currentSortLabel = sortOptions.find(([value]) => value === $boardSort)?.[1] || '';
+
+  async function toggleSortMenu() {
+    if (sortMenuOpen) {
+      closeSortMenu();
+      return;
+    }
+    // The menu hangs from the left edge of its button, as the tag list does; when that would run past the
+    // toolbar's right edge, it moves left just enough to stay inside.
+    sortMenuLeft = Math.max(0, sortTriggerEl?.offsetLeft ?? 0);
+    sortMenuOpen = true;
+    await tick();
+    const menu = sortMenuEl?.getBoundingClientRect();
+    const bar = toolbarEl?.getBoundingClientRect();
+    if (menu && bar && menu.right > bar.right) {
+      sortMenuLeft = Math.max(0, sortMenuLeft - (menu.right - bar.right));
+      await tick();
+    }
+    sortMenuEl?.querySelector('[aria-checked="true"]')?.focus();
+  }
+
+  function closeSortMenu() {
+    sortMenuOpen = false;
+  }
+
+  function sortItems() {
+    return [...(sortMenuEl?.querySelectorAll('[role="menuitemradio"]') || [])];
+  }
+
+  function handleSortTriggerKeydown(event) {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    if (!sortMenuOpen) void toggleSortMenu();
+  }
+
+  function handleSortMenuKeys(event) {
+    const items = sortItems();
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSortMenu();
+      sortTriggerEl?.focus();
+      return;
+    }
+    if (event.key === 'Tab') {
+      closeSortMenu();
+      return;
+    }
+    let next = null;
+    if (event.key === 'ArrowDown') next = items[(index + 1) % items.length];
+    else if (event.key === 'ArrowUp') next = items[(index - 1 + items.length) % items.length];
+    else if (event.key === 'Home') next = items[0];
+    else if (event.key === 'End') next = items[items.length - 1];
+    if (next) {
+      event.preventDefault();
+      next.focus();
+    }
+  }
+
+  function handleWindowClick() {
+    closeContextMenu();
+    closeSortMenu();
   }
 
   function closeContextMenu() {
@@ -245,23 +320,55 @@
 
 </script>
 
-<svelte:window on:click={closeContextMenu} />
+<svelte:window on:click={handleWindowClick} />
 
 {#if !query.trim()}
-<div class="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+<!-- The tags and the order filter the board, so they stay in sight while the cards scroll under them.
+     The bar sits one step (1rem) below and above the content: the page's own top padding is taken down to
+     that step, and the background reaches up over what is left, so a card cannot show in the strip above. -->
+<div class="sticky top-0 z-30 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] pb-4 before:absolute before:inset-x-0 before:bottom-full before:h-4 before:bg-[var(--bg-primary)] before:content-[''] sm:-top-2 sm:-mt-2 lg:-top-4 lg:-mt-4">
   <BoardTags on:choose={(event) => chooseTag(event.detail)} />
-  <div class="ml-auto inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
-    <label class="sr-only" for="board-sort">{$localizedText.app.board.sortLabel}</label>
-    <select
+  <div bind:this={toolbarEl} class="relative z-30 ml-auto inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
+    <button
+      type="button"
       id="board-sort"
-      class="h-7 cursor-pointer rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-      value={$boardSort}
-      on:change={chooseSort}
+      bind:this={sortTriggerEl}
+      aria-haspopup="menu"
+      aria-expanded={sortMenuOpen}
+      aria-label={`${$localizedText.app.board.sortLabel}: ${currentSortLabel}`}
+      class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {sortMenuOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+      on:click|stopPropagation={toggleSortMenu}
+      on:keydown={handleSortTriggerKeydown}
     >
-      {#each sortOptions as [value, label]}
-        <option {value}>{label}</option>
-      {/each}
-    </select>
+      <span class="truncate">{currentSortLabel}</span>
+      <ChevronDown size="12" strokeWidth="1.7" class="shrink-0 transition-transform {sortMenuOpen ? 'rotate-180' : ''}" aria-hidden="true" />
+    </button>
+    {#if sortMenuOpen}
+      <div
+        bind:this={sortMenuEl}
+        role="menu"
+        tabindex="-1"
+        aria-label={$localizedText.app.board.sortLabel}
+        data-testid="board-sort-menu"
+        class="absolute top-full z-50 mt-1 w-44 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-lg shadow-black/10"
+        style="left: {sortMenuLeft}px"
+        on:click|stopPropagation
+        on:keydown={handleSortMenuKeys}
+      >
+        {#each sortOptions as [value, label]}
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={$boardSort === value}
+            class="flex w-full items-center gap-2 rounded-ui px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] {$boardSort === value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+            on:click={() => chooseSort(value)}
+          >
+            <span class="min-w-0 flex-1 truncate">{label}</span>
+            {#if $boardSort === value}<Check size="12" strokeWidth="1.7" aria-hidden="true" />{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
     <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
     <TooltipIconButton
       class="flex h-7 items-center gap-1.5 rounded-ui px-2 text-[length:var(--text-whisper-lg)] transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"

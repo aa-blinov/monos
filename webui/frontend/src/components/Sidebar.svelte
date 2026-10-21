@@ -6,12 +6,13 @@
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
-  import { terminalBridge } from '../lib/terminal.js';
+  import { terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { agentReviewOpen, syncBlockedByReview } from '../lib/agent-review.js';
   import { get as getRequest } from '../lib/api/client.js';
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
   import IconPickerModal from './IconPickerModal.svelte';
+  import SidebarMoreMenu from './SidebarMoreMenu.svelte';
   import {
     isSameOrDescendant,
     basename,
@@ -22,11 +23,12 @@
     replacePathPrefix,
   } from '../lib/sidebar-utils.js';
   import { pinnedNotes, isPinned, pinNote, unpinNote, forgetPin, pinSyncMark, setPinnedFromTree, migrateLegacyPins } from '../lib/sidebar-pinned.js';
+  import { isFavoriteProperties, setFavoriteRequest } from '../lib/favorites.js';
   import { writeNoteDragPayload } from '../lib/drag-payload.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
-  import { iconOptions } from '../lib/icons.js';
+  import { iconOptions, noteIconOptions } from '../lib/icons.js';
   import { getTemplateContext, noteTemplates } from '../lib/note-templates.js';
   import {
     buildRuntimeTemplateContent,
@@ -53,7 +55,7 @@
     syncRequest,
     checkGitStatus,
   } from '../lib/sidebar-api.js';
-  import { bulkTagRequest, duplicateNoteRequest, loadFileContent, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
+  import { bulkTagRequest, duplicateNoteRequest, loadFileContent, loadFileInfo, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
   import { announceNoteLinksUpdated, announceNotesPulled, flushOpenNote } from '../lib/note-refresh.js';
   import {
     convertImageToWebp,
@@ -169,6 +171,8 @@
 
   /** @type {boolean} */
   let showIconModal = false;
+  /** @type {boolean} */
+  let iconPickerIsDir = false;
   /** @type {string} */
   let iconPickerTarget = null;
   /** @type {string} */
@@ -186,6 +190,10 @@
 
   // Context Menu State
   let contextMenu = { show: false, x: 0, y: 0, targetPath: null, targetName: '', isDir: false };
+  // A favourite is a property of the note, not part of the tree: the note's own properties are read when the
+  // menu opens, so the item says whether it will add the mark or take it off.
+  let contextFavorite = false;
+  let contextFavoritePath = '';
   let pendingDelete = null;
   let contextMenuEl = null;
   let contextMenuPos = { x: 0, y: 0 };
@@ -811,6 +819,16 @@
       selectionPaths,
       byKeyboard,
     };
+    contextFavorite = false;
+    contextFavoritePath = isDir ? '' : path;
+    if (!isDir) {
+      const requested = path;
+      loadFileInfo(path)
+        .then((info) => {
+          if (contextFavoritePath === requested) contextFavorite = isFavoriteProperties(info?.properties);
+        })
+        .catch(() => { /* the menu keeps "Add to favorites"; setting it again is harmless */ });
+    }
   }
 
   function handleBackgroundRightClick(e) {
@@ -845,6 +863,7 @@
       newFolderName = categoryPath;
       showCreateFolderModal = true;
     } else if (action === 'setIcon') {
+      iconPickerIsDir = contextMenu.isDir;
       iconPickerTarget = path;
       showIconModal = true;
     } else if (action === 'rename') {
@@ -856,6 +875,10 @@
       pinNote(path, name).catch((error) => console.error('Failed to pin:', error));
     } else if (action === 'unpin') {
       unpinNote(path, name).catch((error) => console.error('Failed to unpin:', error));
+    } else if (action === 'favorite') {
+      setFavoriteRequest(path, true).catch((error) => console.error('Failed to add to favorites:', error));
+    } else if (action === 'unfavorite') {
+      setFavoriteRequest(path, false).catch((error) => console.error('Failed to remove from favorites:', error));
     } else if (action === 'delete') {
       const deletePaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [path];
       // One note goes to the trash at once, with an undo notice. A folder is deleted for good and a
@@ -919,18 +942,6 @@
   }
 
   // A note is resolved in the note itself; a file that is not a note (an attachment) in Settings.
-  // The "More" row's menu (desktop footer).
-  let moreOpen = false;
-  let moreAnchor;
-  const moreItemClass = 'flex h-8 w-full items-center gap-2.5 px-3 text-left text-sm text-[var(--text-secondary)] outline-none transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--bg-secondary)] focus-visible:text-[var(--text-primary)]';
-  function pickMore(event) {
-    moreOpen = false;
-    dispatch(event);
-  }
-  function closeMoreOutside(event) {
-    if (moreOpen && moreAnchor && !moreAnchor.contains(event.target)) moreOpen = false;
-  }
-
   function openFirstConflict() {
     const [path] = [...$conflictedNotes].sort();
     if (!path) {
@@ -1254,68 +1265,47 @@
   </div>
 
   <!-- Stats Footer -->
-  <div class="{mobile ? 'flex max-h-[70dvh] shrink-0 flex-col gap-1 overflow-y-auto border-t border-[var(--border-subtle)] px-4 pb-6 pt-3' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
+  <div class="{mobile ? 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-4 pb-6 pt-3' : 'flex shrink-0 flex-col gap-1 border-t border-[var(--border-subtle)] px-3 py-2 text-[length:var(--text-whisper-lg)] uppercase tracking-widest'}">
     {#if mobile}
-      <!-- Two columns: ten rows of 48px would take the whole screen and leave the notes a single line. -->
-      <div class="grid grid-cols-2 gap-x-3" data-testid="phone-tools">
-      {#if gitConfigured}
-        <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
-          {#if isSyncing}
-            <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
-          {:else if autoPullState?.error}
-            <Icon.AlertTriangle size="20" strokeWidth="1.7" />
-          {:else}
-            <Icon.RefreshCw size="20" strokeWidth="1.7" />
-          {/if}
-          <span>{syncRowLabel}</span>
+      <!-- Three rows, as on a desktop: Other, Terminal, Settings. The tools and the trash live in Other. -->
+      <div class="flex flex-col gap-0.5" data-testid="phone-tools">
+        {#if gitConfigured}
+          <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+            {#if isSyncing}
+              <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
+            {:else if autoPullState?.error}
+              <Icon.AlertTriangle size="20" strokeWidth="1.7" />
+            {:else}
+              <Icon.RefreshCw size="20" strokeWidth="1.7" />
+            {/if}
+            <span>{syncRowLabel}</span>
+          </button>
+        {/if}
+        <SidebarMoreMenu
+          mobile
+          {showTagsLink}
+          {showPropertiesLink}
+          {showSavedSearchesLink}
+          on:picked={() => dispatch('toggleSidebar')}
+          on:openMap={() => dispatch('openMap')}
+          on:openFavorites={() => dispatch('openFavorites')}
+          on:openAttachments={() => dispatch('openAttachments')}
+          on:openProperties={() => dispatch('openProperties')}
+          on:openTags={() => dispatch('openTags')}
+          on:openSavedSearches={() => dispatch('openSavedSearches')}
+          on:openTemplatesManager={() => dispatch('openTemplatesManager')}
+          on:openTrash={() => dispatch('openTrash')}
+        />
+        {#if terminalBridge}
+          <button data-testid="phone-terminal" aria-pressed={$terminalOpen} on:click={() => { toggleTerminal(); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+            <Icon.TerminalSquare size="20" strokeWidth="1.7" />
+            <span>{$localizedText.terminal.open}</span>
+          </button>
+        {/if}
+        <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
+          <Icon.Settings size="20" strokeWidth="1.7" />
+          <span>{$localizedText.sidebar.settings}</span>
         </button>
-      {/if}
-      <button on:click={() => { dispatch('openTemplatesManager'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.LayoutTemplate size="20" strokeWidth="1.7" />
-        <span>{$localizedText.sidebar.templates}</span>
-      </button>
-      {#if showSavedSearchesLink}
-        <button data-testid="open-saved-searches" on:click={() => { dispatch('openSavedSearches'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-          <Icon.Bookmark size="20" strokeWidth="1.7" />
-          <span>{$localizedText.savedSearches.title}</span>
-        </button>
-      {/if}
-      {#if showTagsLink}
-        <button data-testid="open-tags" on:click={() => { dispatch('openTags'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-          <Icon.Hash size="20" strokeWidth="1.7" />
-          <span>{$localizedText.tags.title}</span>
-        </button>
-      {/if}
-      <button data-testid="open-map" on:click={() => { dispatch('openMap'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Waypoints size="20" strokeWidth="1.7" />
-        <span>{$localizedText.map.sidebar}</span>
-      </button>
-      <button data-testid="open-favorites" on:click={() => { dispatch('openFavorites'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Star size="20" strokeWidth="1.7" />
-        <span>{$localizedText.favorites.sidebar}</span>
-      </button>
-      <button data-testid="open-attachments" on:click={() => { dispatch('openAttachments'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Paperclip size="20" strokeWidth="1.7" />
-        <span>{$localizedText.attachments.sidebar}</span>
-      </button>
-      {#if showPropertiesLink}
-        <button data-testid="open-properties" on:click={() => { dispatch('openProperties'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-          <Icon.SlidersHorizontal size="20" strokeWidth="1.7" />
-          <span>{$localizedText.properties.sidebar}</span>
-        </button>
-      {/if}
-      <button on:click={() => { dispatch('openTrash'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Trash2 size="20" strokeWidth="1.7" />
-        <span>{$localizedText.sidebar.trash}</span>
-      </button>
-      <button data-testid="open-help" on:click={() => { dispatch('openHelp'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.LifeBuoy size="20" strokeWidth="1.7" />
-        <span>{$localizedText.sidebar.help}</span>
-      </button>
-      <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-        <Icon.Settings size="20" strokeWidth="1.7" />
-        <span>{$localizedText.sidebar.settings}</span>
-      </button>
       </div>
     {:else}
       <span class="text-[var(--text-secondary)]">
@@ -1368,81 +1358,36 @@
             <span class="truncate">{syncRowLabel}</span>
           </TooltipIconButton>
         {/if}
-        <!-- The places opened now and then (templates, saved searches, tags, the notes table) share one row, so
-             the footer stays short; each is also in the command palette (⌘K). -->
-        <div class="relative" bind:this={moreAnchor}>
-          <button
-            type="button"
-            data-testid="open-more"
-            aria-haspopup="menu"
-            aria-expanded={moreOpen}
-            on:click={() => { moreOpen = !moreOpen; }}
-            class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] {moreOpen ? 'text-[var(--text-primary)]' : ''}"
+        <!-- Everything that is not a place of its own shares one row, so the footer keeps three lines:
+             Other, Terminal, Settings. Each item is also in the command palette (⌘K). -->
+        <SidebarMoreMenu
+          {showTagsLink}
+          {showPropertiesLink}
+          {showSavedSearchesLink}
+          on:openMap={() => dispatch('openMap')}
+          on:openFavorites={() => dispatch('openFavorites')}
+          on:openAttachments={() => dispatch('openAttachments')}
+          on:openProperties={() => dispatch('openProperties')}
+          on:openTags={() => dispatch('openTags')}
+          on:openSavedSearches={() => dispatch('openSavedSearches')}
+          on:openTemplatesManager={() => dispatch('openTemplatesManager')}
+          on:openTrash={() => dispatch('openTrash')}
+        />
+        {#if terminalBridge}
+          <!-- The panel docks at the bottom of the content column; its switch stays at the bottom edge too. -->
+          <TooltipIconButton
+            data-testid="sidebar-terminal"
+            aria-pressed={$terminalOpen}
+            on:click={toggleTerminal}
+            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] {$terminalOpen ? 'text-[var(--text-primary)]' : ''}"
+            label={$localizedText.terminal.open}
+            tooltip=""
+            tooltipAlign="end"
           >
-            <Icon.LayoutGrid class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-            <span class="truncate">{$localizedText.sidebar.more}</span>
-            <Icon.ChevronRight class="ml-auto w-3.5 h-3.5 shrink-0 transition-transform {moreOpen ? '-rotate-90' : ''}" strokeWidth="1.7" aria-hidden="true" />
-          </button>
-          {#if moreOpen}
-            <!-- svelte-ignore a11y-interactive-supports-focus -->
-            <div
-              role="menu"
-              aria-label={$localizedText.sidebar.more}
-              data-testid="more-menu"
-              on:keydown={(event) => { if (event.key === 'Escape') { moreOpen = false; moreAnchor?.querySelector('button')?.focus(); } }}
-              class="absolute bottom-full left-0 z-40 mb-1 max-h-[min(24rem,calc(100dvh-10rem))] w-full overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 normal-case tracking-normal shadow-2xl"
-            >
-              <button type="button" role="menuitem" data-testid="open-map" class={moreItemClass} on:click={() => pickMore('openMap')}>
-                <Icon.Waypoints class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.sidebar}
-              </button>
-              <button type="button" role="menuitem" data-testid="open-favorites" class={moreItemClass} on:click={() => pickMore('openFavorites')}>
-                <Icon.Star class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.favorites.sidebar}
-              </button>
-              <button type="button" role="menuitem" data-testid="open-attachments" class={moreItemClass} on:click={() => pickMore('openAttachments')}>
-                <Icon.Paperclip class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.attachments.sidebar}
-              </button>
-              {#if showPropertiesLink}
-                <button type="button" role="menuitem" data-testid="open-properties" class={moreItemClass} on:click={() => pickMore('openProperties')}>
-                  <Icon.SlidersHorizontal class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.properties.sidebar}
-                </button>
-              {/if}
-              {#if showTagsLink}
-                <button type="button" role="menuitem" data-testid="open-tags" class={moreItemClass} on:click={() => pickMore('openTags')}>
-                  <Icon.Hash class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.tags.title}
-                </button>
-              {/if}
-              {#if showSavedSearchesLink}
-                <button type="button" role="menuitem" data-testid="open-saved-searches" class={moreItemClass} on:click={() => pickMore('openSavedSearches')}>
-                  <Icon.Bookmark class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.savedSearches.title}
-                </button>
-              {/if}
-              <button type="button" role="menuitem" data-testid="open-templates" class={moreItemClass} on:click={() => pickMore('openTemplatesManager')}>
-                <Icon.LayoutTemplate class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />{$localizedText.sidebar.templates}
-              </button>
-            </div>
-          {/if}
-        </div>
-
-        <TooltipIconButton
-          on:click={() => dispatch('openTrash')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.sidebar.trash}
-          tooltip=""
-          tooltipAlign="end"
-        >
-          <Icon.Trash2 class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.sidebar.trash}</span>
-        </TooltipIconButton>
-        <TooltipIconButton
-          data-testid="open-help"
-          on:click={() => dispatch('openHelp')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          label={$localizedText.sidebar.help}
-          tooltip=""
-        >
-          <Icon.LifeBuoy class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.sidebar.help}</span>
-        </TooltipIconButton>
+            <Icon.TerminalSquare class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            <span class="truncate">{$localizedText.terminal.open}</span>
+          </TooltipIconButton>
+        {/if}
         <TooltipIconButton
           on:click={() => dispatch('openSettings')}
           class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
@@ -1477,6 +1422,11 @@
           <button on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.unpin}</button>
         {:else}
           <button on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.pin}</button>
+        {/if}
+        {#if contextFavorite}
+          <button data-testid="context-favorite" on:click={() => handleContextAction('unfavorite')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.editor.favoriteRemove}</button>
+        {:else}
+          <button data-testid="context-favorite" on:click={() => handleContextAction('favorite')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.editor.favoriteAdd}</button>
         {/if}
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
@@ -1523,8 +1473,6 @@
     </div>
   {/if}
 </div>
-
-<svelte:window on:pointerdown={closeMoreOutside} />
 
 <!-- Bulk Tag Modal -->
 {#if showBulkTagPrompt}
@@ -1586,7 +1534,7 @@
 {#if showIconModal}
   <IconPickerModal
     {colorOptions}
-    {iconOptions}
+    iconOptions={iconPickerIsDir ? iconOptions : noteIconOptions}
     {iconMap}
     {selectedColor}
     noneLabel={$localizedText.sidebar.modals.none}

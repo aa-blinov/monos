@@ -1102,7 +1102,6 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
-          on:openHelp={openHelp}
           on:openTerminal={toggleTerminal}
           on:openTags={openTagPanel}
           on:openProperties={openPropertiesView}

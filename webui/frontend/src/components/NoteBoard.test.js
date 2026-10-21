@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import NoteBoard from './NoteBoard.svelte';
 import { conflictedNotes } from '../lib/git-conflicts.js';
 import { locale, uiText } from '../lib/strings.js';
+import { boardSort } from '../lib/dashboard.js';
 import { boardColumns, boardGroupByColor } from '../stores.js';
 
 function jsonResponse(data, ok = true) {
@@ -41,6 +42,7 @@ beforeEach(() => {
   locale.set('en');
   boardColumns.set('3');
   boardGroupByColor.set(false);
+  boardSort.set('modified');
   const fetchMock = vi.fn(async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
     const method = init.method || 'GET';
@@ -302,4 +304,24 @@ test('NoteBoard помечает заметку с конфликтом синх
   } finally {
     conflictedNotes.set(new Set());
   }
+});
+
+test('NoteBoard выбирает порядок тематическим меню, а не системной выпадашкой', async () => {
+  render(NoteBoard, { notes });
+
+  const trigger = screen.getByRole('button', {
+    name: `${uiText.app.board.sortLabel}: ${uiText.app.board.sortModified}`,
+  });
+  await fireEvent.click(trigger);
+
+  const menu = await screen.findByRole('menu', { name: uiText.app.board.sortLabel });
+  // A native select would draw its own popup over the page, with the system's colours.
+  expect(menu.querySelector('select')).toBeNull();
+  expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
+
+  await fireEvent.click(within(menu).getByRole('menuitemradio', { name: uiText.app.board.sortTitle }));
+
+  expect(get(boardSort)).toBe('title');
+  expect(screen.queryByRole('menu', { name: uiText.app.board.sortLabel })).toBeNull();
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
 });

@@ -322,6 +322,7 @@ test('вложения на телефоне: фильтры за одной к�
   await page.route('**/api/attachments/all', (route) => route.fulfill({ json: { lockedNotes: 0, items: bigVault(20) } }));
   await page.goto('/');
   await page.getByRole('button', { name: /Open sidebar/ }).first().click();
+  await page.getByTestId('open-more').click();
   await page.getByTestId('open-attachments').click();
   await expect(page.getByTestId('attachment-card').first()).toBeVisible();
   await expect(page.getByTestId('attachments-sort')).toBeHidden();

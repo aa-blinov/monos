@@ -1252,16 +1252,8 @@
     ? folder.split('/').map((part, index) => (index === 0 ? displayFolderName(part, $localizedText) : part)).join(' / ')
     : $localizedText.editor.noFolder);
   $: currentFolder = folderOf(loadedFilePath || currentFile?.path);
+  // The bottom bar names the folder, not the note: the note's name is already the title above.
   $: currentFolderLabel = folderLabel(currentFolder);
-
-  // The path of the document itself: the folders it lies in and the note at the end of them.
-  const pathLabel = (notePath, text) => {
-    const parts = String(notePath || '').replace(/^notes\//, '').split('/').filter(Boolean);
-    const name = (parts.pop() || '').replace(/\.md$/, '');
-    const folder = parts.map((part, index) => (index === 0 ? displayFolderName(part, text) : part)).join(' / ');
-    return folder ? `${folder} / ${name}` : name;
-  };
-  $: currentPathLabel = pathLabel(loadedFilePath || currentFile?.path, $localizedText);
 
   // The hints of the property buttons: the name of the field and, if it has one, its value.
   $: tagsLabel = editableTags.length
@@ -1745,13 +1737,13 @@
             data-testid="property-category-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
-            aria-label={`${$localizedText.editor.propertyCategory}: ${currentPathLabel}`}
+            aria-label={`${$localizedText.editor.propertyCategory}: ${currentFolderLabel}`}
             class="inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
-            <span class="hidden min-w-0 truncate sm:inline">{currentPathLabel}</span>
+            <span class="hidden min-w-0 truncate sm:inline">{currentFolderLabel}</span>
           </button>
           {#if propertyPanel === 'category'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>
