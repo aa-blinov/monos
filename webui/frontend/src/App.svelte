@@ -27,7 +27,7 @@ import { get } from 'svelte/store';
   import { homeRecentNotes, homeRecentHasMore, homeRecentLoading, homeRecentError, loadHomeRecentNotes } from './lib/dashboard.js';
 import { pickAndImport } from './lib/backup.js';
 import { focusNoteBody, settingsSection } from './stores.js';
-import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
+import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyncPolicy, setBusyCheck, startAutoSync, stopAutoSync } from './lib/git-sync.js';
   import { sidebarOpen, sidebarWidth, isResizingSidebar, toggleSidebar, setSidebarOpen, setSidebarWidth, saveSidebarWidth, clampSidebarWidth, defaultSidebarWidth, SIDEBAR_CONSTANTS } from './lib/sidebar.js';
   import { commandPaletteOpen, commandPaletteMode, openCommandPalette, closeCommandPalette } from './lib/command-palette.js';
   import { urlSearchQuery, searchUrlReady, restoredInitialUrlSearch, searchParamFromUrl, syncSearchUrl } from './lib/search-query.js';
@@ -413,6 +413,11 @@ import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, setBusyC
 
   function handleAutoPullResult(result) {
     if (!result) return;
+    const event = backgroundEvent(result, autoPullState);
+    if (event) {
+      const text = $localizedText.app.notifications[event.kind];
+      menuBridge?.notify?.(text.title, typeof text.body === 'function' ? text.body(event.count) : text.body);
+    }
     if (result.reviewBlocked) {
       syncBlockedByReview.set(result.reviewBlocked);
       void refreshAgentReview();

@@ -5,7 +5,19 @@
 // anything: a file from elsewhere is not a note of this app, and the app does not copy files
 // into the notes folder on its own.
 
+const fs = require('node:fs');
 const path = require('node:path');
+
+// The same files are the same files. The system gives the dropped file by its own path, and
+// that path may lead through a link: /tmp is a link to /private/tmp on macOS, and a chosen
+// notes folder can sit behind a link too. The check compares the folders as the system sees them.
+function realPath(target) {
+  try {
+    return fs.realpathSync(target);
+  } catch {
+    return path.resolve(target);
+  }
+}
 
 // The same files the index keeps as notes.
 const NOTE_EXTENSIONS = new Set(['.md', '.txt']);
@@ -22,7 +34,7 @@ function resolveDroppedNote(notesDir, filePath) {
   const absolute = path.resolve(filePath);
   if (!NOTE_EXTENSIONS.has(path.extname(absolute).toLowerCase())) return { ok: false, code: 'not-a-note' };
   if (!notesDir) return { ok: false, code: 'outside-notes' };
-  const relative = path.relative(path.resolve(notesDir), absolute);
+  const relative = path.relative(realPath(notesDir), realPath(absolute));
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
     return { ok: false, code: 'outside-notes' };
   }
