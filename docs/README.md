@@ -6,7 +6,7 @@ plain Markdown file on the computer of the person who wrote it.
 | Document | What it covers |
 | --- | --- |
 | [architecture.md](architecture.md) | The shape of the code: the modules, the data flow and the boundaries. |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | The owner's long document: the two runtime modes, the storage layout, the theme system, the sync and the test strategy. |
+| [architecture.md](architecture.md) | The owner's long document: the two runtime modes, the storage layout, the theme system, the sync and the test strategy. |
 | [STATE.md](STATE.md) | Where the state lives, who owns it and how it flows. |
 | [LIB.md](LIB.md) | Every pure helper in the frontend, grouped by what it does. |
 | [FRONTMATTER.md](FRONTMATTER.md) | The metadata a note may carry at the top of its file. |
@@ -26,7 +26,7 @@ plain Markdown file on the computer of the person who wrote it.
 
 The folder carries two of them, and the names differ only in the case.
 
-[ARCHITECTURE.md](ARCHITECTURE.md) is the owner's. It is the long one, it
+[architecture.md](architecture.md) is the owner's. It is the long one, it
 predates the rest of this folder, and `docs/docs-freshness.test.js` reads it
 by that exact path and fails the build when it stops naming the systems it
 has to name. It stays where it is, with its content.
@@ -36,7 +36,7 @@ modules, the data flow and the boundaries, in the shape of the "How it
 works" section of the README. It is the shorter one.
 
 Read [architecture.md](architecture.md) first if you want the shape of the
-code, and [ARCHITECTURE.md](ARCHITECTURE.md) afterwards for the detail of any
+code, and [architecture.md](architecture.md) afterwards for the detail of any
 one part of it.
 
 ## Reading order

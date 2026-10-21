@@ -147,7 +147,7 @@ The version follows Semantic Versioning. A MAJOR bump is reserved for a breaking
 
 The documents:
 
-- [ARCHITECTURE](docs/ARCHITECTURE.md) explains the system, the theme system and the sync.
+- [ARCHITECTURE](docs/architecture.md) explains the system, the theme system and the sync.
 - [STATE](docs/STATE.md) says where state lives and who owns it.
 - [LIB](docs/LIB.md) maps every helper in `webui/frontend/src/lib/`.
 - [FRONTMATTER](docs/FRONTMATTER.md) documents the metadata of a note.

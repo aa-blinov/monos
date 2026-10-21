@@ -157,7 +157,7 @@ Tokens live as CSS custom properties in `lib/themes.js`, the single source of tr
 - **Ink** (`#3c3836` / `#ebdbb2`): every readable sentence. The highest-contrast token in the system and the only one allowed at full strength for body copy.
 - **Ink Soft** (`#7c6f64` / `#a89984`): supporting text: excerpts, subtitles, secondary labels. Reads as a quieter sentence, never as disabled text.
 - **Ink Faint** (`#928374`, both modes): the floor. Timestamps, counts, and de-emphasized chrome.
-- **Ink Quiet** (`--text-tertiary`): derived per theme to clear WCAG AA 4.5:1 on a tinted note card. Carries the metadata whisper; see docs/ARCHITECTURE.md.
+- **Ink Quiet** (`--text-tertiary`): derived per theme to clear WCAG AA 4.5:1 on a tinted note card. Carries the metadata whisper; see docs/architecture.md.
 
 ### Tertiary
 
