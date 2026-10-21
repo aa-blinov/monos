@@ -41,9 +41,13 @@ test('настройки на узком окне: отмеченная част
   const nav = page.getByTestId('settings-nav');
   const buttons = nav.getByRole('button');
   const count = await buttons.count();
-  // The strip scrolls itself; a programmatic click keeps the test about that scroll,
-  // not about Playwright's actionability check on a control that is partly clipped.
-  await buttons.nth(count - 1).evaluate((button) => button.click());
+  // The strip scrolls itself; click Help in the page so the test is about that scroll,
+  // not about Playwright resolving a control that is partly clipped at this width.
+  await page.evaluate(() => {
+    const strip = document.querySelector('[data-testid="settings-nav"]');
+    const help = [...(strip?.querySelectorAll('button') || [])].find((button) => button.textContent.trim() === 'Help');
+    help?.click();
+  });
   await page.waitForTimeout(1300);
   const visible = await page.evaluate(() => {
     const strip = document.querySelector('[data-testid="settings-nav"]');
