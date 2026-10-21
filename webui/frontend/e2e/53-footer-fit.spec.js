@@ -38,15 +38,11 @@ test('настройки на узком окне: отмеченная част
   await prepareMonos(page);
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/settings');
-  const nav = page.getByTestId('settings-nav');
-  const buttons = nav.getByRole('button');
-  const count = await buttons.count();
-  // The strip scrolls itself; click Help in the page so the test is about that scroll,
-  // not about Playwright resolving a control that is partly clipped at this width.
+  // Scroll to the end, where Help becomes the marked part. The strip then has to
+  // bring it into view; clicking the clipped last button is a different problem.
   await page.evaluate(() => {
-    const strip = document.querySelector('[data-testid="settings-nav"]');
-    const help = [...(strip?.querySelectorAll('button') || [])].find((button) => button.textContent.trim() === 'Help');
-    help?.click();
+    const scroller = document.querySelector('main [class*="overflow-y-auto"]');
+    scroller.scrollTop = scroller.scrollHeight;
   });
   await page.waitForTimeout(1300);
   const visible = await page.evaluate(() => {
