@@ -118,7 +118,7 @@ export async function dropTinyImage(page, selector = '.ProseMirror') {
   }, { selector, tinyPngBase64 });
 }
 
-// Templates, saved searches, tags and the notes table sit in the sidebar's "More" menu on a wide window.
+// Templates, saved searches, tags, the notes table and the trash sit in the sidebar's "Other" menu.
 export async function openSidebarMore(page) {
   const more = page.getByTestId('open-more');
   if (await more.isVisible()) await more.click();

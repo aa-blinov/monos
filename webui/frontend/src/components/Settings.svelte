@@ -715,6 +715,7 @@
     { id: 'settings-devices', label: $localizedText.settings.navDevices },
     ...(terminalBridge ? [{ id: 'settings-agent', label: $localizedText.agent.title }] : []),
     { id: 'settings-more', label: $localizedText.settings.advanced },
+    { id: 'settings-help', label: $localizedText.settings.helpTitle },
   ];
 
   // A part chosen in the list stays marked while the page scrolls to it: a short part near the end cannot reach the
@@ -1347,15 +1348,6 @@
       </div>
     {/if}
 
-    <!-- The guide lives in the Help; Settings only points to it. -->
-    <section class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-[var(--border-subtle)] pt-5" data-testid="settings-help-link">
-      <div class="min-w-0">
-        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.helpTitle}</h2>
-        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.helpText}</p>
-      </div>
-      <button type="button" data-testid="settings-open-help" on:click={() => dispatch('openHelp')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.helpOpen}</button>
-    </section>
-
     <details class="group scroll-mt-16 space-y-8 border-t border-[var(--border-subtle)] pt-6 lg:scroll-mt-6" id="settings-more" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
       <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
         <span class="block">
@@ -1528,6 +1520,15 @@
 
     </details>
 
+    <!-- The guide lives in the Help; Settings only points to it. Its own part, last: a person looking for
+         instructions should not have to read the rest of Settings first. -->
+    <section id="settings-help" data-testid="settings-help" class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
+      <div class="min-w-0">
+        <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.helpTitle}</h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.helpText}</p>
+      </div>
+      <button type="button" data-testid="settings-open-help" on:click={() => dispatch('openHelp')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.helpOpen}</button>
+    </section>
 
     <footer class="border-t border-[var(--border-subtle)] pt-4 pb-1 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.18em] text-[var(--text-secondary)]">
       <span class="text-[var(--text-tertiary)]">{$localizedText.settings.version} {appVersion}</span>

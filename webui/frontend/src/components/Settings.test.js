@@ -137,6 +137,22 @@ test('Settings показывает версию приложения в фут�
   await waitFor(() => expect(screen.getByText(`${uiText.settings.version} ${appPackage.version}`)).toBeTruthy());
 });
 
+test('Settings ставит справку последним разделом, отдельно от остальных', async () => {
+  const fetchMock = createFetchMock({ settings: {} });
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Settings);
+
+  const nav = screen.getByTestId('settings-nav');
+  const buttons = within(nav).getAllByRole('button');
+  expect(buttons.at(-1).textContent.trim()).toBe(uiText.settings.helpTitle);
+
+  const section = screen.getByTestId('settings-help');
+  expect(within(section).getByTestId('settings-open-help').textContent.trim()).toBe(uiText.settings.helpOpen);
+  expect(section.textContent).toContain(uiText.settings.helpText);
+});
+
 test('Settings не запускает git setup без явного действия пользователя', async () => {
   const fetchMock = createFetchMock({ settings: {} });
   globalThis.fetch = fetchMock;

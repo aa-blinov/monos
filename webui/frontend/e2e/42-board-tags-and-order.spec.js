@@ -26,7 +26,8 @@ test('доска: тег сразу сужает список, порядок п
   await expect(page.getByTestId('board-count')).toHaveText(/Showing 2 of 2/i);
   await expect(page.getByText(`Other ${stamp}`)).toHaveCount(0);
 
-  await page.locator('#board-sort').selectOption('title');
+  await page.locator('#board-sort').click();
+  await page.getByRole('menuitemradio', { name: 'By title' }).click();
   await expect(async () => {
     const text = await page.locator('main [role=list]').innerText();
     expect(text.indexOf(`Alpha ${stamp}`)).toBeGreaterThanOrEqual(0);
@@ -51,28 +52,38 @@ test('доска на телефоне: длинное название карт
   expect(height).toBeLessThanOrEqual(lineHeight * 2 + 2);
 });
 
-// The phone's menu keeps touch-sized rows (44px) in two columns, so the tools do not push the notes off the screen.
-test('меню слева на телефоне: инструменты в две колонки, у заметок остаётся место', async ({ page }) => {
+// The phone's foot keeps three rows: Other, Terminal (in the app), Settings. The tools and the trash wait
+// inside Other, so the note stays in view and every row is a touch target.
+test('меню слева на телефоне: снаружи Прочее и Настройки, корзина внутри', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto('/');
   await page.getByRole('button', { name: /Open sidebar/ }).first().click();
-  const help = page.getByTestId('open-help');
-  await expect(help).toBeVisible();
-  // The grid holds as many items as the state asks for, so its last row may stand alone: the check is
-  // that the tools stand in two columns and that each of them is a touch target.
-  const boxes = await page.getByTestId('phone-tools').locator('button').evaluateAll((els) => els.map((el) => {
+  const footer = page.getByTestId('phone-tools');
+  await expect(footer.getByTestId('open-more')).toBeVisible();
+  await expect(footer.getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+  // The trash is no longer a row of its own.
+  await expect(footer.getByRole('button', { name: 'Trash', exact: true })).toHaveCount(0);
+
+  const boxes = await footer.locator('button').evaluateAll((els) => els.map((el) => {
     const box = el.getBoundingClientRect();
-    return { x: Math.round(box.x), right: Math.round(box.right), height: Math.round(box.height) };
+    return { right: Math.round(box.right), height: Math.round(box.height) };
   }));
-  expect([...new Set(boxes.map((b) => b.x))].length).toBe(2);
   for (const box of boxes) {
     expect(box.height).toBeGreaterThanOrEqual(44);
     expect(box.right).toBeLessThanOrEqual(390);
   }
-  const tools = await page.getByTestId('phone-tools').boundingBox();
-  // Ten tools stay under a third of the screen, the rest is for the notes.
-  expect(tools.height).toBeLessThan(800 * 0.4);
+
+  await footer.getByTestId('open-more').click();
+  const menu = page.getByTestId('more-menu');
+  await expect(menu).toBeVisible();
+  // The tools are inside, and the trash is the last item, away from the ones used every day.
+  await expect(menu.getByTestId('open-map')).toBeVisible();
+  await expect(menu.getByTestId('open-templates')).toBeVisible();
+  await expect(menu.getByTestId('open-trash')).toBeVisible();
+  await expect(menu.getByRole('menuitem').last()).toContainText('Trash');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
 });
 
 // The tag field says what it is for even when the note already has tags: an empty box tells nothing.
@@ -105,4 +116,40 @@ test('заметка на телефоне: «Структура» в верхн
   // The bar of a phone has no room for the trash: it waits in the menu of the foot.
   await page.getByTestId('editor-more').click();
   await expect(page.getByTestId('menu-trash')).toBeVisible();
+});
+
+// The tags and the order decide what the board shows, so they stay at the top while the cards scroll.
+test('доска: строка фильтров закреплена при прокрутке', async ({ page }) => {
+  await prepareMonos(page);
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.addInitScript(() => localStorage.setItem('noteView', 'board'));
+  const stamp = Date.now();
+  for (let i = 0; i < 16; i += 1) {
+    await page.request.post('/api/notes/create', { data: { title: `Scroll ${stamp} ${i}`, category: 'Board', tags: [], content: 'text' } });
+  }
+  await page.goto('/');
+
+  const bar = page.locator('#board-sort').locator('xpath=ancestor::div[contains(@class,"sticky")][1]');
+  await expect(bar).toBeVisible();
+  const scroller = page.locator('[data-board-scroll]');
+  const scrollBox = await scroller.boundingBox();
+  const atRest = await bar.boundingBox();
+  expect(atRest.y).toBeGreaterThan(scrollBox.y + 4);
+
+  await scroller.evaluate((el) => { el.scrollTop = 600; el.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(300);
+
+  const stuck = await bar.boundingBox();
+  // The bar keeps the page's own top gap while it sticks, and no card shows in that strip: the bar's
+  // background reaches up over it.
+  expect(stuck.y).toBeGreaterThan(scrollBox.y + 4);
+  expect(Math.abs(stuck.y - atRest.y)).toBeLessThanOrEqual(1);
+  const gapIsBar = await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('div.sticky')), { x: stuck.x + 20, y: stuck.y - 6 });
+  expect(gapIsBar).toBe(true);
+  // The gap above the controls and the one below them are the same.
+  const toolbar = await page.locator('#board-sort').locator('xpath=..').boundingBox();
+  const above = stuck.y - scrollBox.y;
+  const below = (stuck.y + stuck.height) - (toolbar.y + toolbar.height);
+  expect(Math.abs(above - below)).toBeLessThanOrEqual(2);
+  await expect(page.locator('#board-sort')).toBeInViewport();
 });

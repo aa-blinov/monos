@@ -158,22 +158,32 @@
         {/if}
       {/if}
       </span>
-      {#if $agentTouched.has(note?.path)}
-        <!-- Changed by the agent and not reviewed yet: kept or reverted in the terminal's Agent changes. -->
-        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--blue)]" data-testid="card-agent" title={$localizedText.agentReview.badgeHint}>{$localizedText.agentReview.badge}</span>
-      {/if}
-      {#if inConflict}
-        <!-- A note that changed on two devices says so on the board, not only once it is opened. -->
-        <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>
-      {/if}
-      {#if openedDate}
-        <time
-          class="min-h-4 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]"
-          datetime={openedDateTime}
-          title={openedDateTitle}
-        >
-          {openedDate}
-        </time>
+      {#if openedDate || $agentTouched.has(note?.path) || inConflict}
+        <!-- The day and the marks sit on one line: a mark above the day would take a row of its own and push
+             the text around whenever the agent touched a note. -->
+        <span class="flex min-h-4 min-w-0 items-center justify-between gap-2">
+          {#if openedDate}
+            <time
+              class="min-w-0 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]"
+              datetime={openedDateTime}
+              title={openedDateTitle}
+            >
+              {openedDate}
+            </time>
+          {:else}
+            <span class="min-w-0"></span>
+          {/if}
+          <span class="flex shrink-0 items-center gap-2">
+            {#if $agentTouched.has(note?.path)}
+              <!-- Changed by the agent and not reviewed yet: kept or reverted in the terminal's Agent changes. -->
+              <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--blue)]" data-testid="card-agent" title={$localizedText.agentReview.badgeHint}>{$localizedText.agentReview.badge}</span>
+            {/if}
+            {#if inConflict}
+              <!-- A note that changed on two devices says so on the board, not only once it is opened. -->
+              <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>
+            {/if}
+          </span>
+        </span>
       {/if}
     </span>
   {/if}

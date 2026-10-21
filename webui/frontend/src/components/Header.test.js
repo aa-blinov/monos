@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Header from './Header.svelte';
 import { locale, uiText } from '../lib/strings.js';
+import { HOVER_DELAY } from '../lib/tooltip.js';
 import { isSearching, searchQuery, searchResults } from '../stores.js';
 
 function jsonResponse(data, ok = true) {
@@ -138,6 +139,25 @@ test('Header растягивает поиск и показывает quick not
   expect(screen.queryByText('Quick')).toBeNull();
 
   await fireEvent.click(screen.getByRole('button', { name: uiText.sidebar.quickNoteFromClipboard }));
+  expect(quickNoteHandler).toHaveBeenCalledTimes(1);
+});
+
+test('Header показывает быструю заметку иконкой, а подпись — подсказкой при наведении', async () => {
+  const { component } = render(Header);
+  const quickNoteHandler = vi.fn();
+  component.$on('createQuickNote', quickNoteHandler);
+
+  const button = screen.getByRole('button', { name: uiText.sidebar.quickNoteFromClipboard });
+  expect(button.textContent.trim()).toBe('');
+  expect(button.className).toContain('lg:w-10');
+  expect(button.className).not.toContain('lg:w-auto');
+
+  await fireEvent.mouseEnter(button);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+  await vi.advanceTimersByTimeAsync(HOVER_DELAY);
+  expect(screen.getByRole('tooltip').textContent).toContain(uiText.sidebar.quickNoteFromClipboard);
+
+  await fireEvent.click(button);
   expect(quickNoteHandler).toHaveBeenCalledTimes(1);
 });
 

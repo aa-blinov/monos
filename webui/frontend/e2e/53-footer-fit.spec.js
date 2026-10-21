@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { prepareMonos } from './support/monos.js';
 
-// The bottom block of the phone's menu (Tools items, Trash, Help, Settings) scrolls inside itself on a short
-// screen, so Settings is always reachable.
-test('меню слева на низком телефоне: «Настройки» достижимы прокруткой', async ({ page }) => {
+// The phone's foot is three rows now, so Settings stays in reach even on a short screen.
+test('меню слева на низком телефоне: «Настройки» на месте', async ({ page }) => {
   await prepareMonos(page);
   await page.setViewportSize({ width: 390, height: 420 });
   await page.goto('/');

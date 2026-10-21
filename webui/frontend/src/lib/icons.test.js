@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { iconOptions } from './icons.js';
+import { folderIcons, iconOptions, noteIconOptions } from './icons.js';
 
 test('iconOptions — массив непустых строк-имён lucide иконок', () => {
   assert.ok(Array.isArray(iconOptions));
@@ -17,4 +17,14 @@ test('iconOptions содержит базовые иконки (folder, file-tex
   assert.ok(iconOptions.includes('folder'));
   assert.ok(iconOptions.includes('file-text'));
   assert.ok(iconOptions.includes('archive'));
+});
+
+test('noteIconOptions не предлагает папки: они остаются папкам', () => {
+  assert.deepEqual(folderIcons, ['folder', 'folder-open']);
+  for (const icon of folderIcons) {
+    assert.ok(iconOptions.includes(icon), `${icon} должен остаться в общем наборе для папок`);
+    assert.ok(!noteIconOptions.includes(icon), `${icon} не должен предлагаться заметке`);
+  }
+  assert.equal(noteIconOptions.length, iconOptions.length - folderIcons.length);
+  assert.ok(noteIconOptions.includes('file-text'));
 });

@@ -16,7 +16,7 @@ async function seed(page) {
 
 test.beforeEach(async ({ page }) => { await prepareMonos(page); });
 
-test('карта открывается из меню «Инструменты», рисует заметки, поиск находит и открывает заметку', async ({ page }) => {
+test('карта открывается из меню «Прочее», рисует заметки, поиск находит и открывает заметку', async ({ page }) => {
   const names = await seed(page);
   await page.goto('/');
   await openSidebarMore(page);

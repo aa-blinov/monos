@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { prepareMonos } from './support/monos.js';
 
-// The Help opens from the sidebar, lists every topic, and its search jumps to the topic it found.
-test('справка: открывается из боковой панели, ищет и переходит к теме', async ({ page }) => {
+// The Help opens from its own part of Settings, lists every topic, and its search jumps to the topic it found.
+test('справка: открывается из настроек, ищет и переходит к теме', async ({ page }) => {
   await prepareMonos(page);
-  await page.goto('/');
-  await page.getByTestId('open-help').first().click();
+  await page.goto('/settings');
+  await page.getByTestId('settings-open-help').click();
 
   await expect(page).toHaveURL(/\/help$/);
   await expect(page.locator('#help-faq')).toBeAttached();

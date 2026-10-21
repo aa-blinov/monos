@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { trashedNotice } from '../lib/trash-undo.js';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, test, expect, vi } from 'vitest';
 import Sidebar from './Sidebar.svelte';
@@ -76,6 +76,7 @@ function createFetchMock() {
   let alphaPath = 'notes/Work/Alpha.md';
   let alphaName = 'Alpha.md';
   let deletedAlpha = false;
+  let alphaFavorite = false;
 
   return vi.fn(async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
@@ -87,6 +88,18 @@ function createFetchMock() {
       const node = treeNoteByPath(createTree(), target);
       if (node) node.pinned = Boolean(body.pinned);
       return { ok: true, status: 200, json: async () => ({}) };
+    }
+
+    if (url.startsWith('/api/file-info') && method === 'GET') {
+      return jsonResponse({
+        properties: alphaFavorite ? [{ key: 'monos-favorite', type: 'checkbox', value: true }] : [],
+      });
+    }
+
+    if (url.startsWith('/api/file/property') && method === 'PUT') {
+      const body = JSON.parse(init.body || '{}');
+      alphaFavorite = body.remove ? false : body.value === true;
+      return jsonResponse({ message: 'Saved' });
     }
 
     if (url === '/api/tree') {
@@ -306,6 +319,71 @@ test('Sidebar закрепляет заметку в Pinned через конт�
       && String(init?.body || '').includes('"pinned":false')
   ));
   expect(unpinCall).toBeTruthy();
+});
+
+test('Sidebar добавляет заметку в избранное через контекстное меню и убирает оттуда', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Sidebar);
+  await treeLoaded();
+  await fireEvent.click(screen.getByText('Work'));
+  await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
+
+  await fireEvent.contextMenu(screen.getByText('Alpha').closest('button'));
+  const add = await screen.findByTestId('context-favorite');
+  await waitFor(() => expect(add.textContent.trim()).toBe(uiText.editor.favoriteAdd));
+  await fireEvent.click(add);
+
+  // The mark is the note's own property, so it travels with the file, exactly like a pin.
+  const addCall = fetchMock.mock.calls.find(([url, init]) => (
+    typeof url === 'string'
+      && url.startsWith('/api/file/property')
+      && (init?.method || 'GET') === 'PUT'
+      && String(init?.body || '').includes('"value":true')
+  ));
+  expect(addCall).toBeTruthy();
+  expect(decodeURIComponent(addCall[0].split('path=')[1])).toContain('Alpha.md');
+
+  // The menu reads the note again when it opens, so a favourite offers to take the mark off.
+  await fireEvent.contextMenu(screen.getByText('Alpha').closest('button'));
+  await waitFor(() => expect(screen.getByTestId('context-favorite').textContent.trim()).toBe(uiText.editor.favoriteRemove));
+  await fireEvent.click(screen.getByTestId('context-favorite'));
+
+  const removeCall = fetchMock.mock.calls.find(([url, init]) => (
+    typeof url === 'string'
+      && url.startsWith('/api/file/property')
+      && String(init?.body || '').includes('"remove":true')
+  ));
+  expect(removeCall).toBeTruthy();
+});
+
+test('Sidebar не предлагает папки в иконках заметки, а папке предлагает', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Sidebar);
+  await treeLoaded();
+  await fireEvent.click(screen.getByText('Work'));
+  await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
+
+  await fireEvent.contextMenu(screen.getByText('Alpha').closest('button'));
+  await fireEvent.click(screen.getByText(uiText.sidebar.context.editIcon));
+  let dialog = await screen.findByRole('dialog');
+  expect(within(dialog).queryByRole('button', { name: 'folder' })).toBeNull();
+  expect(within(dialog).queryByRole('button', { name: 'folder-open' })).toBeNull();
+  expect(within(dialog).getByRole('button', { name: 'file-text' })).toBeTruthy();
+  await fireEvent.click(within(dialog).getByText(uiText.sidebar.modals.cancel));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+  // A folder keeps the folder glyphs: they say what the row is.
+  await fireEvent.contextMenu(screen.getByText('Work').closest('button'));
+  await fireEvent.click(screen.getByText(uiText.sidebar.context.editIcon));
+  dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByRole('button', { name: 'folder' })).toBeTruthy();
+  expect(within(dialog).getByRole('button', { name: 'folder-open' })).toBeTruthy();
 });
 
 test('Sidebar создаёт quick note из буфера обмена в Quick Notes', async () => {
@@ -625,4 +703,16 @@ test('Sidebar называет упавшую фоновую синхрониз�
   // The reason waits in the tooltip: the row itself stays short.
   await fireEvent.mouseEnter(row);
   await waitFor(() => expect(screen.getByText(uiText.settings.gitReasons['token-rejected'])).toBeTruthy());
+});
+
+test('Sidebar не держит справку внизу: она живёт последним разделом в настройках', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+
+  render(Sidebar);
+  await treeLoaded();
+
+  expect(screen.queryByTestId('open-help')).toBeNull();
+  expect(screen.getByRole('button', { name: uiText.sidebar.settings })).toBeTruthy();
 });

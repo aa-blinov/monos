@@ -143,9 +143,11 @@ test('Editor показывает breadcrumb без отдельного reveal/
   });
 
   await waitFor(() => expect(screen.getByDisplayValue('Alpha Note')).toBeTruthy());
-  // The folder is in the breadcrumb, and the path in the bottom bar names the whole way to the note.
-  expect(screen.getAllByText('Work').length).toBe(1);
-  expect(screen.getByTestId('property-category-button').textContent).toContain('Work / Alpha');
+  // The bottom bar names the folder; the note's own name is the title above and is not repeated in the path.
+  const folderButton = screen.getByTestId('property-category-button');
+  expect(folderButton.textContent).toContain('Work');
+  expect(folderButton.textContent).not.toContain('Alpha');
+  expect(folderButton.getAttribute('aria-label')).toContain(`${uiText.editor.propertyCategory}: Work`);
   expect(screen.queryByText(uiText.editorHeader.revealInTree)).toBeNull();
   expect(screen.queryByPlaceholderText(uiText.editorHeader.tagPlaceholder)).toBeNull();
   expect(screen.getByTestId('property-tags-button').getAttribute('aria-label')).toContain('#release');
