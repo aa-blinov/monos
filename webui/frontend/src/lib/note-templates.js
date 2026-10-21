@@ -47,19 +47,19 @@ Date: ${localDate}
 Started: ${time}
 
 ## Focus
-- 
+-
 
 ## Tasks
-- [ ] 
+- [ ]
 
 ## Quick Log
-- 
+-
 
 ## Notes Created Today
-- 
+-
 
 ## Gratitude
-- 
+-
 
 ## Shutdown
 - What moved forward:
@@ -79,24 +79,24 @@ Started: ${time}
 Week of ${localDate}
 
 ## Wins
-- 
+-
 
 ## Shipped / Finished
-- 
+-
 
 ## Open Loops
-- [ ] 
+- [ ]
 
 ## Lessons
-- 
+-
 
 ## People To Follow Up With
-- 
+-
 
 ## Next Week Priorities
-1. 
-2. 
-3. 
+1.
+2.
+3.
 `,
   },
   {
@@ -115,19 +115,19 @@ Project:
 Participants:
 
 ## Agenda
-- 
+-
 
 ## Notes
-- 
+-
 
 ## Decisions
-- 
+-
 
 ## Action Items
 - [ ] Task - Owner - Due
 
 ## Follow-up
-- 
+-
 `,
   },
   {
@@ -145,19 +145,19 @@ Person:
 Context:
 
 ## Their Updates
-- 
+-
 
 ## My Updates
-- 
+-
 
 ## Questions
-- 
+-
 
 ## Feedback
-- 
+-
 
 ## Commitments
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -178,29 +178,29 @@ Owner:
 What should be true when this project is done?
 
 ## Why Now
-- 
+-
 
 ## Scope
 ### In
-- 
+-
 
 ### Out
-- 
+-
 
 ## Stakeholders
-- 
+-
 
 ## Milestones
-- [ ] 
+- [ ]
 
 ## Risks
-- 
+-
 
 ## Success Criteria
-- 
+-
 
 ## Related Notes
-- 
+-
 `,
   },
   {
@@ -218,19 +218,19 @@ Started: ${time}
 Project:
 
 ## Intention
-- 
+-
 
 ## Constraints
-- 
+-
 
 ## Session Log
-- 
+-
 
 ## Output
-- 
+-
 
 ## Next Step
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -248,22 +248,22 @@ Status: Proposed
 Owner:
 
 ## Context
-- 
+-
 
 ## Options Considered
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Decision
-- 
+-
 
 ## Consequences
 ### Positive
-- 
+-
 
 ### Negative / Trade-offs
-- 
+-
 
 ## Revisit
 Date:
@@ -285,22 +285,22 @@ Question:
 Confidence: Low / Medium / High
 
 ## Why This Matters
-- 
+-
 
 ## Sources
-- 
+-
 
 ## Evidence
-- 
+-
 
 ## Synthesis
-- 
+-
 
 ## Open Questions
-- 
+-
 
 ## Next Reading
-- 
+-
 `,
   },
   {
@@ -314,19 +314,19 @@ Confidence: Low / Medium / High
     content: ({ title }) => `# ${title}
 
 ## Overview
-- 
+-
 
 ## Start Here
-- 
+-
 
 ## Key Notes
-- 
+-
 
 ## Related Topics
 - [[ ]]
 
 ## Questions
-- 
+-
 
 ## Maintenance
 - Last reviewed:
@@ -347,13 +347,13 @@ Confidence: Low / Medium / High
 Write one clear idea in your own words.
 
 ## Context
-- 
+-
 
 ## Evidence / Example
-- 
+-
 
 ## Why It Matters
-- 
+-
 
 ## Links
 - Supports:
@@ -377,22 +377,22 @@ Started:
 Finished:
 
 ## One-Sentence Summary
-- 
+-
 
 ## Core Thesis
-- 
+-
 
 ## Chapter Notes
-- 
+-
 
 ## Best Quotes
-> 
+>
 
 ## Ideas To Reuse
-- 
+-
 
 ## Actions
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -411,22 +411,22 @@ Author:
 URL:
 
 ## TL;DR
-- 
+-
 
 ## Key Claims
-- 
+-
 
 ## Evidence
-- 
+-
 
 ## Useful Details
-- 
+-
 
 ## My Take
-- 
+-
 
 ## Links
-- 
+-
 `,
   },
   {
@@ -445,22 +445,22 @@ Contact:
 Last Contact:
 
 ## Context
-- 
+-
 
 ## Projects / Topics
-- 
+-
 
 ## Preferences
-- 
+-
 
 ## Promises
-- [ ] 
+- [ ]
 
 ## Conversation Log
-- 
+-
 
 ## Follow-up
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -478,9 +478,9 @@ Why:
 Target Level:
 
 ## Curriculum
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Practice Loop
 - Frequency:
@@ -488,13 +488,13 @@ Target Level:
 - Feedback:
 
 ## Resources
-- 
+-
 
 ## Milestones
-- [ ] 
+- [ ]
 
 ## Notes
-- 
+-
 `,
   },
   {
@@ -512,22 +512,22 @@ Status:
 Severity:
 
 ## Summary
-- 
+-
 
 ## Impact
-- 
+-
 
 ## Timeline
-- 
+-
 
 ## Root Causes
-- 
+-
 
 ## What Went Well
-- 
+-
 
 ## What Went Wrong
-- 
+-
 
 ## Action Items
 - [ ] Owner - Action - Due
@@ -755,7 +755,7 @@ Date: ${localDate}
 
 ## Do Now
 Urgent and important.
-- [ ] 
+- [ ]
 
 ## Schedule
 Important, not urgent.
@@ -767,7 +767,7 @@ Urgent, not important.
 
 ## Eliminate
 Neither urgent nor important.
-- 
+-
 
 ## Review Notes
 - What should move to Schedule before it becomes urgent?
@@ -787,22 +787,22 @@ Neither urgent nor important.
 Date: ${localDate}
 
 ## Inbox Items
-- 
+-
 
 ## Next Actions
-- [ ] 
+- [ ]
 
 ## Projects
-- 
+-
 
 ## Waiting For
 - [ ] Item - Person - Since
 
 ## Someday / Maybe
-- 
+-
 
 ## Reference
-- 
+-
 `,
   },
   {
@@ -840,7 +840,7 @@ Month: ${monthLabel}
 - [ ] Goal - Amount
 
 ## Month Notes
-- 
+-
 `,
   },
   {
@@ -889,19 +889,19 @@ Week of ${localDate}
 
 ## Grocery List
 ### Produce
-- [ ] 
+- [ ]
 
 ### Protein
-- [ ] 
+- [ ]
 
 ### Pantry
-- [ ] 
+- [ ]
 
 ### Household
-- [ ] 
+- [ ]
 
 ## Prep
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -919,19 +919,19 @@ Prep time:
 Cook time:
 
 ## Ingredients
-- 
+-
 
 ## Steps
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Notes
 - What worked:
 - What to change:
 
 ## Pairings
-- 
+-
 `,
   },
   {
@@ -964,13 +964,13 @@ People:
 
 ## Itinerary
 ### Day 1
-- 
+-
 
 ### Day 2
-- 
+-
 
 ## Ideas
-- 
+-
 `,
   },
   {
@@ -990,7 +990,7 @@ People:
 - [ ] Reservations
 
 ## Clothes
-- [ ] 
+- [ ]
 
 ## Tech
 - [ ] Phone charger
@@ -1021,7 +1021,7 @@ People:
 Updated: ${localDate}
 
 ## This Week
-- [ ] 
+- [ ]
 
 ## Repairs
 | Item | Problem | Next step | Owner |
@@ -1035,10 +1035,10 @@ Updated: ${localDate}
 | Deep clean | Monthly |  |  |
 
 ## Purchases Needed
-- [ ] 
+- [ ]
 
 ## Notes
-- 
+-
 `,
   },
   {
@@ -1060,19 +1060,19 @@ Date: ${localDate}
 - Stress:
 
 ## Movement
-- 
+-
 
 ## Food / Water
-- 
+-
 
 ## Symptoms
-- 
+-
 
 ## Medication / Supplements
-- [ ] 
+- [ ]
 
 ## Notes for Doctor / Future Me
-- 
+-
 `,
   },
   {
@@ -1092,13 +1092,13 @@ Week of ${localDate}
 |  | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 ## What helped?
-- 
+-
 
 ## What got in the way?
-- 
+-
 
 ## Next adjustment
-- 
+-
 `,
   },
   {
@@ -1121,7 +1121,7 @@ Week of ${localDate}
 - What happens if I wait 30 days?
 
 ## Approved Purchases
-- [ ] 
+- [ ]
 `,
   },
   {
@@ -1137,22 +1137,22 @@ Week of ${localDate}
 Updated: ${localDate}
 
 ## Now
-- 
+-
 
 ## Active Projects
 - [[ ]]
 
 ## Waiting For
-- [ ] 
+- [ ]
 
 ## Important Links
 - [[ ]]
 
 ## Areas To Review
-- 
+-
 
 ## Inbox
-- 
+-
 `,
   },
 ];
@@ -1261,19 +1261,19 @@ const ruTemplateTranslations = {
 Начато: ${time}
 
 ## Фокус
-- 
+-
 
 ## Задачи
-- [ ] 
+- [ ]
 
 ## Быстрый журнал
-- 
+-
 
 ## Заметки, созданные сегодня
-- 
+-
 
 ## Благодарность
-- 
+-
 
 ## Завершение дня
 - Что продвинулось:
@@ -1291,24 +1291,24 @@ const ruTemplateTranslations = {
 Неделя от ${localDate}
 
 ## Победы
-- 
+-
 
 ## Завершено
-- 
+-
 
 ## Открытые вопросы
-- [ ] 
+- [ ]
 
 ## Уроки
-- 
+-
 
 ## Люди, с кем нужно связаться
-- 
+-
 
 ## Приоритеты следующей недели
-1. 
-2. 
-3. 
+1.
+2.
+3.
 `,
   },
   'meeting-note': {
@@ -1325,19 +1325,19 @@ const ruTemplateTranslations = {
 Участники:
 
 ## Повестка
-- 
+-
 
 ## Заметки
-- 
+-
 
 ## Решения
-- 
+-
 
 ## Действия
 - [ ] Задача - Ответственный - Срок
 
 ## Продолжение
-- 
+-
 `,
   },
   'one-on-one': {
@@ -1353,19 +1353,19 @@ const ruTemplateTranslations = {
 Контекст:
 
 ## Обновления собеседника
-- 
+-
 
 ## Мои обновления
-- 
+-
 
 ## Вопросы
-- 
+-
 
 ## Обратная связь
-- 
+-
 
 ## Договорённости
-- [ ] 
+- [ ]
 `,
   },
   'project-brief': {
@@ -1384,29 +1384,29 @@ const ruTemplateTranslations = {
 Что должно стать правдой после завершения проекта?
 
 ## Почему сейчас
-- 
+-
 
 ## Рамки
 ### Входит
-- 
+-
 
 ### Не входит
-- 
+-
 
 ## Участники
-- 
+-
 
 ## Этапы
-- [ ] 
+- [ ]
 
 ## Риски
-- 
+-
 
 ## Критерии успеха
-- 
+-
 
 ## Связанные заметки
-- 
+-
 `,
   },
   'work-session': {
@@ -1422,19 +1422,19 @@ const ruTemplateTranslations = {
 Проект:
 
 ## Намерение
-- 
+-
 
 ## Ограничения
-- 
+-
 
 ## Журнал сессии
-- 
+-
 
 ## Результат
-- 
+-
 
 ## Следующий шаг
-- [ ] 
+- [ ]
 `,
   },
   'decision-record': {
@@ -1450,22 +1450,22 @@ const ruTemplateTranslations = {
 Владелец:
 
 ## Контекст
-- 
+-
 
 ## Рассмотренные варианты
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Решение
-- 
+-
 
 ## Последствия
 ### Плюсы
-- 
+-
 
 ### Минусы / компромиссы
-- 
+-
 
 ## Пересмотр
 Дата:
@@ -1485,22 +1485,22 @@ const ruTemplateTranslations = {
 Уверенность: Низкая / Средняя / Высокая
 
 ## Почему это важно
-- 
+-
 
 ## Источники
-- 
+-
 
 ## Факты
-- 
+-
 
 ## Выводы
-- 
+-
 
 ## Открытые вопросы
-- 
+-
 
 ## Что читать дальше
-- 
+-
 `,
   },
   'topic-moc': {
@@ -1512,19 +1512,19 @@ const ruTemplateTranslations = {
     content: ({ title }) => `# ${title}
 
 ## Обзор
-- 
+-
 
 ## Начать здесь
-- 
+-
 
 ## Ключевые заметки
-- 
+-
 
 ## Связанные темы
 - [[ ]]
 
 ## Вопросы
-- 
+-
 
 ## Обслуживание
 - Последний обзор:
@@ -1543,13 +1543,13 @@ const ruTemplateTranslations = {
 Сформулируйте одну ясную мысль своими словами.
 
 ## Контекст
-- 
+-
 
 ## Доказательство / пример
-- 
+-
 
 ## Почему это важно
-- 
+-
 
 ## Связи
 - Поддерживает:
@@ -1571,22 +1571,22 @@ const ruTemplateTranslations = {
 Завершено:
 
 ## Краткое резюме
-- 
+-
 
 ## Главный тезис
-- 
+-
 
 ## Заметки по главам
-- 
+-
 
 ## Лучшие цитаты
-> 
+>
 
 ## Идеи для применения
-- 
+-
 
 ## Действия
-- [ ] 
+- [ ]
 `,
   },
   'article-review': {
@@ -1603,22 +1603,22 @@ const ruTemplateTranslations = {
 URL:
 
 ## Кратко
-- 
+-
 
 ## Ключевые тезисы
-- 
+-
 
 ## Доказательства
-- 
+-
 
 ## Полезные детали
-- 
+-
 
 ## Моя оценка
-- 
+-
 
 ## Связи
-- 
+-
 `,
   },
   'person-note': {
@@ -1635,22 +1635,22 @@ URL:
 Последний контакт:
 
 ## Контекст
-- 
+-
 
 ## Проекты / темы
-- 
+-
 
 ## Предпочтения
-- 
+-
 
 ## Обещания
-- [ ] 
+- [ ]
 
 ## Журнал разговоров
-- 
+-
 
 ## Следующие шаги
-- [ ] 
+- [ ]
 `,
   },
   'learning-plan': {
@@ -1666,9 +1666,9 @@ URL:
 Целевой уровень:
 
 ## Программа
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Практика
 - Частота:
@@ -1676,13 +1676,13 @@ URL:
 - Обратная связь:
 
 ## Ресурсы
-- 
+-
 
 ## Этапы
-- [ ] 
+- [ ]
 
 ## Заметки
-- 
+-
 `,
   },
   postmortem: {
@@ -1698,22 +1698,22 @@ URL:
 Критичность:
 
 ## Резюме
-- 
+-
 
 ## Влияние
-- 
+-
 
 ## Таймлайн
-- 
+-
 
 ## Корневые причины
-- 
+-
 
 ## Что сработало хорошо
-- 
+-
 
 ## Что пошло не так
-- 
+-
 
 ## Действия
 - [ ] Ответственный - Действие - Срок
@@ -1927,7 +1927,7 @@ URL:
 
 ## Сделать сейчас
 Срочно и важно.
-- [ ] 
+- [ ]
 
 ## Запланировать
 Важно, но не срочно.
@@ -1939,7 +1939,7 @@ URL:
 
 ## Убрать
 Не срочно и не важно.
-- 
+-
 
 ## Заметки обзора
 - Что стоит запланировать, пока это не стало срочным?
@@ -1957,22 +1957,22 @@ URL:
 Дата: ${localDate}
 
 ## Входящие
-- 
+-
 
 ## Следующие действия
-- [ ] 
+- [ ]
 
 ## Проекты
-- 
+-
 
 ## Ожидаю
 - [ ] Что - От кого - С какого дня
 
 ## Когда-нибудь / возможно
-- 
+-
 
 ## Справка
-- 
+-
 `,
   },
   'monthly-budget': {
@@ -2008,7 +2008,7 @@ URL:
 - [ ] Цель - Сумма
 
 ## Заметки месяца
-- 
+-
 `,
   },
   'subscription-tracker': {
@@ -2053,19 +2053,19 @@ URL:
 
 ## Список покупок
 ### Овощи и фрукты
-- [ ] 
+- [ ]
 
 ### Белок
-- [ ] 
+- [ ]
 
 ### Бакалея
-- [ ] 
+- [ ]
 
 ### Для дома
-- [ ] 
+- [ ]
 
 ## Заготовки
-- [ ] 
+- [ ]
 `,
   },
   'recipe-card': {
@@ -2081,19 +2081,19 @@ URL:
 Готовка:
 
 ## Ингредиенты
-- 
+-
 
 ## Шаги
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Заметки
 - Что получилось:
 - Что изменить:
 
 ## С чем сочетать
-- 
+-
 `,
   },
   'travel-plan': {
@@ -2124,13 +2124,13 @@ URL:
 
 ## Маршрут
 ### День 1
-- 
+-
 
 ### День 2
-- 
+-
 
 ## Идеи
-- 
+-
 `,
   },
   'packing-list': {
@@ -2148,7 +2148,7 @@ URL:
 - [ ] Брони
 
 ## Одежда
-- [ ] 
+- [ ]
 
 ## Техника
 - [ ] Зарядка телефона
@@ -2177,7 +2177,7 @@ URL:
 Обновлено: ${localDate}
 
 ## На этой неделе
-- [ ] 
+- [ ]
 
 ## Ремонт
 | Что | Проблема | Следующий шаг | Ответственный |
@@ -2191,10 +2191,10 @@ URL:
 | Генеральная уборка | Ежемесячно |  |  |
 
 ## Что купить
-- [ ] 
+- [ ]
 
 ## Заметки
-- 
+-
 `,
   },
   'health-log': {
@@ -2214,19 +2214,19 @@ URL:
 - Стресс:
 
 ## Движение
-- 
+-
 
 ## Еда / вода
-- 
+-
 
 ## Симптомы
-- 
+-
 
 ## Лекарства / добавки
-- [ ] 
+- [ ]
 
 ## Заметки для врача / будущего себя
-- 
+-
 `,
   },
   'habit-tracker': {
@@ -2244,13 +2244,13 @@ URL:
 |  | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 ## Что помогло?
-- 
+-
 
 ## Что мешало?
-- 
+-
 
 ## Следующая корректировка
-- 
+-
 `,
   },
   'shopping-wishlist': {
@@ -2271,7 +2271,7 @@ URL:
 - Что будет, если подождать 30 дней?
 
 ## Одобренные покупки
-- [ ] 
+- [ ]
 `,
   },
   'home-dashboard': {
@@ -2285,22 +2285,22 @@ URL:
 Обновлено: ${localDate}
 
 ## Сейчас
-- 
+-
 
 ## Активные проекты
 - [[ ]]
 
 ## Ожидаю
-- [ ] 
+- [ ]
 
 ## Важные ссылки
 - [[ ]]
 
 ## Области для обзора
-- 
+-
 
 ## Входящие
-- 
+-
 `,
   },
 };
