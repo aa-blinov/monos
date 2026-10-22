@@ -17,6 +17,19 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.8.0 — 2026-10-22
+
+### Changed
+
+- `@monos/ui` is now `1.0.4`. Its `IconButton` gained a `bare` mode and its
+  `SearchField` gained `inputEl` and a `trailing` slot.
+- `TooltipIconButton` is the kit's `IconButton` in bare mode; all 49 icon
+  buttons now use the kit primitive while Monos keeps its tooltip placement.
+- `SearchField` is the kit's `SearchField`; the header uses the same component,
+  with the Save-search action in its trailing slot. The app's `inputEl` binding
+  and string `input` event are preserved.
+- Site screenshots were taken again.
+
 ## 1.7.1 — 2026-10-22
 
 ### Fixed

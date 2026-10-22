@@ -1,10 +1,10 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import SearchField from './SearchField.svelte';
   import { searchQuery, searchResults, isSearching } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
-  import { SEARCH_CLEAR_CLASS, SEARCH_ICON_CLASS, SEARCH_INPUT_CLASS } from '../lib/search-field.js';
-  import { Bookmark, Clipboard, Search, ArrowLeft, X, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
+  import { Bookmark, Clipboard, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -122,42 +122,33 @@
 
   {#if showSearch}
   <div class="relative min-w-0 flex-1">
-    <Search size="16" strokeWidth="1.7" class={SEARCH_ICON_CLASS} aria-hidden="true" />
-    <input
-      bind:this={searchInputEl}
-      type="text"
-      placeholder={$localizedText.header.search}
-      aria-label={$localizedText.header.search}
-      role="searchbox"
-      title={$localizedText.header.searchHint}
+    <SearchField
       bind:value={$searchQuery}
+      bind:inputEl={searchInputEl}
+      placeholder={$localizedText.header.search}
+      label={$localizedText.header.search}
+      title={$localizedText.header.searchHint}
+      class="flex-1"
       on:input={handleSearchInput}
-      on:keydown={(e) => { if (e.key === 'Escape') clearSearch(); }}
+      on:clear={clearSearch}
+      on:keydown={(e) => { if (e.key === 'Escape' && !$searchQuery) clearSearch(); }}
       on:focus={loadTags}
-      class="h-11 lg:h-10 {SEARCH_INPUT_CLASS} pr-16"
-    />
-    {#if $searchQuery}
-      <button
-        type="button"
-        data-testid="save-current-search"
-        on:click={() => dispatch('saveSearch', $searchQuery)}
-        class="{SEARCH_CLEAR_CLASS} right-11"
-        aria-label={$localizedText.savedSearches.save}
-        title={$localizedText.savedSearches.save}
-      >
-        <Bookmark size="12" strokeWidth="1.7" aria-hidden="true" />
-      </button>
-    {/if}
-    {#if $searchQuery}
-      <button
-        type="button"
-        on:click={clearSearch}
-        class="{SEARCH_CLEAR_CLASS} right-1.5"
-        aria-label={$localizedText.header.closeSearch}
-      >
-        <X class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-    {/if}
+    >
+      <svelte:fragment slot="trailing">
+        {#if $searchQuery}
+          <button
+            type="button"
+            data-testid="save-current-search"
+            on:click={() => dispatch('saveSearch', $searchQuery)}
+            class="inline-flex h-6 w-6 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]"
+            aria-label={$localizedText.savedSearches.save}
+            title={$localizedText.savedSearches.save}
+          >
+            <Bookmark size="12" strokeWidth="1.7" aria-hidden="true" />
+          </button>
+        {/if}
+      </svelte:fragment>
+    </SearchField>
     {#if showTagSuggestions}
       <div class="absolute top-full left-0 mt-2 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full rounded-ui">
         <div class="px-3 pb-1 pt-2.5 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.tags.title}</div>

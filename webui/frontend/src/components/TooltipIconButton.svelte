@@ -1,5 +1,6 @@
 <script>
   import { tick } from 'svelte';
+  import { IconButton as KitIconButton } from '@monos/ui';
   import { HOVER_DELAY, placeTooltip, tooltipClass } from '../lib/tooltip.js';
 
   export let label;
@@ -62,27 +63,28 @@
   on:mouseleave={hideTooltip}
   on:focusin={showTooltip}
   on:focusout={hideTooltip}
+  on:click={hideTooltip}
+  on:pointerdown
+  on:mousedown
+  on:dblclick
+  on:contextmenu
 >
-  <button
-    bind:this={buttonEl}
-    type={type}
-    disabled={disabled}
-    {...$$restProps}
+  <KitIconButton
+    bare
+    bind:buttonEl
+    {type}
+    {disabled}
+    {label}
+    tooltipText=""
     class="{className} inline-flex items-center justify-center"
-    aria-label={label}
-    on:mouseenter={showTooltip}
-    on:mouseleave={hideTooltip}
+    {...$$restProps}
+    on:click
     on:focus={showTooltip}
     on:blur={hideTooltip}
-    on:click
-    on:click={hideTooltip}
-    on:pointerdown
-    on:mousedown
-    on:dblclick
     on:keydown
   >
     <slot />
-  </button>
+  </KitIconButton>
 
   {#if tooltipVisible}
     <span
