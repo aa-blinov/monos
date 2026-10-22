@@ -84,7 +84,7 @@
   {#if showBack}
     <TooltipIconButton
       on:click={goHome}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
+      class="inline-flex h-11 w-11 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={$localizedText.header.back}
       tooltip={$localizedText.header.back}
       tooltipAlign="start"
@@ -93,7 +93,7 @@
     </TooltipIconButton>
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
+      class="inline-flex h-11 w-11 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -107,7 +107,7 @@
   {:else}
     <TooltipIconButton
       on:click={toggleSidebar}
-      class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
+      class="inline-flex h-11 w-11 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
       label={sidebarToggleLabel}
       tooltip={sidebarToggleLabel}
       tooltipAlign="start"
@@ -164,7 +164,7 @@
   <TooltipIconButton
     data-testid="header-quick-note"
     on:click={createQuickNote}
-    class="inline-flex h-11 w-11 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
+    class="inline-flex h-11 w-11 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]"
     label={$localizedText.sidebar.quickNoteFromClipboard}
     tooltip={$localizedText.sidebar.quickNoteFromClipboard}
     tooltipAlign="end"
