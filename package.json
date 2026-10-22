@@ -1,6 +1,9 @@
 {
   "name": "monos",
   "version": "1.8.0",
+  "engines": {
+    "node": ">=22"
+  },
   "private": true,
   "description": "Monos desktop notes app",
   "author": {
