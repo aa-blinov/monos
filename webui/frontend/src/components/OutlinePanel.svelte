@@ -5,6 +5,7 @@
   import { localizedText } from '../lib/strings.js';
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { X } from 'lucide-svelte';
+  import { IconButton } from '@monos/ui';
 
   /** The markdown source to extract the outline from. */
   export let content = '';
@@ -135,15 +136,16 @@
     </h3>
     <!-- The close button is for the phone, where the panel covers the note: on a wide window the column
          is closed from the note's header, where the button that opened it stands. -->
-    <button
-      type="button"
-      bind:this={closeButton}
-      aria-label={$localizedText.editor.closeOutline}
-      class="-my-2 -mr-2 inline-flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:hidden"
+    <IconButton
+      bare
+      bind:buttonEl={closeButton}
+      label={$localizedText.editor.closeOutline}
+      tooltipText=""
+      class="-my-2 -mr-2 h-11 w-11 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] lg:hidden"
       on:click={close}
     >
       <X class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-    </button>
+    </IconButton>
   </div>
   {#if items.length === 0}
     <p class="text-[var(--text-tertiary)]">
