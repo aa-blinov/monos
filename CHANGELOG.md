@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.6 — 2026-10-22
+
+### Changed
+
+- Settings' token, owner, device name, auto-sync interval and commit message
+  are the kit's `FieldControl`.
+- The tag panel's rename field is the kit's `FieldControl`.
+- Site screenshots were taken again.
+
 ## 1.15.5 — 2026-10-22
 
 ### Changed

@@ -4,7 +4,7 @@
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-  import { Button, SegmentedControl } from '@monos/ui';
+  import { Button, FieldControl, SegmentedControl } from '@monos/ui';
   import ConflictResolver from './ConflictResolver.svelte';
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
@@ -1014,7 +1014,7 @@
         <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
         <div class="flex gap-3">
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-          <input type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1 {formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })}" disabled={isAuthenticated} />
+          <FieldControl type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1" disabled={isAuthenticated} />
           {#if isAuthenticated}
             <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
             {#if confirmingGitReset}
@@ -1068,7 +1068,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="git-owner" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.owner}</label>
-          <input type="text" id="git-owner" bind:value={settings.git_owner} placeholder={$localizedText.settings.ownerPlaceholder} class={formFieldClass({ extraClass: isAuthenticated ? 'opacity-50' : '' })} disabled={isAuthenticated} />
+          <FieldControl type="text" id="git-owner" bind:value={settings.git_owner} placeholder={$localizedText.settings.ownerPlaceholder} class={isAuthenticated ? 'opacity-50' : ''} disabled={isAuthenticated} />
         </div>
         <div>
           <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
@@ -1084,7 +1084,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="device-name" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.deviceName}</label>
-          <input id="device-name" type="text" maxlength="40" bind:value={settings.device_name} on:change={saveDeviceName} placeholder={$localizedText.settings.devicePlaceholder} class={formFieldClass()} />
+          <FieldControl id="device-name" type="text" maxlength="40" bind:value={settings.device_name} on:change={saveDeviceName} placeholder={$localizedText.settings.devicePlaceholder} />
           <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.deviceNameHint}</p>
         </div>
       </div>
@@ -1140,7 +1140,7 @@
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label for="auto-sync-minutes" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.autoSyncEvery}</label>
-          <div class="flex items-center gap-3"><input id="auto-sync-minutes" type="number" min="1" max="1440" bind:value={settings.git_auto_sync_minutes} on:change={saveAutoSync} class={formFieldClass({ extraClass: 'focus:border-[var(--text-primary)]' })} /><span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.minutesUnit}</span></div>
+          <div class="flex items-center gap-3"><FieldControl id="auto-sync-minutes" type="number" min="1" max="1440" bind:value={settings.git_auto_sync_minutes} on:change={saveAutoSync} /><span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.minutesUnit}</span></div>
           <p class="text-[length:var(--text-whisper)] text-[var(--text-secondary)] mt-1">{$localizedText.settings.autoSyncHint}</p>
         </div>
       </div>
@@ -1149,7 +1149,7 @@
         <summary class="min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.commitAdvanced}</summary>
         <div class="mt-3 max-w-sm">
           <label for="git-commit-message" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.commitMessage}</label>
-          <input id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} class={formFieldClass()} />
+          <FieldControl id="git-commit-message" type="text" bind:value={settings.git_commit_message} on:change={saveSettings} />
           <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.commitMessageHint}</p>
         </div>
       </details>

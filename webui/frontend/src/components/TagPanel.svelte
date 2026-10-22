@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import ModalShell from './ModalShell.svelte';
   import SearchField from './SearchField.svelte';
+  import { FieldControl } from '@monos/ui';
   import ConfirmModal from './ConfirmModal.svelte';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { localizedText } from '../lib/strings.js';
@@ -124,10 +125,10 @@
           {#each visible as entry (entry.tag)}
             <li class="flex items-center gap-2 py-1.5">
               {#if editing === entry.tag}
-                <input
+                <FieldControl
                   data-testid="tag-rename-input"
                   type="text"
-                  class="min-w-0 flex-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm outline-none focus:border-[var(--text-primary)]"
+                  class="min-w-0 flex-1"
                   bind:value={editValue}
                   on:keydown={(e) => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') editing = null; }}
                 />
