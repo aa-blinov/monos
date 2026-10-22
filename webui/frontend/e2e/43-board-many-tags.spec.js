@@ -33,7 +33,7 @@ test('доска: много тегов, «Ещё N» открывает спи�
   await expect(page.getByTestId('board-count')).toHaveText(/1 of 1$/i);
 
   // Chips, "N more" and the box with the order and colors are one height, so the row reads as one.
-  const toolbar = await page.locator('#board-sort').locator('xpath=..').boundingBox();
+  const toolbar = await page.getByTestId('board-toolbar').boundingBox();
   for (const box of [await strip.getByRole('button', { name: rare }).boundingBox(), await page.getByTestId('board-tags-more').boundingBox()]) {
     expect(Math.abs(box.height - toolbar.height)).toBeLessThanOrEqual(1);
   }
@@ -63,7 +63,7 @@ test('доска на телефоне: одна кнопка «Теги» в с
   const tags = await button.boundingBox();
   expect(Math.abs(sort.y - tags.y)).toBeLessThan(24);
   // Same height as the box with the order and the colors button, so the row reads as one.
-  const box = await page.locator('#board-sort').locator('xpath=..').boundingBox();
+  const box = await page.getByTestId('board-toolbar').boundingBox();
   expect(Math.abs(box.height - tags.height)).toBeLessThanOrEqual(1);
 
   await button.click();
