@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.11.0 — 2026-10-22
+
+### Changed
+
+- The note's tag panel is the kit's `TagInput`. Tags keep their `#` prefix,
+  "Remove tag alpha" labels, the draft-is-accepted-on-close behaviour and the
+  same `property-tags` and `tag-suggestions` test hooks.
+- `@monos/ui` is `1.1.3`: `TagInput` takes `ariaLabel`, `testid`,
+  `suggestionsTestid`, `prefix`, `commitOnBlur` and a per-tag `removeLabel`.
+- Site screenshots were taken again.
+
 ## 1.10.1 — 2026-10-22
 
 ### Fixed
