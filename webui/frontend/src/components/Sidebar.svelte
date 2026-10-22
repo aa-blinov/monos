@@ -3,7 +3,7 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import SearchField from './SearchField.svelte';
-  import { SidebarItem } from '@monos/ui';
+  import { Sidebar as KitSidebar, SidebarItem } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -833,6 +833,7 @@
   }
 
   function handleBackgroundRightClick(e) {
+    if (e.target !== e.currentTarget) return;
     e.preventDefault();
     contextMenu = { show: true, x: e.clientX, y: e.clientY, targetPath: 'notes', targetName: 'notes', isDir: true, selectionPaths: [] };
   }
@@ -1137,10 +1138,14 @@
   />
 {/if}
 
-  <div
-    class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-primary)]"
+  <KitSidebar
+    label={$localizedText.app.sidebarLabel}
+    width=""
+    scroll={false}
+    bordered={false}
+    class="relative overflow-hidden bg-[var(--bg-primary)]"
     role="presentation"
-    on:contextmenu|self={handleBackgroundRightClick}
+    on:contextmenu={handleBackgroundRightClick}
   >
     <!-- Mobile Navigation Sheet Header -->
     <div class="px-4 pb-1 pt-3 lg:hidden">
@@ -1478,7 +1483,7 @@
       </button>
     </div>
   {/if}
-</div>
+</KitSidebar>
 
 <!-- Bulk Tag Modal -->
 {#if showBulkTagPrompt}
