@@ -1,14 +1,13 @@
 <script>
   import { terminalBridge } from '../lib/terminal.js';
-  import { createEventDispatcher, tick } from 'svelte';
+  import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
   import { pinnedNotes } from '../lib/sidebar-pinned.js';
   import { matchesNoteFilters, parseQuickSwitcherQuery, rankQuickSwitcherResults } from '../lib/quick-switcher.js';
   import { locale, localizedText } from '../lib/strings.js';
   import { shortcutLabel } from '../lib/shortcut-label.js';
-  import { SEARCH_ICON_CLASS, SEARCH_INPUT_CLASS } from '../lib/search-field.js';
-  import { Search } from 'lucide-svelte';
+  import SearchField from './SearchField.svelte';
 
   export let open = false;
   export let mode = 'commands';
@@ -25,6 +24,16 @@
   let lastOpen = false;
   let lastMode = mode;
   let activeIndex = 0;
+  let wiredInput = null;
+
+  // The kit SearchField forwards a component event, not the native key; the palette needs the native key.
+  $: if (inputEl !== wiredInput) {
+    wiredInput?.removeEventListener('keydown', handleKeydown);
+    wiredInput = inputEl;
+    wiredInput?.addEventListener('keydown', handleKeydown);
+  }
+
+  onDestroy(() => wiredInput?.removeEventListener('keydown', handleKeydown));
 
   function displayPath(itemPath) {
     const relative = itemPath?.startsWith('notes/') ? itemPath.slice(6) : itemPath;
@@ -432,25 +441,22 @@
           </div>
         </div>
 
-        <!-- The board's search look, so a search box reads the same everywhere. -->
-        <div class="relative">
-          <Search size="16" strokeWidth="1.7" class={SEARCH_ICON_CLASS} aria-hidden="true" />
-          <input
-            bind:this={inputEl}
-            bind:value={query}
-            on:keydown={handleKeydown}
-            role="combobox"
-            aria-expanded="true"
-            aria-controls="command-palette-results"
-            aria-activedescendant={filteredItems.length ? `command-palette-option-${activeIndex}` : undefined}
-            aria-autocomplete="list"
-            aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
-            placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
-            class="h-11 lg:h-10 {SEARCH_INPUT_CLASS} pr-3"
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </div>
+        <!-- The kit search field, so the palette and the board read the same. -->
+        <SearchField
+          bind:value={query}
+          bind:inputEl
+          label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
+          placeholder={mode === 'notes' ? $localizedText.commandPalette.quickSwitcherPlaceholder : $localizedText.commandPalette.placeholder}
+          size="lg"
+          clearOnEscape={false}
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="command-palette-results"
+          aria-activedescendant={filteredItems.length ? `command-palette-option-${activeIndex}` : undefined}
+          aria-autocomplete="list"
+          autocomplete="off"
+          spellcheck="false"
+        />
       </div>
 
       <div id="command-palette-results" role="listbox" class="max-h-[55vh] overflow-y-auto py-2">

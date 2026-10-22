@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.5 — 2026-10-22
+
+### Changed
+
+- The command palette's search is the kit's `SearchField`, with the same
+  combobox semantics and a native key path for arrows and Enter.
+- `@monos/ui` is `1.1.11`: `SearchField` takes `clearOnEscape`, so the palette
+  closes instead of clearing its query.
+- Site screenshots were taken again.
+
 ## 1.15.4 — 2026-10-22
 
 ### Changed
