@@ -4,7 +4,7 @@
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-  import { Button } from '@monos/ui';
+  import { Button, SegmentedControl } from '@monos/ui';
   import ConflictResolver from './ConflictResolver.svelte';
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
@@ -62,6 +62,7 @@
     { value: 'light', label: () => $localizedText.settings.themeModeLight },
     { value: 'dark', label: () => $localizedText.settings.themeModeDark },
   ];
+  $: themeModeChoices = themeModeOptions.map((option) => ({ value: option.value, label: option.label() }));
 
   $: localizedFontSizeOptions = fontSizeOptions.map(option => ({
     ...option,
@@ -780,18 +781,14 @@
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
-        <div class="grid grid-cols-3 gap-2 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-1" role="group" aria-label={$localizedText.settings.themeMode}>
-          {#each themeModeOptions as option}
-            <button
-              type="button"
-              aria-pressed={$themeMode === option.value}
-              on:click={() => { $themeMode = option.value; saveSettings(); }}
-              class="min-h-9 px-3 text-xs uppercase tracking-[0.12em] transition {$themeMode === option.value ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
-            >
-              {option.label()}
-            </button>
-          {/each}
-        </div>
+        <SegmentedControl
+          label={$localizedText.settings.themeMode}
+          full
+          bind:value={$themeMode}
+          options={themeModeChoices}
+          size="md"
+          on:change={saveSettings}
+        />
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>

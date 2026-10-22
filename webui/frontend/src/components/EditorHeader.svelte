@@ -4,6 +4,7 @@
   import { interfaceDateTime } from '../lib/date-format.js';
   import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import { Button } from '@monos/ui';
   import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
 
   export let editedTitle = '';
@@ -89,7 +90,7 @@
       </div>
     {/if}
     {#if focusMode}
-      <button type="button" data-testid="exit-focus" on:click={onExitFocus} class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]">{$localizedText.editor.focusOff} <span class="text-[var(--text-tertiary)]">Esc</span></button>
+      <Button variant="ghost" size="sm" data-testid="exit-focus" on:click={onExitFocus}>{$localizedText.editor.focusOff} <span class="normal-case text-[var(--text-tertiary)]">Esc</span></Button>
     {/if}
     <!-- The right column is opened and closed from here: the note's actions sit at one end of one row,
          and the line under the title stays a sentence. -->
