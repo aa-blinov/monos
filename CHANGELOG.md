@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.14.0 — 2026-10-22
+
+### Changed
+
+- The outer sidebar is the kit's `Sidebar`, with `scroll={false}` and
+  `bordered={false}` because Monos owns the scroll and the resize border. Its
+  background right-click menu still opens; a row's own menu wins.
+- `@monos/ui` is `1.1.5`: `Sidebar` takes `scroll` and `bordered` and forwards
+  the body's `contextmenu`.
+- Site screenshots were taken again.
+
 ## 1.13.0 — 2026-10-22
 
 ### Changed
