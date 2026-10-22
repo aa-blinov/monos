@@ -17,6 +17,20 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.7.0 — 2026-10-22
+
+### Changed
+
+- The palette is now read from the kit's `themes.css`; `applyTheme()` sets
+  `data-theme` and `data-mode`, and Monos's older variables are aliases of the
+  `--ui-*` roles. Every screen, including the editor and terminal surfaces, now
+  reads the kit palette.
+- `Checkbox` is the kit's checkbox; the app keeps its props and change event.
+- The page keeps `color-scheme: normal`: the kit themes set it at the root, but
+  a page-wide scheme changed caret placement in the editor, so form controls
+  keep their own mode.
+- Site screenshots were taken again from the current app.
+
 ## 1.6.0 — 2026-10-22
 
 ### Added

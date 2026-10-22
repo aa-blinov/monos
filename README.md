@@ -60,11 +60,10 @@ The same board in a narrow window:
 ## UI stack
 
 The UI is moving onto [`@monos/ui`](https://github.com/aa-blinov/monos-ui). The
-kit owns the token layer, the Tailwind bridge and the `--ui-*` semantic roles;
-Monos keeps its palette names as aliases while the product components move over
-one primitive at a time. The Settings Help action and the notes-folder actions
-already use the kit's `Button`; a note card, the tree, the editor and the rest of
-the product stay in the app.
+kit now owns the palette, the token layer, the Tailwind bridge and the `--ui-*`
+semantic roles; Monos keeps its older names as aliases. The Settings actions and
+the checkbox are kit primitives. A note card, the tree, the editor and the rest
+of the product stay in the app while their primitives move over.
 
 ![Settings with the kit buttons](site/media/monos-settings.png)
 

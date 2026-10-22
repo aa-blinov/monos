@@ -119,7 +119,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
 
   $: isDarkMode = typeof window !== 'undefined' ? (systemThemeSignal, detectDarkMode($themeMode)) : false;
   $: if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', isDarkMode);
-  $: applyTheme($activeTheme, isDarkMode, themes);
+  $: applyTheme($activeTheme, isDarkMode);
   // The browser chrome takes the page colour of the chosen palette. (The mode for native option lists is set
   // in app.css, on the selects alone: `color-scheme` on the whole page made the editor's caret unreliable.)
   $: if (typeof document !== 'undefined') {
@@ -521,7 +521,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     const settings = await loadShellSettings(themes);
     if (settings?.theme) $activeTheme = settings.theme;
     if (settings?.themeMode) $themeMode = settings.themeMode;
-    applyTheme($activeTheme, isDarkMode, themes);
+    applyTheme($activeTheme, isDarkMode);
   }
 
   function clearSearch() {
