@@ -15,7 +15,7 @@
   import { SEARCH_BUTTON_COMPACT_CLASS, SEARCH_ICON_COMPACT_CLASS, SEARCH_INPUT_COMPACT_CLASS } from '../lib/search-field.js';
   import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Menu } from '@monos/ui';
+  import { Menu, Tabs } from '@monos/ui';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
@@ -42,6 +42,13 @@
   /** @type {Array<{ key: number, sessionId: number|null, term: any, fit: any, search: any, host: HTMLElement|null, exited: boolean, starting: boolean, title: string, firstOutput: Promise<void>|null, resolveFirst: (() => void)|null }>} */
   let tabs = [];
   let activeKey = null;
+  $: terminalTabs = tabs.map((tab, index) => ({
+    id: tab.key,
+    label: tab.title || `${$localizedText.terminal.tab} ${index + 1}`,
+    testid: 'terminal-tab',
+    closeTestid: 'terminal-tab-close',
+    class: tab.exited ? 'line-through opacity-60' : '',
+  }));
   let nextKey = 1;
   let folder = '';
   let root = '';
@@ -453,33 +460,21 @@
     <header class="flex h-8 shrink-0 items-center gap-2 px-3 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
       <span class="font-bold text-[var(--text-secondary)]">{$localizedText.terminal.title}</span>
       <!-- Tabs: each its own shell. -->
-      <div class="flex min-w-0 items-center gap-1" role="tablist" aria-label={$localizedText.terminal.tabs}>
-        {#each tabs as tab, index (tab.key)}
-          <div class="group flex items-center rounded-ui {tab.key === activeKey ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]'}">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab.key === activeKey}
-              data-testid="terminal-tab"
-              on:click={() => activate(tab.key)}
-              class="max-w-[10rem] truncate px-2 py-1 normal-case tracking-normal {tab.exited ? 'line-through opacity-60' : ''}"
-            >{tab.title || `${$localizedText.terminal.tab} ${index + 1}`}</button>
-            <button
-              type="button"
-              aria-label={$localizedText.terminal.closeTab}
-              title={$localizedText.terminal.closeTab}
-              data-testid="terminal-tab-close"
-              on:click={() => closeTab(tab.key)}
-              class="mr-1 rounded-ui p-0.5 opacity-0 transition hover:text-[var(--text-primary)] focus-visible:opacity-100 group-hover:opacity-100 {tab.key === activeKey ? 'opacity-60' : ''}"
-            ><X size="12" strokeWidth="1.7" aria-hidden="true" /></button>
-          </div>
-        {/each}
+      <div class="flex min-w-0 items-center gap-1">
+        <Tabs
+          items={terminalTabs}
+          bind:value={activeKey}
+          variant="bare"
+          closable
+          closeLabel={$localizedText.terminal.closeTab}
+          on:change={(event) => activate(event.detail)}
+          on:close={(event) => closeTab(event.detail)}
+        />
         {#if tabs.length < MAX_TABS}
           <TooltipIconButton class={iconButton} label={$localizedText.terminal.newTab} tooltip={$localizedText.terminal.newTab} on:click={() => newTab()}>
             <Plus size="14" strokeWidth="1.7" aria-hidden="true" />
           </TooltipIconButton>
         {/if}
-      </div>
       <span class="ml-auto"></span>
       {#if $agentReview.changes?.length}
         <button
