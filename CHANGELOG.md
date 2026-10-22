@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.5 — 2026-10-22
+
+### Changed
+
+- The outline's phone close button is the kit's `IconButton`; focus return and
+  the `lg` visibility stay the same.
+- Site screenshots were taken again.
+
 ## 1.16.4 — 2026-10-22
 
 ### Changed
