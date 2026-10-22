@@ -264,6 +264,6 @@ test('FileTree не использует вертикальную полоску
   });
 
   const button = screen.getByRole('button', { name: 'Colored' });
-  // border-l-transparent гарантирует, что у строки нет видимой цветной полоски
-  expect(button.className).toContain('border-l-transparent');
+  // Никакой border-l: полоска не рисуется вовсе.
+  expect(button.className).not.toContain('border-l');
 });

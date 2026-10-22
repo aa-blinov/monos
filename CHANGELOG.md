@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.12.0 — 2026-10-22
+
+### Changed
+
+- The note tree rows are the kit's `SidebarItem`. Drag-and-drop, the context
+  menu, keyboard menu, selected colours and the `aria-current` marker survive.
+- `@monos/ui` is `1.1.4`: `SidebarItem` takes `style` and forwards drag,
+  context-menu and keyboard events.
+- Site screenshots were taken again.
+
 ## 1.11.0 — 2026-10-22
 
 ### Changed
