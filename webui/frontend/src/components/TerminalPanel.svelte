@@ -12,10 +12,10 @@
   import { WebLinksAddon } from '@xterm/addon-web-links';
   import { SearchAddon } from '@xterm/addon-search';
   import '@xterm/xterm/css/xterm.css';
-  import { SEARCH_BUTTON_COMPACT_CLASS, SEARCH_ICON_COMPACT_CLASS, SEARCH_INPUT_COMPACT_CLASS } from '../lib/search-field.js';
   import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Menu, Tabs } from '@monos/ui';
+  import { IconButton, Menu, Tabs } from '@monos/ui';
+  import SearchField from './SearchField.svelte';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
@@ -525,21 +525,27 @@
     {#if searchOpen}
       <!-- Search in the visible tab: Enter for the next match, Shift+Enter for the one before, Esc to close. -->
       <div class="absolute right-3 top-9 z-20 flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-lg" data-testid="terminal-search">
-        <div class="relative w-56">
-        <Search size="14" strokeWidth="1.7" class={SEARCH_ICON_COMPACT_CLASS} aria-hidden="true" />
-        <input
-          bind:this={searchInput}
+        <SearchField
+          bind:inputEl={searchInput}
           bind:value={searchQuery}
+          label={$localizedText.terminal.search}
+          placeholder={$localizedText.terminal.searchPlaceholder}
+          size="sm"
+          clearOnEscape={false}
+          clearable={false}
+          class="w-56"
           on:input={() => findNext()}
           on:keydown={searchKeydown}
-          placeholder={$localizedText.terminal.searchPlaceholder}
-          aria-label={$localizedText.terminal.search}
-          class="h-8 {SEARCH_INPUT_COMPACT_CLASS} pr-2"
         />
-        </div>
-        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchPrevious} on:click={() => findNext(true)}><ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" /></button>
-        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchNext} on:click={() => findNext()}><ChevronDown size="14" strokeWidth="1.7" aria-hidden="true" /></button>
-        <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.terminal.searchClose} on:click={closeSearch}><X size="14" strokeWidth="1.7" aria-hidden="true" /></button>
+        <IconButton bare tooltipText="" label={$localizedText.terminal.searchPrevious} on:click={() => findNext(true)} class="h-6 w-6">
+          <ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" />
+        </IconButton>
+        <IconButton bare tooltipText="" label={$localizedText.terminal.searchNext} on:click={() => findNext()} class="h-6 w-6">
+          <ChevronDown size="14" strokeWidth="1.7" aria-hidden="true" />
+        </IconButton>
+        <IconButton bare tooltipText="" label={$localizedText.terminal.searchClose} on:click={closeSearch} class="h-6 w-6">
+          <X size="14" strokeWidth="1.7" aria-hidden="true" />
+        </IconButton>
       </div>
     {/if}
     <div class="relative min-h-0 flex-1" role="presentation" on:contextmenu={openTermMenu}>
