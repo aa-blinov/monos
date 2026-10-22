@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.10.0 — 2026-10-22
+
+### Changed
+
+- `@monos/ui` is now `1.0.7`. Its field contract is available as
+  `FieldControl` and `@monos/ui/field`.
+- `formFieldClass()` delegates to `fieldControlClass()`: every native input,
+  select and textarea in Monos now uses the kit's height, underline, leading
+  and focus, while the labels and product behaviour stay in their components.
+- The field geometry is now 44px on a phone, from the kit's touch rule.
+- Site screenshots were taken again.
+
 ## 1.9.0 — 2026-10-22
 
 ### Changed

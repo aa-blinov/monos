@@ -62,8 +62,8 @@ The same board in a narrow window:
 The UI is moving onto [`@monos/ui`](https://github.com/aa-blinov/monos-ui). The
 kit now owns the palette, the token layer, the Tailwind bridge and the `--ui-*`
 semantic roles; Monos keeps its older names as aliases. The Settings actions, the
-checkbox, the icon buttons, every search field and the dialog shell are kit
-primitives. A note card, the tree, the editor and the rest of the product stay
+checkbox, the icon buttons, every search field, the dialog shell and the field
+geometry are kit primitives. A note card, the tree, the editor and the rest of the product stay
 in the app while their primitives move over.
 
 ![Settings with the kit buttons](site/media/monos-settings.png)
