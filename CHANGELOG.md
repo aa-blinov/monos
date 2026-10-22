@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.0 — 2026-10-22
+
+### Changed
+
+- The terminal's find bar uses the kit's `SearchField` and `IconButton`; the
+  previous, next and close actions keep their labels.
+- `@monos/ui` is `1.1.14`: `SearchField` takes `clearable`.
+- Site screenshots were taken again.
+
 ## 1.15.9 — 2026-10-22
 
 ### Changed
