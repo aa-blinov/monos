@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.9 — 2026-10-22
+
+### Changed
+
+- The terminal's shell tabs are the kit's `Tabs` in `bare` mode with `closable`;
+  `terminal-tab` and `terminal-tab-close` hooks survive.
+- `@monos/ui` is `1.1.13`: `Tabs` takes `closable`, `closeLabel` and a `bare`
+  variant; items take `testid`, `closeTestid` and `class`.
+- Site screenshots were taken again.
+
 ## 1.15.8 — 2026-10-22
 
 ### Changed
