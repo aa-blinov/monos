@@ -13,7 +13,8 @@
 </script>
 
 <script>
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
+  import { FieldControl } from '@monos/ui';
   import { localizedText, locale } from '../lib/strings.js';
   import SearchField from './SearchField.svelte';
   import { loadPropertyTableRequest, setPropertyRequest } from '../lib/editor-api.js';
@@ -201,9 +202,12 @@
     await writeProperty(row, key, { key: existing?.key || key, type: 'checkbox', value: !(existing && existing.value === true) });
   }
 
-  function focusOnMount(node) {
-    node.focus();
-    if (node.select) node.select();
+  function focusFieldOnMount(node) {
+    void tick().then(() => {
+      const input = node.querySelector('input, select, textarea');
+      input?.focus();
+      input?.select?.();
+    });
   }
 
   function editKeys(event) {
@@ -349,18 +353,17 @@
                 {#each columns || [] as key (key)}
                   <td class="px-1 py-1 text-[var(--text-secondary)]">
                     {#if editing && editing.path === row.path && editing.key === key}
-                      <input
-                        use:focusOnMount
-                        type={propertyInputType(typeOf(key))}
-                        value={editValue}
-                        on:input={(event) => { editValue = event.currentTarget.value; }}
-                        on:keydown={editKeys}
-                        on:blur={commitEdit}
-                        aria-label={`${columnLabel(key)}: ${row.title}`}
-                        aria-invalid={editError ? 'true' : undefined}
-                        data-testid="properties-cell-input"
-                        class="h-8 w-full min-w-[7rem] rounded-ui border border-[var(--text-primary)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] max-sm:h-10"
-                      />
+                      <div use:focusFieldOnMount role="presentation" class="min-w-[7rem]" on:input={(event) => { editValue = event.target.value; }} on:keydown={editKeys}>
+                        <FieldControl
+                          type={propertyInputType(typeOf(key))}
+                          value={editValue}
+                          on:blur={commitEdit}
+                          aria-label={`${columnLabel(key)}: ${row.title}`}
+                          aria-invalid={editError ? 'true' : undefined}
+                          data-testid="properties-cell-input"
+                          class="h-8 w-full min-w-[7rem] px-2 text-xs"
+                        />
+                      </div>
                       {#if editError}<span role="alert" class="mt-0.5 block text-[length:var(--text-whisper)] text-[var(--red)]">{editError}</span>{/if}
                     {:else}
                       <button
