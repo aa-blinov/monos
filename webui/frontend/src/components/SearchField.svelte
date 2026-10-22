@@ -25,6 +25,14 @@
     dispatch('input', value);
   }
 
+  function forwardKeydown(event) {
+    dispatch('keydown', event.detail ?? event);
+  }
+
+  function forwardFocus(event) {
+    dispatch('focus', event.detail ?? event);
+  }
+
   function onClear() {
     value = '';
     dispatch('input', value);
@@ -44,8 +52,8 @@
   class={className}
   on:input={onInput}
   on:clear={onClear}
-  on:keydown
-  on:focus
+  on:keydown={forwardKeydown}
+  on:focus={forwardFocus}
   {...$$restProps}
 >
   <svelte:fragment slot="trailing">
