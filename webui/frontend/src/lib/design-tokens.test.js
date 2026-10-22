@@ -307,8 +307,11 @@ test('окна и карточки делят один радиус', () => {
   // Модалка и карточка — одна и та же поверхность. Если у них разные углы,
   // окно выглядит вклеенным поверх доски.
   const shell = read(path.join(SRC, 'components', 'ModalShell.svelte'));
+  const modal = shell.includes('@monos/ui')
+    ? read(path.join(SRC, '..', 'node_modules', '@monos', 'ui', 'src', 'components', 'Modal.svelte'))
+    : shell;
   assert.match(
-    shell,
+    modal,
     new RegExp(`rounded-${CONTAINER_RADIUS}\\b`),
     'панель модалки должна использовать радиус контейнера',
   );
