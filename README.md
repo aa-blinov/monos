@@ -64,8 +64,8 @@ kit now owns the palette, the token layer, the Tailwind bridge and the `--ui-*`
 semantic roles; Monos keeps its older names as aliases. The Settings actions, the
 checkbox, the icon buttons, every search field, the dialog shell and the field
 geometry are kit primitives. The note's tag panel is the kit's `TagInput`, and the tree rows are
-the kit's `SidebarItem`. A note card, the sidebar shell, the editor and the rest
-of the product stay in the app while their primitives move over.
+the kit's `SidebarItem`, and so is the sidebar foot. A note card, the editor and
+the rest of the product stay in the app while their primitives move over.
 
 ![Settings with the kit buttons](site/media/monos-settings.png)
 

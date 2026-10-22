@@ -33,12 +33,12 @@ test('Sidebar держит переключатель терминала вни�
   const button = await screen.findByTestId('sidebar-terminal');
   expect(button.getAttribute('aria-pressed')).toBe('false');
   expect(button.textContent.trim()).toBe('Terminal');
-  expect(button.className).toContain('text-[var(--text-secondary)]');
+  expect(button.className).toContain('text-ink-soft');
 
   await fireEvent.click(button);
   expect(get(terminalOpen)).toBe(true);
   expect(button.getAttribute('aria-pressed')).toBe('true');
-  expect(button.className).toContain('text-[var(--text-primary)]');
+  expect(button.className).toContain('text-ink');
 
   await fireEvent.click(button);
   expect(get(terminalOpen)).toBe(false);

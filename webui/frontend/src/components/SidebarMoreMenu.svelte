@@ -6,6 +6,7 @@
    */
   import { createEventDispatcher, tick } from 'svelte';
   import { Icon } from '../lib/tree-icons.js';
+  import { SidebarItem } from '@monos/ui';
   import { localizedText } from '../lib/strings.js';
 
   export let mobile = false;
@@ -51,20 +52,27 @@
 <svelte:window on:pointerdown={closeOutside} />
 
 <div class="relative" bind:this={anchor}>
-  <button
-    type="button"
+  <SidebarItem
     data-testid="open-more"
     aria-haspopup="menu"
     aria-expanded={open}
+    active={open}
     on:click={toggle}
-    class="{mobile
-      ? 'flex min-h-11 w-full items-center gap-4 px-2 text-left text-sm text-[var(--text-primary)] transition hover:opacity-70'
-      : 'flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]'} {open ? 'text-[var(--text-primary)]' : ''}"
+    class={mobile ? 'min-h-11 gap-4' : ''}
   >
-    <Icon.LayoutGrid size={mobile ? 20 : 16} strokeWidth="1.7" class="shrink-0" aria-hidden="true" />
+    <svelte:fragment slot="icon">
+      <Icon.LayoutGrid size={mobile ? 20 : 16} strokeWidth="1.7" class="shrink-0" aria-hidden="true" />
+    </svelte:fragment>
     <span class="truncate">{$localizedText.sidebar.more}</span>
-    <Icon.ChevronRight size={mobile ? 16 : 14} strokeWidth="1.7" class="ml-auto shrink-0 transition-transform {open ? '-rotate-90' : ''}" aria-hidden="true" />
-  </button>
+    <svelte:fragment slot="trailing">
+      <Icon.ChevronRight
+        size={mobile ? 16 : 14}
+        strokeWidth="1.7"
+        class="shrink-0 transition-transform {open ? '-rotate-90' : ''}"
+        aria-hidden="true"
+      />
+    </svelte:fragment>
+  </SidebarItem>
 
   {#if open}
     <div
