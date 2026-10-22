@@ -656,7 +656,7 @@ test('Sidebar после перемещения заметки открывае�
     detail: { path: 'notes/Alpha.md', name: 'Alpha.md', isDir: false },
   })));
   // The selected row is marked for assistive tech and set in bold; DESIGN.md forbids a fill or bar.
-  await waitFor(() => expect(screen.getByText('Alpha').closest('button').getAttribute('aria-current')).toBe('true'));
+  await waitFor(() => expect(screen.getByText('Alpha').closest('button').getAttribute('aria-current')).toBe('page'));
 });
 
 test('Sidebar при открытии заметки не пересоздаёт дерево', async () => {

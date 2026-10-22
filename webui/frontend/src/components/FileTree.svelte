@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { SidebarItem } from '@monos/ui';
   import { displayFolderName, localizedText } from '../lib/strings.js';
   import { Icon } from '../lib/tree-icons.js';
   import { conflictedNotes } from '../lib/git-conflicts.js';
@@ -137,61 +138,58 @@
 </script>
 
 <div class="group text-sm lg:text-xs">
-  <button
-    class="flex min-h-11 w-full cursor-pointer items-center gap-2 border-l-2 border-l-transparent px-2.5 py-2 text-left transition-[background-color,border-color,opacity] lg:min-h-7 lg:px-3 lg:py-1.5 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] {isDragging ? 'opacity-40' : ''} {isDragOver ? 'bg-[var(--border-subtle)]' : ''}"
-    class:border-[var(--text-primary)]={node.is_dir && isDragOver}
-    class:bg-[var(--border-subtle)]={node.is_dir && isDragOver}
-    class:font-semibold={active}
-    aria-current={active ? 'true' : undefined}
-    aria-expanded={node.is_dir ? String(isExpanded) : undefined}
+  <SidebarItem
+    active={active}
+    class="lg:text-xs {isDragging ? 'opacity-40' : ''} {isDragOver && node.is_dir ? 'bg-surface' : ''}"
     style={activeBgStyle}
-    on:click={handleSelect}
-    on:contextmenu={onRightClick}
-    on:keydown={onKeyboardMenu}
+    aria-expanded={node.is_dir ? String(isExpanded) : undefined}
     data-tooltip={fileName}
     data-tooltip-position="right"
     data-tooltip-overflow
     draggable={node.path !== 'notes'}
+    on:click={handleSelect}
+    on:contextmenu={onRightClick}
+    on:keydown={onKeyboardMenu}
     on:dragstart={handleDragStart}
     on:dragend={handleDragEnd}
     on:dragover={handleDragOver}
     on:dragleave={handleDragLeave}
     on:drop={handleDrop}
   >
-    <!-- Icon -->
-    {#if node.is_dir}
-      <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-        <Icon.ChevronRight class="w-3 h-3 transition-transform duration-200 {isExpanded ? 'rotate-90' : ''}" strokeWidth="1.7" aria-hidden="true" />
-      </span>
-      {#if node.icon && iconMap[node.icon]}
-        <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-          <svelte:component this={iconMap[node.icon]} size="14" />
+    <span slot="icon" class="flex shrink-0 items-center gap-2">
+      {#if node.is_dir}
+        <span class="flex h-4 w-4 items-center justify-center" style="color: {node.color || ''}">
+          <Icon.ChevronRight class="h-3 w-3 transition-transform duration-200 {isExpanded ? 'rotate-90' : ''}" strokeWidth="1.7" aria-hidden="true" />
         </span>
-      {/if}
-    {:else}
-      {#if node.icon && iconMap[node.icon]}
-        <span class="w-4 h-4 flex items-center justify-center shrink-0" style="color: {node.color || ''}">
-          <svelte:component this={iconMap[node.icon]} size="14" />
-        </span>
+        {#if node.icon && iconMap[node.icon]}
+          <span class="flex h-4 w-4 items-center justify-center" style="color: {node.color || ''}">
+            <svelte:component this={iconMap[node.icon]} size="14" />
+          </span>
+        {/if}
       {:else}
-        <Icon.FileText class="w-3 h-3 opacity-30 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+        {#if node.icon && iconMap[node.icon]}
+          <span class="flex h-4 w-4 items-center justify-center" style="color: {node.color || ''}">
+            <svelte:component this={iconMap[node.icon]} size="14" />
+          </span>
+        {:else}
+          <Icon.FileText class="h-3 w-3 shrink-0 opacity-30" strokeWidth="1.7" aria-hidden="true" />
+        {/if}
       {/if}
-    {/if}
-
-    <span
-      class="truncate flex-1 {node.is_dir ? 'font-medium' : ''}"
-    >
-      {fileName}
     </span>
-    {#if !node.is_dir && $agentTouched.has(node.path) && !$conflictedNotes.has(node.path)}
-      <span class="mr-1 h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" title={$localizedText.agentReview.badgeHint} data-testid="tree-agent"></span>
-      <span class="sr-only">{$localizedText.agentReview.badge}</span>
-    {/if}
-    {#if !node.is_dir && $conflictedNotes.has(node.path)}
-      <span class="mr-1 h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" title={$localizedText.app.board.conflictHint} data-testid="tree-conflict"></span>
-      <span class="sr-only">{$localizedText.app.board.conflict}</span>
-    {/if}
-  </button>
+
+    <span class="truncate {node.is_dir ? 'font-medium' : ''}">{fileName}</span>
+
+    <span slot="trailing" class="flex shrink-0 items-center gap-1">
+      {#if !node.is_dir && $agentTouched.has(node.path) && !$conflictedNotes.has(node.path)}
+        <span class="h-2 w-2 rounded-full bg-[var(--blue)]" title={$localizedText.agentReview.badgeHint} data-testid="tree-agent"></span>
+        <span class="sr-only">{$localizedText.agentReview.badge}</span>
+      {/if}
+      {#if !node.is_dir && $conflictedNotes.has(node.path)}
+        <span class="h-2 w-2 rounded-full bg-[var(--red)]" title={$localizedText.app.board.conflictHint} data-testid="tree-conflict"></span>
+        <span class="sr-only">{$localizedText.app.board.conflict}</span>
+      {/if}
+    </span>
+  </SidebarItem>
 
   {#if node.is_dir && isExpanded && node.children}
     <div class="ml-2.5 border-l border-[var(--border-subtle)] pl-1.5 lg:ml-3 lg:pl-2">
