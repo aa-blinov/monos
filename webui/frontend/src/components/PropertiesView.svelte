@@ -301,7 +301,14 @@
           <button type="button" data-testid="properties-more-columns" aria-expanded={showAllKeys} on:click={() => { showAllKeys = !showAllKeys; keyQuery = ''; }} class="min-h-8 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{showAllKeys ? $localizedText.properties.fewerColumns : $localizedText.properties.moreColumns(keys.length - visibleKeys.length)}</button>
         {/if}
         {#if showAllKeys}
-          <input type="search" data-testid="properties-column-search" bind:value={keyQuery} placeholder={$localizedText.properties.findColumn} aria-label={$localizedText.properties.findColumn} class="h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-transparent px-2 text-xs text-[var(--text-primary)] max-sm:h-10" />
+          <SearchField
+            testid="properties-column-search"
+            bind:value={keyQuery}
+            label={$localizedText.properties.findColumn}
+            placeholder={$localizedText.properties.findColumn}
+            size="sm"
+            class="w-full"
+          />
         {/if}
       </div>
     {/if}

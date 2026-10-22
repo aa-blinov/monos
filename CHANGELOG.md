@@ -17,6 +17,13 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.1 — 2026-10-22
+
+### Changed
+
+- The notes table's column search is the kit's `SearchField`.
+- Site screenshots were taken again.
+
 ## 1.16.0 — 2026-10-22
 
 ### Changed
