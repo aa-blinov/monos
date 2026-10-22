@@ -1,6 +1,7 @@
 @import './fonts.css';
 @import 'katex/dist/katex.min.css';
 @import '@monos/ui/tokens.css';
+@import '@monos/ui/themes.css';
 
 @tailwind base;
 @tailwind components;
@@ -15,24 +16,33 @@
   --text-whisper: 11px;
   --text-whisper-lg: 12px;
 
-  /* The kit owns the semantic stack. Monos keeps its own names while the
-     product components move over; the --ui- roles are aliases of them. */
-  --ui-bg: var(--bg-primary);
-  --ui-surface: var(--bg-secondary);
-  --ui-surface-2: var(--bg-tertiary);
-  --ui-ink: var(--text-primary);
-  --ui-ink-soft: var(--text-secondary);
-  --ui-ink-faint: var(--text-tertiary);
-  --ui-ink-muted: var(--text-muted);
-  --ui-line: var(--border-subtle);
-  --ui-accent: var(--blue);
-  --ui-danger: var(--red);
-  --ui-warning: var(--orange);
-  --ui-success: var(--green);
-  --ui-info: var(--blue);
-  --ui-radius: var(--radius);
-  --ui-text-whisper: var(--text-whisper);
-  --ui-text-whisper-lg: var(--text-whisper-lg);
+  /* The kit owns the palette now. Monos keeps its older names as aliases so
+     every existing component reads the same variables from the new stack. */
+  --bg-primary: var(--ui-bg);
+  --bg-secondary: var(--ui-surface);
+  --bg-tertiary: var(--ui-surface-2);
+  --text-primary: var(--ui-ink);
+  --text-secondary: var(--ui-ink-soft);
+  --text-tertiary: var(--ui-ink-faint);
+  --text-muted: var(--ui-ink-muted);
+  --border-subtle: var(--ui-line);
+  --border-strong: var(--ui-line-strong);
+  --radius: var(--ui-radius);
+  --red: var(--ui-danger);
+  --green: var(--ui-success);
+  --yellow: var(--ui-warning);
+  --orange: var(--ui-warning);
+  --blue: var(--ui-accent);
+  --purple: var(--ui-accent);
+  --aqua: var(--ui-success);
+  --text-whisper: var(--ui-text-whisper);
+  --text-whisper-lg: var(--ui-text-whisper-lg);
+}
+
+/* The kit themes set color-scheme at the root; Monos keeps that on form
+   controls only, because a page-wide scheme changed caret placement. */
+:root[data-theme] {
+  color-scheme: normal;
 }
 
 @layer base {

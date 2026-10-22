@@ -1,12 +1,8 @@
-export function applyTheme(activeTheme, isDarkMode, themes) {
-  const theme = themes[activeTheme];
-  if (!theme) return;
-
-  const vars = isDarkMode ? theme.dark : theme.light;
+export function applyTheme(activeTheme, isDarkMode) {
+  // The kit owns the palette: its themes.css selects on these two attributes.
   const root = document.documentElement;
-  for (const [key, value] of Object.entries(vars)) {
-    root.style.setProperty(key, value);
-  }
+  root.dataset.theme = activeTheme;
+  root.dataset.mode = isDarkMode ? 'dark' : 'light';
 }
 
 export function applyTypographyVars({
