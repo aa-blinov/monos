@@ -130,7 +130,7 @@
                   type="text"
                   class="min-w-0 flex-1"
                   bind:value={editValue}
-                  on:keydown={(e) => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') editing = null; }}
+                  on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter') confirmRename(); if (key === 'Escape') editing = null; }}
                 />
                 <button
                   type="button"
