@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.7 — 2026-10-22
+
+### Changed
+
+- Settings' appearance selects — language, font, sizes, tabs, content width and
+  line height — are the kit's `FieldControl`.
+- `@monos/ui` is `1.1.12`: `FieldControl` keeps its value in step on `change`,
+  so a bound store updates before its change handler runs.
+- Site screenshots were taken again.
+
 ## 1.15.6 — 2026-10-22
 
 ### Changed

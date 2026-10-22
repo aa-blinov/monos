@@ -68,6 +68,20 @@
     ...option,
     label: $localizedText.optionLabels.fontSize[option.value] || option.name,
   }));
+  $: localeSelectOptions = localeOptions.map((option) => ({ value: option.value, label: option.label }));
+  $: fontSelectOptions = fontOptions.map((font) => ({
+    value: font.name,
+    label: font.category === 'system' ? $localizedText.settings.fontSystem : `${font.name} (${$localizedText.optionLabels.fontCategory?.[font.category] || font.category})`,
+  }));
+  $: fontSizeSelectOptions = localizedFontSizeOptions.map((option) => ({ value: option.value, label: `${option.label} (${option.base})` }));
+  $: editorFontSizeSelectOptions = localizedEditorFontSizeOptions.map((option) => ({ value: option.value, label: `${option.label} (${option.base})` }));
+  $: tabsSelectOptions = [
+    { value: 'off', label: $localizedText.settings.tabsOff },
+    { value: '2', label: $localizedText.settings.tabs2 },
+    { value: '4', label: $localizedText.settings.tabs4 },
+  ];
+  $: contentWidthSelectOptions = localizedContentWidthOptions.map((option) => ({ value: option.value, label: option.label }));
+  $: lineHeightSelectOptions = localizedLineHeightOptions.map((option) => ({ value: option.value, label: option.label }));
   $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
     ...option,
     label: $localizedText.optionLabels.fontSize[option.value] || option.name,
@@ -768,16 +782,14 @@
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.appearance}</h2>
       <div>
         <label for="interface-language" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.interfaceLanguage}</label>
-        <select
+        <FieldControl
+          as="select"
           id="interface-language"
           bind:value={$locale}
           on:change={saveSettings}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-        >
-          {#each localeOptions as option}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
+          options={localeSelectOptions}
+          class="appearance-none cursor-pointer select-chevron"
+        />
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.themeMode}</div>
@@ -817,83 +829,71 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div class="min-w-0">
           <label for="font-family" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.font}</label>
-          <select
+          <FieldControl
+            as="select"
             id="font-family"
             value={$fontFamily}
-            on:change={(e) => { $fontFamily = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each fontOptions as f}
-              <option value={f.name}>{f.category === 'system' ? $localizedText.settings.fontSystem : `${f.name} (${$localizedText.optionLabels.fontCategory?.[f.category] || f.category})`}</option>
-            {/each}
-          </select>
+            on:change={(e) => { $fontFamily = (e.detail ?? e).target.value; saveSettings(); }}
+            options={fontSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+          />
         </div>
         <div class="min-w-0">
           <label for="font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.size}</label>
-          <select
+          <FieldControl
+            as="select"
             id="font-size"
             value={$fontSize}
-            on:change={(e) => { $fontSize = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each localizedFontSizeOptions as s}
-              <option value={s.value}>{s.label} ({s.base})</option>
-            {/each}
-          </select>
+            on:change={(e) => { $fontSize = (e.detail ?? e).target.value; saveSettings(); }}
+            options={fontSizeSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+          />
         </div>
       </div>
       <div class="min-w-0">
         <label for="editor-font-size" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.fontSize}</label>
-        <select
+        <FieldControl
+          as="select"
           id="editor-font-size"
           value={$editorFontSize}
-          on:change={(e) => { $editorFontSize = e.target.value; saveSettings(); }}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-        >
-          {#each localizedEditorFontSizeOptions as s}
-            <option value={s.value}>{s.label} ({s.base})</option>
-          {/each}
-        </select>
+          on:change={(e) => { $editorFontSize = (e.detail ?? e).target.value; saveSettings(); }}
+          options={editorFontSizeSelectOptions}
+          class="appearance-none cursor-pointer select-chevron"
+        />
       </div>
       <div class="min-w-0">
         <label for="tabs-to-spaces" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.tabsToSpaces}</label>
-        <select
+        <FieldControl
+          as="select"
           id="tabs-to-spaces"
           bind:value={$tabsToSpaces}
-          class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-        >
-          <option value="off">{$localizedText.settings.tabsOff}</option>
-          <option value="2">{$localizedText.settings.tabs2}</option>
-          <option value="4">{$localizedText.settings.tabs4}</option>
-        </select>
+          options={tabsSelectOptions}
+          class="appearance-none cursor-pointer select-chevron"
+        />
         <p class="mt-1.5 text-xs text-[var(--text-tertiary)]">{$localizedText.settings.tabsToSpacesHint}</p>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="min-w-0">
           <label for="content-width" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.richEditor.contentWidth}</label>
-          <select
+          <FieldControl
+            as="select"
             id="content-width"
             value={$contentWidth}
-            on:change={(e) => { $contentWidth = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each localizedContentWidthOptions as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
+            on:change={(e) => { $contentWidth = (e.detail ?? e).target.value; saveSettings(); }}
+            options={contentWidthSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+          />
         </div>
         <div class="min-w-0">
           <label for="line-height" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.richEditor.lineHeight}</label>
-          <select
+          <FieldControl
+            as="select"
             id="line-height"
             value={$lineHeight}
-            on:change={(e) => { $lineHeight = e.target.value; saveSettings(); }}
-            class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}
-          >
-            {#each localizedLineHeightOptions as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
+            on:change={(e) => { $lineHeight = (e.detail ?? e).target.value; saveSettings(); }}
+            options={lineHeightSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+          />
         </div>
       </div>
     </section>
