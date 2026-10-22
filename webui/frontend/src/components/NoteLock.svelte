@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { localizedText } from '../lib/strings.js';
   import { flushOpenNote } from '../lib/note-refresh.js';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { Button, FieldControl } from '@monos/ui';
   import { lockNoteRequest, relockNoteRequest, unprotectNoteRequest } from '../lib/editor-api.js';
 
   // Locking controls of the open note: seal it with a passphrase, close it again, or remove the lock.
@@ -67,54 +67,15 @@
   <p class="mb-2 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.lock.title}</p>
   {#if !locked}
     <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.lock.lockHint}</p>
-    <input
-      type="password"
-      bind:value={passphrase}
-      disabled={busy}
-      autocomplete="new-password"
-      placeholder={$localizedText.lock.passphrase}
-      aria-label={$localizedText.lock.passphrase}
-      class={formFieldClass({ extraClass: 'w-full' })}
-    />
-    <input
-      type="password"
-      bind:value={repeat}
-      disabled={busy}
-      autocomplete="new-password"
-      placeholder={$localizedText.lock.repeatPassphrase}
-      aria-label={$localizedText.lock.repeatPassphrase}
-      class={formFieldClass({ extraClass: 'w-full' })}
-    />
-    <button
-      type="button"
-      disabled={busy}
-      on:click={lock}
-      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-    >{$localizedText.lock.lockButton}</button>
+    <FieldControl type="password" bind:value={passphrase} disabled={busy} autocomplete="new-password" placeholder={$localizedText.lock.passphrase} aria-label={$localizedText.lock.passphrase} class="w-full" />
+    <FieldControl type="password" bind:value={repeat} disabled={busy} autocomplete="new-password" placeholder={$localizedText.lock.repeatPassphrase} aria-label={$localizedText.lock.repeatPassphrase} class="w-full" />
+    <Button variant="outline" size="sm" disabled={busy} on:click={lock}>{$localizedText.lock.lockButton}</Button>
   {:else if unlocked}
     <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.lock.openForSession}</p>
-    <button
-      type="button"
-      disabled={busy}
-      on:click={relock}
-      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-    >{$localizedText.lock.relock}</button>
-    <input
-      type="password"
-      bind:value={passphrase}
-      disabled={busy}
-      autocomplete="off"
-      placeholder={$localizedText.lock.passphrase}
-      aria-label={$localizedText.lock.passphrase}
-      class={formFieldClass({ extraClass: 'w-full' })}
-    />
+    <Button variant="outline" size="sm" disabled={busy} on:click={relock}>{$localizedText.lock.relock}</Button>
+    <FieldControl type="password" bind:value={passphrase} disabled={busy} autocomplete="off" placeholder={$localizedText.lock.passphrase} aria-label={$localizedText.lock.passphrase} class="w-full" />
     <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.lock.removeLockHint}</p>
-    <button
-      type="button"
-      disabled={busy}
-      on:click={removeLock}
-      class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-    >{$localizedText.lock.removeLock}</button>
+    <Button variant="outline" size="sm" disabled={busy} on:click={removeLock}>{$localizedText.lock.removeLock}</Button>
   {/if}
   {#if error}
     <p role="alert" class="text-xs text-[var(--red)]">{error}</p>

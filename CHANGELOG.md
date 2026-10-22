@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.4 — 2026-10-22
+
+### Changed
+
+- The lock panel's passphrase fields are the kit's `FieldControl`, and its
+  lock, relock and remove actions are the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.3 — 2026-10-22
 
 ### Changed
