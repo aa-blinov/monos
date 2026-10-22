@@ -3,6 +3,7 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import SearchField from './SearchField.svelte';
+  import { SidebarItem } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -1297,15 +1298,23 @@
           on:openTrash={() => dispatch('openTrash')}
         />
         {#if terminalBridge}
-          <button data-testid="phone-terminal" aria-pressed={$terminalOpen} on:click={() => { toggleTerminal(); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-            <Icon.TerminalSquare size="20" strokeWidth="1.7" />
-            <span>{$localizedText.terminal.open}</span>
-          </button>
+          <SidebarItem
+            data-testid="phone-terminal"
+            aria-pressed={$terminalOpen}
+            label={$localizedText.terminal.open}
+            on:click={() => { toggleTerminal(); dispatch('toggleSidebar'); }}
+            class="min-h-11 gap-4"
+          >
+            <svelte:fragment slot="icon"><Icon.TerminalSquare size="20" strokeWidth="1.7" /></svelte:fragment>
+          </SidebarItem>
         {/if}
-        <button on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition">
-          <Icon.Settings size="20" strokeWidth="1.7" />
-          <span>{$localizedText.sidebar.settings}</span>
-        </button>
+        <SidebarItem
+          label={$localizedText.sidebar.settings}
+          on:click={() => { dispatch('openSettings'); dispatch('toggleSidebar'); }}
+          class="min-h-11 gap-4"
+        >
+          <svelte:fragment slot="icon"><Icon.Settings size="20" strokeWidth="1.7" /></svelte:fragment>
+        </SidebarItem>
       </div>
     {:else}
       <span class="text-[var(--text-secondary)]">
@@ -1375,29 +1384,26 @@
         />
         {#if terminalBridge}
           <!-- The panel docks at the bottom of the content column; its switch stays at the bottom edge too. -->
-          <TooltipIconButton
+          <SidebarItem
             data-testid="sidebar-terminal"
             aria-pressed={$terminalOpen}
+            active={$terminalOpen}
             on:click={toggleTerminal}
-            class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] {$terminalOpen ? 'text-[var(--text-primary)]' : ''}"
             label={$localizedText.terminal.open}
-            tooltip=""
-            tooltipAlign="end"
           >
-            <Icon.TerminalSquare class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-            <span class="truncate">{$localizedText.terminal.open}</span>
-          </TooltipIconButton>
+            <svelte:fragment slot="icon">
+              <Icon.TerminalSquare class="h-4 w-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+            </svelte:fragment>
+          </SidebarItem>
         {/if}
-        <TooltipIconButton
+        <SidebarItem
           on:click={() => dispatch('openSettings')}
-          class="flex h-7 w-full !justify-start gap-2 px-2 text-left text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
           label={$localizedText.sidebar.settings}
-          tooltip=""
-          tooltipAlign="end"
         >
-          <Icon.Settings class="w-4 h-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
-          <span class="truncate">{$localizedText.sidebar.settings}</span>
-        </TooltipIconButton>
+          <svelte:fragment slot="icon">
+            <Icon.Settings class="h-4 w-4 shrink-0" strokeWidth="1.7" aria-hidden="true" />
+          </svelte:fragment>
+        </SidebarItem>
       </div>
     {/if}
     </div>

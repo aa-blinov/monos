@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.13.0 — 2026-10-22
+
+### Changed
+
+- The sidebar foot — Other, Terminal and Settings — is made of the kit's
+  `SidebarItem`; the Other trigger too. The three rows keep their order, their
+  `aria-pressed` state and their menu.
+- `@monos/ui` is `1.1.4`.
+- Site screenshots were taken again.
+
 ## 1.12.0 — 2026-10-22
 
 ### Changed
