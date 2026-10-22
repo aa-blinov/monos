@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.8 — 2026-10-22
+
+### Changed
+
+- Settings' git repository and branch selects are the kit's `FieldControl`;
+  every select in Settings now uses the kit field.
+- Site screenshots were taken again.
+
 ## 1.15.7 — 2026-10-22
 
 ### Changed
