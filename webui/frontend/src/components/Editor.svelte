@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Menu, TagInput as KitTagInput } from '@monos/ui';
+  import { Button, Menu, TagInput as KitTagInput } from '@monos/ui';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -1860,21 +1860,23 @@
               </div>
               <div class="mt-2 flex flex-wrap items-center gap-1.5">
                 {#each DUE_QUICK_DAYS as days}
-                  <button
+                  <Button
                     type="button"
                     data-testid="due-quick"
                     aria-pressed={dueDate === isoDayFromToday(days)}
-                    class="rounded-ui border px-2 py-1 text-xs transition {dueDate === isoDayFromToday(days) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+                    variant={dueDate === isoDayFromToday(days) ? 'outline' : 'ghost'}
+                    size="sm"
                     on:click={() => setDueIso(isoDayFromToday(days))}
-                  >{$localizedText.editor.dueQuick[days]}</button>
+                  >{$localizedText.editor.dueQuick[days]}</Button>
                 {/each}
                 <span class="relative">
-                  <button
+                  <Button
                     type="button"
                     data-testid="due-calendar"
-                    class="inline-flex items-center gap-1.5 rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    variant="outline"
+                    size="sm"
                     on:click={openDueCalendar}
-                  ><CalendarDays size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.dueCalendar}</button>
+                  ><CalendarDays size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.dueCalendar}</Button>
                   <input
                     type="date"
                     bind:this={dueDateInput}
