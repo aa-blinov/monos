@@ -3,7 +3,7 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import SearchField from './SearchField.svelte';
-  import { Sidebar as KitSidebar, SidebarItem } from '@monos/ui';
+  import { Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -1164,40 +1164,38 @@
 
   <!-- Pinned Notes Section -->
   {#if $pinnedNotes.length > 0}
-    <div class="mb-4 shrink-0 px-4">
-      <button
-        type="button"
-        data-testid="pinned-toggle"
-        aria-expanded={!$pinnedCollapsed}
-        title={$pinnedCollapsed ? $localizedText.sidebar.expandPinned : $localizedText.sidebar.collapsePinned}
-        on:click={() => pinnedCollapsed.update((value) => !value)}
-        class="flex min-h-10 w-full items-center justify-between border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper-lg)] uppercase tracking-[0.2em] font-bold text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)] {$pinnedCollapsed ? '' : 'mb-3'}"
-      >
-        <span class="flex items-center gap-1.5">
-          <Icon.ChevronRight class="h-3.5 w-3.5 shrink-0 transition-transform {$pinnedCollapsed ? '' : 'rotate-90'}" strokeWidth="1.7" aria-hidden="true" />
-          {$localizedText.sidebar.pinned}
-        </span>
-        <span class="text-[length:var(--text-whisper)] tabular-nums text-[var(--text-tertiary)]">{$pinnedNotes.length}</span>
-      </button>
+    <SidebarSection
+      title={$localizedText.sidebar.pinned}
+      count={$pinnedNotes.length}
+      collapsible
+      open={!$pinnedCollapsed}
+      toggleTestid="pinned-toggle"
+      bodyTestid="pinned-list"
+      on:toggle={() => pinnedCollapsed.update((value) => !value)}
+      class="mb-4 shrink-0 px-4"
+    >
       <!-- However many are pinned, the list takes a third of the panel at most and scrolls inside. -->
-      <div class="max-h-[32vh] space-y-0.5 overflow-y-auto {$pinnedCollapsed ? 'hidden' : ''}" data-testid="pinned-list">
+      <div class="max-h-[32vh] space-y-0.5 overflow-y-auto">
         {#each $pinnedNotes as note (note.path)}
           {@const pathLabel = recentPathLabel(note)}
-          <button
+          <SidebarItem
             draggable="true"
             on:dragstart={(event) => writeNoteDragPayload(event.dataTransfer, [note.path])}
             on:click={() => handleSelectFile({ detail: { path: note.path, name: note.name, isDir: false } })}
-            on:contextmenu|preventDefault={(event) => handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } })}
-            class="w-full min-h-10 rounded-ui border border-transparent px-2 py-0.5 text-left group hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] transition"
+            on:contextmenu={(event) => {
+              event.preventDefault();
+              handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } });
+            }}
+            class="min-h-10"
           >
-            <div class="text-xs font-medium truncate group-hover:text-[var(--text-primary)] transition-colors tracking-tight">{note.name}</div>
+            <div class="truncate text-xs font-medium tracking-tight">{note.name}</div>
             {#if pathLabel}
-              <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] truncate mt-0.5">{pathLabel}</div>
+              <div class="mt-0.5 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{pathLabel}</div>
             {/if}
-          </button>
+          </SidebarItem>
         {/each}
       </div>
-    </div>
+    </SidebarSection>
   {/if}
 
   <!-- Tree View Header -->

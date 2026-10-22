@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { Pin } from 'lucide-svelte';
+  import { Card as KitCard } from '@monos/ui';
   import { highlightExcerpt, searchSnippet } from '../lib/search.js';
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { relativeDay } from '../lib/date-format.js';
@@ -77,8 +78,11 @@
     : 'note-card group relative flex h-48 w-full flex-col overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-4 text-left shadow-sm shadow-black/[0.03] transition hover:border-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)] sm:px-5 sm:hover:-translate-y-0.5 sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-xl sm:hover:shadow-black/10';
 </script>
 
-<button
+<KitCard
+  as="button"
   type="button"
+  padding="none"
+  bare
   class={cardClass}
   style={cardStyle}
   {draggable}
@@ -187,7 +191,7 @@
       {/if}
     </span>
   {/if}
-</button>
+</KitCard>
 
 <style>
   .break-anywhere {
