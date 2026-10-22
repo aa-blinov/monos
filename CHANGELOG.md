@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.9.0 — 2026-10-22
+
+### Changed
+
+- `@monos/ui` is now `1.0.5`. Its `Modal` keeps a stack of dialogs, preserves
+  focus in a child control that autofocuses, returns focus on destroy and takes
+  host `widthClass`, `titleClass` and `descriptionClass`.
+- `ModalShell` is the kit's `Modal`; the app keeps its title face, its widths
+  and its `close` event. Nested dialogs answer Escape one at a time.
+- Site screenshots were taken again.
+
 ## 1.8.0 — 2026-10-22
 
 ### Changed
