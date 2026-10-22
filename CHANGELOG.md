@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.0 — 2026-10-22
+
+### Changed
+
+- The pinned section is the kit's `SidebarSection`; its rows are `SidebarItem`.
+  The collapse hook, the `pinned-toggle` and `pinned-list` hooks and the drag
+  payload survive.
+- The board card is the kit's `Card` in `bare` mode; the tint, proportional
+  serif and hover lift stay in `NoteCard`.
+- `@monos/ui` is `1.1.8`.
+- Site screenshots were taken again.
+
 ## 1.14.0 — 2026-10-22
 
 ### Changed
