@@ -9,6 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import { TagInput as KitTagInput } from '@monos/ui';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -136,7 +137,6 @@
   let dueText = '';
   let dueFocused = false;
   let dueInvalid = false;
-  let tagDraft = '';
   let footerMoreOpen = false;
   // Свойства открываются окошками над нижней панелью. Открыто не больше одного:
   // 'category' | 'tags' | 'due' | 'related' | 'color' | null.
@@ -334,7 +334,6 @@
   function closePropertyPanel({ restoreFocus = false } = {}) {
     const panel = propertyPanel;
     if (!panel) return;
-    if (panel === 'tags') addTagsFromDraft();
     if (panel === 'due' && dueFocused) commitDueText();
     dueFocused = false;
     dueInvalid = false;
@@ -348,7 +347,6 @@
     propertyPanel = null;
     footerMoreOpen = false;
     exportError = '';
-    tagDraft = '';
     dueFocused = false;
     dueInvalid = false;
   }
@@ -1180,20 +1178,7 @@
 
   $: if (fileInfo) editedTitle, scheduleMetadataSave();
 
-  /** Теги вводятся через запятую — формат тот же, что у Obsidian. */
-  // Теги — чипами: Enter или запятая добавляют, Backspace в пустом поле убирает последний.
-  function addTagsFromDraft() {
-    const incoming = tagDraft.split(',').map((tag) => tag.trim()).filter(Boolean);
-    tagDraft = '';
-    const merged = [...editableTags];
-    for (const tag of incoming) if (!merged.includes(tag)) merged.push(tag);
-    if (merged.length === editableTags.length) return;
-    editableTags = merged;
-    void saveMetadataFields();
-  }
-
-  // Tags already in use, offered under the field so a tag is picked rather than remembered (and typed
-  // the same way every time). Loaded when the panel opens; filtered by what is being typed.
+  // Tags already in use are offered by the kit's TagInput; it filters them as the person types.
   let knownTags = [];
   async function loadKnownTags() {
     try {
@@ -1204,33 +1189,6 @@
     }
   }
   $: if (propertyPanel === 'tags') void loadKnownTags();
-  $: tagQuery = tagDraft.split(',').pop().trim().toLowerCase();
-  $: offeredTags = knownTags
-    .filter((tag) => !editableTags.includes(tag) && (!tagQuery || tag.toLowerCase().includes(tagQuery)))
-    .slice(0, 12);
-
-  function addTag(tag) {
-    if (!tag || editableTags.includes(tag)) return;
-    const parts = tagDraft.split(',');
-    parts.pop();
-    tagDraft = parts.join(',');
-    editableTags = [...editableTags, tag];
-    void saveMetadataFields();
-  }
-
-  function removeTag(tag) {
-    editableTags = editableTags.filter((item) => item !== tag);
-    void saveMetadataFields();
-  }
-
-  function onTagDraftKeydown(event) {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      addTagsFromDraft();
-    } else if (event.key === 'Backspace' && !tagDraft && editableTags.length) {
-      removeTag(editableTags[editableTags.length - 1]);
-    }
-  }
 
   function togglePinned() {
     const pinning = !noteIsPinned();
@@ -1789,43 +1747,19 @@
           {#if propertyPanel === 'tags'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyTags} data-testid="property-panel" data-panel="tags" class="{panelClass} sm:left-auto sm:right-0">
               <p class={panelLabelClass}>{$localizedText.editor.propertyTags}</p>
-              <div class="flex flex-wrap gap-1.5">
-                {#each editableTags as tag (tag)}
-                  <span class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-0.5 pl-2.5 pr-1 text-xs text-[var(--text-primary)]">
-                    #{tag}
-                    <button
-                      type="button"
-                      class="inline-flex h-6 w-5 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                      aria-label={$localizedText.editor.tagRemove(tag)}
-                      on:click={() => removeTag(tag)}
-                    >
-                      <X size="12" aria-hidden="true" />
-                    </button>
-                  </span>
-                {/each}
-              </div>
-              <input
-                type="text"
-                data-testid="property-tags"
-                aria-label={$localizedText.editor.propertyTags}
-                bind:value={tagDraft}
-                on:keydown={onTagDraftKeydown}
-                on:blur={addTagsFromDraft}
+              <KitTagInput
+                bind:tags={editableTags}
+                suggestions={knownTags}
+                label=""
+                ariaLabel={$localizedText.editor.propertyTags}
+                prefix="#"
+                removeLabel={(tag) => $localizedText.editor.tagRemove(tag)}
+                testid="property-tags"
+                suggestionsTestid="tag-suggestions"
+                commitOnBlur
                 placeholder={editableTags.length ? $localizedText.editor.propertyTagsMore : $localizedText.editor.propertyTagsEmpty}
-                class="mt-2 h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-secondary)]"
+                on:change={saveMetadataFields}
               />
-              {#if offeredTags.length}
-                <div class="mt-2 flex flex-wrap gap-1.5" aria-label={$localizedText.editor.tagSuggestions} role="group" data-testid="tag-suggestions">
-                  {#each offeredTags as tag (tag)}
-                    <button
-                      type="button"
-                      class="rounded-ui border border-dashed border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                      on:mousedown|preventDefault
-                      on:click={() => addTag(tag)}
-                    >#{tag}</button>
-                  {/each}
-                </div>
-              {/if}
             </div>
           {/if}
         </div>
