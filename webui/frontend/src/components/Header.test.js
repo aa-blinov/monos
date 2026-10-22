@@ -149,7 +149,7 @@ test('Header показывает быструю заметку иконкой, 
 
   const button = screen.getByRole('button', { name: uiText.sidebar.quickNoteFromClipboard });
   expect(button.textContent.trim()).toBe('');
-  expect(button.className).toContain('lg:w-10');
+  expect(button.className).toContain('lg:w-9');
   expect(button.className).not.toContain('lg:w-auto');
 
   await fireEvent.mouseEnter(button.parentElement);

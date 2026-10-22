@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.10.1 — 2026-10-22
+
+### Fixed
+
+- The header search and the icon buttons beside it now share one height:
+  36px on a desktop and 44px on a phone, from the kit's `sm`/`md`/`lg` scale.
+- `@monos/ui` is `1.1.1`: `Select` `sm`, `SearchField` `md` and
+  `SegmentedControl` no longer disagree with the rest of the controls.
+- Site screenshots were taken again.
+
 ## 1.10.0 — 2026-10-22
 
 ### Changed
