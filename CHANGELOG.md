@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.7.1 — 2026-10-22
+
+### Fixed
+
+- Express 5 no longer accepts a bare `*` route. The SPA fallback now uses a
+  regular expression; without it the desktop app failed at boot with
+  "Missing parameter name at index 1: *" and no window opened.
+- The full acceptance run now passes on the dev app: 23 of 23 steps, including
+  a clean install, a real note, the native menus, the terminal, a phone-sized
+  window and a restart.
+
 ## 1.7.0 — 2026-10-22
 
 ### Changed
