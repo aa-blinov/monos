@@ -944,22 +944,12 @@
         <div class="min-w-0">
           <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
           <div class="flex flex-wrap gap-x-6 gap-y-2">
-          <button
-            type="button"
-            on:click={printAllNotes}
-            disabled={isExporting || isImporting}
-            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
-          >
+          <Button variant="ghost" size="md" on:click={printAllNotes} disabled={isExporting || isImporting}>
             {$localizedText.settings.printAllNotes}
-          </button>
-          <button
-            type="button"
-            on:click={exportNotes}
-            disabled={isExporting}
-            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
-          >
+          </Button>
+          <Button variant="ghost" size="md" on:click={exportNotes} disabled={isExporting}>
             {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
-          </button>
+          </Button>
           </div>
         </div>
 
@@ -976,14 +966,9 @@
               on:change={handleImportChange}
               class="sr-only"
             />
-            <button
-              type="button"
-              on:click={openArchivePicker}
-              disabled={isImporting}
-              class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
-            >
+            <Button variant="ghost" size="md" on:click={openArchivePicker} disabled={isImporting}>
               {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
-            </button>
+            </Button>
             <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>
           </div>
         </div>
@@ -1025,7 +1010,7 @@
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
           <FieldControl type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1" disabled={isAuthenticated} />
           {#if isAuthenticated}
-            <button type="button" on:click={() => confirmingGitReset = true} class="text-xs uppercase tracking-widest font-bold shrink-0 text-[var(--red)]">{$localizedText.settings.reset}</button>
+            <Button variant="ghost" size="sm" class="shrink-0 text-danger-text" on:click={() => confirmingGitReset = true}>{$localizedText.settings.reset}</Button>
             {#if confirmingGitReset}
               <ConfirmModal
                 danger={true}
@@ -1385,7 +1370,7 @@
       <section class="space-y-3">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsMoved}</p>
-        <button type="button" data-testid="settings-open-attachments" on:click={() => dispatch('openAttachments')} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition">{$localizedText.settings.attachmentsOpen}</button>
+        <Button variant="ghost" size="md" data-testid="settings-open-attachments" on:click={() => dispatch('openAttachments')}>{$localizedText.settings.attachmentsOpen}</Button>
       </section>
 
       <section class="space-y-5">

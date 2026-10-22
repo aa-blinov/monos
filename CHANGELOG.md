@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.3 — 2026-10-22
+
+### Changed
+
+- Settings' print, export, import, attachments and git-reset actions are the
+  kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.2 — 2026-10-22
 
 ### Changed
