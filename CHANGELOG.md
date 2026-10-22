@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.4 — 2026-10-22
+
+### Changed
+
+- The editor's `⋯` menu is the kit's `Menu`; pin, favourite, terminal, agent,
+  lock, focus, raw mode, colour and trash keep their rows and test hooks.
+- `@monos/ui` is `1.1.10`: `Menu` takes a bindable `open`, and items take
+  `iconProps` and `class`.
+- Site screenshots were taken again.
+
 ## 1.15.3 — 2026-10-22
 
 ### Changed

@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { TagInput as KitTagInput } from '@monos/ui';
+  import { Menu, TagInput as KitTagInput } from '@monos/ui';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -138,6 +138,38 @@
   let dueFocused = false;
   let dueInvalid = false;
   let footerMoreOpen = false;
+  $: footerMenuItems = [
+    { value: 'pin', label: pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo, icon: Pin, iconProps: { fill: pinnedNow ? 'currentColor' : 'none' }, class: 'sm:hidden', testid: 'menu-pin' },
+    !fileInfo?.locked
+      ? { value: 'favorite', label: favoriteNow ? $localizedText.editor.favoriteRemove : $localizedText.editor.favoriteAdd, icon: Star, iconProps: { fill: favoriteNow ? 'currentColor' : 'none' }, testid: 'menu-favorite' }
+      : null,
+    terminalBridge
+      ? { value: 'terminal', label: $localizedText.terminal.open, icon: TerminalSquare, class: 'sm:hidden', testid: 'menu-terminal' }
+      : null,
+    terminalBridge && loadedFilePath && !fileInfo?.locked
+      ? { value: 'agent', label: $localizedText.terminal.askAboutNote, icon: Bot, testid: 'menu-ask-agent' }
+      : null,
+    { value: 'lock', label: $localizedText.editor.lockMenu, icon: Lock, testid: 'menu-lock' },
+    { value: 'focus', label: focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn, icon: Focus, testid: 'toggle-focus-mode' },
+    { value: 'raw', label: rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode, icon: FileText, testid: 'toggle-raw-mode' },
+    { value: 'color', label: $localizedText.editor.noteColor, icon: Palette, testid: 'toggle-note-color' },
+    { value: 'trash', label: $localizedText.editor.moveToTrash, icon: Trash2, danger: true, class: 'sm:hidden', testid: 'menu-trash' },
+  ].filter(Boolean);
+
+  function footerMenuPick(value) {
+    footerMoreOpen = false;
+    if (value === 'pin') togglePinned();
+    else if (value === 'favorite') toggleFavorite();
+    else if (value === 'terminal') toggleTerminal();
+    else if (value === 'agent') askAgentAboutNote(loadedFilePath);
+    else if (value === 'lock') {
+      propertyTriggers.lock = document.querySelector('[data-testid="editor-more"]');
+      togglePropertyPanel('lock');
+    } else if (value === 'focus') setFocusMode(!focusMode);
+    else if (value === 'raw') { flushEditorMarkdown(); chooseRawMode(!rawMode); }
+    else if (value === 'color') togglePropertyPanel('color');
+    else if (value === 'trash') void deleteFile();
+  }
   // Свойства открываются окошками над нижней панелью. Открыто не больше одного:
   // 'category' | 'tags' | 'due' | 'related' | 'color' | null.
   let propertyPanel = null;
@@ -2130,57 +2162,31 @@
         </span>
         <!-- The ⋯ button also anchors the password panel: locking a note is an action on the note, not one of its fields. -->
         <div class="relative" data-footer-more data-panel-anchor="lock">
-          <TooltipIconButton
-            type="button"
-            data-testid="editor-more"
-            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-primary)] max-sm:h-11 max-sm:w-11 transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] focus-visible:outline-none {footerMoreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          <Menu
+            bind:open={footerMoreOpen}
+            items={footerMenuItems}
             label={$localizedText.editor.moreActions}
-            tooltip={$localizedText.editor.moreActions}
-            tooltipPosition="top"
-            tooltipAlign="end"
-            on:click={() => footerMoreOpen = !footerMoreOpen}
+            placement="top"
+            align="end"
+            menuTestid="editor-more-menu"
+            on:select={(event) => footerMenuPick(event.detail.value)}
           >
-            <MoreHorizontal class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
-          </TooltipIconButton>
-          {#if footerMoreOpen}
-            <div class="absolute bottom-full right-0 z-30 mb-2 w-56 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.editor.moreActions} data-testid="editor-more-menu">
-              <!-- On a phone the bottom bar has room for six buttons; pinning moves here. -->
-              <button type="button" role="menuitem" data-testid="menu-pin" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; togglePinned(); }}>
-                <Pin size="16" strokeWidth="1.7" fill={pinnedNow ? 'currentColor' : 'none'} aria-hidden="true" />{pinnedNow ? $localizedText.editor.pinUnpin : $localizedText.editor.pinDo}
-              </button>
-              {#if !fileInfo?.locked}<button type="button" role="menuitem" data-testid="menu-favorite" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; toggleFavorite(); }}>
-                <Star size="16" strokeWidth="1.7" fill={favoriteNow ? 'currentColor' : 'none'} aria-hidden="true" />{favoriteNow ? $localizedText.editor.favoriteRemove : $localizedText.editor.favoriteAdd}
-              </button>{/if}
-              <!-- Narrow window: the footer has no room for the terminal button, so the terminal opens from here. -->
-              {#if terminalBridge}
-                <button type="button" role="menuitem" data-testid="menu-terminal" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] sm:hidden" on:click={() => { footerMoreOpen = false; toggleTerminal(); }}>
-                  <TerminalSquare size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.open}
-                </button>
-              {/if}
-              <!-- The agent reads the note from the notes folder; a locked note is sealed there, so it is not offered. -->
-              {#if terminalBridge && loadedFilePath && !fileInfo?.locked}
-                <button type="button" role="menuitem" data-testid="menu-ask-agent" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; askAgentAboutNote(loadedFilePath); }}>
-                  <Bot size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.askAboutNote}
-                </button>
-              {/if}
-              <button type="button" role="menuitem" data-testid="menu-lock" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { propertyTriggers.lock = document.querySelector('[data-testid="editor-more"]'); togglePropertyPanel('lock'); }}>
-                <Lock size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.lockMenu}
-              </button>
-              <button type="button" role="menuitem" data-testid="toggle-focus-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; setFocusMode(!focusMode); }}>
-                <Focus size="16" strokeWidth="1.7" aria-hidden="true" />{focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn}
-              </button>
-              <button type="button" role="menuitem" data-testid="toggle-raw-mode" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { flushEditorMarkdown(); chooseRawMode(!rawMode); footerMoreOpen = false; }}>
-                <FileText size="16" strokeWidth="1.7" aria-hidden="true" />{rawMode ? $localizedText.editor.richMode : $localizedText.editor.rawMode}
-              </button>
-              <button type="button" role="menuitem" data-testid="toggle-note-color" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => { footerMoreOpen = false; togglePropertyPanel('color'); }}>
-                <Palette size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.noteColor}
-              </button>
-              <!-- The trash goes last here, like everywhere: it is the one action that is not worth a misclick. -->
-              <button type="button" role="menuitem" data-testid="menu-trash" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] sm:hidden" on:click={() => { footerMoreOpen = false; void deleteFile(); }}>
-                <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.moveToTrash}
-              </button>
-            </div>
-          {/if}
+            <svelte:fragment slot="trigger" let:open let:toggle let:triggerProps>
+              <TooltipIconButton
+                {...triggerProps}
+                type="button"
+                data-testid="editor-more"
+                class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-primary)] max-sm:h-11 max-sm:w-11 transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] focus-visible:outline-none {open ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+                label={$localizedText.editor.moreActions}
+                tooltip={$localizedText.editor.moreActions}
+                tooltipPosition="top"
+                tooltipAlign="end"
+                on:click={toggle}
+              >
+                <MoreHorizontal class="h-4 w-4" strokeWidth="1.7" aria-hidden="true" />
+              </TooltipIconButton>
+            </svelte:fragment>
+          </Menu>
           {#if propertyPanel === 'lock'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.lock.title} data-testid="property-panel" data-panel="lock" class="{panelClass} sm:left-auto sm:right-0 sm:!w-96">
               <NoteLock filePath={loadedFilePath} locked={Boolean(fileInfo?.locked)} unlocked={Boolean(fileInfo?.unlocked)} on:changed={() => loadFile()} />
