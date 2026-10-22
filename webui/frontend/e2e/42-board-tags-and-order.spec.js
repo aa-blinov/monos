@@ -147,7 +147,7 @@ test('доска: строка фильтров закреплена при пр
   const gapIsBar = await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('div.sticky')), { x: stuck.x + 20, y: stuck.y - 6 });
   expect(gapIsBar).toBe(true);
   // The gap above the controls and the one below them are the same.
-  const toolbar = await page.locator('#board-sort').locator('xpath=..').boundingBox();
+  const toolbar = await page.getByTestId('board-toolbar').boundingBox();
   const above = stuck.y - scrollBox.y;
   const below = (stuck.y + stuck.height) - (toolbar.y + toolbar.height);
   expect(Math.abs(above - below)).toBeLessThanOrEqual(2);

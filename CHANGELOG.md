@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.2 — 2026-10-22
+
+### Changed
+
+- The board's order menu is the kit's `Menu`; its checked item is a
+  `menuitemradio` with a check mark.
+- `@monos/ui` is `1.1.15`: `Menu` items take `checked`.
+- Site screenshots were taken again.
+
 ## 1.16.1 — 2026-10-22
 
 ### Changed
