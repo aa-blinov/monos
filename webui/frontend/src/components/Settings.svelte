@@ -82,6 +82,15 @@
   ];
   $: contentWidthSelectOptions = localizedContentWidthOptions.map((option) => ({ value: option.value, label: option.label }));
   $: lineHeightSelectOptions = localizedLineHeightOptions.map((option) => ({ value: option.value, label: option.label }));
+  $: gitRepoSelectOptions = [
+    { value: '', label: $localizedText.settings.select },
+    ...gitRepos.map((repo) => ({ value: getRepoOptionValue(repo), label: getRepoOptionLabel(repo) })),
+  ];
+  $: gitBranchSelectOptions = isLoadingBranches
+    ? [{ value: '', label: $localizedText.settings.loading, disabled: true }]
+    : gitBranches.length
+      ? gitBranches.map((branch) => ({ value: branch, label: branch }))
+      : [{ value: 'master', label: 'master' }];
   $: localizedEditorFontSizeOptions = editorFontSizeOptions.map(option => ({
     ...option,
     label: $localizedText.optionLabels.fontSize[option.value] || option.name,
@@ -1072,12 +1081,15 @@
         </div>
         <div>
           <label for="git-repository" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.repository}</label>
-          <select id="git-repository" bind:value={settings.git_repo} on:change={onRepoChange} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })} disabled={!gitRepos.length}>
-            <option value="">{$localizedText.settings.select}</option>
-            {#each gitRepos as r}
-              <option value={getRepoOptionValue(r)}>{getRepoOptionLabel(r)}</option>
-            {/each}
-          </select>
+          <FieldControl
+            as="select"
+            id="git-repository"
+            bind:value={settings.git_repo}
+            on:change={onRepoChange}
+            options={gitRepoSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+            disabled={!gitRepos.length}
+          />
         </div>
       </div>
 
@@ -1094,17 +1106,14 @@
         <summary class="min-h-6 cursor-pointer py-1 hover:text-[var(--text-primary)] transition-colors max-sm:min-h-11 max-sm:py-3">{$localizedText.settings.gitAdvanced}</summary>
         <div class="mt-3 max-w-sm">
           <label for="git-branch" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.branch}</label>
-          <select id="git-branch" bind:value={settings.git_branch} on:change={saveSettings} class={formFieldClass({ extraClass: 'appearance-none cursor-pointer select-chevron' })}>
-            {#if isLoadingBranches}
-              <option>{$localizedText.settings.loading}</option>
-            {:else if gitBranches.length}
-              {#each gitBranches as b}
-                <option value={b}>{b}</option>
-              {/each}
-            {:else}
-              <option value="master">master</option>
-            {/if}
-          </select>
+          <FieldControl
+            as="select"
+            id="git-branch"
+            bind:value={settings.git_branch}
+            on:change={saveSettings}
+            options={gitBranchSelectOptions}
+            class="appearance-none cursor-pointer select-chevron"
+          />
           <p class="mt-1.5 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.branchHint}</p>
         </div>
       </details>
