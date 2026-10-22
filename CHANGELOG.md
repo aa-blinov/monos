@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.2 — 2026-10-22
+
+### Changed
+
+- The sidebar's "Other" menu is the kit's `Menu`; its links, separators, danger
+  item and `open-*` test hooks survive.
+- `@monos/ui` is `1.1.9`: `Menu` items take `href` and `testid`, and the list
+  takes `menuTestid`.
+- Site screenshots were taken again.
+
 ## 1.15.1 — 2026-10-22
 
 ### Changed
