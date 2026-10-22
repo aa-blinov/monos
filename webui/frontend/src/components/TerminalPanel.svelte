@@ -15,6 +15,7 @@
   import { SEARCH_BUTTON_COMPACT_CLASS, SEARCH_ICON_COMPACT_CLASS, SEARCH_INPUT_COMPACT_CLASS } from '../lib/search-field.js';
   import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
+  import { Menu } from '@monos/ui';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
@@ -419,15 +420,20 @@
   }
 
   const iconButton = 'h-7 w-7 rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
-  const menuItem = 'flex w-full items-center gap-2.5 px-3 py-1.5 text-left outline-none transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--bg-secondary)] focus-visible:text-[var(--text-primary)]';
-  let menuOpen = false;
-  let menuAnchor;
-  function closeMenuOutside(event) {
-    if (menuOpen && menuAnchor && !menuAnchor.contains(event.target)) menuOpen = false;
+  $: terminalMenuItems = [
+    { value: 'search', label: `${$localizedText.terminal.searchMenu}  ⌘F`, icon: Search, testid: 'terminal-menu-search' },
+    { value: 'restart', label: $localizedText.terminal.restart, icon: RotateCcw, testid: 'terminal-menu-restart' },
+    rulesMissing
+      ? { value: 'rules', label: $localizedText.terminal.rulesCreate, testid: 'agent-rules-create' }
+      : null,
+  ].filter(Boolean);
+
+  function pickTerminalMenu(value) {
+    if (value === 'search') void openSearch();
+    else if (value === 'restart') restart();
+    else if (value === 'rules') void createRules();
   }
 </script>
-
-<svelte:window on:pointerdown={closeMenuOutside} />
 
 {#if terminalBridge}
   <section
@@ -493,29 +499,30 @@
       </button>
       <!-- Search, restart and the agent's rules: needed now and then, so behind ⋯ (⌘F still searches). A dot on
            ⋯ says the rules are missing. -->
-      <div class="relative" bind:this={menuAnchor}>
-        <TooltipIconButton class="{iconButton} relative" label={$localizedText.terminal.menu} tooltip={$localizedText.terminal.menu} tooltipAlign="end" data-testid="terminal-menu" on:click={() => { menuOpen = !menuOpen; }}>
-          <MoreHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
-          {#if rulesMissing}<span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>{/if}
-        </TooltipIconButton>
-        {#if menuOpen}
-          <!-- svelte-ignore a11y-interactive-supports-focus -->
-          <div role="menu" on:keydown={(event) => { if (event.key === 'Escape') menuOpen = false; }} class="absolute bottom-full right-0 z-30 mb-1 w-80 whitespace-nowrap rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 text-sm normal-case tracking-normal text-[var(--text-secondary)] shadow-2xl" data-testid="terminal-menu-list">
-            <button type="button" role="menuitem" class={menuItem} on:click={() => { menuOpen = false; void openSearch(); }}>
-              <Search size="14" strokeWidth="1.7" aria-hidden="true" /><span class="flex-1">{$localizedText.terminal.searchMenu}</span><span class="text-xs text-[var(--text-tertiary)]">⌘F</span>
-            </button>
-            <button type="button" role="menuitem" class={menuItem} on:click={() => { menuOpen = false; restart(); }}>
-              <RotateCcw size="14" strokeWidth="1.7" aria-hidden="true" /><span class="flex-1">{$localizedText.terminal.restart}</span>
-            </button>
-            {#if rulesMissing}
-              <div class="my-1 h-px bg-[var(--border-subtle)]"></div>
-              <button type="button" role="menuitem" data-testid="agent-rules-create" class={menuItem} title={$localizedText.terminal.rulesHint} on:click={() => { menuOpen = false; void createRules(); }}>
-                <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" aria-hidden="true"></span><span class="flex-1">{$localizedText.terminal.rulesCreate}</span>
-              </button>
-            {/if}
-          </div>
-        {/if}
-      </div>
+      <Menu
+        items={terminalMenuItems}
+        label={$localizedText.terminal.menu}
+        placement="top"
+        align="end"
+        width="auto"
+        menuTestid="terminal-menu-list"
+        on:select={(event) => pickTerminalMenu(event.detail.value)}
+      >
+        <svelte:fragment slot="trigger" let:toggle let:triggerProps>
+          <TooltipIconButton
+            {...triggerProps}
+            class="{iconButton} relative"
+            label={$localizedText.terminal.menu}
+            tooltip={$localizedText.terminal.menu}
+            tooltipAlign="end"
+            data-testid="terminal-menu"
+            on:click={toggle}
+          >
+            <MoreHorizontal size="14" strokeWidth="1.7" aria-hidden="true" />
+            {#if rulesMissing}<span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>{/if}
+          </TooltipIconButton>
+        </svelte:fragment>
+      </Menu>
       <TooltipIconButton class={iconButton} label={$localizedText.terminal.hide} tooltip={$localizedText.terminal.hide} tooltipAlign="end" on:click={() => terminalOpen.set(false)}>
         <X size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>

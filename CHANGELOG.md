@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.3 — 2026-10-22
+
+### Changed
+
+- The terminal's `⋯` menu is the kit's `Menu`; search, restart and the agent
+  rules keep their actions and test hooks.
+- Site screenshots were taken again.
+
 ## 1.15.2 — 2026-10-22
 
 ### Changed
