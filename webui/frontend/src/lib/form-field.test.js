@@ -19,12 +19,12 @@ test('formFieldClass даёт одинаковый size для input и select',
 
 test('formFieldClass использует CSS-переменные темы', () => {
   const cls = formFieldClass();
-  assert.match(cls, /var\(--border-subtle\)/, 'border должен быть из border-subtle');
+  assert.match(cls, /border-line/, 'border должен быть из border-subtle');
 });
 
 test('formFieldClass включает focus-стиль', () => {
   const cls = formFieldClass();
-  assert.match(cls, /focus:border-\[var\(--text-secondary\)\]/, 'focus должен подсвечивать border');
+  assert.match(cls, /focus:border-ink-soft/, 'focus должен подсвечивать border');
   assert.match(cls, /outline-none/, 'фокусное кольцо должно быть отключено');
 });
 
