@@ -701,7 +701,7 @@ test('Sidebar называет упавшую фоновую синхрониз�
   const row = await screen.findByRole('button', { name: uiText.sidebar.syncFailed });
   expect(row).toBeTruthy();
   // The reason waits in the tooltip: the row itself stays short.
-  await fireEvent.mouseEnter(row);
+  await fireEvent.mouseEnter(row.parentElement);
   await waitFor(() => expect(screen.getByText(uiText.settings.gitReasons['token-rejected'])).toBeTruthy());
 });
 

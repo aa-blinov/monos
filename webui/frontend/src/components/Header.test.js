@@ -152,7 +152,7 @@ test('Header показывает быструю заметку иконкой, 
   expect(button.className).toContain('lg:w-10');
   expect(button.className).not.toContain('lg:w-auto');
 
-  await fireEvent.mouseEnter(button);
+  await fireEvent.mouseEnter(button.parentElement);
   expect(screen.queryByRole('tooltip')).toBeNull();
   await vi.advanceTimersByTimeAsync(HOVER_DELAY);
   expect(screen.getByRole('tooltip').textContent).toContain(uiText.sidebar.quickNoteFromClipboard);
