@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.15.1 — 2026-10-22
+
+### Changed
+
+- Settings' theme mode is the kit's `SegmentedControl`.
+- The focus-mode exit is the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.15.0 — 2026-10-22
 
 ### Changed
