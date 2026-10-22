@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.6 — 2026-10-22
+
+### Changed
+
+- The notes table's inline cell editor is the kit's `FieldControl`; focus,
+  select-all, Enter to save, Escape to cancel and the write error stay.
+- Site screenshots were taken again.
+
 ## 1.16.5 — 2026-10-22
 
 ### Changed
