@@ -215,7 +215,9 @@ function registerFrontendStatic() {
   if (!frontendDist || !fs.existsSync(indexPath)) return;
 
   app.use(express.static(frontendDist));
-  app.get('*', (req, res, next) => {
+  // Express 5 reads a bare '*' as a path-to-regexp pattern and throws; a regex
+  // keeps the SPA fallback for every page address, root included.
+  app.get(/.*/, (req, res, next) => {
     if (req.path.startsWith('/api/') || req.path === '/health') {
       next();
       return;
