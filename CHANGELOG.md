@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.12 — 2026-10-22
+
+### Changed
+
+- The note title is the kit's `FieldControl` in `bare` mode; Enter, blur,
+  readonly-on-conflict and the title commit path stay.
+- `@monos/ui` is `1.1.17`: `FieldControl` takes `bare`.
+- Site screenshots were taken again.
+
 ## 1.16.11 — 2026-10-22
 
 ### Changed
