@@ -17,6 +17,13 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.35 — 2026-10-22
+
+### Changed
+
+- A housekeeping release: Playwright artifacts are no longer tracked and
+  `test-results/` is ignored, so the house-style check passes on the tag.
+
 ## 1.16.34 — 2026-10-22
 
 ### Fixed
