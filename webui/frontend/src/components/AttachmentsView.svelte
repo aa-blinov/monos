@@ -16,13 +16,13 @@
   import { localeDate } from '../lib/date-format.js';
   import SearchField from './SearchField.svelte';
   import ModalShell from './ModalShell.svelte';
+  import { Button, FieldControl, FilterChip } from '@monos/ui';
 
   // Every picture and PDF of the notes in one grid, as large as the vault: sorted, narrowed by type, folder and
   // use, drawn in pages of 60. A click on a picture shows it large with its notes; unused files can be moved to a
   // local trash (30 days, with an undo) in one go.
   const dispatch = createEventDispatcher();
   const PAGE = 60;
-  const filterSelectClass = 'h-8 max-sm:h-10 max-w-[14rem] cursor-pointer rounded-ui border border-[var(--border-subtle)] bg-transparent px-2 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]';
 
   let items = [];
   let lockedNotes = 0;
@@ -307,40 +307,28 @@
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.empty}</p>
     {:else}
       <div class="flex flex-wrap items-center gap-2" role="group" aria-label={$localizedText.attachments.title}>
-        <button
-          type="button" aria-pressed={filter === 'all'} data-testid="attachments-filter-all"
-          on:click={() => { filter = 'all'; narrowed(); }}
-          class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'all' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-        >{$localizedText.attachments.filterAll} ({items.length})</button>
-        <button
-          type="button" aria-pressed={filter === 'unused'} data-testid="attachments-filter-unused"
-          on:click={() => { filter = 'unused'; narrowed(); }}
-          class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'unused' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-        >{$localizedText.attachments.filterUnused} ({unusedItems.length})</button>
+        <FilterChip active={filter === 'all'} data-testid="attachments-filter-all" on:click={() => { filter = 'all'; narrowed(); }}>{$localizedText.attachments.filterAll} ({items.length})</FilterChip>
+        <FilterChip active={filter === 'unused'} data-testid="attachments-filter-unused" on:click={() => { filter = 'unused'; narrowed(); }}>{$localizedText.attachments.filterUnused} ({unusedItems.length})</FilterChip>
 
-        <button type="button" data-testid="attachments-filters-toggle" aria-expanded={filtersOpen} on:click={() => { filtersOpen = !filtersOpen; }} class="rounded-ui border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] sm:hidden max-sm:min-h-10">{$localizedText.attachments.filters(activeFilters)}</button>
+        <Button variant="outline" size="sm" data-testid="attachments-filters-toggle" aria-expanded={filtersOpen} class="sm:hidden" on:click={() => { filtersOpen = !filtersOpen; }}>{$localizedText.attachments.filters(activeFilters)}</Button>
         <div class="contents {filtersOpen ? '' : 'max-sm:hidden'}" data-testid="attachments-filter-row">
         {#if names.size > 0}
-          <button
-            type="button" aria-pressed={filter === 'duplicates'} data-testid="attachments-filter-duplicates"
-            on:click={() => { filter = filter === 'duplicates' ? 'all' : 'duplicates'; narrowed(); }}
-            class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {filter === 'duplicates' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-          >{$localizedText.attachments.filterDuplicates}</button>
+          <FilterChip active={filter === 'duplicates'} data-testid="attachments-filter-duplicates" on:click={() => { filter = filter === 'duplicates' ? 'all' : 'duplicates'; narrowed(); }}>{$localizedText.attachments.filterDuplicates}</FilterChip>
         {/if}
-        <select aria-label={$localizedText.attachments.kindLabel} data-testid="attachments-kind" bind:value={$attachmentsKind} on:change={narrowed} class={filterSelectClass}>
-          <option value="all">{$localizedText.attachments.kindAll}</option>
-          <option value="image">{$localizedText.attachments.kindImage}</option>
-          <option value="pdf">{$localizedText.attachments.kindPdf}</option>
-        </select>
-        <button type="button" data-testid="attachments-folder" aria-haspopup="dialog" aria-label={$localizedText.attachments.folderLabel} on:click={() => { folderPickerOpen = true; }} class="{filterSelectClass} inline-flex items-center gap-1 truncate">
+        <FieldControl as="select" aria-label={$localizedText.attachments.kindLabel} data-testid="attachments-kind" bind:value={$attachmentsKind} on:change={narrowed} class="!w-auto" options={[
+          { value: 'all', label: $localizedText.attachments.kindAll },
+          { value: 'image', label: $localizedText.attachments.kindImage },
+          { value: 'pdf', label: $localizedText.attachments.kindPdf },
+        ]} />
+        <Button variant="outline" size="sm" data-testid="attachments-folder" aria-haspopup="dialog" aria-label={$localizedText.attachments.folderLabel} class="max-w-[14rem] normal-case" on:click={() => { folderPickerOpen = true; }}>
           <span class="truncate">{folder ? folderTail(folder) : $localizedText.attachments.folderAll}</span>
-        </button>
-        <select aria-label={$localizedText.attachments.sortLabel} data-testid="attachments-sort" bind:value={$attachmentsSort} on:change={narrowed} class={filterSelectClass}>
-          <option value="new">{$localizedText.attachments.sortNew}</option>
-          <option value="size">{$localizedText.attachments.sortSize}</option>
-          <option value="name">{$localizedText.attachments.sortName}</option>
-          <option value="notes">{$localizedText.attachments.sortNotes}</option>
-        </select>
+        </Button>
+        <FieldControl as="select" aria-label={$localizedText.attachments.sortLabel} data-testid="attachments-sort" bind:value={$attachmentsSort} on:change={narrowed} class="!w-auto" options={[
+          { value: 'new', label: $localizedText.attachments.sortNew },
+          { value: 'size', label: $localizedText.attachments.sortSize },
+          { value: 'name', label: $localizedText.attachments.sortName },
+          { value: 'notes', label: $localizedText.attachments.sortNotes },
+        ]} />
 
         </div>
         <span class="ml-auto text-xs text-[var(--text-tertiary)]" data-testid="attachments-count">{$localizedText.attachments.count(filtered.length, items.length)}</span>
