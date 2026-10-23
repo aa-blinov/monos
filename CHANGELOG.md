@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.22 — 2026-10-22
+
+### Changed
+
+- Settings' git authenticate/connect/sync/refresh/conflict actions and the LAN
+  copy/show-QR/renew actions are the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.21 — 2026-10-22
 
 ### Changed

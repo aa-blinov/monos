@@ -1022,9 +1022,9 @@
               />
             {/if}
           {:else}
-            <button type="submit" disabled={isConnecting || !settings.git_token} class="text-xs uppercase tracking-widest font-bold hover:opacity-60 disabled:opacity-30 shrink-0">
+            <Button type="submit" variant="ghost" size="sm" disabled={isConnecting || !settings.git_token} class="shrink-0">
               {isConnecting ? $localizedText.settings.connecting : $localizedText.settings.authenticate}
-            </button>
+            </Button>
           {/if}
         </div>
       </form>
@@ -1113,14 +1113,14 @@
           connectedRepo={gitStatus?.initialized ? gitStatus.repo : ''}
           connectedBranch={gitStatus?.branch || ''}
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="md"
           on:click={setupGitRepo}
           disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
-          class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
         >
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
-        </button>
+        </Button>
       </div>
       <p class="text-xs leading-relaxed text-[var(--text-tertiary)]" data-testid="upload-notice">
         {settings.git_auto_upload ? $localizedText.settings.autoUploadNotice(settings.git_auto_sync_minutes) : $localizedText.settings.manualUploadNotice}
@@ -1179,9 +1179,9 @@
               {#if gitStatus.status === 'conflict'}<div class="text-xs text-[var(--red)]">{$localizedText.settings.conflictStatus}</div>{/if}
               {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(relativeDay(gitStatus.last_sync, $locale, { today: $localizedText.app.board.today, yesterday: $localizedText.app.board.yesterday }))}</div>{/if}
             </div>
-            <button on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
+            <Button variant="ghost" size="md" on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty}>
               {isSyncing ? $localizedText.settings.syncing : $localizedText.settings.syncNow}
-            </button>
+            </Button>
           </div>
         {:else if gitStatus && !gitStatus.initialized}
           <div class="text-sm text-[var(--text-secondary)]">{$localizedText.settings.notInitialized}</div>
@@ -1191,9 +1191,9 @@
       </div>
 
       <div class="flex gap-4 text-xs">
-        <button on:click={checkGitStatus} class="min-h-6 uppercase tracking-widest transition hover:opacity-60 max-sm:min-h-11">{$localizedText.settings.refreshStatus}</button>
+        <Button variant="ghost" size="sm" on:click={checkGitStatus}>{$localizedText.settings.refreshStatus}</Button>
         {#if gitConflicts.length > 0}
-          <button on:click={loadConflicts} class="uppercase tracking-widest hover:opacity-60 transition">{$localizedText.settings.viewConflicts}</button>
+          <Button variant="ghost" size="sm" on:click={loadConflicts}>{$localizedText.settings.viewConflicts}</Button>
         {/if}
       </div>
     </section>
@@ -1230,18 +1230,15 @@
                     on:focus={(event) => event.currentTarget.select()}
                     class={formFieldClass({ extraClass: 'font-mono text-xs' })}
                   />
-                  <button
-                    type="button"
-                    on:click={() => copyLanUrl(url)}
-                    class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
-                  >{$localizedText.settings.lanCopy}</button>
+                  <Button variant="ghost" size="md" on:click={() => copyLanUrl(url)} class="shrink-0">{$localizedText.settings.lanCopy}</Button>
                   {#if lan.urls.length > 1}
-                    <button
-                      type="button"
+                    <Button
+                      variant={shownQrUrl === url ? 'outline' : 'ghost'}
+                      size="md"
                       aria-pressed={shownQrUrl === url}
                       on:click={() => qrUrl = url}
-                      class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest transition hover:opacity-60 {shownQrUrl === url ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
-                    >{$localizedText.settings.lanShowQr}</button>
+                      class="shrink-0"
+                    >{$localizedText.settings.lanShowQr}</Button>
                   {/if}
                 </div>
               {/each}
@@ -1263,13 +1260,7 @@
           {:else}
             <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanNoNetwork}</p>
           {/if}
-          <button
-            type="button"
-            disabled={lanBusy}
-            data-testid="lan-renew"
-            on:click={() => confirmingLanRenew = true}
-            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          >{$localizedText.settings.lanRenew}</button>
+          <Button variant="outline" size="sm" disabled={lanBusy} data-testid="lan-renew" on:click={() => confirmingLanRenew = true}>{$localizedText.settings.lanRenew}</Button>
         {/if}
         {#if lan.restartRequired}
           <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
@@ -1314,9 +1305,9 @@
           {/each}
         </div>
         {#if fileConflictDetails.length > 0}
-          <button on:click={openConflictResolver} class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30">
+          <Button variant="ghost" size="md" on:click={openConflictResolver}>
             {$localizedText.settings.resolveFileConflicts}
-          </button>
+          </Button>
         {/if}
       </section>
     {/if}
