@@ -3,7 +3,7 @@
   import Checkbox from './Checkbox.svelte';
   import { localizedText } from '../lib/strings.js';
   import { flushOpenNote } from '../lib/note-refresh.js';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { Button, FieldControl, IconButton } from '@monos/ui';
   import { setPropertyRequest } from '../lib/editor-api.js';
   import {
     PROPERTY_TYPES,
@@ -26,6 +26,7 @@
   let newType = 'text';
   let newText = '';
   let newChecked = false;
+  $: typeOptions = PROPERTY_TYPES.map((type) => ({ value: type, label: $localizedText.properties.typeNames[type] }));
 
   function invalidValue(type) {
     return $localizedText.properties.invalidValue.replace('{type}', $localizedText.properties.typeNames[type]);
@@ -107,33 +108,32 @@
               />
             </div>
           {:else}
-            <input
+            <FieldControl
               type={propertyInputType(property.type)}
               value={propertyInputText(property)}
               disabled={busy}
               aria-label={property.key}
-              class={formFieldClass({ extraClass: 'min-w-0 flex-1' })}
-              on:change={(event) => saveValue(property, event.currentTarget.value)}
+              class="min-w-0 flex-1"
+              on:change={(event) => saveValue(property, (event.detail ?? event).target.value)}
             />
           {/if}
-          <select
+          <FieldControl
+            as="select"
             value={property.type}
             disabled={busy}
             aria-label={$localizedText.properties.type}
-            class={formFieldClass({ extraClass: '!w-auto shrink-0' })}
-            on:change={(event) => changeType(property, event.currentTarget.value)}
-          >
-            {#each PROPERTY_TYPES as type}
-              <option value={type}>{$localizedText.properties.typeNames[type]}</option>
-            {/each}
-          </select>
-          <button
-            type="button"
-            class="shrink-0 px-1 text-sm text-[var(--text-tertiary)] hover:text-[var(--red)] disabled:opacity-50"
+            options={typeOptions}
+            class="!w-auto shrink-0"
+            on:change={(event) => changeType(property, (event.detail ?? event).target.value)}
+          />
+          <IconButton
+            bare
+            tooltipText=""
+            label={$localizedText.properties.remove.replace('{name}', property.key)}
             disabled={busy}
-            aria-label={$localizedText.properties.remove.replace('{name}', property.key)}
+            class="shrink-0 px-1 text-sm text-[var(--text-tertiary)] hover:text-[var(--red)]"
             on:click={() => remove(property)}
-          >×</button>
+          >×</IconButton>
         </li>
       {/each}
     </ul>
@@ -141,19 +141,22 @@
 
   <form class="space-y-2 border-t border-[var(--border-subtle)] pt-3" on:submit|preventDefault={add}>
     <div class="flex items-center gap-2">
-      <input
+      <FieldControl
         type="text"
         bind:value={newName}
         disabled={busy}
         placeholder={$localizedText.properties.name}
         aria-label={$localizedText.properties.name}
-        class={formFieldClass({ extraClass: 'min-w-0 flex-1' })}
+        class="min-w-0 flex-1"
       />
-      <select bind:value={newType} disabled={busy} aria-label={$localizedText.properties.type} class={formFieldClass({ extraClass: '!w-auto shrink-0' })}>
-        {#each PROPERTY_TYPES as type}
-          <option value={type}>{$localizedText.properties.typeNames[type]}</option>
-        {/each}
-      </select>
+      <FieldControl
+        as="select"
+        bind:value={newType}
+        disabled={busy}
+        aria-label={$localizedText.properties.type}
+        options={typeOptions}
+        class="!w-auto shrink-0"
+      />
     </div>
     <div class="flex items-center gap-2">
       {#if newType === 'checkbox'}
@@ -162,37 +165,33 @@
           <span>{$localizedText.properties.value}</span>
         </div>
       {:else if newType === 'number'}
-        <input
+        <FieldControl
           type="number"
           bind:value={newText}
           disabled={busy}
           placeholder={$localizedText.properties.value}
           aria-label={$localizedText.properties.value}
-          class={formFieldClass({ extraClass: 'min-w-0 flex-1' })}
+          class="min-w-0 flex-1"
         />
       {:else if newType === 'date'}
-        <input
+        <FieldControl
           type="date"
           bind:value={newText}
           disabled={busy}
           aria-label={$localizedText.properties.value}
-          class={formFieldClass({ extraClass: 'min-w-0 flex-1' })}
+          class="min-w-0 flex-1"
         />
       {:else}
-        <input
+        <FieldControl
           type="text"
           bind:value={newText}
           disabled={busy}
           placeholder={$localizedText.properties.value}
           aria-label={$localizedText.properties.value}
-          class={formFieldClass({ extraClass: 'min-w-0 flex-1' })}
+          class="min-w-0 flex-1"
         />
       {/if}
-      <button
-        type="submit"
-        disabled={busy || !newName.trim()}
-        class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-      >{$localizedText.properties.add}</button>
+      <Button type="submit" variant="ghost" size="sm" disabled={busy || !newName.trim()}>{$localizedText.properties.add}</Button>
     </div>
   </form>
 
