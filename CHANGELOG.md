@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.18 — 2026-10-22
+
+### Changed
+
+- The attachments view's filter chips are the kit's `FilterChip`, its kind and
+  sort selects are `FieldControl`, and its folder picker is a `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.17 — 2026-10-22
 
 ### Changed
