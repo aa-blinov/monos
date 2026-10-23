@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.20 — 2026-10-22
+
+### Changed
+
+- The sidebar's twelve context-menu actions are the kit's `Button`; their
+  custom positioning, role and destructive colour stay.
+- Site screenshots were taken again.
+
 ## 1.16.19 — 2026-10-22
 
 ### Changed
