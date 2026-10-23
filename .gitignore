@@ -62,3 +62,5 @@ brag-output-*/
 # was meant for the repository's config, not for these.
 !.impeccable/config.json
 !.impeccable/design.json
+
+test-results/
