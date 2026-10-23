@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.34 — 2026-10-22
+
+### Fixed
+
+- The new-note, template, agent-review, help-result and continue-work cards
+  declare `flex`, so their multi-line content stacks inside the card instead of
+  spilling across the row.
+- Site screenshots were taken again.
+
 ## 1.16.33 — 2026-10-22
 
 ### Fixed

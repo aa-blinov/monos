@@ -1595,7 +1595,7 @@
                     selected={selectedTemplateId === template.id}
                     padding="none"
                     on:click={() => selectTemplate(template)}
-                    class="w-full flex-col items-start justify-start gap-0 p-2.5 normal-case"
+                    class="w-full flex flex-col items-start justify-start gap-0 p-2.5 normal-case"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">

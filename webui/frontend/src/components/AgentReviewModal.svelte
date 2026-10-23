@@ -78,7 +78,7 @@
             selected={selected === change.path}
             padding="none"
             on:click={() => select(change.path)}
-            class="w-full flex-row items-start justify-start gap-2 px-2 py-1.5 text-left normal-case"
+            class="w-full flex flex-row items-start justify-start gap-2 px-2 py-1.5 text-left normal-case"
             data-testid="agent-review-item"
           >
             <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green)]' : change.status === 'deleted' ? 'text-[var(--red)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>

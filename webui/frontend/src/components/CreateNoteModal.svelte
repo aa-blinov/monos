@@ -167,7 +167,7 @@
             type="button"
             interactive
             padding="none"
-            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
+            class="w-full min-h-24 flex flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
             on:click={() => titleInput?.focus()}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
@@ -178,7 +178,7 @@
             type="button"
             interactive
             padding="none"
-            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
+            class="w-full min-h-24 flex flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
             on:click={createToday}
             disabled={isCreating}
           >
@@ -190,7 +190,7 @@
             type="button"
             interactive
             padding="none"
-            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
+            class="w-full min-h-24 flex flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
