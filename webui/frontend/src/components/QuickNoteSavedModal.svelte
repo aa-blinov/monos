@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, tick } from 'svelte';
   import ModalShell from './ModalShell.svelte';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button } from '@monos/ui';
   import { formFieldClass } from '../lib/form-field.js';
   import { resolveQuickNoteRename } from '../lib/quick-note-rename.js';
   import { localizedText } from '../lib/strings.js';
@@ -81,22 +81,8 @@
     </div>
 
     <div class="mt-8 flex gap-4">
-      <button
-        type="button"
-        on:click={() => dispatch('close')}
-        class={getModalButtonClass('secondary')}
-      >
-        {$localizedText.sidebar.modals.stayHere}
-      </button>
-      <button
-        type="button"
-        on:click={handleOpen}
-        disabled={!canOpen}
-        class={getModalButtonClass('primary', { disabled: !canOpen })}
-        data-testid="quick-note-open-button"
-      >
-        {$localizedText.sidebar.modals.openNote}
-      </button>
+      <Button variant="secondary" size="md" class="flex-1" on:click={() => dispatch('close')}>{$localizedText.sidebar.modals.stayHere}</Button>
+      <Button variant="primary" size="md" class="flex-1" on:click={handleOpen} disabled={!canOpen} data-testid="quick-note-open-button">{$localizedText.sidebar.modals.openNote}</Button>
     </div>
   </ModalShell>
 {/if}

@@ -7,6 +7,7 @@
    * it is written. Nothing is written in plain text at any point.
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import { Lock } from 'lucide-svelte';
   import ConflictNoteView from './ConflictNoteView.svelte';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
@@ -84,9 +85,9 @@
           disabled={opening || busy}
           class="min-w-0 flex-1 {formFieldClass()}"
         />
-        <button type="submit" data-testid="locked-conflict-open" disabled={!passphrase || opening || busy} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">
+        <Button type="submit" variant="primary" size="sm" data-testid="locked-conflict-open" disabled={!passphrase || opening || busy}>
           {text.lockedConflictOpen}
-        </button>
+        </Button>
       </div>
       {#if error}<p role="alert" class="text-xs text-[var(--red)]">{error}</p>{/if}
     </form>
@@ -100,15 +101,15 @@
         </p>
       {/if}
       <p class="text-xs text-[var(--text-secondary)]">{text.lockedConflictKeepWhole}</p>
-      <button type="button" data-testid="locked-keep-ours" disabled={busy} on:click={() => dispatch('keep', { side: 'ours' })} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] underline decoration-[var(--border-subtle)] underline-offset-4 transition hover:decoration-current disabled:opacity-30">{oursName}</button>
-      <button type="button" data-testid="locked-keep-theirs" disabled={busy} on:click={() => dispatch('keep', { side: 'theirs' })} class="text-xs font-bold uppercase tracking-widest text-[var(--blue)] underline decoration-[color-mix(in_srgb,var(--blue)_40%,transparent)] underline-offset-4 transition hover:decoration-current disabled:opacity-30">{theirsName}</button>
+      <Button variant="quiet" size="sm" data-testid="locked-keep-ours" disabled={busy} on:click={() => dispatch('keep', { side: 'ours' })} class="underline decoration-line underline-offset-4">{oursName}</Button>
+      <Button variant="quiet" size="sm" data-testid="locked-keep-theirs" disabled={busy} on:click={() => dispatch('keep', { side: 'theirs' })} class="text-[var(--blue)] underline decoration-[color-mix(in_srgb,var(--blue)_40%,transparent)] underline-offset-4">{theirsName}</Button>
       <p class="basis-full text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{text.conflictWholeKept}</p>
     </div>
   {:else if merged && merged.conflicts === 0}
     <!-- The two devices changed different parts: both edits fit together, nothing to choose. -->
     <div class="rounded-ui flex flex-wrap items-center gap-x-5 gap-y-2 border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-3">
       <p class="mr-auto text-xs text-[var(--text-secondary)]">{text.lockedConflictMergeable}</p>
-      <button type="button" data-testid="locked-conflict-merge" disabled={busy} on:click={() => dispatch('resolveText', { content: merged.text })} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70 disabled:opacity-30">{text.lockedConflictMerge}</button>
+      <Button variant="primary" size="sm" data-testid="locked-conflict-merge" disabled={busy} on:click={() => dispatch('resolveText', { content: merged.text })}>{text.lockedConflictMerge}</Button>
     </div>
     <div class="prose-plain">{@html renderMarkdownPreview(splitFrontmatter(merged.text).body)}</div>
   {:else if merged}

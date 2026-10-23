@@ -8,6 +8,7 @@
    * itself visible the next time the note syncs.
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { locale, localizedText } from '../lib/strings.js';
@@ -109,12 +110,7 @@
   {:else if !tracked}
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.notSynced}</p>
     <!-- Not a dead end: the way to get a history is one click away. -->
-    <button
-      type="button"
-      data-testid="history-open-sync"
-      class="mt-4 inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
-      on:click={() => dispatch('openSettings')}
-    >{$localizedText.history.setUpSync}</button>
+    <Button variant="ghost" size="md" data-testid="history-open-sync" class="mt-4" on:click={() => dispatch('openSettings')}>{$localizedText.history.setUpSync}</Button>
   {:else if !revisions.length}
     <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.empty}</p>
   {:else}
@@ -135,12 +131,13 @@
                       class="absolute left-0 top-3 h-3 w-3 rounded-full border-2 {selected?.sha === revision.sha ? 'border-[var(--text-primary)] bg-[var(--text-primary)]' : latest ? 'border-[var(--text-primary)] bg-[var(--bg-primary)]' : 'border-[var(--text-tertiary)] bg-[var(--bg-primary)]'}"
                       aria-hidden="true"
                     ></span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       data-testid="history-revision"
                       aria-pressed={selected?.sha === revision.sha}
                       on:click={() => openRevision(revision)}
-                      class="mb-1 w-full rounded-ui border-0 px-3 py-2 text-left transition {selected?.sha === revision.sha ? 'bg-[var(--bg-secondary)]' : 'bg-transparent hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]'}"
+                      class="mb-1 w-full justify-start px-3 py-2 normal-case {selected?.sha === revision.sha ? 'bg-surface' : ''}"
                     >
                       <span class="flex items-baseline justify-between gap-2">
                         <span class="text-xs font-bold text-[var(--text-primary)]">{revisionTitle(revision.message, $localizedText.history.messages) || $localizedText.history.noMessage}</span>
@@ -149,7 +146,7 @@
                       <span class="mt-1 block text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                         {revision.author}, {revision.short}{#if latest}{', '}{$localizedText.history.newest}{/if}
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 {/each}
               </ol>
@@ -172,14 +169,9 @@
             <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
               {$localizedText.history.diffTitle}
             </p>
-            <button
-              type="button"
-              on:click={restore}
-              disabled={restoring || !selectedContent.changed}
-              class="text-xs uppercase tracking-widest font-bold transition enabled:hover:opacity-70 disabled:opacity-30"
-            >
+            <Button variant="primary" size="sm" on:click={restore} disabled={restoring || !selectedContent.changed}>
               {restoring ? $localizedText.history.restoring : $localizedText.history.restore}
-            </button>
+            </Button>
           </div>
           {#if !selectedContent.changed}
             <p class="mt-2 text-xs text-[var(--text-tertiary)]">{$localizedText.history.unchanged}</p>

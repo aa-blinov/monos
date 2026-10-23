@@ -5,6 +5,7 @@
    * the topics on the right; the search above finds a topic by any of its words and shows why it matched.
    */
   import { onMount, tick } from 'svelte';
+  import { Button, FilterChip } from '@monos/ui';
   import SearchField from './SearchField.svelte';
   import { locale, localizedText } from '../lib/strings.js';
   import { helpSections } from '../lib/help-content.js';
@@ -147,13 +148,13 @@
   <!-- On a phone the sections sit in one scrolling row under the search: there is no side list there. -->
   <nav class="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-2 md:hidden" bind:this={chipsEl} aria-label={$localizedText.help.sections} data-testid="help-chips">
     {#each sections as section (section.id)}
-      <button
-        type="button"
+      <FilterChip
+        active={activeSection === section.id && !query}
         data-testid="help-chip"
         aria-current={activeSection === section.id && !query ? 'true' : undefined}
         on:click={() => go(section.id)}
-        class="rounded-ui min-h-10 shrink-0 whitespace-nowrap border px-3 text-xs {activeSection === section.id && !query ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-      >{section.title}</button>
+        class="min-h-10 shrink-0 whitespace-nowrap"
+      >{section.title}</FilterChip>
     {/each}
 </nav>
 
@@ -164,25 +165,27 @@
         <ul class="space-y-0.5">
           {#each sections as section (section.id)}
             <li>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 data-testid="help-section"
                 aria-current={activeSection === section.id && !query ? 'true' : undefined}
                 on:click={() => go(section.id)}
-                class="w-full rounded-ui px-2 py-1.5 text-left text-sm transition {activeSection === section.id && !query ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
-              >{section.title}</button>
+                class="w-full justify-start normal-case {activeSection === section.id && !query ? 'bg-surface text-ink' : ''}"
+              >{section.title}</Button>
               {#if activeSection === section.id && !query}
                 <ul class="mb-2 ml-2 mt-0.5 space-y-0.5 border-l border-[var(--border-subtle)] pl-2" data-testid="help-topics">
                   {#each section.items as item (item.id)}
                     <li>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         data-testid="help-topic"
                         aria-current={activeTopic === item.id ? 'true' : undefined}
                         on:click={() => go(section.id, item.id)}
-                        class="block min-h-7 w-full truncate rounded-ui px-2 py-1 text-left text-xs transition {activeTopic === item.id ? 'text-[var(--text-primary)] font-bold' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
+                        class="w-full justify-start truncate normal-case {activeTopic === item.id ? 'font-bold text-ink' : ''}"
                         title={item.title}
-                      >{item.title}</button>
+                      >{item.title}</Button>
                     </li>
                   {/each}
                 </ul>
@@ -201,11 +204,11 @@
             <ul class="space-y-2" data-testid="help-results">
               {#each results as result (`${result.sectionId}/${result.itemId}`)}
                 <li>
-                  <button type="button" class="w-full rounded-ui border border-[var(--border-subtle)] px-4 py-3 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]" on:click={() => go(result.sectionId, result.itemId)}>
+                  <Button variant="outline" size="md" class="w-full flex-col items-start justify-start gap-0 normal-case" on:click={() => go(result.sectionId, result.itemId)}>
                     <span class="block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{result.sectionTitle}</span>
                     <span class="mt-0.5 block text-sm font-bold text-[var(--text-primary)]">{@html highlight(result.title)}</span>
                     <span class="mt-1 block text-xs leading-relaxed text-[var(--text-secondary)]">{@html highlight(result.excerpt)}</span>
-                  </button>
+                  </Button>
                 </li>
               {/each}
             </ul>
@@ -223,7 +226,7 @@
                   </article>
                 {/each}
               </div>
-              <button type="button" data-testid="help-top" on:click={toTop} class="mt-6 min-h-9 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">{$localizedText.help.top}</button>
+              <Button variant="ghost" size="sm" data-testid="help-top" on:click={toTop} class="mt-6">{$localizedText.help.top}</Button>
             </section>
           {/each}
         {/if}

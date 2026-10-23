@@ -17,7 +17,7 @@ const inView = (page, id) => page.evaluate((id) => {
 test('справка: у раздела список тем, клик ведёт к теме, адрес запоминается', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await openHelp(page);
-  await page.getByTestId('help-section').filter({ hasText: /^Organising$/ }).first().click();
+  await page.getByTestId('help-section').filter({ hasText: 'Organising' }).first().click();
   await expect(page.getByTestId('help-topics')).toBeVisible();
   await page.getByTestId('help-topic').filter({ hasText: 'Attachments' }).click();
   await expect.poll(() => inView(page, 'help-organize-attachments')).toBe(true);

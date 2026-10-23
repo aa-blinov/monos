@@ -2,7 +2,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { displayNoteName, recentPathLabel } from '../lib/note-format.js';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button } from '@monos/ui';
 
   export let open = false;
   export let notes = [];
@@ -20,31 +20,20 @@
   >
     <div class="space-y-2">
       {#each notes.slice(0, 6) as note (note.path)}
-        <button
-          type="button"
-          class="w-full rounded-ui border border-transparent px-3 py-3 text-left transition hover:border-[var(--border-subtle)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
+        <Button
+          variant="ghost"
+          size="md"
+          class="w-full flex-col items-start justify-start gap-0 p-3 text-left normal-case"
           on:click={() => onOpenNote(note)}
         >
           <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>
           <span class="mt-1 block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{recentPathLabel(note, $localizedText.sidebar?.modals?.root)}</span>
-        </button>
+        </Button>
       {/each}
     </div>
     <div class="mt-8 flex gap-4">
-      <button
-        type="button"
-        class={getModalButtonClass('secondary')}
-        on:click={onClose}
-      >
-        {$localizedText.sidebar.modals.cancel}
-      </button>
-      <button
-        type="button"
-        class={getModalButtonClass('primary')}
-        on:click={onOpenAll}
-      >
-        {$localizedText.app.continueWork.all}
-      </button>
+      <Button variant="secondary" size="md" class="flex-1" on:click={onClose}>{$localizedText.sidebar.modals.cancel}</Button>
+      <Button variant="primary" size="md" class="flex-1" on:click={onOpenAll}>{$localizedText.app.continueWork.all}</Button>
     </div>
   </ModalShell>
 {/if}

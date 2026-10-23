@@ -7,7 +7,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import ModalShell from './ModalShell.svelte';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button } from '@monos/ui';
   import { formFieldClass } from '../lib/form-field.js';
   import { localizedText } from '../lib/strings.js';
 
@@ -67,20 +67,8 @@
     />
 
     <div class="mt-8 flex gap-3">
-      <button
-        type="button"
-        class={getModalButtonClass('secondary', { extraClass: 'py-2' })}
-        on:click={cancel}
-      >
-        {$localizedText.modal.cancel}
-      </button>
-      <button
-        type="submit"
-        class={getModalButtonClass('primary', { disabled: !canSubmit, extraClass: 'py-2' })}
-        disabled={!canSubmit}
-      >
-        {submitLabel || $localizedText.modal.confirm}
-      </button>
+      <Button variant="secondary" size="md" class="flex-1" on:click={cancel}>{$localizedText.modal.cancel}</Button>
+      <Button type="submit" variant="primary" size="md" class="flex-1" disabled={!canSubmit}>{submitLabel || $localizedText.modal.confirm}</Button>
     </div>
   </form>
 </ModalShell>
