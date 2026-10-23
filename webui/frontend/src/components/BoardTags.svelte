@@ -11,6 +11,7 @@
   import { boardTag, homeTags } from '../lib/dashboard.js';
   import { filterTagStats } from '../lib/tags.js';
   import { localizedText } from '../lib/strings.js';
+  import { Button, FilterChip } from '@monos/ui';
 
   // Every control in the row is as tall as the order-and-colors box beside it: border 2 + padding 8 + h-7 28 = 38px.
   const CHIPS = 4;
@@ -106,31 +107,30 @@
     <!-- Chips only from sm up, in one row. -->
     <div class="relative hidden min-w-0 items-center gap-1.5 overflow-hidden sm:flex">
       {#each chipNames as tag, index (tag)}
-        <button
-          type="button"
-          bind:this={chipEls[tag]}
-          class="{shown.includes(tag) ? '' : 'invisible absolute left-0 top-0'} h-[38px] max-w-[12rem] shrink-0 truncate rounded-ui border px-2.5 text-[length:var(--text-whisper-lg)] leading-tight transition {$boardTag === tag ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
-          aria-pressed={$boardTag === tag}
+        <FilterChip
+          bind:element={chipEls[tag]}
+          active={$boardTag === tag}
+          class="{shown.includes(tag) ? '' : 'invisible absolute left-0 top-0'} h-[38px] max-w-[12rem] shrink-0"
           on:click={() => choose(tag)}
         >
           {tag}
-        </button>
+        </FilterChip>
       {/each}
     </div>
     {#if stats.length > 0}
       <div class="relative shrink-0 {moreCount > 0 ? '' : 'sm:hidden'}" bind:this={root}>
-        <button
-          type="button"
-          class="inline-flex max-w-[8rem] items-center gap-1 rounded-ui border px-2.5 text-[length:var(--text-whisper-lg)] leading-tight transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] h-[38px] sm:max-w-none sm:px-2.5 {$boardTag ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)] sm:border-dashed sm:border-[var(--border-subtle)] sm:bg-transparent sm:font-normal sm:text-[var(--text-secondary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] sm:border-dashed'}"
+        <FilterChip
+          active={Boolean($boardTag)}
+          data-testid="board-tags-more"
           aria-haspopup="dialog"
           aria-expanded={open}
-          data-testid="board-tags-more"
+          class="h-[38px] max-w-[8rem] sm:max-w-none sm:border-dashed sm:bg-transparent sm:font-normal sm:text-ink-soft"
           on:click={toggle}
         >
           <span class="min-w-0 truncate sm:hidden">{$boardTag || $localizedText.app.board.tagsLabel}</span>
           <span class="hidden sm:inline">{$localizedText.app.board.allTags}</span>
           <ChevronDown size="12" strokeWidth="1.7" class="shrink-0" aria-hidden="true" />
-        </button>
+        </FilterChip>
         {#if open}
           <div
             class="absolute left-0 top-full z-40 mt-1.5 w-[min(18rem,calc(100vw-2rem))] rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-2 shadow-lg shadow-black/10"
@@ -147,17 +147,18 @@
             <ul class="mt-2 max-h-72 overflow-y-auto">
               {#each visible as entry (entry.tag)}
                 <li>
-                  <button
-                    type="button"
+                  <Button
+                    variant={$boardTag === entry.tag ? 'outline' : 'ghost'}
+                    size="sm"
                     data-testid="board-tag-option"
                     aria-pressed={$boardTag === entry.tag}
-                    class="flex w-full items-center gap-2 rounded-ui px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] {$boardTag === entry.tag ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
+                    class="w-full justify-start normal-case"
                     on:click={() => pick($boardTag === entry.tag ? '' : entry.tag)}
                   >
                     <span class="min-w-0 flex-1 truncate">{entry.tag}</span>
                     {#if $boardTag === entry.tag}<Check size="12" strokeWidth="1.7" aria-hidden="true" />{/if}
                     <span class="tabular-nums text-[var(--text-tertiary)]">{entry.count}</span>
-                  </button>
+                  </Button>
                 </li>
               {:else}
                 <li class="px-2 py-3 text-center text-xs text-[var(--text-tertiary)]">{$localizedText.tags.emptyFiltered}</li>
