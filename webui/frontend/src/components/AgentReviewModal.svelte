@@ -5,6 +5,7 @@
    * in a commit of their own; reverted files are back as they were, and an open note shows it at once.
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import { displayFolderName, localizedText } from '../lib/strings.js';
   import { agentDiff, agentReview, keepAgentChanges, revertAgentChanges } from '../lib/agent-review.js';
@@ -70,10 +71,11 @@
     <ul class="max-h-[56vh] space-y-1 overflow-y-auto">
       {#each changes as change (change.path)}
         <li>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             on:click={() => select(change.path)}
-            class="flex w-full items-start gap-2 rounded-ui px-2 py-1.5 text-left transition {selected === change.path ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]'}"
+            class="w-full items-start justify-start gap-2 px-2 py-1.5 text-left normal-case {selected === change.path ? 'bg-surface' : ''}"
             data-testid="agent-review-item"
           >
             <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green)]' : change.status === 'deleted' ? 'text-[var(--red)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>
@@ -81,7 +83,7 @@
               <span class="block truncate text-sm text-[var(--text-primary)]">{label(change.path).name}</span>
               {#if label(change.path).folder}<span class="block truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{label(change.path).folder}</span>{/if}
             </span>
-          </button>
+          </Button>
         </li>
       {/each}
     </ul>
@@ -90,10 +92,10 @@
         <div class="mb-2 flex flex-wrap items-center gap-x-5 gap-y-2">
           <p class="mr-auto min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">{label(current.path).name}</p>
           {#if current.status !== 'deleted'}
-            <button type="button" class="text-xs text-[var(--text-secondary)] underline decoration-[var(--border-subtle)] underline-offset-4 hover:text-[var(--text-primary)]" on:click={() => dispatch('open', current.path)}>{$localizedText.agentReview.open}</button>
+            <Button variant="quiet" size="sm" on:click={() => dispatch('open', current.path)}>{$localizedText.agentReview.open}</Button>
           {/if}
-          <button type="button" data-testid="agent-review-revert" disabled={busy} on:click={() => act('revert', [current.path])} class="text-xs uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.agentReview.revert}</button>
-          <button type="button" data-testid="agent-review-keep" disabled={busy} on:click={() => act('keep', [current.path])} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.agentReview.keep}</button>
+          <Button variant="danger" size="sm" data-testid="agent-review-revert" disabled={busy} on:click={() => act('revert', [current.path])}>{$localizedText.agentReview.revert}</Button>
+          <Button variant="primary" size="sm" data-testid="agent-review-keep" disabled={busy} on:click={() => act('keep', [current.path])}>{$localizedText.agentReview.keep}</Button>
         </div>
         {#if loading}
           <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.agentReview.loading}</p>
@@ -106,7 +108,7 @@
   </div>
   <div class="mt-6 flex flex-wrap items-center justify-end gap-x-6 gap-y-2 border-t border-[var(--border-subtle)] pt-4">
     <p class="mr-auto text-xs text-[var(--text-tertiary)]">{$localizedText.agentReview.footnote}</p>
-    <button type="button" data-testid="agent-review-revert-all" disabled={busy} on:click={() => act('revert', changes.map((c) => c.path))} class="text-xs uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.agentReview.revertAll}</button>
-    <button type="button" data-testid="agent-review-keep-all" disabled={busy} on:click={() => act('keep', changes.map((c) => c.path))} class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.agentReview.keepAll}</button>
+    <Button variant="danger" size="sm" data-testid="agent-review-revert-all" disabled={busy} on:click={() => act('revert', changes.map((c) => c.path))}>{$localizedText.agentReview.revertAll}</Button>
+    <Button variant="primary" size="sm" data-testid="agent-review-keep-all" disabled={busy} on:click={() => act('keep', changes.map((c) => c.path))}>{$localizedText.agentReview.keepAll}</Button>
   </div>
 </ModalShell>

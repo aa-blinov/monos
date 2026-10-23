@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.27 — 2026-10-22
+
+### Changed
+
+- The continue-work, rename, URL-prompt, quick-note-saved, agent-review,
+  note-history, locked-conflict and first-run modals are on kit buttons.
+- Help's section chips are `FilterChip`; sections, topics, results and "top" are
+  `Button`; `aria-current` stays.
+- Site screenshots were taken again.
+
 ## 1.16.26 — 2026-10-22
 
 ### Changed
