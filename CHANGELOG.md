@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.14 — 2026-10-22
+
+### Changed
+
+- The board's tag chips, "all tags" trigger and tag options use the kit's
+  `FilterChip` and `Button`.
+- `@monos/ui` is `1.1.19`: `FilterChip` keeps its slot on one line.
+- Site screenshots were taken again.
+
 ## 1.16.13 — 2026-10-22
 
 ### Changed
