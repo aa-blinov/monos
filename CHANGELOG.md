@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.10 — 2026-10-22
+
+### Changed
+
+- The note-properties panel uses the kit's `FieldControl` for values and types,
+  `IconButton` for removal and `Button` for adding a property.
+- Site screenshots were taken again.
+
 ## 1.16.9 — 2026-10-22
 
 ### Changed
