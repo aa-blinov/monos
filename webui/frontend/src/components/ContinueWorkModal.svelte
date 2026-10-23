@@ -25,7 +25,7 @@
           type="button"
           interactive
           padding="none"
-          class="w-full flex-col items-start justify-start gap-0 p-3 text-left normal-case"
+          class="w-full flex flex-col items-start justify-start gap-0 p-3 text-left normal-case"
           on:click={() => onOpenNote(note)}
         >
           <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>
