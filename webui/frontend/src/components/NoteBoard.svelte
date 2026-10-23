@@ -13,7 +13,7 @@
   import { boardColumns, boardGroupByColor, activeTheme } from '../stores.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
-  import { Menu } from '@monos/ui';
+  import { Button, IconButton, Menu } from '@monos/ui';
 
   export let notes = [];
   export let query = '';
@@ -381,22 +381,22 @@
     on:click|stopPropagation
     on:keydown={(event) => event.key === 'Escape' && closeContextMenu()}
   >
-    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)}>
+    <Button variant="ghost" size="sm" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
       <Pin size="14" strokeWidth="1.7" fill={contextMenu.note?.pinned ? 'currentColor' : 'none'} aria-hidden="true" /> {contextMenu.note?.pinned ? $localizedText.sidebar.context.unpin : $localizedText.sidebar.context.pin}
-    </button>
-    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => openFull(contextMenu.note)}>
+    </Button>
+    <Button variant="ghost" size="sm" role="menuitem" on:click={() => openFull(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
       <ExternalLink size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.openFull}
-    </button>
-    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => revealNote(contextMenu.note)}>
+    </Button>
+    <Button variant="ghost" size="sm" role="menuitem" on:click={() => revealNote(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
       <PanelTop size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.editorHeader.revealInTree}
-    </button>
-    <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" on:click={() => copyPath(contextMenu.note)}>
+    </Button>
+    <Button variant="ghost" size="sm" role="menuitem" on:click={() => copyPath(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
       <Copy size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.copyPath}
-    </button>
+    </Button>
     {#if canRevealInFinder}
-      <button class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-secondary)]" role="menuitem" data-testid="card-show-in-finder" on:click={() => revealInFinder(contextMenu.note?.path)}>
+      <Button variant="ghost" size="sm" role="menuitem" data-testid="card-show-in-finder" on:click={() => revealInFinder(contextMenu.note?.path)} class="w-full justify-start gap-2 px-3 normal-case">
         <FolderOpen size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.showInFinder}
-      </button>
+      </Button>
     {/if}
     <div class="mt-1 border-t border-[var(--border-subtle)] px-3 py-2">
       <div class="mb-2 flex items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
@@ -404,13 +404,14 @@
       </div>
       <div class="grid grid-cols-5 gap-1.5">
         {#each colorOptions as color}
-          <button
-            type="button"
+          <IconButton
+            bare
+            tooltipText=""
             class="h-6 w-6 rounded-full border transition hover:scale-110 {contextMenu.note?.color === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
             style="background: {color};"
-            aria-label={$localizedText.app.board.applyColor(color)}
+            label={$localizedText.app.board.applyColor(color)}
             on:click={() => recolorNote(contextMenu.note, color)}
-          ></button>
+          ></IconButton>
         {/each}
       </div>
     </div>
