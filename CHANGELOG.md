@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.17 — 2026-10-22
+
+### Changed
+
+- The board's card context menu uses the kit's `Button` for its five actions
+  and `IconButton` for the colour swatches; positioning and Escape stay.
+- Site screenshots were taken again.
+
 ## 1.16.16 — 2026-10-22
 
 ### Changed
