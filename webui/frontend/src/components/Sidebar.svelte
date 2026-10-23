@@ -3,7 +3,7 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import SearchField from './SearchField.svelte';
-  import { Button, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
+  import { Button, FieldControl, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -70,7 +70,6 @@
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
   import { localeStamp } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
-  import { formFieldClass } from '../lib/form-field.js';
   import { Icon } from '../lib/tree-icons.js';
 
   const dispatch = createEventDispatcher();
@@ -1207,7 +1206,7 @@
           size="sm"
           data-testid="tree-new-note"
           on:click={() => dispatch('openCreateNote')}
-          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui px-2 lg:static lg:min-h-8 lg:px-2.5"
+          class="absolute right-4 top-3 min-h-11 shrink-0 justify-start rounded-ui px-2 lg:static lg:min-h-8 lg:px-2.5"
         >
           <span class="text-sm leading-none">+</span>
           <span class="whitespace-nowrap">{$localizedText.sidebar.new.replace(/^\+\s*/, '')}</span>
@@ -1499,13 +1498,12 @@
   >
     <div class="space-y-3">
       <p class="text-sm text-[var(--text-secondary)]">{$localizedText.sidebar.modals.tagHint}</p>
-      <input
+      <FieldControl
         data-testid="bulk-tag-input"
         type="text"
-        class="w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm outline-none placeholder-[var(--text-secondary)]"
         placeholder={$localizedText.sidebar.modals.tagPlaceholder}
         bind:value={bulkTagValue}
-        on:keydown={(e) => { if (e.key === 'Enter') applyBulkTag(); }}
+        on:keydown={(e) => { if ((e.detail ?? e).key === 'Enter') applyBulkTag(); }}
       />
       {#if bulkError}
         <p class="text-sm text-[var(--red)]">{bulkError}</p>
@@ -1550,7 +1548,7 @@
   <ModalShell title={$localizedText.sidebar.modals.newSection} closeOnEscape={true} on:close={() => showCreateFolderModal = false}>
       <div>
         <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
-        <input id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} class={formFieldClass()} on:keydown={(e) => { if (e.key === 'Enter' && newFolderNameInput.trim() && !folderNameProblem) createFolder(); if (e.key === 'Escape') showCreateFolderModal = false; }} />
+        <FieldControl id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter' && newFolderNameInput.trim() && !folderNameProblem) createFolder(); if (key === 'Escape') showCreateFolderModal = false; }} />
         {#if folderNameProblem && folderNameProblem !== 'empty'}
           <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(folderNameProblem)}</p>
         {/if}
@@ -1619,12 +1617,11 @@
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
             <label for="template-title" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.modals.title}</label>
-            <input
+            <FieldControl
               id="template-title"
               type="text"
               bind:value={templateTitle}
               on:input={() => { templateError = ''; templateDuplicatePath = ''; }}
-              class={formFieldClass()}
             />
             {#if templateTitleProblem && templateTitleProblem !== 'empty'}
               <p role="alert" class="mt-2 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(templateTitleProblem)}</p>
@@ -1632,15 +1629,13 @@
           </div>
           <div>
             <label for="template-category" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)] mb-1.5">{$localizedText.sidebar.templateFolder}</label>
-            <select
+            <FieldControl
+              as="select"
               id="template-category"
               bind:value={templateCategory}
-              class={formFieldClass({ extraClass: 'appearance-none cursor-pointer' })}
-            >
-              {#each templateDirectoryList as dir}
-                <option value={dir}>{dir || $localizedText.sidebar.modals.root}</option>
-              {/each}
-            </select>
+              class="appearance-none cursor-pointer"
+              options={templateDirectoryList.map((dir) => ({ value: dir, label: dir || $localizedText.sidebar.modals.root }))}
+            />
             {#if templateCategory && !directoryList.includes(templateCategory)}
               <p class="mt-1.5 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.templateNewFolder(templateCategory)}</p>
             {/if}
@@ -1715,10 +1710,6 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-  }
-
-  .tree-header-action {
-    justify-content: flex-start;
   }
 
   :global(.template-preview) {

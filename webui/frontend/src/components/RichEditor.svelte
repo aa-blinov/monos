@@ -1,7 +1,7 @@
 <script>
   import UrlPromptModal from './UrlPromptModal.svelte';
   import { onMount, tick } from 'svelte';
-  import { Button, IconButton } from '@monos/ui';
+  import { Button, FieldControl, IconButton } from '@monos/ui';
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -1024,18 +1024,16 @@
         {/each}
         <span role="presentation" on:mousedown|preventDefault><Button variant="ghost" size="sm" class="normal-case text-danger-text" on:click={() => tableCommand('deleteTable')}>{$localizedText.richEditor.blockTools.deleteTable}</Button></span>
       {:else}
-        <select
-          aria-label={$localizedText.richEditor.blockTools.language}
-          value={active.codeLanguage}
-          on:change={(event) => setCodeLanguage(event.currentTarget.value)}
-          class="h-7 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)]"
-          on:mousedown|stopPropagation
-          on:pointerdown|stopPropagation
-        >
-          {#each codeLanguages as language}
-            <option value={language}>{language || $localizedText.richEditor.blockTools.plainText}</option>
-          {/each}
-        </select>
+        <span role="presentation" on:mousedown|stopPropagation on:pointerdown|stopPropagation>
+          <FieldControl
+            as="select"
+            aria-label={$localizedText.richEditor.blockTools.language}
+            value={active.codeLanguage}
+            on:change={(event) => setCodeLanguage((event.detail ?? event).target.value)}
+            class="!h-7 !w-auto"
+            options={codeLanguages.map((language) => ({ value: language, label: language || $localizedText.richEditor.blockTools.plainText }))}
+          />
+        </span>
         <span role="presentation" on:mousedown|preventDefault><Button variant="ghost" size="sm" class="normal-case" on:click={copyCodeBlock}>{codeCopied ? $localizedText.richEditor.blockTools.copied : $localizedText.richEditor.blockTools.copy}</Button></span>
       {/if}
       </div>

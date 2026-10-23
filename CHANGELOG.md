@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.31 — 2026-10-22
+
+### Changed
+
+- Every native `<select>` and `<textarea>` in app components is the kit's
+  `FieldControl`; the remaining text/password inputs in templates, renames,
+  saved searches, agent settings, tags, folders and locks are `FieldControl`.
+- Only the outline column's drag handle stays a native `<button>` (it owns
+  pointer capture), and a few file/date/color inputs stay native.
+- Site screenshots were taken again.
+
 ## 1.16.30 — 2026-10-22
 
 ### Changed

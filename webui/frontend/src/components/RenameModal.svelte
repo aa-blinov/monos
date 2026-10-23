@@ -3,7 +3,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { Button } from '@monos/ui';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { FieldControl } from '@monos/ui';
   import { fileNameProblem } from '../lib/file-name.js';
 
   /** Whether the target is a folder (changes the title suffix). */
@@ -41,13 +41,12 @@
   <div class="space-y-8">
     <div>
       <label for="rename-input" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.newName}</label>
-      <input
+      <FieldControl
         id="rename-input"
         type="text"
         bind:value={newName}
         placeholder={$localizedText.sidebar.modals.newNamePlaceholder}
-        class={formFieldClass()}
-        on:keydown={onKeydown}
+        on:keydown={(event) => onKeydown(event.detail ?? event)}
       />
       {#if nameProblem && nameProblem !== 'empty'}
         <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(nameProblem)}</p>

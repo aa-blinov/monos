@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import ModalShell from './ModalShell.svelte';
-  import { Button, IconButton } from '@monos/ui';
+  import { Button, FieldControl, IconButton } from '@monos/ui';
   import { localizedText } from '../lib/strings.js';
   import {
     addSavedSearch,
@@ -96,13 +96,12 @@
       <!-- Opened to run a search, the panel shows the list first: the form to save one only appears once there
            is a query to save. -->
       {#if trimmedQuery}
-      <input
+      <FieldControl
         data-testid="saved-search-name"
         type="text"
-        class="h-9 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none placeholder-[var(--text-secondary)] focus:border-[var(--text-primary)]"
         placeholder={$localizedText.savedSearches.namePlaceholder}
         bind:value={name}
-        on:keydown={(e) => { if (e.key === 'Enter') save(); }}
+        on:keydown={(e) => { if ((e.detail ?? e).key === 'Enter') save(); }}
       />
 
       <!--
@@ -146,12 +145,12 @@
           {#each $savedSearches as entry (entry.id)}
             <li class="flex items-center gap-2 py-1.5">
               {#if editing === entry.id}
-                <input
+                <FieldControl
                   data-testid="saved-search-rename-input"
                   type="text"
-                  class="h-9 min-w-0 flex-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-sm outline-none focus:border-[var(--text-primary)]"
+                  class="min-w-0 flex-1"
                   bind:value={editValue}
-                  on:keydown={(e) => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') editing = null; }}
+                  on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter') confirmRename(); if (key === 'Escape') editing = null; }}
                 />
                 <Button variant="primary" size="sm" data-testid="saved-search-rename-save" disabled={busy} on:click={confirmRename}>{$localizedText.savedSearches.save}</Button>
               {:else}
