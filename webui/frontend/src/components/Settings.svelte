@@ -4,7 +4,7 @@
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-  import { Button, FieldControl, SegmentedControl } from '@monos/ui';
+  import { Button, Card, FieldControl, SegmentedControl } from '@monos/ui';
   import ConflictResolver from './ConflictResolver.svelte';
   import AgentSettings from './AgentSettings.svelte';
   import { terminalBridge } from '../lib/terminal.js';
@@ -816,11 +816,15 @@
       <!-- Each theme shows itself: its light and dark page with text and an accent, small enough for one row. -->
       <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
         {#each Object.entries(themes) as [key, t]}
-          <button
+          <Card
+            as="button"
             type="button"
+            interactive
+            selected={$activeTheme === key}
+            padding="none"
             aria-pressed={$activeTheme === key}
+            class="p-1.5 text-left"
             on:click={() => { $activeTheme = key; saveSettings(); }}
-            class="rounded-ui border p-1.5 text-left transition-colors {$activeTheme === key ? 'border-[var(--text-primary)]' : 'border-[var(--border-subtle)] hover:border-[var(--text-secondary)]'}"
           >
             <span class="flex h-12 overflow-hidden rounded-ui" aria-hidden="true">
               {#each [t.light, t.dark] as palette}
@@ -831,7 +835,7 @@
               {/each}
             </span>
             <span class="mt-1.5 block truncate px-0.5 text-xs {$activeTheme === key ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}">{t.name}</span>
-          </button>
+          </Card>
         {/each}
       </div>
       </div>
@@ -1294,12 +1298,7 @@
             <div class="flex items-center justify-between gap-4 py-1 text-sm border-b border-[var(--border-subtle)] last:border-0">
               <span class="truncate font-mono text-xs">{getConflictLabel(conflict)}</span>
               {#if String(conflict).endsWith('.md')}
-                <button
-                  type="button"
-                  data-testid="settings-open-conflict"
-                  on:click={() => dispatch('navigate', { path: conflictNotePath(conflict), name: String(conflict).split('/').pop(), isDir: false })}
-                  class="shrink-0 text-xs uppercase tracking-widest font-bold hover:opacity-60 transition"
-                >{$localizedText.settings.openConflictNote}</button>
+                <Button variant="ghost" size="sm" data-testid="settings-open-conflict" class="shrink-0" on:click={() => dispatch('navigate', { path: conflictNotePath(conflict), name: String(conflict).split('/').pop(), isDir: false })}>{$localizedText.settings.openConflictNote}</Button>
               {/if}
             </div>
           {/each}
@@ -1342,12 +1341,7 @@
             />
           </label>
           <p id="publish-folder-hint" class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.publishFolderHint}</p>
-          <button
-            type="submit"
-            disabled={publishBusy || !publishFolder.trim()}
-            data-testid="publish-button"
-            class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-          >{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</button>
+          <Button type="submit" variant="outline" size="sm" disabled={publishBusy || !publishFolder.trim()} data-testid="publish-button">{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</Button>
         </form>
         {#if publishStatus}
           <p role="status" class="text-xs text-[var(--green)] break-all">{publishStatus}</p>
@@ -1379,11 +1373,7 @@
               {#each connectionReport.broken as item (item.target)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
                   <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
-                  <button
-                    type="button"
-                    class="min-w-0 shrink truncate text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-                    on:click={() => openNote(item.sources[0])}
-                  >{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</button>
+                  <Button variant="quiet" size="sm" class="min-w-0 shrink truncate" on:click={() => openNote(item.sources[0])}>{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</Button>
                 </li>
               {/each}
             </ul>
@@ -1393,7 +1383,7 @@
             <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
               {#each connectionReport.orphans as item (item.path)}
                 <li>
-                  <button type="button" class="block w-full truncate px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>{item.title}</button>
+                  <Button variant="ghost" size="sm" class="w-full justify-start truncate px-3 normal-case" on:click={() => openNote(item.path)}>{item.title}</Button>
                 </li>
               {/each}
             </ul>
@@ -1406,10 +1396,10 @@
             <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="stale-notes">
               {#each connectionReport.stale as item (item.path)}
                 <li>
-                  <button type="button" class="flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-[var(--bg-secondary)]" on:click={() => openNote(item.path)}>
+                  <Button variant="ghost" size="sm" class="w-full justify-between gap-3 px-3 normal-case" on:click={() => openNote(item.path)}>
                     <span class="min-w-0 truncate text-[var(--text-primary)]">{item.title}</span>
                     <span class="shrink-0 text-[var(--text-tertiary)]">{$localizedText.settings.staleSince.replace('{date}', localeDate(new Date(item.lastActivity), $locale))}</span>
-                  </button>
+                  </Button>
                 </li>
               {/each}
             </ul>
@@ -1419,18 +1409,13 @@
             <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
               {#each connectionReport.conflictCopies as item (item.path)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
-                  <button type="button" class="min-w-0 truncate text-left text-xs text-[var(--text-primary)] hover:underline" on:click={() => openNote(item.path)}>{item.title}</button>
+                  <Button variant="quiet" size="sm" class="min-w-0 truncate text-left" on:click={() => openNote(item.path)}>{item.title}</Button>
                   <span class="hidden min-w-0 truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:block">
                     {item.kind === 'duplicate'
                       ? $localizedText.settings.conflictSameText.replace('{original}', noteNameOf(item.original))
                       : $localizedText.settings.conflictCopyOf.replace('{original}', noteNameOf(item.original))}
                   </span>
-                  <button
-                    type="button"
-                    data-testid="conflict-copy-trash"
-                    class="shrink-0 text-xs text-[var(--text-secondary)] hover:text-[var(--red)]"
-                    on:click={() => copyToTrash = item}
-                  >{$localizedText.settings.conflictTrash}</button>
+                  <Button variant="danger" size="sm" data-testid="conflict-copy-trash" class="shrink-0" on:click={() => copyToTrash = item}>{$localizedText.settings.conflictTrash}</Button>
                 </li>
               {/each}
             </ul>
@@ -1465,14 +1450,7 @@
           <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.clipperHint}</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            on:click={revealClipperToken}
-            disabled={showClipperToken}
-            class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition disabled:opacity-30"
-          >
-            {$localizedText.settings.clipperShowToken}
-          </button>
+          <Button variant="ghost" size="md" on:click={revealClipperToken} disabled={showClipperToken}>{$localizedText.settings.clipperShowToken}</Button>
           {#if showClipperToken}
             <div class="min-w-0 flex-1 space-y-1">
               <div class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.settings.clipperEndpoint}</div>

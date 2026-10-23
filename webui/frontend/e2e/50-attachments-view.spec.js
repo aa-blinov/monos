@@ -70,7 +70,7 @@ test('настройки: вместо списка вложений ссылк�
 
 async function pickFolder(page, name) {
   await page.getByTestId('attachments-folder').click();
-  await page.getByTestId('attachments-folder-option').filter({ hasText: new RegExp(`^${name}`) }).first().click();
+  await page.getByTestId('attachments-folder-option').filter({ hasText: name }).first().click();
 }
 
 function bigVault(count) {

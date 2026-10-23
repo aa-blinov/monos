@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.29 — 2026-10-22
+
+### Changed
+
+- The sidebar's modals and template cards are on kit controls; only the theme
+  cards in Settings are rendered with `Card`.
+- Settings' conflict links, publish, broken/orphan/stale lists, conflict-copy
+  actions and clipper token are kit `Button`.
+- Attachments' note lists, folder choices, load-more, zoom, copy and trash are
+  kit controls; one test selector was relaxed for button text.
+- Site screenshots were taken again.
+
 ## 1.16.28 — 2026-10-22
 
 ### Changed
