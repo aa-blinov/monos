@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Button, Menu, TagInput as KitTagInput } from '@monos/ui';
+  import { Button, IconButton, Menu, TagInput as KitTagInput } from '@monos/ui';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -2051,25 +2051,24 @@
             <div use:focusFirstControl role="group" aria-label={$localizedText.editor.noteColor} data-testid="property-panel" data-panel="color" class="{panelClass} sm:left-auto sm:right-0">
               <p class={panelLabelClass}>{$localizedText.editor.noteColor}</p>
               <div class="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant={currentNoteColor === '' ? 'outline' : 'ghost'}
+                  size="sm"
                   aria-pressed={currentNoteColor === ''}
-                  class="flex h-8 shrink-0 items-center rounded-ui border px-3 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] transition hover:border-[var(--text-secondary)] disabled:opacity-40 {currentNoteColor === '' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
                   disabled={isColorSaving}
                   on:click={() => setNoteColor('')}
-                >
-                  {$localizedText.editor.noColor}
-                </button>
+                >{$localizedText.editor.noColor}</Button>
                 {#each colorOptions as color}
-                  <button
-                    type="button"
-                    class="h-8 w-8 shrink-0 rounded-ui border-2 transition hover:scale-105 disabled:opacity-40 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
+                  <IconButton
+                    bare
+                    tooltipText=""
+                    class="h-8 w-8 shrink-0 rounded-ui border-2 transition hover:scale-105 {currentNoteColor === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
                     style="background: {color};"
                     disabled={isColorSaving}
-                    aria-label={$localizedText.app.board.applyColor(color)}
+                    label={$localizedText.app.board.applyColor(color)}
                     aria-pressed={currentNoteColor === color}
                     on:click={() => setNoteColor(color)}
-                  ></button>
+                  ></IconButton>
                 {/each}
               </div>
             </div>
