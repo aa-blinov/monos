@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.19 — 2026-10-22
+
+### Changed
+
+- The attachments view's text actions (retry, select, trash, restore, undo,
+  copy, load more) are the kit's `Button`, and its previous/next controls are
+  the kit's `IconButton`.
+- Site screenshots were taken again.
+
 ## 1.16.18 — 2026-10-22
 
 ### Changed

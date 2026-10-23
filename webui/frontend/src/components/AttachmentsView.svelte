@@ -16,7 +16,7 @@
   import { localeDate } from '../lib/date-format.js';
   import SearchField from './SearchField.svelte';
   import ModalShell from './ModalShell.svelte';
-  import { Button, FieldControl, FilterChip } from '@monos/ui';
+  import { Button, FieldControl, FilterChip, IconButton } from '@monos/ui';
 
   // Every picture and PDF of the notes in one grid, as large as the vault: sorted, narrowed by type, folder and
   // use, drawn in pages of 60. A click on a picture shows it large with its notes; unused files can be moved to a
@@ -301,7 +301,7 @@
     {:else if status === 'error'}
       <p role="alert" class="flex items-center gap-4 text-xs text-[var(--red)]">
         {$localizedText.attachments.loadFailed}
-        <button type="button" data-testid="attachments-retry" on:click={() => { status = 'loading'; load(); }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.retry}</button>
+        <Button variant="ghost" size="sm" type="button" data-testid="attachments-retry" on:click={() => { status = 'loading'; load(); }} class="min-h-8">{$localizedText.attachments.retry}</Button>
       </p>
     {:else if items.length === 0}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.empty}</p>
@@ -340,13 +340,13 @@
       {#if lockedNotes === 0}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-0 text-xs text-[var(--text-tertiary)]">
           {#if unusedItems.length > 0}
-          <button type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-8 border-0 bg-transparent p-0 text-left text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.reviewUnused}</button>
+          <Button variant="ghost" size="sm" type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-8">{$localizedText.attachments.reviewUnused}</Button>
           <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize, $locale))}</span>
           {#if !selecting}
-            <button type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.select}</button>
+            <Button variant="ghost" size="sm" type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8">{$localizedText.attachments.select}</Button>
           {/if}
           {/if}
-          <button type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">{$localizedText.attachments.removed}</button>
+          <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8">{$localizedText.attachments.removed}</Button>
         </div>
       {/if}
 
@@ -354,16 +354,16 @@
         <div class="rounded-ui sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-xs" data-testid="attachments-selection-bar">
           {#if confirming}
             <span class="min-w-0 flex-1">{$localizedText.attachments.confirmTrash(selectedItems.length, formatAttachmentSize(selectedSize, $locale))}</span>
-            <button type="button" data-testid="attachments-confirm" disabled={busy} on:click={() => trash(selectedItems.map((item) => item.path))} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.confirmYes}</button>
-            <button type="button" on:click={() => { confirming = false; }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.confirmNo}</button>
+            <Button variant="ghost" size="sm" type="button" data-testid="attachments-confirm" disabled={busy} on:click={() => trash(selectedItems.map((item) => item.path))} class="min-h-8">{$localizedText.attachments.confirmYes}</Button>
+            <Button variant="ghost" size="sm" type="button" on:click={() => { confirming = false; }} class="min-h-8">{$localizedText.attachments.confirmNo}</Button>
           {:else}
             <span class="text-[var(--text-secondary)]" data-testid="attachments-selected">{$localizedText.attachments.selected(selectedItems.length, formatAttachmentSize(selectedSize, $locale))}</span>
-            <button type="button" data-testid="attachments-select-unused" on:click={() => { selected = new Set(unusedShown.map((item) => item.path)); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectUnusedShown(unusedShown.length)}</button>
+            <Button variant="ghost" size="sm" type="button" data-testid="attachments-select-unused" on:click={() => { selected = new Set(unusedShown.map((item) => item.path)); }} class="min-h-8">{$localizedText.attachments.selectUnusedShown(unusedShown.length)}</Button>
             {#if selectedItems.length > 0}
-              <button type="button" on:click={() => { selected = new Set(); }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-secondary)] transition hover:opacity-60">{$localizedText.attachments.clearSelection}</button>
-              <button type="button" data-testid="attachments-trash" on:click={() => { confirming = true; }} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60">{$localizedText.attachments.moveToTrash(selectedItems.length)}</button>
+              <Button variant="ghost" size="sm" type="button" on:click={() => { selected = new Set(); }} class="min-h-8">{$localizedText.attachments.clearSelection}</Button>
+              <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash" on:click={() => { confirming = true; }} class="min-h-8">{$localizedText.attachments.moveToTrash(selectedItems.length)}</Button>
             {/if}
-            <button type="button" on:click={stopSelecting} class="ml-auto min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.selectDone}</button>
+            <Button variant="ghost" size="sm" type="button" on:click={stopSelecting} class="min-h-8">{$localizedText.attachments.selectDone}</Button>
           {/if}
         </div>
       {/if}
@@ -472,9 +472,9 @@
   >
     <span class="min-w-0 flex-1">{notice.text}</span>
     {#if notice.batch}
-      <button type="button" data-testid="attachments-undo" disabled={busy} on:click={undo} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.undo}</button>
+      <Button variant="ghost" size="sm" type="button" data-testid="attachments-undo" disabled={busy} on:click={undo} class="min-h-8">{$localizedText.attachments.undo}</Button>
     {/if}
-    <button type="button" aria-label={$localizedText.attachments.close} on:click={() => { notice = null; }} class="min-h-8 border-0 bg-transparent p-0 uppercase tracking-widest text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]">×</button>
+    <Button variant="ghost" size="sm" type="button" aria-label={$localizedText.attachments.close} on:click={() => { notice = null; }} class="min-h-8">×</Button>
   </div>
 {/if}
 
@@ -494,14 +494,14 @@
             <div>
               <div class="mb-1 flex items-center justify-between gap-3 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                 <span>{localeDate(new Date(entry.at), $locale)}, {entry.files.length}</span>
-                <button type="button" disabled={busy} on:click={() => restoreFromTrash(entry.batch)} class="min-h-8 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.restoreAll}</button>
+                <Button variant="ghost" size="sm" type="button" disabled={busy} on:click={() => restoreFromTrash(entry.batch)} class="min-h-8">{$localizedText.attachments.restoreAll}</Button>
               </div>
               <ul class="divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
                 {#each entry.files.slice(0, 100) as file (file.path)}
                   <li class="flex items-center justify-between gap-3 py-1">
                     <span class="min-w-0 flex-1 truncate text-xs text-[var(--text-secondary)]" title={file.path}>{file.name}</span>
                     <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{formatAttachmentSize(file.size, $locale)}</span>
-                    <button type="button" data-testid="attachments-restore-one" disabled={busy} on:click={() => restoreFromTrash(entry.batch, [file.path])} class="min-h-8 shrink-0 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.restore}</button>
+                    <Button variant="ghost" size="sm" type="button" data-testid="attachments-restore-one" disabled={busy} on:click={() => restoreFromTrash(entry.batch, [file.path])} class="min-h-8">{$localizedText.attachments.restore}</Button>
                   </li>
                 {/each}
               </ul>
@@ -536,10 +536,10 @@
           {/if}
         </div>
         {#if at > 0}
-          <button type="button" data-testid="attachment-prev" aria-label={$localizedText.attachments.prev} on:click={() => step(-1)} class="rounded-ui absolute left-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] transition hover:opacity-70"><ChevronLeft size="20" strokeWidth="1.7" aria-hidden="true" /></button>
+          <IconButton bare tooltipText="" data-testid="attachment-prev" label={$localizedText.attachments.prev} class="absolute left-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:opacity-70" on:click={() => step(-1)}><ChevronLeft size="20" strokeWidth="1.7" aria-hidden="true" /></IconButton>
         {/if}
         {#if at >= 0 && at < filtered.length - 1}
-          <button type="button" data-testid="attachment-next" aria-label={$localizedText.attachments.next} on:click={() => step(1)} class="rounded-ui absolute right-2 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] transition hover:opacity-70"><ChevronRight size="20" strokeWidth="1.7" aria-hidden="true" /></button>
+          <IconButton bare tooltipText="" data-testid="attachment-next" label={$localizedText.attachments.next} class="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:opacity-70" on:click={() => step(1)}><ChevronRight size="20" strokeWidth="1.7" aria-hidden="true" /></IconButton>
         {/if}
       </div>
       <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]" title={viewing.path}>
@@ -553,7 +553,7 @@
           <ul class="max-h-40 overflow-y-auto" data-testid="attachment-viewer-notes">
             {#each viewing.usedBy as note (note.path)}
               <li>
-                <button type="button" class="block min-h-8 w-full truncate border-0 bg-transparent p-0 text-left text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-xs text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</button>
+                <Button variant="ghost" size="sm" type="button" class="min-h-8" on:click={() => { const target = note; viewing = null; openNote(target); }}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-xs text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</Button>
               </li>
             {/each}
           </ul>
