@@ -5,7 +5,7 @@
    * in a commit of their own; reverted files are back as they were, and an open note shows it at once.
    */
   import { createEventDispatcher } from 'svelte';
-  import { Button } from '@monos/ui';
+  import { Button, Card } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import { displayFolderName, localizedText } from '../lib/strings.js';
   import { agentDiff, agentReview, keepAgentChanges, revertAgentChanges } from '../lib/agent-review.js';
@@ -71,11 +71,14 @@
     <ul class="max-h-[56vh] space-y-1 overflow-y-auto">
       {#each changes as change (change.path)}
         <li>
-          <Button
-            variant="ghost"
-            size="sm"
+          <Card
+            as="button"
+            type="button"
+            interactive
+            selected={selected === change.path}
+            padding="none"
             on:click={() => select(change.path)}
-            class="w-full items-start justify-start gap-2 px-2 py-1.5 text-left normal-case {selected === change.path ? 'bg-surface' : ''}"
+            class="w-full flex-row items-start justify-start gap-2 px-2 py-1.5 text-left normal-case"
             data-testid="agent-review-item"
           >
             <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green)]' : change.status === 'deleted' ? 'text-[var(--red)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>
@@ -83,7 +86,7 @@
               <span class="block truncate text-sm text-[var(--text-primary)]">{label(change.path).name}</span>
               {#if label(change.path).folder}<span class="block truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{label(change.path).folder}</span>{/if}
             </span>
-          </Button>
+          </Card>
         </li>
       {/each}
     </ul>

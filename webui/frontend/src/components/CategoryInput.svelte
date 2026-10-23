@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { FieldControl } from '@monos/ui';
   import { canonicalCategory, filterCategories } from '../lib/categories.js';
 
   /** The category stored for the note. Updated when the user commits a value. */
@@ -22,6 +23,13 @@
   // Что пользователь напечатал после фокуса. null — ещё ничего не печатал,
   // и список показывает все категории, даже если в поле уже стоит значение.
   let query = null;
+  let inputEl = null;
+  $: if (inputEl) {
+    inputEl.oninput = handleInput;
+    inputEl.onfocus = handleFocus;
+    inputEl.onblur = handleBlur;
+    inputEl.onkeydown = handleKeydown;
+  }
 
   // Пока поле не в фокусе, показываем сохранённое значение, а не черновик.
   $: if (!focused) text = value;
@@ -65,7 +73,7 @@
   function handleInput(event) {
     open = true;
     activeIndex = -1;
-    query = event.currentTarget.value;
+    query = event.target.value;
   }
 
   function handleKeydown(event) {
@@ -99,7 +107,8 @@
 </script>
 
 <div class="relative">
-  <input
+  <FieldControl
+    bare
     type="text"
     role="combobox"
     aria-label={label}
@@ -108,12 +117,9 @@
     aria-controls={listId}
     aria-activedescendant={showList && activeIndex >= 0 ? optionId(activeIndex) : undefined}
     data-testid={testid}
+    bind:inputEl={inputEl}
     bind:value={text}
     {placeholder}
-    on:focus={handleFocus}
-    on:blur={handleBlur}
-    on:input={handleInput}
-    on:keydown={handleKeydown}
     class="h-8 w-full rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-secondary)]"
   />
   {#if showList}

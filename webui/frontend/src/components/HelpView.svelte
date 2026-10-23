@@ -5,7 +5,7 @@
    * the topics on the right; the search above finds a topic by any of its words and shows why it matched.
    */
   import { onMount, tick } from 'svelte';
-  import { Button, FilterChip } from '@monos/ui';
+  import { Button, Card, FilterChip } from '@monos/ui';
   import SearchField from './SearchField.svelte';
   import { locale, localizedText } from '../lib/strings.js';
   import { helpSections } from '../lib/help-content.js';
@@ -204,11 +204,11 @@
             <ul class="space-y-2" data-testid="help-results">
               {#each results as result (`${result.sectionId}/${result.itemId}`)}
                 <li>
-                  <Button variant="outline" size="md" class="w-full flex-col items-start justify-start gap-0 normal-case" on:click={() => go(result.sectionId, result.itemId)}>
+                  <Card as="button" type="button" interactive padding="none" class="w-full flex-col items-start justify-start gap-0 p-4 text-left normal-case" on:click={() => go(result.sectionId, result.itemId)}>
                     <span class="block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{result.sectionTitle}</span>
                     <span class="mt-0.5 block text-sm font-bold text-[var(--text-primary)]">{@html highlight(result.title)}</span>
                     <span class="mt-1 block text-xs leading-relaxed text-[var(--text-secondary)]">{@html highlight(result.excerpt)}</span>
-                  </Button>
+                  </Card>
                 </li>
               {/each}
             </ul>

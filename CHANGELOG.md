@@ -17,6 +17,25 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.32 — 2026-10-22
+
+### Changed
+
+- The UI migration is complete: every visible button, chip, menu row, field,
+  select and text area in the app is a kit primitive. The last categories were
+  the note map, command palette, sidebar header/footer, favourites, trash,
+  conflict views, info/confirm modals, agent settings, the wiki-link bar, the
+  raw-source editor and the note table.
+- Deliberate native exceptions are documented in the README: the outline drag
+  handle, OS-drawn file/colour/date inputs and `TooltipIconSelect`'s transparent
+  select.
+- The new-note, template, agent-review, help-result and continue-work cards use
+  `Card as="button"` instead of a text `Button`, so their multi-line content is
+  not truncated.
+- `FieldControl` gained native-listener glue in hosts that need `Enter`/`Escape`
+  on a specific field.
+- Site screenshots were taken again.
+
 ## 1.16.31 — 2026-10-22
 
 ### Changed

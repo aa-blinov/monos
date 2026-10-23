@@ -2,7 +2,7 @@
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { displayNoteName, recentPathLabel } from '../lib/note-format.js';
-  import { Button } from '@monos/ui';
+  import { Button, Card } from '@monos/ui';
 
   export let open = false;
   export let notes = [];
@@ -20,15 +20,17 @@
   >
     <div class="space-y-2">
       {#each notes.slice(0, 6) as note (note.path)}
-        <Button
-          variant="ghost"
-          size="md"
+        <Card
+          as="button"
+          type="button"
+          interactive
+          padding="none"
           class="w-full flex-col items-start justify-start gap-0 p-3 text-left normal-case"
           on:click={() => onOpenNote(note)}
         >
           <span class="block truncate text-sm font-semibold tracking-tight">{displayNoteName(note)}</span>
           <span class="mt-1 block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{recentPathLabel(note, $localizedText.sidebar?.modals?.root)}</span>
-        </Button>
+        </Card>
       {/each}
     </div>
     <div class="mt-8 flex gap-4">

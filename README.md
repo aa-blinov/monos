@@ -59,15 +59,19 @@ The same board in a narrow window:
 
 ## UI stack
 
-The UI is moving onto [`@monos/ui`](https://github.com/aa-blinov/monos-ui). The
-kit now owns the palette, the token layer, the Tailwind bridge and the `--ui-*`
-semantic roles; Monos keeps its older names as aliases. The Settings actions, the
-checkbox, the icon buttons, every search field, the dialog shell and the field
-geometry are kit primitives. The note's tag panel is the kit's `TagInput`, and the tree rows are
-the kit's `SidebarItem`, and so is the sidebar foot. The sidebar shell and the
-pinned section are kit primitives, the board card uses the kit `Card`, and the
-sidebar menu uses the kit `Menu`. The editor and the rest of the product stay in
-the app while their primitives move over.
+The UI is on [`@monos/ui`](https://github.com/aa-blinov/monos-ui). The kit owns
+the palette, the token layer, the Tailwind bridge and the `--ui-*` semantic
+roles; Monos keeps its older names as aliases. Every product button, filter chip,
+menu row, field, select and text area is a kit primitive: `Button`, `IconButton`,
+`FilterChip`, `FieldControl`, `Checkbox`, `Menu`, `Card`, `Sidebar`, `TagInput`,
+`Modal`, `Tabs` and the search field. The editor, the board, the settings, the
+notes table, attachments, the terminal and the helpers all read from the same
+kit surfaces.
+
+Three things stay native on purpose: the outline column's drag handle (it owns
+pointer capture), the transparent file/colour/date inputs the OS draws itself,
+and `TooltipIconSelect`'s invisible select that puts a native popup under an
+icon. They are controls, not product components.
 
 ![Settings with the kit buttons](site/media/monos-settings.png)
 
@@ -78,7 +82,7 @@ Electron main process (electron/main.cjs)
   starts the Express backend on 127.0.0.1 and serves the built Svelte app
 Svelte frontend (webui/frontend)
   the editor, the board, the search and the settings; @monos/ui supplies
-  the token layer and the first migrated primitives; it talks to /api/*
+  every control and the token layer; the app talks to /api/*
 Express backend (webui/backend)
   reads and writes Markdown, keeps the SQLite index, runs git
 notes/           Markdown files and their attachments
