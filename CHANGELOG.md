@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.11 — 2026-10-22
+
+### Changed
+
+- The notes table's column toggles, "more columns" and filter suggestions are
+  the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.10 — 2026-10-22
 
 ### Changed
