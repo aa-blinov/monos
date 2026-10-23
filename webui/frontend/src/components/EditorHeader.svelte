@@ -4,7 +4,7 @@
   import { interfaceDateTime } from '../lib/date-format.js';
   import { ArrowLeft, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Button } from '@monos/ui';
+  import { Button, FieldControl } from '@monos/ui';
   import { sidebarOpen, toggleSidebar } from '../lib/sidebar.js';
 
   export let editedTitle = '';
@@ -26,6 +26,13 @@
   export let focusMode = false;
   export let onExitFocus = () => {};
   let titleFocused = false;
+  let titleInput = null;
+  $: if (titleInput) {
+    titleInput.oninput = () => onTitleInput();
+    titleInput.onfocus = () => { titleFocused = true; };
+    titleInput.onblur = () => { titleFocused = false; onCommitTitle(); };
+    titleInput.onkeydown = titleKeydown;
+  }
   $: folded = compact && !titleFocused;
   export let onTitleInput = () => {};
   export let onCommitTitle = () => {};
@@ -117,14 +124,12 @@
     <div class="flex-1 min-w-0">
       <!-- The note's title is the page's heading; the field below is how it is edited. -->
       <h1 class="sr-only">{editedTitle}</h1>
-      <input
+      <FieldControl
+        bare
         type="text"
         bind:value={editedTitle}
-        on:input={onTitleInput}
-        on:focus={() => { titleFocused = true; }}
-        on:blur={() => { titleFocused = false; onCommitTitle(); }}
-        on:keydown={titleKeydown}
-        readonly={titleLocked}
+        bind:inputEl={titleInput}
+        readonly={titleLocked || undefined}
         title={titleLocked ? $localizedText.editor.conflictPropertiesLocked : undefined}
         aria-label={$localizedText.editorHeader.noteTitle}
         placeholder={$localizedText.editorHeader.noteTitle}
