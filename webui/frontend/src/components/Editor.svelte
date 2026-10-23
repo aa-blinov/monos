@@ -1924,21 +1924,23 @@
         {/if}
         {#if relatedCount > 0}
           <div class="relative" data-panel-anchor="related">
-            <button
+            <Button
               type="button"
-              bind:this={propertyTriggers.related}
+              bind:buttonEl={propertyTriggers.related}
+              variant="ghost"
+              size="sm"
               data-testid="property-related-button"
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'related'}
               aria-label={`${$localizedText.editor.localNavigation}: ${relatedCount}`}
-              class="inline-flex h-7 items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'related' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+              class="normal-case"
               on:click={() => togglePropertyPanel('related')}
             >
               <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
               <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.links} {relatedCount}</span>
               <span class="hidden sm:inline">{$localizedText.editor.localNavigation}</span>
               <span class="tabular-nums max-sm:hidden">{relatedCount}</span>
-            </button>
+            </Button>
             {#if propertyPanel === 'related'}
               <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.localNavigation} data-testid="property-panel" data-panel="related" class="{panelClass} max-h-[70vh] overflow-y-auto">
                 <p class={panelLabelClass}>{$localizedText.editor.localNavigation}</p>
@@ -2000,24 +2002,26 @@
                           <span class="block truncate font-medium text-[var(--text-primary)]">{item.title}</span>
                           <span class="block truncate text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.editor.mentionOf.replace('{phrase}', item.phrase)}</span>
                         </span>
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           data-testid="link-mention-button"
-                          class="shrink-0 rounded-ui px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                          class="shrink-0"
                           on:click={() => linkMention(item)}
-                        >{$localizedText.editor.linkMention}</button>
+                        >{$localizedText.editor.linkMention}</Button>
                       </li>
                     {/each}
                   </ul>
                 {/if}
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   data-testid="show-on-map"
-                  class="mt-3 inline-flex min-h-9 items-center gap-2 rounded-ui px-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
+                  class="mt-3"
                   on:click={() => { closePropertyPanel(); dispatch('showOnMap', { path: loadedFilePath }); }}
                 >
                   <Waypoints size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.showOnMap}
-                </button>
+                </Button>
                 {#if linkMentionFailed}
                   <p class="mt-2 text-xs text-[var(--red)]" role="status">{$localizedText.editor.linkMentionFailed}</p>
                 {/if}

@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.9 — 2026-10-22
+
+### Changed
+
+- The editor's related-notes trigger, "show on map" and "link mention"
+  actions are the kit's `Button`; the trigger still returns focus to the panel.
+- Site screenshots were taken again.
+
 ## 1.16.8 — 2026-10-22
 
 ### Changed
