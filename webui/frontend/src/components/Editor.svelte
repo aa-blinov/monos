@@ -1721,20 +1721,21 @@
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
       <div class="flex min-w-0 flex-1 items-center gap-2 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
         <div class="relative min-w-0 sm:flex-1" data-panel-anchor="category">
-          <button
-            type="button"
-            bind:this={propertyTriggers.category}
+          <Button
+            variant="ghost"
+            size="sm"
+            bind:buttonEl={propertyTriggers.category}
             data-testid="property-category-button"
             aria-haspopup="dialog"
             aria-expanded={propertyPanel === 'category'}
             aria-label={`${$localizedText.editor.propertyCategory}: ${currentFolderLabel}`}
-            class="inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-ui px-2 text-xs transition max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)] {propertyPanel === 'category' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}"
+            class="min-w-0 max-w-full justify-start gap-1.5 px-2 normal-case max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 {propertyPanel === 'category' ? 'bg-surface text-ink' : 'text-ink-soft'}"
             on:click={() => togglePropertyPanel('category')}
           >
             <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
             <span class="hidden min-w-0 truncate sm:inline">{currentFolderLabel}</span>
-          </button>
+          </Button>
           {#if propertyPanel === 'category'}
             <div use:focusFirstControl role="dialog" aria-label={$localizedText.editor.propertyCategory} data-testid="property-panel" data-panel="category" class={panelClass}>
               <p class={panelLabelClass}>{$localizedText.editor.propertyCategory}</p>

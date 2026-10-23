@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.16 — 2026-10-22
+
+### Changed
+
+- The folder/category trigger in the editor footer is the kit's `Button`; the
+  panel's `aria-haspopup`, `aria-expanded` and focus return stay.
+- Site screenshots were taken again.
+
 ## 1.16.15 — 2026-10-22
 
 ### Changed
