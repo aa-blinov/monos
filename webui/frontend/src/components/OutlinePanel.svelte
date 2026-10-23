@@ -5,7 +5,7 @@
   import { localizedText } from '../lib/strings.js';
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { X } from 'lucide-svelte';
-  import { IconButton } from '@monos/ui';
+  import { Button, IconButton } from '@monos/ui';
 
   /** The markdown source to extract the outline from. */
   export let content = '';
@@ -104,13 +104,13 @@
 <svelte:window on:keydown={onKeydown} />
 
 {#if open}
-  <button
+  <Button variant="ghost" size="sm"
     type="button"
     tabindex="-1"
     aria-label={$localizedText.editor.closeOutline}
     class="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
     on:click={close}
-  ></button>
+  ></Button>
 {/if}
 
 <aside

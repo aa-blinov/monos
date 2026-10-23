@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { Button } from '@monos/ui';
   import { Star } from 'lucide-svelte';
   import { localizedText, locale } from '../lib/strings.js';
   import { localeDate } from '../lib/date-format.js';
@@ -52,7 +53,7 @@
       <ul class="rounded-ui divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)]" data-testid="favorites-list">
         {#each rows as row (row.path)}
           <li class="flex items-center gap-1" data-testid="favorite-row">
-            <button
+            <Button variant="ghost" size="md"
               type="button"
               class="min-h-11 min-w-0 flex-1 border-0 bg-transparent px-4 py-2 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)]"
               on:click={() => open(row)}
@@ -61,8 +62,8 @@
               <span class="block truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                 {row.category || ''}{row.category && row.modified ? ', ' : ''}{row.modified ? localeDate(new Date(row.modified), $locale) : ''}
               </span>
-            </button>
-            <button
+            </Button>
+            <Button variant="ghost" size="sm"
               type="button"
               aria-label={`${$localizedText.favorites.remove}: ${row.title}`}
               title={$localizedText.favorites.remove}
@@ -71,7 +72,7 @@
               on:click={() => remove(row)}
             >
               <Star size="16" strokeWidth="1.7" fill="currentColor" aria-hidden="true" />
-            </button>
+            </Button>
           </li>
         {/each}
       </ul>

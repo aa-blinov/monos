@@ -38,7 +38,7 @@
       <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.writeTitle}</h2>
       <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.writeText}</p>
       <div class="mt-4 flex flex-wrap gap-x-6">
-        <button type="button" class={primaryAction} on:click={() => dispatch('newNote')}>{text.writeAction}</button>
+        <Button variant="ghost" size="sm" type="button" class={primaryAction} on:click={() => dispatch('newNote')}>{text.writeAction}</Button>
       </div>
     </section>
 

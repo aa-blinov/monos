@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import SearchField from './SearchField.svelte';
   import { searchQuery, searchResults, isSearching } from '../stores.js';
@@ -136,7 +137,7 @@
     >
       <svelte:fragment slot="trailing">
         {#if $searchQuery}
-          <button
+          <Button variant="ghost" size="sm"
             type="button"
             data-testid="save-current-search"
             on:click={() => dispatch('saveSearch', $searchQuery)}
@@ -145,7 +146,7 @@
             title={$localizedText.savedSearches.save}
           >
             <Bookmark size="12" strokeWidth="1.7" aria-hidden="true" />
-          </button>
+          </Button>
         {/if}
       </svelte:fragment>
     </SearchField>
@@ -153,10 +154,10 @@
       <div class="absolute top-full left-0 mt-2 bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-lg z-50 max-h-48 overflow-y-auto w-full rounded-ui">
         <div class="px-3 pb-1 pt-2.5 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">{$localizedText.tags.title}</div>
         {#each filteredTags as tag}
-          <button
+          <Button variant="ghost" size="sm"
             on:click={() => { clearTimeout(searchTimer); $searchQuery = `#${tag} `; doSearch(); }}
             class="flex w-full items-center text-left px-3 py-2.5 text-sm hover:bg-[var(--bg-secondary)] transition"
-          >#{tag}</button>
+          >#{tag}</Button>
         {/each}
       </div>
     {/if}

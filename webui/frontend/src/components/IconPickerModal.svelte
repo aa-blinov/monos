@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { localizedText } from '../lib/strings.js';
@@ -54,6 +55,6 @@
     {/each}
   </div>
   <div class="mt-8">
-    <button on:click={() => dispatch('close')} class="w-full text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</button>
+    <Button variant="ghost" size="sm" on:click={() => dispatch('close')} class="w-full text-sm font-medium uppercase tracking-widest hover:opacity-60 transition">{$localizedText.sidebar.modals.cancel}</Button>
   </div>
 </ModalShell>

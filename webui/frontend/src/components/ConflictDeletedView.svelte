@@ -6,6 +6,7 @@
    * changed text stays in the history and the conflict archive.
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
   import { splitFrontmatter } from '../lib/frontmatter.js';
   import { localizedText } from '../lib/strings.js';
@@ -30,7 +31,7 @@
     </p>
     <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{text.conflictDeletedHint}</p>
     <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-      <button
+      <Button variant="ghost" size="sm"
         type="button"
         data-testid="conflict-keep-note"
         disabled={busy}
@@ -38,8 +39,8 @@
         class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
       >
         {deletedHere ? text.conflictRestoreNote : text.conflictKeepNote}
-      </button>
-      <button
+      </Button>
+      <Button variant="danger" size="sm"
         type="button"
         data-testid="conflict-delete-note"
         disabled={busy}
@@ -47,7 +48,7 @@
         class="text-xs font-bold uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30"
       >
         {text.conflictDeleteNote}
-      </button>
+      </Button>
     </div>
   </div>
   <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">

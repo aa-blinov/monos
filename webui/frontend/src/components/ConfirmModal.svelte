@@ -8,6 +8,7 @@
    * modal, so the delete flow never looks like it came from somewhere else.
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import { getModalButtonClass } from '../lib/modal-button.js';
   import { localizedText } from '../lib/strings.js';
@@ -38,14 +39,14 @@
   {/if}
 
   <div class="mt-8 flex gap-3">
-    <button
+    <Button variant="ghost" size="sm"
       type="button"
       class={getModalButtonClass('secondary', { extraClass: 'py-2' })}
       on:click={cancel}
     >
       {resolvedCancel}
-    </button>
-    <button
+    </Button>
+    <Button variant="ghost" size="sm"
       type="button"
       class={getModalButtonClass('primary', {
         extraClass: danger ? 'py-2 text-[var(--red)]' : 'py-2',
@@ -53,7 +54,7 @@
       on:click={confirm}
     >
       {resolvedConfirm}
-    </button>
+    </Button>
   </div>
 </ModalShell>
 

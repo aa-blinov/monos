@@ -375,7 +375,7 @@
         <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="attachments-grid">
           {#each shown as item (item.path)}
             <li class="rounded-ui relative flex min-w-0 flex-col overflow-hidden border {selected.has(item.path) ? 'border-[var(--text-primary)]' : 'border-[var(--border-subtle)]'}" data-testid="attachment-card">
-              <button
+              <Button variant="ghost" size="sm"
                 type="button"
                 data-testid="attachment-open"
                 aria-label={selecting ? item.name : `${$localizedText.attachments.preview}: ${item.name}`}
@@ -397,7 +397,7 @@
                     <span class="text-xs">{$localizedText.attachments.pdf}</span>
                   </span>
                 {/if}
-              </button>
+              </Button>
               {#if selecting && isUnused(item)}
                 <span class="pointer-events-none absolute left-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-ui border {selected.has(item.path) ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'border-[var(--text-primary)] bg-[var(--bg-primary)]'}" aria-hidden="true">
                   {#if selected.has(item.path)}<Check size="14" strokeWidth="1.7" />{/if}

@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { Button } from '@monos/ui';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { deleteFilePermanentlyRequest, loadTrashNotesRequest, restoreNoteRequest } from '../lib/editor-api.js';
@@ -132,18 +133,18 @@
             <div class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <!-- Spelled out: two bare icons on a card were a guess, and one of them deletes for good. -->
               <div class="contents">
-                <button
+                <Button variant="ghost" size="sm"
                   type="button"
                   class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
                   disabled={busyPath === note.path}
                   on:click={() => restore(note)}
-                >{$localizedText.trash.restore}</button>
-                <button
+                >{$localizedText.trash.restore}</Button>
+                <Button variant="danger" size="sm"
                   type="button"
                   class="whitespace-nowrap text-xs uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30"
                   disabled={busyPath === note.path}
                   on:click={() => requestDeleteForever(note)}
-                >{$localizedText.trash.deleteForever}</button>
+                >{$localizedText.trash.deleteForever}</Button>
               </div>
             </div>
           </article>

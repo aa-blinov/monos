@@ -1118,30 +1118,38 @@
       data-testid="wiki-link-bar"
     >
       {#if wikiLinkHere.status.kind === 'external'}
-        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => openExternal(wikiLinkHere.status.href)}>
+        <span role="presentation" on:mousedown|preventDefault>
+        <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => openExternal(wikiLinkHere.status.href)}>
           <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.openExternal}<span class="ml-2 text-[var(--text-tertiary)]">{wikiLinkHere.status.href.replace(/^https?:\/\//, '')}</span></span>
           <kbd class="hidden shrink-0 font-sans text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:inline">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
-        </button>
+        </Button>
+        </span>
       {:else if wikiLinkHere.status.kind === 'found'}
-        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => openWikiNote(wikiLinkHere.status)}>
+        <span role="presentation" on:mousedown|preventDefault>
+        <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => openWikiNote(wikiLinkHere.status)}>
           <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.open(wikiLinkHere.status.name)}</span>
           <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
-        </button>
+        </Button>
+        </span>
       {:else if wikiLinkHere.status.kind === 'missing'}
-        <button type="button" on:mousedown|preventDefault class="flex w-full items-center gap-2 rounded-ui px-2.5 py-1.5 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => createWikiNote(wikiLinkHere.target)}>
+        <span role="presentation" on:mousedown|preventDefault>
+        <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => createWikiNote(wikiLinkHere.target)}>
           <FilePlus size="16" strokeWidth="1.7" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.create(newNoteForWikiLink(wikiLinkHere.target).title)}</span>
           <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
-        </button>
+        </Button>
+        </span>
       {:else}
         <p class="px-2.5 py-1.5 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{$localizedText.richEditor.wikiLink.ambiguous}</p>
         {#each wikiLinkHere.status.matches as match}
-          <button type="button" on:mousedown|preventDefault class="flex w-full flex-col items-start rounded-ui px-2.5 py-1.5 text-left hover:bg-[var(--bg-secondary)]" on:click={() => openWikiNote(match)}>
+          <span role="presentation" on:mousedown|preventDefault>
+          <Button variant="ghost" size="sm" class="w-full flex-col items-start justify-start gap-0 normal-case" on:click={() => openWikiNote(match)}>
             <span class="max-w-full truncate text-sm">{match.name}</span>
             <span class="max-w-full truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{match.path.startsWith('notes/') ? match.path.slice(6) : match.path}</span>
-          </button>
+          </Button>
+        </span>
         {/each}
       {/if}
     </div>
@@ -1157,7 +1165,7 @@
     >
       <div class="px-3 py-2 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.richEditor.slashHint}</div>
       {#each slashCommands as slashCommand, index}
-        <button
+        <Button variant="ghost" size="sm"
           type="button"
           id="slash-option-{index}"
           tabindex="-1"
@@ -1169,7 +1177,7 @@
         >
           <span>{$localizedText.richEditor.slashCommands[slashCommand.id]}</span>
           {#if slashCommand.markdown}<kbd aria-hidden="true" class="shrink-0 font-mono text-xs text-[var(--text-tertiary)]">{slashCommand.markdown}</kbd>{/if}
-        </button>
+        </Button>
       {/each}
     </div>
   {/if}
@@ -1223,7 +1231,7 @@
         {$localizedText.sourceEditor.wikiSuggestions}
       </div>
       {#each wikiSuggestions as suggestion, index}
-        <button
+        <Button variant="ghost" size="sm"
           type="button"
           role="option"
           aria-selected={activeWikiSuggestionIndex === index}
@@ -1241,7 +1249,7 @@
             {/if}
           </span>
           <span class="max-w-full truncate text-[length:var(--text-whisper)] uppercase leading-tight tracking-[0.1em] text-[var(--text-tertiary)]">{suggestion.path?.startsWith('notes/') ? suggestion.path.slice(6) : suggestion.path}</span>
-        </button>
+        </Button>
       {/each}
     </div>
   {/if}
@@ -1358,8 +1366,6 @@
      button costs tools on screen: 40 keeps seven in view, 44 would show six); with a pointer they tighten to 28px. */
   [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
   @media (min-width: 640px) { [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { min-width: 28px; min-height: 28px; } }
-  button:not([role='menuitem']):not([role='menuitemradio']):not([role='option']) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
-  @media (min-width: 640px) { button:not([role='menuitem']):not([role='menuitemradio']):not([role='option']) { min-width: 28px; min-height: 28px; } }
 
   .toolbar-scroll::-webkit-scrollbar { height: 3px; }
   .toolbar-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: var(--radius); }

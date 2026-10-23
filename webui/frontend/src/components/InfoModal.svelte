@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -45,22 +46,22 @@
   </div>
   <div class="mt-8 flex {secondaryLabel && primaryLabel ? 'gap-4' : 'justify-center'}">
     {#if secondaryLabel}
-      <button
+      <Button variant="ghost" size="sm"
         type="button"
         on:click={() => dispatch('secondary')}
         class={getModalButtonClass('secondary')}
       >
         {secondaryLabel}
-      </button>
+      </Button>
     {/if}
     {#if primaryLabel}
-      <button
+      <Button variant="ghost" size="sm"
         type="button"
         on:click={() => dispatch('primary')}
         class={getModalButtonClass(primaryStyle === 'bold' ? 'primary' : 'secondary')}
       >
         {primaryLabel}
-      </button>
+      </Button>
     {/if}
   </div>
 </ModalShell>

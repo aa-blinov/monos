@@ -162,15 +162,15 @@
           {$localizedText.sidebar.modals.createStart}
         </div>
         <div class="grid gap-2 sm:grid-cols-3">
-          <button
+          <Button variant="ghost" size="sm"
             type="button"
             class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
             on:click={() => titleInput?.focus()}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.blankNoteHint}</span>
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost" size="sm"
             type="button"
             class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
             on:click={createToday}
@@ -178,15 +178,15 @@
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.todayNoteHint}</span>
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost" size="sm"
             type="button"
             class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.fromTemplateHint}</span>
-          </button>
+          </Button>
         </div>
       </section>
       <div>

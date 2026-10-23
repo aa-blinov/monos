@@ -4,6 +4,7 @@
    * that tell it how notes are written here. Desktop app only: elsewhere there is no terminal to run it in.
    */
   import { onMount } from 'svelte';
+  import { Button } from '@monos/ui';
   import { formFieldClass } from '../lib/form-field.js';
   import { localizedText } from '../lib/strings.js';
   import { AGENT_PRESETS, DEFAULT_AGENT_COMMAND } from '../lib/terminal.js';
@@ -58,21 +59,21 @@
   </div>
   <div class="flex flex-wrap gap-2" role="radiogroup" aria-label={$localizedText.agent.which}>
     {#each AGENT_PRESETS as preset (preset.id)}
-      <button
+      <Button variant="ghost" size="sm"
         type="button"
         role="radio"
         aria-checked={choice === preset.id}
         on:click={() => pick(preset.id)}
         class="rounded-ui border px-3 py-1.5 text-xs transition {choice === preset.id ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
-      >{preset.label} <span class="font-mono text-[var(--text-tertiary)]">{preset.command}</span></button>
+      >{preset.label} <span class="font-mono text-[var(--text-tertiary)]">{preset.command}</span></Button>
     {/each}
-    <button
+    <Button variant="ghost" size="sm"
       type="button"
       role="radio"
       aria-checked={choice === 'custom'}
       on:click={() => { choice = 'custom'; }}
       class="rounded-ui border px-3 py-1.5 text-xs transition {choice === 'custom' ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}"
-    >{$localizedText.agent.other}</button>
+    >{$localizedText.agent.other}</Button>
   </div>
   {#if choice === 'custom'}
     <div>
@@ -85,7 +86,7 @@
       {rulesReady ? $localizedText.agent.rulesReady : $localizedText.agent.rulesMissing}
     </p>
     {#if !rulesReady}
-      <button type="button" disabled={busy} on:click={createRules} class="min-h-6 text-xs font-bold max-sm:min-h-11 uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.terminal.rulesCreate}</button>
+      <Button variant="ghost" size="md" type="button" disabled={busy} on:click={createRules} class="min-h-6 text-xs font-bold max-sm:min-h-11 uppercase tracking-widest text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30">{$localizedText.terminal.rulesCreate}</Button>
     {/if}
   </div>
 </section>
