@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.15 — 2026-10-22
+
+### Changed
+
+- The due-date clear control is the kit's `IconButton`, and related-note rows
+  are the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.14 — 2026-10-22
 
 ### Changed
