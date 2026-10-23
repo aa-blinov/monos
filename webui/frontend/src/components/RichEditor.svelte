@@ -1020,9 +1020,9 @@
       <span class="mr-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{active.table ? $localizedText.richEditor.blockTools.table : $localizedText.richEditor.blockTools.code}</span>
       {#if active.table}
         {#each [['addRowAfter', 'addRow'], ['addColumnAfter', 'addColumn'], ['deleteRow', 'deleteRow'], ['deleteColumn', 'deleteColumn']] as [command, label]}
-          <button type="button" on:mousedown|preventDefault on:click={() => tableCommand(command)} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]">{$localizedText.richEditor.blockTools[label]}</button>
+          <span role="presentation" on:mousedown|preventDefault><Button variant="ghost" size="sm" class="normal-case" on:click={() => tableCommand(command)}>{$localizedText.richEditor.blockTools[label]}</Button></span>
         {/each}
-        <button type="button" on:mousedown|preventDefault on:click={() => tableCommand('deleteTable')} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] hover:text-[var(--red)]">{$localizedText.richEditor.blockTools.deleteTable}</button>
+        <span role="presentation" on:mousedown|preventDefault><Button variant="ghost" size="sm" class="normal-case text-danger-text" on:click={() => tableCommand('deleteTable')}>{$localizedText.richEditor.blockTools.deleteTable}</Button></span>
       {:else}
         <select
           aria-label={$localizedText.richEditor.blockTools.language}
@@ -1036,7 +1036,7 @@
             <option value={language}>{language || $localizedText.richEditor.blockTools.plainText}</option>
           {/each}
         </select>
-        <button type="button" on:mousedown|preventDefault on:click={copyCodeBlock} class="rounded-ui px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]">{codeCopied ? $localizedText.richEditor.blockTools.copied : $localizedText.richEditor.blockTools.copy}</button>
+        <span role="presentation" on:mousedown|preventDefault><Button variant="ghost" size="sm" class="normal-case" on:click={copyCodeBlock}>{codeCopied ? $localizedText.richEditor.blockTools.copied : $localizedText.richEditor.blockTools.copy}</Button></span>
       {/if}
       </div>
     {/if}
@@ -1075,17 +1075,17 @@
     {/each}
 
     {#if hiddenTools > 0}
-      <button
-        type="button"
-        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {moreOpen ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
-        aria-label={$localizedText.richEditor.more}
-        title={$localizedText.richEditor.more}
+      <IconButton
+        bare
+        tooltipText=""
+        class="h-8 w-8 shrink-0 {moreOpen ? 'bg-surface text-ink' : 'text-ink-soft'}"
+        label={$localizedText.richEditor.more}
         aria-haspopup="menu"
         aria-expanded={moreOpen}
         on:click={() => moreOpen = !moreOpen}
       >
         <MoreHorizontal size="16" strokeWidth="1.7" aria-hidden="true" />
-      </button>
+      </IconButton>
     {/if}
 
     {#if moreOpen}

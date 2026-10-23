@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.25 — 2026-10-22
+
+### Changed
+
+- The rich editor's table/code-block tools are the kit's `Button`, and its
+  "more tools" trigger is the kit's `IconButton`.
+- Site screenshots were taken again.
+
 ## 1.16.24 — 2026-10-22
 
 ### Changed
