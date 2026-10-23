@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.28 — 2026-10-22
+
+### Changed
+
+- The notes table's sort headers, note links and cells are kit `Button`.
+- The tag panel and saved-searches panel are on kit `Button`/`IconButton`; the
+  terminal agent actions and context menu are kit `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.27 — 2026-10-22
 
 ### Changed

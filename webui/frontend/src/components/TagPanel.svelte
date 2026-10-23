@@ -2,9 +2,8 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import ModalShell from './ModalShell.svelte';
   import SearchField from './SearchField.svelte';
-  import { FieldControl } from '@monos/ui';
+  import { Button, FieldControl, IconButton } from '@monos/ui';
   import ConfirmModal from './ConfirmModal.svelte';
-  import { getModalButtonClass } from '../lib/modal-button.js';
   import { localizedText } from '../lib/strings.js';
   import { deleteTag, filterTagStats, loadTagStats, renameTag } from '../lib/tags.js';
   import { Hash, Pencil, Trash2 } from 'lucide-svelte';
@@ -132,46 +131,20 @@
                   bind:value={editValue}
                   on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter') confirmRename(); if (key === 'Escape') editing = null; }}
                 />
-                <button
-                  type="button"
-                  data-testid="tag-rename-save"
-                  disabled={busy}
-                  class={getModalButtonClass('primary', { extraClass: 'px-3 py-1 text-sm' })}
-                  on:click={confirmRename}
-                >{$localizedText.tags.save}</button>
-                <button
-                  type="button"
-                  class={getModalButtonClass('secondary', { extraClass: 'px-2 py-1 text-sm' })}
-                  on:click={() => editing = null}
-                >{$localizedText.tags.cancel}</button>
+                <Button variant="primary" size="sm" data-testid="tag-rename-save" disabled={busy} on:click={confirmRename}>{$localizedText.tags.save}</Button>
+                <Button variant="secondary" size="sm" on:click={() => editing = null}>{$localizedText.tags.cancel}</Button>
               {:else}
-                <button
-                  type="button"
-                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]"
-                  on:click={() => openTag(entry.tag)}
-                >
+                <Button variant="ghost" size="sm" class="min-w-0 flex-1 justify-start gap-2 px-2 normal-case" on:click={() => openTag(entry.tag)}>
                   <Hash size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
                   <span class="truncate text-sm text-[var(--text-primary)]">{entry.tag}</span>
-                </button>
+                </Button>
                 <span class="shrink-0 tabular-nums text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{entry.count}</span>
-                <button
-                  type="button"
-                  data-testid="tag-rename"
-                  aria-label={$localizedText.tags.rename(entry.tag)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--text-primary)]"
-                  on:click={() => startRename(entry.tag)}
-                >
+                <IconButton bare tooltipText="" data-testid="tag-rename" label={$localizedText.tags.rename(entry.tag)} class="h-7 w-7 shrink-0 text-ink-soft" on:click={() => startRename(entry.tag)}>
                   <Pencil size="14" strokeWidth="1.7" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  data-testid="tag-delete"
-                  aria-label={$localizedText.tags.drop(entry.tag)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--red)]"
-                  on:click={() => askRemove(entry)}
-                >
+                </IconButton>
+                <IconButton bare tooltipText="" data-testid="tag-delete" label={$localizedText.tags.drop(entry.tag)} class="h-7 w-7 shrink-0 text-ink-soft text-danger-text" on:click={() => askRemove(entry)}>
                   <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
-                </button>
+                </IconButton>
               {/if}
             </li>
           {/each}

@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import ModalShell from './ModalShell.svelte';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button, IconButton } from '@monos/ui';
   import { localizedText } from '../lib/strings.js';
   import {
     addSavedSearch,
@@ -123,17 +123,11 @@
             <span class="font-sans text-[var(--text-tertiary)]">{$localizedText.savedSearches.queryPlaceholder}</span>
           {/if}
         </p>
-        <button
-          type="button"
-          data-testid="saved-search-save"
-          disabled={busy || !trimmedQuery}
-          class={getModalButtonClass('primary', { fit: false, extraClass: 'ml-auto' })}
-          on:click={save}
-        >
+        <Button variant="primary" size="sm" data-testid="saved-search-save" disabled={busy || !trimmedQuery} class="ml-auto" on:click={save}>
           {alreadySaved
             ? $localizedText.savedSearches.renameHint
             : $localizedText.savedSearches.save}
-        </button>
+        </Button>
       </div>
       {:else}
         <p class="text-xs leading-relaxed text-[var(--text-tertiary)]" data-testid="saved-search-howto">{$localizedText.savedSearches.howToSave}</p>
@@ -159,18 +153,13 @@
                   bind:value={editValue}
                   on:keydown={(e) => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') editing = null; }}
                 />
-                <button
-                  type="button"
-                  data-testid="saved-search-rename-save"
-                  disabled={busy}
-                  class={getModalButtonClass('primary', { fit: false })}
-                  on:click={confirmRename}
-                >{$localizedText.savedSearches.save}</button>
+                <Button variant="primary" size="sm" data-testid="saved-search-rename-save" disabled={busy} on:click={confirmRename}>{$localizedText.savedSearches.save}</Button>
               {:else}
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   data-testid="saved-search-run"
-                  class="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-1 text-left transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]"
+                  class="min-w-0 flex-1 justify-start gap-2 px-2 normal-case"
                   on:click={() => { dispatch('run', entry); open = false; }}
                 >
                   <Bookmark size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
@@ -178,25 +167,13 @@
                     <span class="block truncate text-sm text-[var(--text-primary)]">{entry.name}</span>
                     <span class="block truncate font-mono text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)]">{entry.query}</span>
                   </span>
-                </button>
-                <button
-                  type="button"
-                  data-testid="saved-search-rename"
-                  aria-label={$localizedText.savedSearches.rename(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--text-primary)]"
-                  on:click={() => startRename(entry)}
-                >
+                </Button>
+                <IconButton bare tooltipText="" data-testid="saved-search-rename" label={$localizedText.savedSearches.rename(entry.name)} class="h-7 w-7 shrink-0 text-ink-soft" on:click={() => startRename(entry)}>
                   <Pencil size="12" strokeWidth="1.7" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  data-testid="saved-search-delete"
-                  aria-label={$localizedText.savedSearches.remove(entry.name)}
-                  class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)] hover:text-[var(--red)]"
-                  on:click={() => remove(entry)}
-                >
+                </IconButton>
+                <IconButton bare tooltipText="" data-testid="saved-search-delete" label={$localizedText.savedSearches.remove(entry.name)} class="h-7 w-7 shrink-0 text-ink-soft text-danger-text" on:click={() => remove(entry)}>
                   <Trash2 size="12" strokeWidth="1.7" aria-hidden="true" />
-                </button>
+                </IconButton>
               {/if}
             </li>
           {/each}
