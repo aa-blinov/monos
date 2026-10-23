@@ -17,6 +17,7 @@
   import { FieldControl } from '@monos/ui';
   import { localizedText, locale } from '../lib/strings.js';
   import SearchField from './SearchField.svelte';
+  import { Button } from '@monos/ui';
   import { loadPropertyTableRequest, setPropertyRequest } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import { propertyInputText, propertyInputType, propertyValueFrom } from '../lib/properties.js';
@@ -278,7 +279,7 @@
         <ul class="flex flex-wrap gap-2" data-testid="properties-suggestions" aria-label={$localizedText.properties.suggestions}>
           {#each suggestions as item (item.text)}
             <li>
-              <button type="button" data-testid="properties-suggestion" on:mousedown|preventDefault={() => applySuggestion(item)} class="rounded-ui min-h-8 border border-[var(--border-subtle)] px-2 text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{item.label}</button>
+              <span role="presentation" on:mousedown|preventDefault><Button variant="outline" size="sm" data-testid="properties-suggestion" class="normal-case" on:click={() => applySuggestion(item)}>{item.label}</Button></span>
             </li>
           {/each}
         </ul>
@@ -294,15 +295,16 @@
       <div class="flex flex-wrap items-center gap-2" role="group" aria-label={$localizedText.properties.columns}>
         <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">{$localizedText.properties.columns}</span>
         {#each visibleKeys as item (item.key)}
-          <button
-            type="button"
+          <Button
+            variant={columns?.includes(item.key) ? 'outline' : 'ghost'}
+            size="sm"
             aria-pressed={columns?.includes(item.key)}
+            class="normal-case"
             on:click={() => toggleColumn(item.key)}
-            class="rounded-ui border px-2 py-1 text-xs max-sm:min-h-10 {columns?.includes(item.key) ? 'border-[var(--text-primary)] text-[var(--text-primary)]' : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'}"
-          >{columnLabel(item.key)} ({item.count})</button>
+          >{columnLabel(item.key)} ({item.count})</Button>
         {/each}
         {#if showAllKeys || keys.length > visibleKeys.length}
-          <button type="button" data-testid="properties-more-columns" aria-expanded={showAllKeys} on:click={() => { showAllKeys = !showAllKeys; keyQuery = ''; }} class="min-h-8 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10">{showAllKeys ? $localizedText.properties.fewerColumns : $localizedText.properties.moreColumns(keys.length - visibleKeys.length)}</button>
+          <Button variant="ghost" size="sm" data-testid="properties-more-columns" aria-expanded={showAllKeys} on:click={() => { showAllKeys = !showAllKeys; keyQuery = ''; }}>{showAllKeys ? $localizedText.properties.fewerColumns : $localizedText.properties.moreColumns(keys.length - visibleKeys.length)}</Button>
         {/if}
         {#if showAllKeys}
           <SearchField
