@@ -1,6 +1,7 @@
 <script>
   import UrlPromptModal from './UrlPromptModal.svelte';
   import { onMount, tick } from 'svelte';
+  import { Button, IconButton } from '@monos/ui';
   import { createEventDispatcher } from 'svelte';
   import { Editor } from '@tiptap/core';
   import TooltipIconButton from './TooltipIconButton.svelte';
@@ -977,9 +978,9 @@
         />
       </div>
       <span class="shrink-0 text-xs tabular-nums text-[var(--text-tertiary)]" data-testid="note-find-count">{findLabel}</span>
-      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findPrevious} on:click={() => stepFind(true)}><ChevronUp size={14} strokeWidth="1.7" aria-hidden="true" /></button>
-      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findNext} on:click={() => stepFind(false)}><ChevronDown size={14} strokeWidth="1.7" aria-hidden="true" /></button>
-      <button type="button" class={SEARCH_BUTTON_COMPACT_CLASS} aria-label={$localizedText.richEditor.findClose} on:click={() => closeFind({ focus: true })}><X size={14} strokeWidth="1.7" aria-hidden="true" /></button>
+      <IconButton bare tooltipText="" class={SEARCH_BUTTON_COMPACT_CLASS} label={$localizedText.richEditor.findPrevious} on:click={() => stepFind(true)}><ChevronUp size={14} strokeWidth="1.7" aria-hidden="true" /></IconButton>
+      <IconButton bare tooltipText="" class={SEARCH_BUTTON_COMPACT_CLASS} label={$localizedText.richEditor.findNext} on:click={() => stepFind(false)}><ChevronDown size={14} strokeWidth="1.7" aria-hidden="true" /></IconButton>
+      <IconButton bare tooltipText="" class={SEARCH_BUTTON_COMPACT_CLASS} label={$localizedText.richEditor.findClose} on:click={() => closeFind({ focus: true })}><X size={14} strokeWidth="1.7" aria-hidden="true" /></IconButton>
     </div>
   {/if}
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
@@ -1056,16 +1057,17 @@
         {#if viewPanel === control.id}
           <div class="absolute right-0 top-full z-30 mt-1 w-44 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={control.label}>
             {#each control.options as option (option.value)}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 role="menuitemradio"
                 aria-checked={control.value === option.value}
-                class="flex w-full items-center gap-2 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]"
+                class="w-full justify-start gap-2 px-3 normal-case"
                 on:click={() => { control.store.set(option.value); viewPanel = null; }}
               >
                 <span class="w-3.5 shrink-0">{#if control.value === option.value}<Check size="14" strokeWidth="1.7" aria-hidden="true" />{/if}</span>
                 {option.label}
-              </button>
+              </Button>
             {/each}
           </div>
         {/if}
@@ -1090,9 +1092,9 @@
       <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
         {#each extraTools as tool, index (tool.id)}
           {#if index >= visibleExtras}
-            <button type="button" role="menuitem" class="flex w-full items-center gap-3 rounded-ui px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]" on:click={() => runMore(tool.run)}>
+            <Button variant="ghost" size="sm" role="menuitem" class="w-full justify-start gap-3 px-3 normal-case" on:click={() => runMore(tool.run)}>
               <svelte:component this={tool.icon} size="16" strokeWidth="1.7" aria-hidden="true" />{tool.label}
-            </button>
+            </Button>
           {/if}
         {/each}
       </div>

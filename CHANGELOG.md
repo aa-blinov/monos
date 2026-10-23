@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.23 — 2026-10-22
+
+### Changed
+
+- The rich editor's find bar buttons are the kit's `IconButton`; view options
+  and the "more tools" menu items are the kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.22 — 2026-10-22
 
 ### Changed
