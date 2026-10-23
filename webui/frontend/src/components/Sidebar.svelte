@@ -1203,13 +1203,16 @@
       <!-- With nothing pinned this is the first row: it takes the height of the "Pinned" row, so "Create" does not sit on the top edge. -->
       <div class="flex items-center justify-between gap-3 pb-1.5 {$pinnedNotes.length === 0 ? 'lg:min-h-10 lg:pb-0' : 'lg:pb-2'}">
         <p class="text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)] lg:text-[length:var(--text-whisper-lg)] lg:tracking-[0.22em]">{$localizedText.sidebar.knowledgeTree}</p>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="tree-new-note"
           on:click={() => dispatch('openCreateNote')}
-          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui px-2 text-[length:var(--text-whisper-lg)] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-subtle)] lg:static lg:min-h-8 lg:px-2.5 lg:text-[length:var(--text-whisper)] lg:tracking-[0.16em]"
+          class="tree-header-action absolute right-4 top-3 min-h-11 shrink-0 rounded-ui px-2 lg:static lg:min-h-8 lg:px-2.5"
         >
           <span class="text-sm leading-none">+</span>
           <span class="whitespace-nowrap">{$localizedText.sidebar.new.replace(/^\+\s*/, '')}</span>
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -1274,7 +1277,7 @@
       <!-- Three rows, as on a desktop: Other, Terminal, Settings. The tools and the trash live in Other. -->
       <div class="flex flex-col gap-0.5" data-testid="phone-tools">
         {#if gitConfigured}
-          <button on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="flex min-h-11 items-center gap-4 text-left text-sm text-[var(--text-primary)] hover:opacity-70 transition disabled:opacity-30">
+          <Button variant="ghost" size="sm" on:click={() => { handleSync(); dispatch('toggleSidebar'); }} disabled={isSyncing || $editorState.saving || $editorState.dirty} class="min-h-11 justify-start gap-4 normal-case">
             {#if isSyncing}
               <span class="block w-5 h-5 rounded-full border-2 border-[var(--text-secondary)] border-t-transparent motion-safe:animate-spin"></span>
             {:else if autoPullState?.error}
@@ -1283,7 +1286,7 @@
               <Icon.RefreshCw size="20" strokeWidth="1.7" />
             {/if}
             <span>{syncRowLabel}</span>
-          </button>
+          </Button>
         {/if}
         <SidebarMoreMenu
           mobile
@@ -1326,28 +1329,30 @@
       <div class="flex flex-col gap-0.5">
         {#if $syncBlockedByReview.length}
           <!-- The sync waits for the agent's edits to be reviewed (they changed on another device too). -->
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="sync-blocked-review"
             on:click={() => agentReviewOpen.set(true)}
-            class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--blue)] transition-colors hover:bg-[color-mix(in_srgb,var(--blue)_10%,transparent)]"
+            class="h-7 w-full justify-start gap-2 px-2 normal-case text-[var(--blue)] hover:bg-[color-mix(in_srgb,var(--blue)_10%,transparent)]"
             title={$localizedText.agentReview.syncBlocked($syncBlockedByReview)}
           >
             <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>
             <span class="truncate">{$localizedText.agentReview.syncWaits}</span>
-          </button>
+          </Button>
         {/if}
         {#if $conflictedNotes.size + $conflictedFiles.size > 0}
           <!-- A conflict is resolved inside its note: this opens the first one. -->
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="open-conflict"
             on:click={openFirstConflict}
-            class="flex h-7 w-full items-center gap-2 rounded-ui px-2 text-left text-[var(--red)] transition-colors hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
+            class="h-7 w-full justify-start gap-2 px-2 normal-case text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
           >
             <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" aria-hidden="true"></span>
             <span class="truncate">{$conflictedNotes.size > 0 ? $localizedText.sidebar.conflictNotice($conflictedNotes.size) : $localizedText.sidebar.conflictFilesNotice($conflictedFiles.size)}</span>
-          </button>
+          </Button>
         {/if}
         <!-- These rows show their names, so they carry no tooltip that repeats it; only a row whose name needs
              explaining (the notes table) has one. -->

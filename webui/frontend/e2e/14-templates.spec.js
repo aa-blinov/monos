@@ -93,7 +93,7 @@ test('создание пустой заметки по-прежнему отк�
 test('русская локаль: название шаблона с датой через точку', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('locale', 'ru'));
   await page.reload();
-  await page.locator('button').filter({ hasText: /^\+/ }).first().click();
+  await page.getByTestId('tree-new-note').click();
   await page.getByRole('button', { name: 'Заметка из шаблона' }).click();
   await page.getByTestId('template-list-scroll').getByText('Еженедельный обзор', { exact: true }).click();
   await expect(page.locator('#template-title')).toHaveValue(/^Еженедельный обзор \d{2}\.\d{2}\.\d{4}$/);

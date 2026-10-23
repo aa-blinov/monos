@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.21 — 2026-10-22
+
+### Changed
+
+- The sidebar's "Создать", phone sync row and the review/conflict rows are the
+  kit's `Button`; the create button has `tree-new-note` for tests.
+- Site screenshots were taken again.
+
 ## 1.16.20 — 2026-10-22
 
 ### Changed
