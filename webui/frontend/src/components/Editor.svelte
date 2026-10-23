@@ -1833,15 +1833,16 @@
                     class="h-8 w-36 rounded-ui border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
                   />
                   {#if dueText}
-                    <button
-                      type="button"
+                    <IconButton
+                      bare
+                      tooltipText=""
                       data-testid="clear-due"
-                      aria-label={$localizedText.editor.dueClear}
-                      class="absolute right-1 inline-flex h-6 w-5 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      label={$localizedText.editor.dueClear}
+                      class="absolute right-1 h-6 w-5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       on:click={clearDue}
                     >
                       <X size="12" strokeWidth="1.7" aria-hidden="true" />
-                    </button>
+                    </IconButton>
                   {/if}
                 </div>
                 {#if dueDate}
@@ -1947,13 +1948,14 @@
                 <ul class="-mx-1 max-h-64 overflow-y-auto">
                   {#each relatedList as item (item.path)}
                     <li>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         aria-label={`${item.name}, ${relationText(item.relation)}`}
                         title={item.path}
                         data-testid="related-row"
                         data-relation={item.relation}
-                        class="flex w-full min-w-0 items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs hover:bg-[var(--bg-secondary)]"
+                        class="w-full justify-between normal-case"
                         on:click={() => { closePropertyPanel(); openLinkedNote(item); }}
                       >
                         <span class="min-w-0 truncate font-medium text-[var(--text-primary)]">{item.name}</span>
@@ -1963,7 +1965,7 @@
                           {:else}<ArrowLeft size="12" strokeWidth="1.7" aria-hidden="true" />{/if}
                           {relationText(item.relation)}
                         </span>
-                      </button>
+                      </Button>
                     </li>
                   {/each}
                 </ul>
