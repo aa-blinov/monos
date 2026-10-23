@@ -1758,7 +1758,7 @@
              раздвигала их. Пока надписи нет, она не занимает место: пустой элемент в ряду с отступами
              раздвигает иконки вдвое. На телефоне места в ряду нет вовсе — там надпись ложится полосой
              над нижней панелью, как окошки свойств. -->
-        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage ? '' : 'sr-only'} {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'} max-sm:absolute max-sm:inset-x-2 max-sm:bottom-full max-sm:mb-1 max-sm:whitespace-normal max-sm:rounded-ui max-sm:border max-sm:border-[var(--border-subtle)] max-sm:bg-[var(--note-page-panel)] max-sm:px-2 max-sm:py-1">{saveMessage}{#if saveFailed}<button type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</button>{/if}</p>
+        <p role="status" aria-live="polite" class="flex items-center gap-2 whitespace-nowrap text-xs {saveMessage ? '' : 'sr-only'} {saveMessageIsError ? 'text-[var(--red)]' : 'text-[var(--text-tertiary)]'} max-sm:absolute max-sm:inset-x-2 max-sm:bottom-full max-sm:mb-1 max-sm:whitespace-normal max-sm:rounded-ui max-sm:border max-sm:border-[var(--border-subtle)] max-sm:bg-[var(--note-page-panel)] max-sm:px-2 max-sm:py-1">{saveMessage}{#if saveFailed}<Button variant="ghost" size="sm" type="button" class="underline underline-offset-2 hover:opacity-70" on:click={saveContent}>{$localizedText.editor.retry}</Button>{/if}</p>
 
         <div class="relative" data-panel-anchor="tags">
           <TooltipIconButton
@@ -2225,12 +2225,12 @@
       {/if}
     </div>
     <div class="mt-8 flex gap-6">
-      <button on:click={() => imageRename = null} class={getModalButtonClass('secondary')}>
+      <Button variant="ghost" size="sm" on:click={() => imageRename = null} class={getModalButtonClass('secondary')}>
         {$localizedText.editor.cancel}
-      </button>
-      <button on:click={saveImageRename} disabled={!attachmentNewName.trim() || Boolean(attachmentProblem)} class={getModalButtonClass('primary', { disabled: !attachmentNewName.trim() || Boolean(attachmentProblem) })}>
+      </Button>
+      <Button variant="ghost" size="sm" on:click={saveImageRename} disabled={!attachmentNewName.trim() || Boolean(attachmentProblem)} class={getModalButtonClass('primary', { disabled: !attachmentNewName.trim() || Boolean(attachmentProblem) })}>
         {$localizedText.editor.renameImage}
-      </button>
+      </Button>
     </div>
   </ModalShell>
 {/if}

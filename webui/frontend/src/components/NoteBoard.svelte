@@ -273,17 +273,17 @@
       on:select={(event) => chooseSort(event.detail.value)}
     >
       <svelte:fragment slot="trigger" let:open let:toggle let:triggerProps>
-        <button
+        <Button variant="ghost" size="sm"
           type="button"
           id="board-sort"
           {...triggerProps}
           aria-label={`${$localizedText.app.board.sortLabel}: ${currentSortLabel}`}
-          class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {open ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
-          on:click|stopPropagation={toggle}
+          class="inline-flex h-7 max-sm:!min-h-0 cursor-pointer items-center gap-1 rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {open ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          on:click={toggle}
         >
           <span class="truncate">{currentSortLabel}</span>
           <ChevronDown size="12" strokeWidth="1.7" class="shrink-0 transition-transform {open ? 'rotate-180' : ''}" aria-hidden="true" />
-        </button>
+        </Button>
       </svelte:fragment>
     </Menu>
     <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
@@ -337,7 +337,7 @@
         {#if showCreateCard && group.id === createGroupId && !query.trim()}
           <!-- An invitation, not a note: a dashed outline that steps forward on hover, so the first slot
                does not weigh like a blank card. -->
-          <button
+          <Button variant="ghost" size="sm"
             type="button"
             class="{mobile ? 'h-36 px-3 py-3' : 'h-48 px-4 py-4 sm:px-5'} group flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-ui border border-dashed border-[var(--border-subtle)] bg-transparent text-center text-[var(--text-tertiary)] transition hover:border-[var(--text-tertiary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_40%,transparent)] hover:text-[var(--text-primary)] focus-visible:border-[var(--text-tertiary)] focus-visible:text-[var(--text-primary)]"
             on:click={createNote}
@@ -346,7 +346,7 @@
             <span class="block text-xs uppercase tracking-[0.16em]">
               {$localizedText.app.homeActions.newNote.replace(/^\+\s*/, '')}
             </span>
-          </button>
+          </Button>
         {/if}
         {#each group.notes as note (note.path)}
           <NoteCard

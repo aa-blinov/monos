@@ -5,6 +5,7 @@
    * on a narrow window, a column beside it on a wide one; both stay in sight while the page scrolls.
    */
   import { createEventDispatcher, tick } from 'svelte';
+  import { Button } from '@monos/ui';
   import { localizedText } from '../lib/strings.js';
 
   /** @type {Array<{ id: string, label: string }>} */
@@ -34,11 +35,11 @@
   class="sticky -top-4 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 pb-2 pt-6 sm:-top-6 sm:pt-8 lg:top-8 lg:mx-0 lg:mb-0 lg:flex-col lg:self-start lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0"
 >
   {#each items as item (item.id)}
-    <button
+    <Button variant="ghost" size="sm"
       type="button"
       aria-current={active === item.id ? 'true' : undefined}
       on:click={() => dispatch('go', item.id)}
       class="shrink-0 rounded-ui px-3 py-1.5 text-left text-xs uppercase tracking-[0.12em] transition {active === item.id ? 'bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] hover:text-[var(--text-primary)]'}"
-    >{item.label}</button>
+    >{item.label}</Button>
   {/each}
 </nav>

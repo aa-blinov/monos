@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import NoteBoard from './NoteBoard.svelte';
   import { localizedText } from '../lib/strings.js';
 
@@ -33,11 +34,11 @@
     <div class="flex h-32 flex-col items-center justify-center gap-3 px-4 text-center" role="status">
       <span class="text-xs uppercase tracking-widest opacity-70">{$localizedText.searchResults.noResults}</span>
       <p class="max-w-md text-sm text-[var(--text-secondary)]">{$localizedText.searchResults.noResultsHint}</p>
-      <button
+      <Button variant="ghost" size="md"
         type="button"
         class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
         on:click={() => dispatch('clear')}
-      >{$localizedText.searchResults.clear}</button>
+      >{$localizedText.searchResults.clear}</Button>
     </div>
   {/if}
 </div>

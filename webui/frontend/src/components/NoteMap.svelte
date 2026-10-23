@@ -6,6 +6,7 @@
    * canvas (thousands of dots), so the search and its list are the way to a note without a pointer.
    */
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { Button } from '@monos/ui';
   import { useLocation } from 'svelte-routing';
   import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force';
   import { Maximize2, Minus, Plus, X } from 'lucide-svelte';
@@ -406,7 +407,7 @@
         <ul class="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-lg shadow-black/10" data-testid="map-results">
           {#each matchList as node (node.path)}
             <li>
-              <button
+              <Button variant="ghost" size="md"
                 type="button"
                 class="flex min-h-9 w-full items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                 data-testid="map-result"
@@ -414,7 +415,7 @@
               >
                 <span class="min-w-0 truncate font-medium text-[var(--text-primary)]">{node.title}</span>
                 <span class="shrink-0 tabular-nums text-[var(--text-tertiary)]">{node.degree}</span>
-              </button>
+              </Button>
             </li>
           {:else}
             <li class="px-2 py-3 text-center text-xs text-[var(--text-tertiary)]">{$localizedText.map.noMatches}</li>
@@ -470,9 +471,9 @@
     {#if focusNode}
       <div class="absolute left-3 top-3 flex max-w-[80%] items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 pl-3 pr-1 text-xs text-[var(--text-secondary)]" data-testid="map-focus">
         <span class="min-w-0 truncate">{$localizedText.map.around(focusNode.title)}</span>
-        <button type="button" class="inline-flex h-7 shrink-0 items-center gap-1 rounded-ui px-2 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.map.showAll} on:click={clearFocus}>
+        <Button variant="ghost" size="sm" type="button" class="inline-flex h-7 shrink-0 items-center gap-1 rounded-ui px-2 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.map.showAll} on:click={clearFocus}>
           <X size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.showAll}
-        </button>
+        </Button>
       </div>
     {/if}
 
@@ -490,7 +491,7 @@
     {:else if status === 'error'}
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center" role="alert">
         <p class="text-sm text-[var(--text-secondary)]">{$localizedText.map.loadFailed}</p>
-        <button type="button" class="inline-flex min-h-9 items-center text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] hover:opacity-60" on:click={load}>{$localizedText.map.retry}</button>
+        <Button variant="ghost" size="md" type="button" class="inline-flex min-h-9 items-center text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] hover:opacity-60" on:click={load}>{$localizedText.map.retry}</Button>
       </div>
     {/if}
   </div>

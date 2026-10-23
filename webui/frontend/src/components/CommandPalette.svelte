@@ -1,5 +1,6 @@
 <script>
   import { terminalBridge } from '../lib/terminal.js';
+  import { Button } from '@monos/ui';
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { customNoteTemplates, getTemplateCatalog, hiddenLibraryTemplateIds } from '../lib/template-library.js';
   import { loadRecentNotesRequest, loadTreeData } from '../lib/sidebar-api.js';
@@ -413,7 +414,7 @@
 
 {#if open}
   <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/20 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
-    <button class="absolute inset-0 cursor-default" tabindex="-1" aria-label={$localizedText.commandPalette.close} on:click={close}></button>
+    <Button variant="ghost" size="sm" class="absolute inset-0 cursor-default" tabindex="-1" aria-label={$localizedText.commandPalette.close} on:click={close}></Button>
 
     <!-- Esc must work wherever focus is inside the dialog (a result, the backdrop), not only in the field. -->
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -469,7 +470,7 @@
                 {$localizedText.commandPalette.sections[item.section]}
               </div>
             {/if}
-            <button
+            <Button variant="ghost" size="sm"
               id="command-palette-option-{index}"
               tabindex="-1"
               class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition {activeIndex === index ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[color-mix(in_srgb,var(--bg-secondary)_70%,transparent)]'}"
@@ -485,7 +486,7 @@
               {#if item.shortcut}
                 <span class="rounded-ui shrink-0 border border-[var(--border-subtle)] px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{item.shortcut}</span>
               {/if}
-            </button>
+            </Button>
           {/each}
           {#if isLoading}
             <div class="px-5 py-3 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{$localizedText.commandPalette.loading}</div>

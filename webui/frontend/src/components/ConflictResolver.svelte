@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import ModalShell from './ModalShell.svelte';
   import { localizedText } from '../lib/strings.js';
   import { ChevronLeft, ChevronRight, FileCode } from 'lucide-svelte';
@@ -54,13 +55,13 @@
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2.5 bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] border-b border-[var(--border-subtle)]">
           <span class="text-xs font-bold uppercase tracking-widest text-[var(--green)]">{oursLabel}</span>
-          <button
+          <Button variant="ghost" size="sm"
             on:click={chooseOurs}
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)] hover:bg-[color-mix(in_srgb,var(--green)_20%,transparent)] transition"
           >
             <ChevronLeft size="14" strokeWidth="1.7" />
             {$localizedText.settings.keepLocal}
-          </button>
+          </Button>
         </div>
         {#if isImage && current.oursExists !== false}
           <img src={versionUrl(current, 'ours')} alt={oursLabel} class="block max-h-80 w-full object-contain p-4" data-testid="conflict-image-ours" />
@@ -72,13 +73,13 @@
       <div class="rounded-ui border border-[var(--border-subtle)] overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2.5 bg-[color-mix(in_srgb,var(--bg-secondary)_50%,transparent)] border-b border-[var(--border-subtle)]">
           <span class="text-xs font-bold uppercase tracking-widest text-[var(--blue)]">{theirsLabel}</span>
-          <button
+          <Button variant="ghost" size="sm"
             on:click={chooseTheirs}
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-ui text-xs font-medium bg-[color-mix(in_srgb,var(--blue)_10%,transparent)] text-[var(--blue)] hover:bg-[color-mix(in_srgb,var(--blue)_20%,transparent)] transition"
           >
             {$localizedText.settings.keepRemote}
             <ChevronRight size="14" strokeWidth="1.7" />
-          </button>
+          </Button>
         </div>
         {#if isImage && current.theirsExists !== false}
           <img src={versionUrl(current, 'theirs')} alt={theirsLabel} class="block max-h-80 w-full object-contain p-4" data-testid="conflict-image-theirs" />

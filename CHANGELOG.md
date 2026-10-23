@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.30 — 2026-10-22
+
+### Changed
+
+- All remaining native `<button>` elements in app components are now kit
+  controls; only the outline drag handle stays a native button because it owns
+  pointer capture.
+- Note map, command palette, sidebar header/footer, favorites, trash, conflict
+  views, info/confirm modals, agent settings and the editor's wiki-link bar are
+  included.
+- Site screenshots were taken again.
+
 ## 1.16.29 — 2026-10-22
 
 ### Changed
