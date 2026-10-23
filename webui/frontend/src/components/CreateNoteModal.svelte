@@ -4,8 +4,7 @@
   import { localeDate } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
-  import { Button } from '@monos/ui';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { Button, Card, FieldControl } from '@monos/ui';
 
   export let open = false;
   export let category = '';
@@ -20,11 +19,12 @@
   // Set only when the backend refused the name (409): the note that already has it.
   let duplicatePath = '';
   let titleInput;
-
-  // The title field takes the caret when the dialog opens. An action rather than `autofocus`: the
-  // attribute is ignored when the dialog is added to an already loaded page.
-  function focusOnOpen(node) {
-    node.focus();
+  $: if (titleInput) {
+    titleInput.onkeydown = (event) => {
+      if (event.key === 'Enter' && !blockedName) submitCreateNote();
+      if (event.key === 'Escape') onClose();
+    };
+    if (open) titleInput.focus();
   }
 
   $: if (open) {
@@ -162,48 +162,51 @@
           {$localizedText.sidebar.modals.createStart}
         </div>
         <div class="grid gap-2 sm:grid-cols-3">
-          <Button variant="ghost" size="sm"
+          <Card
+            as="button"
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
+            interactive
+            padding="none"
+            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--text-primary)] bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] p-4 text-left transition hover:border-[var(--text-primary)]"
             on:click={() => titleInput?.focus()}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.blankNote}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.blankNoteHint}</span>
-          </Button>
-          <Button variant="ghost" size="sm"
+          </Card>
+          <Card
+            as="button"
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
+            interactive
+            padding="none"
+            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)] disabled:opacity-40"
             on:click={createToday}
             disabled={isCreating}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.todayNote}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.todayNoteHint}</span>
-          </Button>
-          <Button variant="ghost" size="sm"
+          </Card>
+          <Card
+            as="button"
             type="button"
-            class="min-h-24 flex flex-col justify-start rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
+            interactive
+            padding="none"
+            class="w-full min-h-24 flex-col items-start justify-start gap-0 p-4 normal-case rounded-ui border border-[var(--border-subtle)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--bg-secondary)_45%,transparent)]"
             on:click={pickTemplate}
           >
             <span class="block text-sm font-semibold">{$localizedText.sidebar.modals.fromTemplate}</span>
             <span class="mt-2 block text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.fromTemplateHint}</span>
-          </Button>
+          </Card>
         </div>
       </section>
       <div>
         <label for="create-note-title" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.title}</label>
-        <input
+        <FieldControl
           id="create-note-title"
-          bind:this={titleInput}
+          bind:inputEl={titleInput}
           type="text"
           bind:value={newNoteTitle}
           on:input={() => { createError = ''; duplicatePath = ''; }}
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
-          class={formFieldClass()}
-          on:keydown={(e) => {
-            if (e.key === 'Enter' && !blockedName) submitCreateNote();
-            if (e.key === 'Escape') onClose();
-          }}
-          use:focusOnOpen
         />
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
         {#if titleProblem && titleProblem !== 'empty'}

@@ -3,7 +3,7 @@
   import { marked } from 'marked';
   import FileTree from './FileTree.svelte';
   import SearchField from './SearchField.svelte';
-  import { Button, FieldControl, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
+  import { Button, Card, FieldControl, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -1588,9 +1588,12 @@
               </div>
               <div class="grid gap-1.5">
                 {#each group.templates as template}
-                  <Button
-                    variant={selectedTemplateId === template.id ? 'outline' : 'ghost'}
-                    size="md"
+                  <Card
+                    as="button"
+                    type="button"
+                    interactive
+                    selected={selectedTemplateId === template.id}
+                    padding="none"
                     on:click={() => selectTemplate(template)}
                     class="w-full flex-col items-start justify-start gap-0 p-2.5 normal-case"
                   >
@@ -1605,7 +1608,7 @@
                         <span class="rounded-ui bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
-                  </Button>
+                  </Card>
                 {/each}
               </div>
             </section>

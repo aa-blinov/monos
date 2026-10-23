@@ -214,6 +214,10 @@
   let findTotal = 0;
   let findAt = 0;
   let findInput;
+  $: if (findInput) {
+    findInput.oninput = (event) => { findTerm = event.target.value; applyFindTerm(); };
+    findInput.onkeydown = findKeydown;
+  }
   let findNotePath = '';
 
   function updateFindState() {
@@ -966,11 +970,9 @@
     <div class="flex items-center gap-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))] px-4 py-1.5 lg:py-2" data-testid="note-find">
       <div class="relative w-64 max-w-full">
         <Search size={14} strokeWidth="1.7" class={SEARCH_ICON_COMPACT_CLASS} aria-hidden="true" />
-        <input
-          bind:this={findInput}
-          value={findTerm}
-          on:input={(event) => { findTerm = event.currentTarget.value; applyFindTerm(); }}
-          on:keydown={findKeydown}
+        <FieldControl
+          bind:inputEl={findInput}
+          bind:value={findTerm}
           placeholder={$localizedText.richEditor.findPlaceholder}
           aria-label={$localizedText.richEditor.find}
           class="h-8 {SEARCH_INPUT_COMPACT_CLASS} pr-2"

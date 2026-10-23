@@ -14,7 +14,6 @@
   import { resolveRegion } from '../lib/conflict-markers.js';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
   import { splitFrontmatter } from '../lib/frontmatter.js';
-  import { formFieldClass } from '../lib/form-field.js';
   import { localizedText } from '../lib/strings.js';
 
   export let filePath = '';
@@ -77,13 +76,13 @@
     <form class="space-y-3" on:submit|preventDefault={openVersions}>
       <label for="locked-conflict-pass" class="block text-xs text-[var(--text-secondary)]">{text.lockedConflictPassLabel}</label>
       <div class="flex flex-wrap items-center gap-3">
-        <input
+        <FieldControl
           id="locked-conflict-pass"
           type="password"
           autocomplete="off"
           bind:value={passphrase}
           disabled={opening || busy}
-          class="min-w-0 flex-1 {formFieldClass()}"
+          class="min-w-0 flex-1"
         />
         <Button type="submit" variant="primary" size="sm" data-testid="locked-conflict-open" disabled={!passphrase || opening || busy}>
           {text.lockedConflictOpen}

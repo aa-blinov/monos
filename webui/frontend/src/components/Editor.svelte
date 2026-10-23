@@ -13,7 +13,6 @@
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
-  import { formFieldClass } from '../lib/form-field.js';
   import { announceNoteLinksUpdated, FLUSH_OPEN_NOTE_EVENT, NOTE_LINKS_UPDATED_EVENT, NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import { mergeThreeWay } from '../lib/three-way-merge.js';
   import { markPinned, pinEvents } from '../lib/sidebar-pinned.js';
@@ -328,6 +327,13 @@
   // The calendar is the system's own date picker; the text field stays for any other date.
   const DUE_QUICK_DAYS = [0, 1, 7];
   let dueDateInput;
+  let dueTextInput;
+  $: if (dueTextInput) {
+    dueTextInput.onfocus = () => { dueFocused = true; };
+    dueTextInput.onblur = () => { dueFocused = false; commitDueText(); };
+    dueTextInput.onkeydown = (event) => { if (event.key === 'Enter') { event.preventDefault(); commitDueText(); } };
+    dueTextInput.oninput = () => { dueInvalid = false; };
+  }
   function isoDayFromToday(days) {
     const date = new Date();
     date.setDate(date.getDate() + days);
@@ -1821,7 +1827,7 @@
               <p class={panelLabelClass}>{$localizedText.editor.propertyDue}</p>
               <div class="flex items-center gap-2">
                 <div class="relative flex items-center">
-                  <input
+                  <FieldControl
                     type="text"
                     inputmode="numeric"
                     data-testid="property-due"
@@ -1829,11 +1835,8 @@
                     aria-invalid={dueInvalid}
                     placeholder={$localizedText.editor.dueFormat}
                     bind:value={dueText}
-                    on:focus={() => dueFocused = true}
-                    on:blur={() => { dueFocused = false; commitDueText(); }}
-                    on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitDueText(); } }}
-                    on:input={() => dueInvalid = false}
-                    class="h-8 w-36 rounded-ui border bg-[var(--bg-primary)] px-2 pr-7 text-xs outline-none {dueInvalid ? 'border-[var(--red)] text-[var(--red)]' : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--text-secondary)]'}"
+                    bind:inputEl={dueTextInput}
+                    class="h-8 w-36 pr-7 text-xs {dueInvalid ? '!border-[var(--red)] text-[var(--red)]' : ''}"
                   />
                   {#if dueText}
                     <IconButton
@@ -1881,14 +1884,15 @@
                     size="sm"
                     on:click={openDueCalendar}
                   ><CalendarDays size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.editor.dueCalendar}</Button>
-                  <input
+                  <FieldControl
+                    bare
                     type="date"
-                    bind:this={dueDateInput}
+                    bind:inputEl={dueDateInput}
                     value={dueDate || ''}
                     tabindex="-1"
                     aria-hidden="true"
                     class="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-                    on:change={(event) => setDueIso(event.currentTarget.value)}
+                    on:change={(event) => setDueIso((event.detail ?? event).target.value)}
                   />
                 </span>
               </div>
@@ -2216,11 +2220,10 @@
       <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
         {$localizedText.editor.renameImageHint}
       </p>
-      <input
+      <FieldControl
         type="text"
         bind:value={attachmentNewName}
-        class={formFieldClass()}
-        on:keydown={(e) => { if (e.key === 'Enter') saveImageRename(); if (e.key === 'Escape') imageRename = null; }}
+        on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter') saveImageRename(); if (key === 'Escape') imageRename = null; }}
       />
       {#if attachmentProblem && attachmentProblem !== 'empty'}
         <p role="alert" class="text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(attachmentProblem)}</p>

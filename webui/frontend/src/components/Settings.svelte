@@ -17,7 +17,6 @@
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection, tabsToSpaces, lineHeight, contentWidth } from '../stores.js';
   import ConnectStatus from './ConnectStatus.svelte';
   import SettingsNav from './SettingsNav.svelte';
-  import { formFieldClass } from '../lib/form-field.js';
   import { exportNotesArchive, importNotesArchive } from '../lib/backup.js';
     import { printTreeToPdf } from '../lib/print.js';
   import { fetchClipperToken } from '../lib/clipper.js';
@@ -1226,13 +1225,13 @@
               <div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanUrlsTitle}</div>
               {#each lan.urls as url (url)}
                 <div class="flex gap-2">
-                  <input
+                  <FieldControl
                     type="text"
                     readonly
                     value={url}
                     aria-label={url}
-                    on:focus={(event) => event.currentTarget.select()}
-                    class={formFieldClass({ extraClass: 'font-mono text-xs' })}
+                    on:focus={(event) => event.detail?.target?.select()}
+                    class="font-mono text-xs"
                   />
                   <Button variant="ghost" size="md" on:click={() => copyLanUrl(url)} class="shrink-0">{$localizedText.settings.lanCopy}</Button>
                   {#if lan.urls.length > 1}
@@ -1329,15 +1328,15 @@
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.publishTitle}</h2>
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.publishHint}</p>
         <form class="space-y-2" on:submit|preventDefault={publishNotes}>
-          <label class="block space-y-1">
+          <label for="publish-folder" class="block space-y-1">
             <span class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.publishFolder}</span>
-            <input
+            <FieldControl
+              id="publish-folder"
               type="text"
               bind:value={publishFolder}
               placeholder="/Users/you/Sites"
               aria-describedby="publish-folder-hint"
               data-testid="publish-folder"
-              class={formFieldClass()}
             />
           </label>
           <p id="publish-folder-hint" class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.publishFolderHint}</p>

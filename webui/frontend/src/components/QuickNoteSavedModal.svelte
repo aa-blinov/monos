@@ -1,8 +1,7 @@
 <script>
   import { createEventDispatcher, tick } from 'svelte';
   import ModalShell from './ModalShell.svelte';
-  import { Button } from '@monos/ui';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { Button, FieldControl } from '@monos/ui';
   import { resolveQuickNoteRename } from '../lib/quick-note-rename.js';
   import { localizedText } from '../lib/strings.js';
   import { displayNoteName } from '../lib/note-format.js';
@@ -12,6 +11,7 @@
 
   let editedName = '';
   let inputEl;
+  $: if (inputEl) inputEl.onkeydown = handleKeydown;
   let lastNotePath = null;
 
   // Синхронизируем editedName с note, но только когда note реально меняется
@@ -61,13 +61,11 @@
       <label for="quick-note-name" class="block text-[length:var(--text-whisper)] uppercase tracking-[0.18em] font-bold text-[var(--text-tertiary)]">
         {$localizedText.sidebar.modals.title}
       </label>
-      <input
-        bind:this={inputEl}
+      <FieldControl
+        bind:inputEl={inputEl}
         bind:value={editedName}
         id="quick-note-name"
         type="text"
-        class={formFieldClass()}
-        on:keydown={handleKeydown}
         data-testid="quick-note-name-input"
       />
       <div class="truncate pt-1 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
