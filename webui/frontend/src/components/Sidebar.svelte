@@ -67,7 +67,6 @@
   } from '../lib/attachments.js';
   import { editorState, activeTheme, templateRequest, pinnedCollapsed, propertiesChanged, noteSaveSignal } from '../stores.js';
   import { DEFAULT_ICON_COLOR, getNoteColorOptions } from '../lib/note-colors.js';
-  import { getModalButtonClass } from '../lib/modal-button.js';
   import { extractTemplateMetadata, normalizeEmptyListItems } from '../lib/template-preview.js';
   import { localeStamp } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
@@ -1512,20 +1511,8 @@
         <p class="text-sm text-[var(--red)]">{bulkError}</p>
       {/if}
       <div class="flex gap-2">
-        <button
-          type="button"
-          data-testid="bulk-tag-apply"
-          disabled={bulkBusy || !bulkTagValue.trim()}
-          class={getModalButtonClass('primary', { extraClass: 'flex-1 py-2' })}
-          on:click={applyBulkTag}
-        >
-          {$localizedText.sidebar.context.addTag}
-        </button>
-        <button
-          type="button"
-          class={getModalButtonClass('secondary', { extraClass: 'flex-1 py-2' })}
-          on:click={() => showBulkTagPrompt = false}
-        >{$localizedText.editor.cancel}</button>
+        <Button variant="primary" size="md" data-testid="bulk-tag-apply" disabled={bulkBusy || !bulkTagValue.trim()} class="flex-1" on:click={applyBulkTag}>{$localizedText.sidebar.context.addTag}</Button>
+        <Button variant="secondary" size="md" class="flex-1" on:click={() => showBulkTagPrompt = false}>{$localizedText.editor.cancel}</Button>
       </div>
     </div>
   </ModalShell>
@@ -1569,14 +1556,10 @@
         {/if}
       </div>
       <div class="flex gap-6 mt-12">
-        <button on:click={() => showCreateFolderModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
-        <button
-          on:click={createFolder}
-          disabled={isCreating || !newFolderNameInput.trim() || Boolean(folderNameProblem)}
-          class={getModalButtonClass('primary', { disabled: isCreating || !newFolderNameInput.trim() || Boolean(folderNameProblem) })}
-        >
+        <Button variant="secondary" size="md" class="flex-1" on:click={() => showCreateFolderModal = false}>{$localizedText.sidebar.modals.cancel}</Button>
+        <Button variant="primary" size="md" class="flex-1" on:click={createFolder} disabled={isCreating || !newFolderNameInput.trim() || Boolean(folderNameProblem)}>
           {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
-        </button>
+        </Button>
       </div>
   </ModalShell>
 {/if}
@@ -1607,10 +1590,11 @@
               </div>
               <div class="grid gap-1.5">
                 {#each group.templates as template}
-                  <button
-                    type="button"
+                  <Button
+                    variant={selectedTemplateId === template.id ? 'outline' : 'ghost'}
+                    size="md"
                     on:click={() => selectTemplate(template)}
-                    class="w-full rounded-ui border p-2.5 text-left transition {selectedTemplateId === template.id ? 'border-[var(--text-primary)] bg-[var(--bg-secondary)]' : 'border-[var(--border-subtle)] hover:border-[color-mix(in_srgb,var(--text-secondary)_50%,transparent)]'}"
+                    class="w-full flex-col items-start justify-start gap-0 p-2.5 normal-case"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
@@ -1623,7 +1607,7 @@
                         <span class="rounded-ui bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)] px-1.5 py-0.5 text-[length:var(--text-whisper)] uppercase tracking-wider text-[var(--text-tertiary)]">#{tag}</span>
                       {/each}
                     </div>
-                  </button>
+                  </Button>
                 {/each}
               </div>
             </section>
@@ -1701,22 +1685,24 @@
             <p class="text-sm leading-relaxed text-[var(--red)]">{templateError}</p>
             {#if templateDuplicatePath}
               <div class="mt-3 flex flex-wrap gap-4">
-                <button type="button" class={getModalButtonClass('secondary')} on:click={openExistingTemplateNote}>{$localizedText.sidebar.modals.openExisting}</button>
-                <button type="button" class={getModalButtonClass('primary')} disabled={isCreating} on:click={createTemplateNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${templateTitle.trim()} 2`)}</button>
+                <Button variant="secondary" size="md" on:click={openExistingTemplateNote}>{$localizedText.sidebar.modals.openExisting}</Button>
+                <Button variant="primary" size="md" disabled={isCreating} on:click={createTemplateNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${templateTitle.trim()} 2`)}</Button>
               </div>
             {/if}
           </div>
         {/if}
         <div class="mt-5 flex gap-4">
-          <button on:click={() => showTemplatesModal = false} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
-          <button
+          <Button variant="secondary" size="md" class="flex-1" on:click={() => showTemplatesModal = false}>{$localizedText.sidebar.modals.cancel}</Button>
+          <Button
+            variant="primary"
+            size="md"
+            class="flex-1"
             on:click={createNoteFromTemplate}
             style="white-space: nowrap;"
             disabled={isCreating || !templateTitle.trim() || Boolean(templateTitleProblem)}
-            class={getModalButtonClass('primary', { disabled: isCreating || !templateTitle.trim() || Boolean(templateTitleProblem) })}
           >
             {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.useTemplate}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

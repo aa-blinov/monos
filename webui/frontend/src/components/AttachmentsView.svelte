@@ -371,7 +371,7 @@
       {#if filtered.length === 0}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.noMatches}</p>
       {:else}
-        <button type="button" data-testid="attachments-skip" on:click={skipToEnd} class="sr-only focus:not-sr-only focus:min-h-9 focus:border-0 focus:bg-transparent focus:p-0 focus:text-xs focus:uppercase focus:tracking-widest focus:text-[var(--text-primary)]">{$localizedText.attachments.skipToEnd}</button>
+        <Button variant="ghost" size="sm" data-testid="attachments-skip" on:click={skipToEnd} class="sr-only focus:not-sr-only">{$localizedText.attachments.skipToEnd}</Button>
         <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="attachments-grid">
           {#each shown as item (item.path)}
             <li class="rounded-ui relative flex min-w-0 flex-col overflow-hidden border {selected.has(item.path) ? 'border-[var(--text-primary)]' : 'border-[var(--border-subtle)]'}" data-testid="attachment-card">
@@ -414,10 +414,10 @@
                 {:else}
                   <div class="space-y-0.5" data-testid="attachment-notes">
                     {#each (expanded.has(item.path) ? item.usedBy : item.usedBy.slice(0, 2)) as note (note.path)}
-                      <button type="button" class="block min-h-6 w-full truncate border-0 bg-transparent p-0 text-left text-xs text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] max-sm:min-h-10" title={note.path} on:click={() => openNote(note)}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</button>
+                      <Button variant="quiet" size="sm" class="w-full justify-start truncate px-0 text-left" title={note.path} on:click={() => openNote(note)}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</Button>
                     {/each}
                     {#if item.usedBy.length > 2}
-                      <button type="button" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="block min-h-6 border-0 bg-transparent p-0 text-left text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</button>
+                      <Button variant="quiet" size="sm" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="px-0" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</Button>
                     {/if}
                   </div>
                 {/if}
@@ -427,7 +427,7 @@
         </ul>
         {#if shown.length < filtered.length}
           <div bind:this={sentinel} class="py-4 text-center">
-            <button type="button" data-testid="attachments-more" on:click={() => { limit += PAGE; }} class="min-h-9 border-0 bg-transparent p-0 text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">{$localizedText.attachments.loadMore(shown.length, filtered.length)}</button>
+            <Button variant="ghost" size="md" data-testid="attachments-more" on:click={() => { limit += PAGE; }}>{$localizedText.attachments.loadMore(shown.length, filtered.length)}</Button>
           </div>
         {/if}
       {/if}
@@ -442,15 +442,15 @@
       <ul class="max-h-[50vh] overflow-y-auto" role="listbox" aria-label={$localizedText.attachments.folderLabel}>
         {#if !folderQuery.trim()}
           <li role="option" aria-selected={folder === ''}>
-            <button type="button" data-testid="attachments-folder-all" on:click={() => chooseFolder('')} class="block min-h-9 w-full border-0 bg-transparent p-0 text-left text-sm {folder === '' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'} transition hover:text-[var(--text-primary)] max-sm:min-h-11">{$localizedText.attachments.folderAll}</button>
+            <Button variant="ghost" size="sm" data-testid="attachments-folder-all" class="w-full justify-start normal-case {folder === '' ? 'font-bold' : ''}" on:click={() => chooseFolder('')}>{$localizedText.attachments.folderAll}</Button>
           </li>
         {/if}
         {#each folderChoices as entry (entry.folder)}
           <li role="option" aria-selected={folder === entry.folder}>
-            <button type="button" data-testid="attachments-folder-option" on:click={() => chooseFolder(entry.folder)} class="flex min-h-9 w-full items-baseline justify-between gap-3 border-0 bg-transparent p-0 text-left text-sm transition hover:text-[var(--text-primary)] max-sm:min-h-11 {folder === entry.folder ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}" style="padding-left: {folderQuery.trim() ? 0 : entry.depth * 16}px" title={entry.folder}>
+            <Button variant="ghost" size="sm" data-testid="attachments-folder-option" class="w-full justify-between gap-3 normal-case {folder === entry.folder ? 'font-bold' : ''}" style="padding-left: {folderQuery.trim() ? 0 : entry.depth * 16}px" title={entry.folder} on:click={() => chooseFolder(entry.folder)}>
               <span class="min-w-0 truncate">{folderQuery.trim() ? entry.folder : entry.label}</span>
               <span class="shrink-0 text-xs text-[var(--text-tertiary)]">{entry.count}</span>
-            </button>
+            </Button>
           </li>
         {:else}
           <li class="py-2 text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.folderNone}</li>
@@ -523,9 +523,9 @@
       <div class="relative">
         <div class="flex max-h-[55vh] justify-center bg-[var(--bg-secondary)] {viewing.kind === 'pdf' || (viewerAspect < 0.5 && !zoomed) ? 'items-start overflow-y-auto' : zoomed ? 'items-center overflow-auto' : 'items-center overflow-hidden'}" data-testid="attachment-stage">
           {#if viewing.kind === 'image' && !broken.has(viewing.path)}
-            <button type="button" aria-label={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} title={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} data-testid="attachment-zoom" on:click={() => { zoomed = !zoomed; }} class="m-0 border-0 bg-transparent p-0 {zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}">
+            <IconButton bare tooltipText="" label={zoomed ? $localizedText.attachments.zoomOut : $localizedText.attachments.zoomIn} data-testid="attachment-zoom" class="m-0 {zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}" on:click={() => { zoomed = !zoomed; }}>
               <img src={rawUrl(viewing)} alt={viewing.name} on:load={(event) => { viewerAspect = event.currentTarget.naturalWidth / (event.currentTarget.naturalHeight || 1); }} on:error={() => { broken = new Set([...broken, viewing.path]); }} class={zoomed ? 'max-w-none' : viewerAspect < 0.5 ? 'h-auto w-full' : 'max-h-[55vh] max-w-full object-contain'} />
-            </button>
+            </IconButton>
           {:else if viewing.kind === 'image'}
             <p class="p-10 text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.brokenImage}</p>
           {:else if !broken.has(viewing.path)}
@@ -561,9 +561,9 @@
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs uppercase tracking-widest">
         <a href={rawUrl(viewing)} target="_blank" rel="noopener" class="inline-flex min-h-9 items-center font-bold text-[var(--text-primary)] transition hover:opacity-60">{$localizedText.attachments.open}</a>
-        <button type="button" data-testid="attachment-copy" on:click={() => copyEmbed(viewing)} class="min-h-9 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-60">{copied ? $localizedText.attachments.copied : $localizedText.attachments.copyEmbed}</button>
+        <Button variant="ghost" size="md" data-testid="attachment-copy" on:click={() => copyEmbed(viewing)}>{copied ? $localizedText.attachments.copied : $localizedText.attachments.copyEmbed}</Button>
         {#if isUnused(viewing)}
-          <button type="button" data-testid="attachment-trash" disabled={busy} on:click={() => trash([viewing.path])} class="ml-auto min-h-9 border-0 bg-transparent p-0 font-bold uppercase tracking-widest text-[var(--red)] transition hover:opacity-60 disabled:opacity-30">{$localizedText.attachments.moveToTrash(1)}</button>
+          <Button variant="danger" size="md" data-testid="attachment-trash" disabled={busy} on:click={() => trash([viewing.path])} class="ml-auto">{$localizedText.attachments.moveToTrash(1)}</Button>
         {/if}
       </div>
     </div>
