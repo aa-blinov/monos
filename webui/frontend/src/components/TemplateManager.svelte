@@ -16,7 +16,7 @@
     showLibraryTemplate,
   } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button } from '@monos/ui';
   import { formFieldClass } from '../lib/form-field.js';
   import { templateRequest } from '../stores.js';
 
@@ -141,14 +141,10 @@
           <div>
             <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">{$localizedText.templates.myTemplates}</h2>
           </div>
-          <button
-            type="button"
-            class="inline-flex h-9 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-primary)] transition hover:opacity-60"
-            on:click={openNewTemplate}
-          >
+          <Button variant="ghost" size="md" on:click={openNewTemplate}>
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
             <span>{$localizedText.templates.newTemplate}</span>
-          </button>
+          </Button>
         </div>
 
         {#if filteredCustomTemplates.length === 0}
@@ -181,13 +177,7 @@
                   {/each}
                 </div>
                 <div class="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    class="inline-flex h-8 items-center whitespace-nowrap text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60"
-                    on:click={() => templateRequest.set(template.id)}
-                  >
-                    {$localizedText.templates.createNote}
-                  </button>
+                  <Button variant="ghost" size="sm" on:click={() => templateRequest.set(template.id)}>{$localizedText.templates.createNote}</Button>
                 </div>
               </article>
             {/each}
@@ -223,11 +213,7 @@
                       {/each}
                     </div>
                     <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        class="inline-flex h-8 mr-auto shrink-0 items-center gap-1.5 rounded-ui px-2 text-xs uppercase tracking-[0.12em] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-                        on:click={() => toggleLibraryTemplate(template)}
-                      >
+                      <Button variant="ghost" size="sm" on:click={() => toggleLibraryTemplate(template)} class="mr-auto">
                         {#if template.hidden}
                           <EyeOff size="14" strokeWidth="1.7" aria-hidden="true" />
                           <span>{$localizedText.templates.show}</span>
@@ -235,15 +221,9 @@
                           <Eye size="14" strokeWidth="1.7" aria-hidden="true" />
                           <span>{$localizedText.templates.hide}</span>
                         {/if}
-                      </button>
+                      </Button>
                       {#if !template.hidden}
-                        <button
-                          type="button"
-                          class="inline-flex h-8 items-center whitespace-nowrap text-xs uppercase tracking-[0.12em] text-[var(--text-primary)] transition hover:opacity-60"
-                          on:click={() => templateRequest.set(template.id)}
-                        >
-                          {$localizedText.templates.createNote}
-                        </button>
+                        <Button variant="ghost" size="sm" on:click={() => templateRequest.set(template.id)}>{$localizedText.templates.createNote}</Button>
                       {/if}
                     </div>
                   </article>
@@ -294,12 +274,12 @@
     </div>
 
     <div class="mt-6 flex shrink-0 gap-4">
-      <button type="button" on:click={closeForm} class={getModalButtonClass('secondary')}>
+      <Button variant="secondary" size="md" on:click={closeForm}>
         {$localizedText.sidebar.modals.cancel}
-      </button>
-      <button type="button" on:click={submitTemplate} disabled={!form.title.trim()} title={form.title.trim() ? undefined : $localizedText.templates.createTemplateHint} class={getModalButtonClass('primary', { disabled: !form.title.trim() })}>
+      </Button>
+      <Button variant="primary" size="md" on:click={submitTemplate} disabled={!form.title.trim()} title={form.title.trim() ? undefined : $localizedText.templates.createTemplateHint}>
         {form.id ? $localizedText.templates.saveChanges : $localizedText.templates.createTemplate}
-      </button>
+      </Button>
     </div>
   </ModalShell>
 {/if}

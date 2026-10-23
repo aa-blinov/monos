@@ -19,6 +19,7 @@
    * takes "both".
    */
   import { createEventDispatcher } from 'svelte';
+  import { Button } from '@monos/ui';
   import { splitByConflicts } from '../lib/conflict-markers.js';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
   import { locale, localizedText } from '../lib/strings.js';
@@ -145,22 +146,8 @@
       <p class="text-xs leading-relaxed text-[var(--text-secondary)]">
         {$localizedText.editor.conflictResolveHint}
       </p>
-      <button
-        type="button"
-        data-testid="conflict-whole-ours"
-        on:click={() => keepWhole('ours')}
-        class="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)] underline decoration-[var(--border-strong,var(--border-subtle))] decoration-1 underline-offset-4 transition hover:decoration-current"
-      >
-        {oursName}
-      </button>
-      <button
-        type="button"
-        data-testid="conflict-whole-theirs"
-        on:click={() => keepWhole('theirs')}
-        class="text-xs font-bold uppercase tracking-widest text-[var(--blue)] underline decoration-[color-mix(in_srgb,var(--blue)_40%,transparent)] decoration-1 underline-offset-4 transition hover:decoration-current"
-      >
-        {theirsName}
-      </button>
+      <Button variant="quiet" size="sm" data-testid="conflict-whole-ours" on:click={() => keepWhole('ours')} class="text-ink underline decoration-line underline-offset-4">{oursName}</Button>
+      <Button variant="quiet" size="sm" data-testid="conflict-whole-theirs" on:click={() => keepWhole('theirs')} class="text-[var(--blue)] underline decoration-[color-mix(in_srgb,var(--blue)_40%,transparent)] underline-offset-4">{theirsName}</Button>
       <p class="basis-full text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.editor.conflictWholeKept}</p>
     </div>
   {/if}
@@ -175,41 +162,45 @@
             {segment.property ? $localizedText.editor.conflictPropertiesLabel : $localizedText.editor.conflictRegionLabel}
           </p>
           <div class="ml-auto flex flex-wrap items-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant={choices[segment.conflictNo] === 'ours' ? 'outline' : 'ghost'}
+              size="sm"
               aria-pressed={choices[segment.conflictNo] === 'ours'}
               on:click={() => choose(segment.conflictNo, 'ours')}
-              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'ours' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'ours' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
-            >
-              {$localizedText.editor.conflictKeepSide(oursName)}
-            </button>
-            <button
-              type="button"
+              class="normal-case"
+              >
+                {$localizedText.editor.conflictKeepSide(oursName)}
+              </Button>
+            <Button
+              variant={choices[segment.conflictNo] === 'theirs' ? 'outline' : 'ghost'}
+              size="sm"
               aria-pressed={choices[segment.conflictNo] === 'theirs'}
               on:click={() => choose(segment.conflictNo, 'theirs')}
-              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'theirs' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'theirs' ? 'font-bold text-[var(--blue)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
-            >
-              {$localizedText.editor.conflictKeepSide(theirsName)}
-            </button>
+              class="normal-case"
+              >
+                {$localizedText.editor.conflictKeepSide(theirsName)}
+              </Button>
             {#if segment.canKeepBoth}
-            <button
-              type="button"
+            <Button
+              variant={choices[segment.conflictNo] === 'both' ? 'outline' : 'ghost'}
+              size="sm"
               aria-pressed={choices[segment.conflictNo] === 'both'}
               on:click={() => choose(segment.conflictNo, 'both')}
-              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'both' ? 'bg-[var(--bg-secondary)] ' : ''}{choices[segment.conflictNo] === 'both' ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
-            >
-              {$localizedText.editor.conflictKeepBoth}
-            </button>
+              class="normal-case"
+              >
+                {$localizedText.editor.conflictKeepBoth}
+              </Button>
             {/if}
             {#if !segment.property}
-            <button
-              type="button"
+            <Button
+              variant={choices[segment.conflictNo] === 'custom' ? 'outline' : 'ghost'}
+              size="sm"
               aria-pressed={choices[segment.conflictNo] === 'custom'}
               on:click={() => chooseCustom(segment)}
-              class="rounded-ui px-2 py-1 text-[length:var(--text-whisper)] uppercase tracking-[0.14em] transition {choices[segment.conflictNo] === 'custom' ? 'bg-[var(--bg-secondary)] font-bold text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}"
-            >
-              {$localizedText.editor.conflictWriteOwn}
-            </button>
+              class="normal-case"
+              >
+                {$localizedText.editor.conflictWriteOwn}
+              </Button>
             {/if}
           </div>
         </header>
@@ -265,14 +256,14 @@
     <!-- Apply sits after the last part too: the choices are made down here, not in the bar above. -->
     <div class="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 pt-1" data-testid="conflict-apply-bar">
       <p class="mr-auto text-xs text-[var(--text-secondary)]">{$localizedText.editor.conflictChosen(pending, conflictCount)}</p>
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="sm"
         on:click={apply}
         disabled={pending === 0 || (requireAll && pending < conflictCount)}
-        class="text-xs uppercase tracking-widest font-bold text-[var(--text-primary)] transition enabled:hover:opacity-70 disabled:opacity-30"
       >
         {$localizedText.editor.conflictApply}
-      </button>
+      </Button>
     </div>
   {/if}
 </div>
