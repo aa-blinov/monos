@@ -2126,16 +2126,17 @@
               <ul class="flex flex-col">
                 {#each exportFormats as format (format.id)}
                   <li>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       data-testid="export-{format.id}"
                       disabled={exporting}
-                      class="flex w-full items-center justify-between gap-3 rounded-ui px-2 py-1.5 text-left text-xs transition hover:bg-[var(--bg-secondary)] disabled:opacity-40"
+                      class="w-full justify-between normal-case"
                       on:click={() => exportNote(format.id)}
                     >
                       <span class="text-[var(--text-primary)]">{format.label}</span>
                       <span class="text-[length:var(--text-whisper-lg)] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">.{format.extension}</span>
-                    </button>
+                    </Button>
                   </li>
                 {/each}
               </ul>
