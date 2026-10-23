@@ -29,7 +29,7 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "@monos/ui": "github:aa-blinov/monos-ui#v1.1.19",
+    "@monos/ui": "github:aa-blinov/monos-ui#v1.1.20",
     "@tiptap/core": "^3.32.0",
     "@tiptap/extension-code-block-lowlight": "^3.32.0",
     "@tiptap/extension-image": "^3.32.0",

@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.33 — 2026-10-22
+
+### Fixed
+
+- Kit `Button` keeps its label and trailing icon on one line, so the board's
+  "Recently changed" trigger no longer drops its chevron under the text.
+- `@monos/ui` is `1.1.20`.
+- Site screenshots were taken again.
+
 ## 1.16.32 — 2026-10-22
 
 ### Changed
