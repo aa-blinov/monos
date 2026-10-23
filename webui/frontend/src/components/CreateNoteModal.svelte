@@ -4,7 +4,7 @@
   import { localeDate } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
-  import { getModalButtonClass } from '../lib/modal-button.js';
+  import { Button } from '@monos/ui';
   import { formFieldClass } from '../lib/form-field.js';
 
   export let open = false;
@@ -213,22 +213,23 @@
           <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{createError}</p>
           {#if duplicatePath}
             <div class="mt-3 flex flex-wrap gap-3">
-              <button type="button" class={getModalButtonClass('secondary')} on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</button>
-              <button type="button" class={getModalButtonClass('primary')} on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</button>
+              <Button variant="secondary" size="md" on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</Button>
+              <Button variant="primary" size="md" on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</Button>
             </div>
           {/if}
         {/if}
       </div>
     </div>
     <div class="flex gap-6 mt-10">
-      <button on:click={onClose} class={getModalButtonClass('secondary')}>{$localizedText.sidebar.modals.cancel}</button>
-      <button
+      <Button variant="secondary" size="md" on:click={onClose}>{$localizedText.sidebar.modals.cancel}</Button>
+      <Button
+        variant="primary"
+        size="md"
         on:click={submitCreateNote}
         disabled={isCreating || blockedName}
-        class={getModalButtonClass('primary', { disabled: isCreating || blockedName })}
       >
         {isCreating ? $localizedText.sidebar.modals.creating : $localizedText.sidebar.modals.create}
-      </button>
+      </Button>
     </div>
   </ModalShell>
 {/if}
