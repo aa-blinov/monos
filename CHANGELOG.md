@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.24 — 2026-10-22
+
+### Changed
+
+- The new-note modal's cancel/create/open-existing/numbered-copy actions are the
+  kit's `Button`.
+- Site screenshots were taken again.
+
 ## 1.16.23 — 2026-10-22
 
 ### Changed
