@@ -16,8 +16,7 @@
     showLibraryTemplate,
   } from '../lib/template-library.js';
   import { locale, localizedText } from '../lib/strings.js';
-  import { Button } from '@monos/ui';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { Button, FieldControl } from '@monos/ui';
   import { templateRequest } from '../stores.js';
 
   let pendingDelete = null;
@@ -243,30 +242,32 @@
       <div class="grid gap-4">
       <div>
         <label for="template-manager-title" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.templateTitle}</label>
-        <input id="template-manager-title" bind:value={form.title} class={formFieldClass()} />
+        <FieldControl id="template-manager-title" bind:value={form.title} />
       </div>
       <div>
         <label for="template-manager-description" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.description}</label>
-        <input id="template-manager-description" bind:value={form.description} class={formFieldClass()} />
+        <FieldControl id="template-manager-description" bind:value={form.description} />
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label for="template-manager-category" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.folder}</label>
-          <input id="template-manager-category" bind:value={form.category} class={formFieldClass()} />
+          <FieldControl id="template-manager-category" bind:value={form.category} />
         </div>
         <div>
           <label for="template-manager-tags" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.tags}</label>
-          <input id="template-manager-tags" bind:value={form.tags} placeholder={$localizedText.templates.tagsPlaceholder} class={formFieldClass()} />
+          <FieldControl id="template-manager-tags" bind:value={form.tags} placeholder={$localizedText.templates.tagsPlaceholder} />
         </div>
       </div>
       <div>
         <label for="template-manager-content" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.templates.content}</label>
-        <textarea
+        <FieldControl
+          bare
+          as="textarea"
           id="template-manager-content"
           bind:value={form.content}
           rows="12"
           class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_30%,transparent)] p-3 font-mono text-xs leading-relaxed outline-none"
-        ></textarea>
+        />
         <p class="mt-2 text-[length:var(--text-whisper-lg)] text-[var(--text-tertiary)]">{$localizedText.templates.placeholders}</p>
       </div>
 

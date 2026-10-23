@@ -7,7 +7,7 @@
    * it is written. Nothing is written in plain text at any point.
    */
   import { createEventDispatcher } from 'svelte';
-  import { Button } from '@monos/ui';
+  import { Button, FieldControl } from '@monos/ui';
   import { Lock } from 'lucide-svelte';
   import ConflictNoteView from './ConflictNoteView.svelte';
   import { mergeThreeWay } from '../lib/three-way-merge.js';

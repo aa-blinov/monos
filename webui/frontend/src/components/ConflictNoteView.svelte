@@ -19,7 +19,7 @@
    * takes "both".
    */
   import { createEventDispatcher } from 'svelte';
-  import { Button } from '@monos/ui';
+  import { Button, FieldControl } from '@monos/ui';
   import { splitByConflicts } from '../lib/conflict-markers.js';
   import { renderMarkdownPreview } from '../lib/preview-html.js';
   import { locale, localizedText } from '../lib/strings.js';
@@ -239,13 +239,15 @@
             <label class="mb-2 block text-[length:var(--text-whisper)] uppercase tracking-[0.14em] text-[var(--text-secondary)]" for="conflict-own-{segment.conflictNo}">
               {$localizedText.editor.conflictOwnLabel}
             </label>
-            <textarea
+            <FieldControl
+              bare
+              as="textarea"
               id="conflict-own-{segment.conflictNo}"
               data-testid="conflict-own-text"
               bind:value={customTexts[segment.conflictNo]}
               rows={Math.min(12, Math.max(3, String(customTexts[segment.conflictNo] || '').split('\n').length + 1))}
               class="w-full resize-y rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] p-3 font-mono text-xs leading-relaxed text-[var(--text-primary)] outline-none focus:border-[var(--text-tertiary)]"
-            ></textarea>
+            />
           </div>
         {/if}
       </section>

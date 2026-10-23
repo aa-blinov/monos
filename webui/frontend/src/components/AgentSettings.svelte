@@ -5,7 +5,7 @@
    */
   import { onMount } from 'svelte';
   import { Button } from '@monos/ui';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { FieldControl } from '@monos/ui';
   import { localizedText } from '../lib/strings.js';
   import { AGENT_PRESETS, DEFAULT_AGENT_COMMAND } from '../lib/terminal.js';
 
@@ -78,7 +78,7 @@
   {#if choice === 'custom'}
     <div>
       <label for="agent-command" class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.agent.command}</label>
-      <input id="agent-command" type="text" bind:value={custom} on:change={() => save(custom)} placeholder="aider --model sonnet" class="font-mono {formFieldClass()}" />
+      <FieldControl id="agent-command" type="text" bind:value={custom} on:change={() => save(custom)} placeholder="aider --model sonnet" class="font-mono" />
     </div>
   {/if}
   <div class="flex flex-wrap items-baseline gap-x-5 gap-y-2">

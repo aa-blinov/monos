@@ -9,7 +9,7 @@
   import CategoryInput from './CategoryInput.svelte';
   import { scrollBehavior } from '../lib/motion.js';
   import TooltipIconButton from './TooltipIconButton.svelte';
-  import { Button, IconButton, Menu, TagInput as KitTagInput } from '@monos/ui';
+  import { Button, FieldControl, IconButton, Menu, TagInput as KitTagInput } from '@monos/ui';
   import { editorState, editorAction, noteSaveSignal, activeTheme, outlineHidden, outlineWidth, focusNoteBody, propertiesChanged, updateMenuState } from '../stores.js';
   import { getNoteColorOptions } from '../lib/note-colors.js';
   import { getModalButtonClass } from '../lib/modal-button.js';
@@ -1672,7 +1672,9 @@
           {#if rawForHtml}
             <p class="shrink-0 border-b border-[var(--border-subtle)] px-4 py-2 text-[length:var(--text-whisper-lg)] leading-relaxed text-[var(--text-secondary)] lg:px-12" data-testid="raw-html-notice">{$localizedText.editor.rawHtmlNotice}</p>
           {/if}
-          <textarea
+          <FieldControl
+            bare
+            as="textarea"
             data-testid="raw-source"
             class="min-h-0 w-full flex-1 resize-none bg-transparent px-4 py-4 font-mono text-[length:var(--editor-font-size,16px)] leading-[var(--line-height,1.625)] text-[var(--text-primary)] outline-none lg:px-12 lg:py-10"
             placeholder={isLoading ? '' : $localizedText.editor.beginWriting}

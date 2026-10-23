@@ -3,7 +3,7 @@
   import { Button } from '@monos/ui';
   import { Lock } from 'lucide-svelte';
   import { localizedText } from '../lib/strings.js';
-  import { formFieldClass } from '../lib/form-field.js';
+  import { FieldControl } from '@monos/ui';
   import { unlockNoteRequest } from '../lib/editor-api.js';
 
   // The screen a locked note shows instead of its text. Nothing of the note is loaded until it is unlocked.
@@ -35,14 +35,14 @@
   <Lock size="24" strokeWidth="1.7" aria-hidden="true" class="mx-auto text-[var(--text-secondary)]" />
   <h2 class="text-base font-bold text-[var(--text-primary)]">{$localizedText.lock.lockedTitle}</h2>
   <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.lock.lockedHint}</p>
-  <input
+  <FieldControl
     type="password"
     bind:value={passphrase}
     disabled={busy}
     autocomplete="off"
     placeholder={$localizedText.lock.passphrase}
     aria-label={$localizedText.lock.passphrase}
-    class={formFieldClass({ extraClass: 'text-center' })}
+    class="text-center"
   />
   <Button variant="ghost" size="sm"
     type="submit"
