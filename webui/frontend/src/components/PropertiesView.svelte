@@ -14,10 +14,9 @@
 
 <script>
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
-  import { FieldControl } from '@monos/ui';
+  import { Button, FieldControl } from '@monos/ui';
   import { localizedText, locale } from '../lib/strings.js';
   import SearchField from './SearchField.svelte';
-  import { Button } from '@monos/ui';
   import { loadPropertyTableRequest, setPropertyRequest } from '../lib/editor-api.js';
   import { localeDate } from '../lib/date-format.js';
   import { propertyInputText, propertyInputType, propertyValueFrom } from '../lib/properties.js';
@@ -334,15 +333,15 @@
           <thead class="sticky top-0 z-[3] bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
             <tr>
               <th class="sticky left-0 z-[4] bg-[var(--bg-secondary)] px-3 py-2 font-medium" aria-sort={ariaSort('title')}>
-                <button type="button" class="font-medium" on:click={() => sortBy('title')}>{$localizedText.properties.noteColumn}</button>
+                <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy('title')}>{$localizedText.properties.noteColumn}</Button>
               </th>
               {#each columns || [] as key (key)}
                 <th class="px-3 py-2 font-medium" aria-sort={ariaSort(key)}>
-                  <button type="button" class="font-medium" on:click={() => sortBy(key)}>{columnLabel(key)}</button>
+                  <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy(key)}>{columnLabel(key)}</Button>
                 </th>
               {/each}
               <th class="px-3 py-2 font-medium" aria-sort={ariaSort('modified')}>
-                <button type="button" class="font-medium" on:click={() => sortBy('modified')}>{$localizedText.properties.modified}</button>
+                <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy('modified')}>{$localizedText.properties.modified}</Button>
               </th>
             </tr>
           </thead>
@@ -350,7 +349,7 @@
             {#each rows as row (row.path)}
               <tr class="group border-t border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]">
                 <td class="sticky left-0 z-[1] bg-[var(--bg-primary)] px-3 py-2 group-hover:bg-[var(--bg-secondary)]">
-                  <button type="button" class="block max-w-[14rem] truncate text-left text-[var(--text-primary)] hover:underline max-sm:max-w-[9rem]" on:click={() => openRow(row)}>{row.title}</button>
+                  <Button variant="quiet" size="sm" class="block max-w-[14rem] truncate text-left normal-case max-sm:max-w-[9rem]" on:click={() => openRow(row)}>{row.title}</Button>
                 </td>
                 {#each columns || [] as key (key)}
                   <td class="px-1 py-1 text-[var(--text-secondary)]">
@@ -368,13 +367,14 @@
                       </div>
                       {#if editError}<span role="alert" class="mt-0.5 block text-[length:var(--text-whisper)] text-[var(--red)]">{editError}</span>{/if}
                     {:else}
-                      <button
-                        type="button"
+                      <Button
+                        variant="quiet"
+                        size="sm"
                         data-testid="properties-cell"
                         on:click={() => startEdit(row, key)}
                         title={$localizedText.properties.editCell}
-                        class="block min-h-8 w-full min-w-[5rem] rounded-ui border-0 bg-transparent px-2 text-left text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] max-sm:min-h-10"
-                      >{cellText(row, key) || ' '}</button>
+                        class="block min-h-8 w-full min-w-[5rem] justify-start px-2 text-left text-xs max-sm:min-h-10"
+                      >{cellText(row, key) || ' '}</Button>
                     {/if}
                   </td>
                 {/each}

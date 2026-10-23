@@ -7,6 +7,7 @@
    * Several tabs, each its own shell; ⌘F searches the visible one; a note path in the output opens the note.
    */
   import { onDestroy, onMount, tick } from 'svelte';
+  import { Button } from '@monos/ui';
   import { Terminal } from '@xterm/xterm';
   import { FitAddon } from '@xterm/addon-fit';
   import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -477,21 +478,11 @@
         {/if}
       <span class="ml-auto"></span>
       {#if $agentReview.changes?.length}
-        <button
-          type="button"
-          data-testid="agent-review-open"
-          on:click={() => agentReviewOpen.set(true)}
-          class="inline-flex h-7 shrink-0 items-center rounded-ui px-2 font-bold normal-case tracking-normal text-[var(--blue)] transition hover:bg-[var(--bg-secondary)]"
-        >{$localizedText.agentReview.button($agentReview.changes.length)}</button>
+        <Button variant="ghost" size="sm" data-testid="agent-review-open" class="shrink-0 text-[var(--blue)]" on:click={() => agentReviewOpen.set(true)}>{$localizedText.agentReview.button($agentReview.changes.length)}</Button>
       {/if}
-      <button
-        type="button"
-        data-testid="agent-launch"
-        on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}
-        class="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-ui px-2 font-bold text-[var(--text-primary)] transition hover:bg-[var(--bg-secondary)]"
-      >
+      <Button variant="ghost" size="sm" data-testid="agent-launch" class="shrink-0" on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}>
         <Bot size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
-      </button>
+      </Button>
       <!-- Search, restart and the agent's rules: needed now and then, so behind ⋯ (⌘F still searches). A dot on
            ⋯ says the rules are missing. -->
       <Menu
@@ -570,9 +561,9 @@
         class="fixed z-[130] w-44 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-2xl"
         style="left: {termMenuPos.x}px; top: {termMenuPos.y}px;"
       >
-        <button type="button" role="menuitem" data-testid="terminal-copy" disabled={!termMenu.canCopy} class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)] disabled:opacity-40 disabled:hover:bg-transparent" on:click={copySelection}>{$localizedText.terminal.copy}</button>
-        <button type="button" role="menuitem" data-testid="terminal-paste" class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)]" on:click={pasteClipboard}>{$localizedText.terminal.paste}</button>
-        <button type="button" role="menuitem" data-testid="terminal-select-all" class="w-full px-3 py-2 text-left text-xs outline-none transition hover:bg-[var(--bg-secondary)] focus-visible:bg-[var(--bg-secondary)]" on:click={selectAllOutput}>{$localizedText.terminal.selectAll}</button>
+        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-copy" disabled={!termMenu.canCopy} class="w-full justify-start px-3 normal-case" on:click={copySelection}>{$localizedText.terminal.copy}</Button>
+        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-paste" class="w-full justify-start px-3 normal-case" on:click={pasteClipboard}>{$localizedText.terminal.paste}</Button>
+        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-select-all" class="w-full justify-start px-3 normal-case" on:click={selectAllOutput}>{$localizedText.terminal.selectAll}</Button>
       </div>
     {/if}
   </section>
