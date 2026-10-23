@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.13 — 2026-10-22
+
+### Changed
+
+- The note-colour panel's "no colour" and swatches use the kit's `Button` and
+  `IconButton`; the colour is still written to the note.
+- Site screenshots were taken again.
+
 ## 1.16.12 — 2026-10-22
 
 ### Changed
