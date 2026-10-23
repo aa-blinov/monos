@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.26 — 2026-10-22
+
+### Changed
+
+- The template manager is on kit `Button`; the template row actions and its
+  modal footer are kit controls.
+- The conflict view's whole-note choices, per-region choices and Apply are kit
+  `Button`; `aria-pressed` and the diff rendering stay.
+- The rich editor's table/code tools are kit `Button`, and its "more" trigger is
+  `IconButton`.
+- Site screenshots were taken again.
+
 ## 1.16.25 — 2026-10-22
 
 ### Changed
