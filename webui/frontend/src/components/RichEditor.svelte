@@ -24,6 +24,7 @@
     Undo2, Redo2, Bold, Italic, Strikethrough, Code,
     Heading1, Heading2, Heading3, Heading4,
     List, ListOrdered, Quote, Code2, Minus, Link, Table2, CheckSquare,
+    Highlighter, Subscript, Superscript,
     MoreHorizontal, ArrowUpRight, FilePlus,
     Maximize2, WrapText, ALargeSmall, Check,
     Search, ChevronUp, ChevronDown, X
@@ -106,7 +107,7 @@
   let editor;
   let canUndo = false;
   let canRedo = false;
-  let active = { bold: false, italic: false, strike: false, code: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false, table: false, codeLanguage: '' };
+  let active = { bold: false, italic: false, strike: false, code: false, highlight: false, subscript: false, superscript: false, heading: 0, bullet: false, ordered: false, task: false, quote: false, codeBlock: false, table: false, codeLanguage: '' };
   let slashMenuOpen = false;
 
   // While the menu is open the text box says so and names the highlighted command, which a screen reader
@@ -157,6 +158,9 @@
     { id: 'codeblock', icon: Code2, label: $localizedText.richEditor.codeBlock, run: cmd('toggleCodeBlock'), on: active.codeBlock },
     { id: 'hr', icon: Minus, label: $localizedText.richEditor.horizontalRule, run: cmd('hr'), on: false },
     { id: 'code', icon: Code, label: shortcutLabel($localizedText.richEditor.inlineCode), run: cmd('toggleCode'), on: active.code },
+    { id: 'highlight', icon: Highlighter, label: $localizedText.richEditor.highlight, run: cmd('toggleHighlight'), on: active.highlight },
+    { id: 'subscript', icon: Subscript, label: $localizedText.richEditor.subscript, run: cmd('toggleSubscript'), on: active.subscript },
+    { id: 'superscript', icon: Superscript, label: $localizedText.richEditor.superscript, run: cmd('toggleSuperscript'), on: active.superscript },
     { id: 'link', icon: Link, label: $localizedText.richEditor.addLink, run: cmd('link'), on: false },
     { id: 'table', icon: Table2, label: $localizedText.richEditor.insertTable, run: cmd('table'), on: active.table },
   ];
@@ -175,6 +179,8 @@
     // also teaches the shortcut. A table has none.
     { id: 'heading1', markdown: '#', run: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
     { id: 'heading2', markdown: '##', run: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+    { id: 'heading3', markdown: '###', run: () => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+    { id: 'heading4', markdown: '####', run: () => editor.chain().focus().toggleHeading({ level: 4 }).run() },
     { id: 'bulletList', markdown: '-', run: () => editor.chain().focus().toggleBulletList().run() },
     { id: 'numberedList', markdown: '1.', run: () => editor.chain().focus().toggleOrderedList().run() },
     { id: 'checklist', markdown: '[ ]', run: () => editor.chain().focus().toggleTaskList().run() },
@@ -465,6 +471,7 @@
   function updateActive(ed) {
     active = {
       bold: ed.isActive('bold'), italic: ed.isActive('italic'), strike: ed.isActive('strike'), code: ed.isActive('code'),
+      highlight: ed.isActive('highlight'), subscript: ed.isActive('subscript'), superscript: ed.isActive('superscript'),
       heading: ed.isActive('heading') ? ed.getAttributes('heading').level : 0,
       bullet: ed.isActive('bulletList'), ordered: ed.isActive('orderedList'), task: ed.isActive('taskList'),
       quote: ed.isActive('blockquote'), codeBlock: ed.isActive('codeBlock'),
@@ -1281,6 +1288,16 @@
   /* flow-root keeps the paragraphs' margins inside the editor: a collapsed margin would stick out past min-height and show a scrollbar on a short note. */
   :global(.ProseMirror) { --editor-caret: color-mix(in srgb, var(--text-primary) 82%, var(--yellow) 18%); display: flow-root; min-height: 100%; outline: none; caret-color: var(--editor-caret); }
   :global(.ProseMirror ::selection) { background: color-mix(in srgb, var(--editor-caret) 18%, transparent); color: var(--text-primary); }
+  /* Highlight (==text==): the palette's warning tint under the text, and the text pushed a little toward black (light)
+     or white (dark) so that the tint never costs it its 4.5:1. A test measures all twelve palette and mode pairs. */
+  :global(.ProseMirror mark) { background: color-mix(in srgb, var(--yellow) 20%, transparent); color: color-mix(in srgb, var(--text-primary) 70%, black); border-radius: var(--radius); padding: 0 0.1em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  :global(:root[data-mode='dark'] .ProseMirror mark) { color: color-mix(in srgb, var(--text-primary) 70%, white); }
+  :global(.ProseMirror sub), :global(.ProseMirror sup) { line-height: 0; }
+  /* A footnote: the reference is a small raised label, the definition a smaller paragraph that carries its label in front. */
+  :global(.ProseMirror .footnote-ref) { font-size: 0.75em; color: var(--text-secondary); padding: 0 0.1em; user-select: none; }
+  :global(.ProseMirror .footnote-ref.ProseMirror-selectednode) { background: color-mix(in srgb, var(--text-primary) 12%, transparent); border-radius: var(--radius); }
+  :global(.ProseMirror .footnote-def) { font-size: 0.875em; color: var(--text-secondary); margin: 0.25rem 0; }
+  :global(.ProseMirror .footnote-def::before) { content: attr(data-footnote-def); font-size: 0.8em; vertical-align: super; line-height: 0; margin-right: 0.35em; }
   /* Совпадения поиска по заметке: тем же жёлтым, что и в справке. */
   :global(.ProseMirror-search-match) { background: color-mix(in srgb, var(--yellow) 35%, transparent); }
   :global(.ProseMirror-active-search-match) { background: color-mix(in srgb, var(--yellow) 60%, transparent); }

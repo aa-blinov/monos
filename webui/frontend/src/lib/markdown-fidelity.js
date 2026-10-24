@@ -12,6 +12,25 @@ const PUNCTUATION = /[!-/:-@[-`{-~]/;
 const LINK_DEFINITION = /^\[[^\]]+\]:\s*\S+(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/;
 const TASK_MARKER = /^\[[ xX]\](?:\s|$)/;
 
+// `~`, `^` and `==` pair up into a subscript, a superscript and a highlight. A literal one is written with a
+// backslash only when another of its kind could close it: `~5 minutes` and `a == b` stay as they are, `~x~` typed as text does not.
+// The same text is read back as the marks otherwise, and a note must not change meaning on its way through the file.
+function pairsAcrossWord(source, index, char) {
+  for (const step of [-1, 1]) {
+    for (let at = index + step; at >= 0 && at < source.length && !/\s/.test(source[at]); at += step) {
+      if (source[at] === char) return true;
+    }
+  }
+  return false;
+}
+
+function startsPairedEquals(source, index) {
+  if (source[index] !== '=' || source[index + 1] !== '=' || source[index - 1] === '=') return false;
+  let end = index;
+  while (source[end] === '=') end += 1;
+  return source.indexOf('==', end) >= 0 || source.lastIndexOf('==', index - 1) >= 0;
+}
+
 /**
  * Text as it is written into the file: backslashes, emphasis marks and brackets only where they would change
  * what the text reads as.
@@ -42,7 +61,11 @@ export function escapeInline(text, { startOfLine = false, inTable = false } = {}
       const alone = before !== undefined && after !== undefined && spaceBefore && spaceAfter;
       out += intraword || alone ? char : '\\_';
     } else if (char === '~') {
-      out += before === '~' || after === '~' ? '\\~' : char;
+      out += before === '~' || after === '~' || pairsAcrossWord(source, index, '~') ? '\\~' : char;
+    } else if (char === '^') {
+      out += pairsAcrossWord(source, index, '^') ? '\\^' : char;
+    } else if (char === '=') {
+      out += startsPairedEquals(source, index) ? '\\=' : char;
     } else if (char === '[' || char === ']') {
       out += linkLike ? `\\${char}` : char;
     } else if (char === '&') {

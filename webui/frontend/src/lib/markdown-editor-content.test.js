@@ -214,10 +214,14 @@ test('~~текст~~ открывается как зачёркнутый, а н
   assert.ok(paragraph.content.every((node) => !String(node.text || '').includes('~~')));
 });
 
-test('одинарные тильды остаются текстом: ~sub~ не зачёркивание', () => {
+// A single tilde is a subscript (markdown-extended.js), not a strikethrough; prose with a lone tilde stays text.
+test('одинарные тильды: ~sub~ нижний индекс, а не зачёркивание', () => {
   const doc = markdownToEditorContent('H~2~O\n');
-  assert.equal(doc.content[0].content.map((node) => node.text).join(''), 'H~2~O');
-  assert.ok(doc.content[0].content.every((node) => !node.marks?.length));
+  assert.equal(doc.content[0].content.map((node) => node.text).join(''), 'H2O');
+  assert.deepEqual(doc.content[0].content.map((node) => node.marks?.[0]?.type), [undefined, 'subscript', undefined]);
+  assert.ok(doc.content[0].content.every((node) => !node.marks?.some((mark) => mark.type === 'strike')));
+  const prose = markdownToEditorContent('about ~5 minutes\n');
+  assert.equal(prose.content[0].content.map((node) => node.text).join(''), 'about ~5 minutes');
 });
 
 test('нумерованный список помнит первый номер и скобку', () => {

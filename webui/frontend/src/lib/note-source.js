@@ -1,4 +1,5 @@
 import { defaultMarkdownParser } from 'prosemirror-markdown';
+import { extendedMarkdownPlugin } from './markdown-extended.js';
 
 // The file is the product: a note must not be rewritten behind the person's back. The editor holds a
 // document, and writing that document out again re-spells everything it had to normalise (`*` for `-`,
@@ -7,12 +8,13 @@ import { defaultMarkdownParser } from 'prosemirror-markdown';
 // Only a block the person touched is written by the serializer.
 
 const MarkdownIt = defaultMarkdownParser.tokenizer.constructor;
-const splitter = new MarkdownIt('commonmark', { html: false }).enable(['table', 'strikethrough']);
+const splitter = new MarkdownIt('commonmark', { html: false }).enable(['table', 'strikethrough']).use(extendedMarkdownPlugin);
 
 // Which editor nodes a block of source may turn into. A block that turned into something else means the
 // two lists did not line up, and nothing is passed through.
 const COMPATIBLE = {
   paragraph_open: ['paragraph', 'mathBlock', 'noteEmbed', 'pdfEmbed', 'image'],
+  footnote_def_open: ['footnoteDefinition'],
   heading_open: ['heading'],
   fence: ['codeBlock', 'mermaidBlock'],
   code_block: ['codeBlock'],
@@ -145,6 +147,7 @@ const KIND_OF_NODE = {
   orderedList: 'ordered_list_open',
   blockquote: 'blockquote_open',
   table: 'table_open',
+  footnoteDefinition: 'footnote_def_open',
 };
 const kindOfNode = (node) => KIND_OF_NODE[node.type.name] || 'paragraph_open';
 

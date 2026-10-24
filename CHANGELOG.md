@@ -17,6 +17,22 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.18.0 — 2026-10-25
+
+### Added
+
+- The editor shows four more things the file could already hold. `==highlighted==` is a highlight, `H~2~O` a
+  subscript and `x^2^` a superscript; each has a button among the extra tools of the toolbar and an input rule (type
+  `==text==`). A footnote reference `[^1]` is a small raised label and its definition `[^1]: text` is a paragraph of
+  its own that can be edited. The slash menu offers heading 3 and heading 4 next to 1 and 2.
+- Text that only looks like a mark stays text: `a == b`, `~5 minutes`, `x^2` without a closing caret, `\==x==`,
+  anything in code, and a reference with no definition.
+
+### Changed
+
+- A single `~word~` is a subscript now (`~~strike~~` is unchanged). The file keeps what was written: opening a note
+  rewrites nothing, and an edited paragraph writes the marks back as `==..==`, `~..~`, `^..^`.
+
 ## 1.17.11 — 2026-10-24
 
 ### Fixed

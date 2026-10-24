@@ -4,7 +4,7 @@ import { escapeInline } from './markdown-fidelity.js';
 
 test('brackets, tildes and angle brackets stay as written when nothing reads them as syntax', () => {
   assert.equal(escapeInline('Text[^1] and [[Wiki]] and Array[0]'), 'Text[^1] and [[Wiki]] and Array[0]');
-  assert.equal(escapeInline('H~2~O and ~maybe~'), 'H~2~O and ~maybe~');
+  assert.equal(escapeInline('about ~5 minutes or ~10'), 'about ~5 minutes or ~10');
   assert.equal(escapeInline('a < b > c & d, <br>'), 'a < b > c & d, <br>');
   assert.equal(escapeInline('C:\\Users\\me'), 'C:\\Users\\me');
   assert.equal(escapeInline('2 * 3 and snake_case'), '2 * 3 and snake_case');

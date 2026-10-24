@@ -202,6 +202,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `git-history.js` | Note history served by git: list the revisions of a note, read one with its diff, restore one (`noteHistoryRequest`, `noteRevisionRequest`, `restoreNoteRevisionRequest`) |
 | `git-history.test.js` | Request paths and methods, error text taken from the backend |
 | `markdown-extras.js` | Turns TipTap math and Mermaid nodes back into markdown (`convertMarkdownExtras`) and finds inline `$…$` formulas (`findInlineMath`) |
+| `markdown-extended.js` | markdown-it plugins for what CommonMark leaves as text: `==highlight==`, `H~2~O`, `x^2^` and footnotes (`[^1]`, `[^1]: text`); shared by the editor's parser and the block splitter in `note-source.js` |
+| `extended-markdown-nodes.js` | TipTap marks (highlight, subscript, superscript) and nodes (footnote reference and definition) with the serializers that write them back as `==x==`, `~x~`, `^x^`, `[^1]` and `[^1]: text` |
 | `reminders.js` | Due-date reminders: notification permission, and at most one native notification per note and due date (`notifyDue`, `wasNotified`) |
 | `richEditorExtras.js` | TipTap nodes for inline math, math blocks, Mermaid diagrams and note embeds |
 | `richEditorExtras.test.js` | Node names, which TipTap uses to tell the nodes apart |

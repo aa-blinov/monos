@@ -13,6 +13,7 @@ import { EditableParagraph } from './blank-line.js';
 import { Markdown } from 'tiptap-markdown';
 import { search } from 'prosemirror-search';
 import { MarkdownFidelity, serializeImage } from './markdown-fidelity.js';
+import { ExtendedMarkdown } from './extended-markdown-nodes.js';
 
 // 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
 // а редактор их игнорировал. `common` покрывает 11 языков из 12 встречающихся;
@@ -142,6 +143,7 @@ export function createRichEditorExtensions(placeholder, {
     WikiLinks.configure({ onActivate: onWikiLinkActivate }),
     ExternalLinks,
     SoftBreak,
+    ...ExtendedMarkdown,
     FindInNote,
     BodyHeadingLevel,
     MarkdownFidelity,
