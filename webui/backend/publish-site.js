@@ -6,6 +6,7 @@ import { NOTES_DIR } from './config.js';
 import { stripFrontmatter } from './routes/helpers.js';
 import { httpError, linkNameCandidates, noteLinkNames, notesRelativePath, readTextFile, replaceOutsideCode, resolveNotesPath, wikiLinkTarget } from './utils.js';
 import { isLockedNote } from './note-lock.js';
+import { sanitizeHtml } from './html-safety.js';
 
 // A static copy of the notes in a folder on this computer. Nothing is uploaded: the output is plain
 // HTML and files, and the folder it goes into is named by the person who asks for it. The site lives in
@@ -43,6 +44,12 @@ ul.notes li { padding: 0.25rem 0; }
 `;
 
 const marker = (name) => `[!${name}]`;
+
+// No script runs in a published page, whatever a note carried into it; images and frames stay as they are.
+const PAGE_POLICY = "script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+// A page is made in one go from the whole note; past this size the renderer runs out of stack, and one such note
+// must not stop the site (it is left out and named in the answer).
+const MAX_NOTE_CHARS = 2_000_000;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -139,11 +146,6 @@ function restoreSyntax(html, held) {
   });
 }
 
-// A link with a `javascript:`-style target would run in the page; such targets become plain anchors.
-function sanitizeLinks(html) {
-  return html.replace(/href="\s*(javascript|vbscript|data):[^"]*"/gi, 'href="#"');
-}
-
 // Obsidian callouts keep their marker in the file; the page marks the quote so the stylesheet can draw it.
 function markCallouts(html) {
   return html.replace(/<blockquote>\n<p>\[!([A-Za-z][\w-]*)\]/g, (match, type) => (
@@ -156,12 +158,15 @@ export function renderNoteBody(content, context) {
   const body = stripFrontmatter(String(content ?? '')).replace(/\r\n/g, '\n');
   const { text, held } = holdSyntax(body, context);
   const html = markdownRenderer(context).parse(text, { async: false });
-  return markCallouts(sanitizeLinks(restoreSyntax(html, held)));
+  // What the note's text made is filtered before the parts the app wrote itself (its embeds and links) are put back:
+  // those are built here from escaped text and must not be filtered as if a note had written them.
+  return markCallouts(restoreSyntax(sanitizeHtml(html), held));
 }
 
 function pageDocument({ title, crumbs, indexHref, body }) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${PAGE_POLICY}">
 <title>${escapeHtml(title)}</title><style>${SITE_STYLE}</style></head>
 <body><main>
 <nav class="crumbs"><a href="${escapeHtml(indexHref)}">Notes</a>${crumbs ? ` / ${escapeHtml(crumbs)}` : ''}</nav>
@@ -176,6 +181,7 @@ function indexDocument(groups) {
 <ul class="notes">${notes.map((note) => `<li><a href="${escapeHtml(hrefBetween('', note.page))}">${escapeHtml(note.title)}</a></li>`).join('')}</ul>`);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${PAGE_POLICY}">
 <title>Notes</title><style>${SITE_STYLE}</style></head>
 <body><main>
 <h1>Notes</h1>
@@ -223,11 +229,8 @@ export function publishSite({ target, folder = '' } = {}) {
   }
 
   const siteDir = path.join(outputRoot, SITE_FOLDER);
-  if (fs.existsSync(siteDir)) {
-    if (!fs.existsSync(path.join(siteDir, MARKER))) {
-      throw httpError(409, `${SITE_FOLDER} already exists and is not a published site; choose another folder`);
-    }
-    fs.rmSync(siteDir, { recursive: true, force: true });
+  if (fs.existsSync(siteDir) && !fs.existsSync(path.join(siteDir, MARKER))) {
+    throw httpError(409, `${SITE_FOLDER} already exists and is not a published site; choose another folder`, 'not_a_site');
   }
 
   const found = liveNotes(folder.trim().replace(/^\/+|\/+$/g, ''));
@@ -253,19 +256,33 @@ export function publishSite({ target, folder = '' } = {}) {
 
   const assets = new Set();
   const pages = [];
+  const skipped = [];
   for (const note of notes) {
+    if (String(note.content || '').length > MAX_NOTE_CHARS) {
+      skipped.push({ path: note.path, reason: 'too_large' });
+      continue;
+    }
     const page = pagePathOf(note.relative);
     const noteDir = path.posix.dirname(note.relative) === '.' ? '' : path.posix.dirname(note.relative);
     const pageDir = path.posix.dirname(page);
+    const noteAssets = new Set();
     const assetHref = (src) => {
       if (/^(https?:|data:|mailto:|#)/i.test(String(src || '').trim()) || String(src || '').startsWith('/')) return src;
       const asset = path.posix.normalize(path.posix.join(noteDir, safeDecode(String(src || ''))));
       if (asset.startsWith('..')) return '#';
-      assets.add(asset);
+      noteAssets.add(asset);
       return hrefBetween(pageDir, path.posix.join('assets', asset));
     };
     const context = { pageDir, assetHref, resolve };
-    const body = renderNoteBody(note.content, context);
+    let body;
+    try {
+      body = renderNoteBody(note.content, context);
+    } catch {
+      // One note the renderer cannot take is left out and named; the others are still a site.
+      skipped.push({ path: note.path, reason: 'render_failed' });
+      continue;
+    }
+    for (const asset of noteAssets) assets.add(asset);
     const crumbs = path.posix.dirname(note.relative) === '.' ? '' : path.posix.dirname(note.relative);
     pages.push({
       page,
@@ -275,42 +292,61 @@ export function publishSite({ target, folder = '' } = {}) {
     });
   }
 
-  fs.mkdirSync(siteDir, { recursive: true });
-  for (const item of pages) {
-    const full = path.join(siteDir, item.page);
-    fs.mkdirSync(path.dirname(full), { recursive: true });
-    fs.writeFileSync(full, item.html, 'utf-8');
-  }
-
+  // The new site is built beside the old one and swapped in when it is whole: the site that is published now stays
+  // until a new one exists, whatever goes wrong on the way.
+  const suffix = `${process.pid}-${Date.now()}`;
+  const buildDir = path.join(outputRoot, `.monos-site-building-${suffix}`);
+  const retiredDir = path.join(outputRoot, `.monos-site-retired-${suffix}`);
   let copied = 0;
   const missing = [];
-  for (const asset of assets) {
-    const source = path.join(NOTES_DIR, asset);
-    if (!fs.existsSync(source) || fs.statSync(source).isDirectory()) {
-      missing.push(asset);
-      continue;
+  try {
+    fs.mkdirSync(buildDir, { recursive: true });
+    for (const item of pages) {
+      const full = path.join(buildDir, item.page);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, item.html, 'utf-8');
     }
-    const destination = path.join(siteDir, 'assets', asset);
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.copyFileSync(source, destination);
-    copied += 1;
-  }
 
-  const groups = [];
-  for (const item of pages) {
-    let group = groups.find((entry) => entry.folder === item.folder);
-    if (!group) {
-      group = { folder: item.folder, notes: [] };
-      groups.push(group);
+    for (const asset of assets) {
+      const source = path.join(NOTES_DIR, asset);
+      if (!fs.existsSync(source) || fs.statSync(source).isDirectory()) {
+        missing.push(asset);
+        continue;
+      }
+      const destination = path.join(buildDir, 'assets', asset);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.copyFileSync(source, destination);
+      copied += 1;
     }
-    group.notes.push(item);
+
+    const groups = [];
+    for (const item of pages) {
+      let group = groups.find((entry) => entry.folder === item.folder);
+      if (!group) {
+        group = { folder: item.folder, notes: [] };
+        groups.push(group);
+      }
+      group.notes.push(item);
+    }
+    fs.writeFileSync(path.join(buildDir, 'index.html'), indexDocument(groups), 'utf-8');
+    fs.writeFileSync(path.join(buildDir, MARKER), `${JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      pages: pages.length,
+      assets: copied,
+    }, null, 2)}\n`, 'utf-8');
+
+    if (fs.existsSync(siteDir)) fs.renameSync(siteDir, retiredDir);
+    try {
+      fs.renameSync(buildDir, siteDir);
+    } catch (error) {
+      if (fs.existsSync(retiredDir)) fs.renameSync(retiredDir, siteDir);
+      throw error;
+    }
+    fs.rmSync(retiredDir, { recursive: true, force: true });
+  } catch (error) {
+    fs.rmSync(buildDir, { recursive: true, force: true });
+    throw error;
   }
-  fs.writeFileSync(path.join(siteDir, 'index.html'), indexDocument(groups), 'utf-8');
-  fs.writeFileSync(path.join(siteDir, MARKER), `${JSON.stringify({
-    generatedAt: new Date().toISOString(),
-    pages: pages.length,
-    assets: copied,
-  }, null, 2)}\n`, 'utf-8');
 
   return {
     outputDir: siteDir,
@@ -318,5 +354,6 @@ export function publishSite({ target, folder = '' } = {}) {
     assets: copied,
     missingAssets: missing,
     lockedSkipped,
+    skipped,
   };
 }

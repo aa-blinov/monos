@@ -158,7 +158,7 @@
     {:else}
       <section class="rounded-ui border border-[color-mix(in_srgb,var(--red)_30%,transparent)]">
         <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)] px-4 py-2">
-          <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--red)]">
+          <p class="text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--red-text)]">
             {segment.property ? $localizedText.editor.conflictPropertiesLabel : $localizedText.editor.conflictRegionLabel}
           </p>
           <div class="ml-auto flex flex-wrap items-center gap-3">

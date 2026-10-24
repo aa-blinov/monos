@@ -9,6 +9,8 @@ import { httpError } from './utils.js';
 const ALGORITHM = 'aes-256-gcm';
 const KDF = { N: 2 ** 15, r: 8, p: 1 };
 const SCRYPT_MAXMEM = 64 * 1024 * 1024;
+// The most a lock file may ask of the key derivation: what the app writes, with room for a different cost chosen later.
+const MAX_KDF = { r: 16, p: 4, work: 2 ** 19 };
 const BEGIN = '-----BEGIN MONOS LOCKED NOTE-----';
 const END = '-----END MONOS LOCKED NOTE-----';
 const DAMAGED = 'The locked note is damaged';
@@ -29,12 +31,17 @@ export function isLockedNote(text) {
 }
 
 function deriveKey(passphrase, salt, params) {
-  return crypto.scryptSync(String(passphrase ?? ''), salt, 32, {
-    N: params.N,
-    r: params.r,
-    p: params.p,
-    maxmem: SCRYPT_MAXMEM,
-  });
+  try {
+    return crypto.scryptSync(String(passphrase ?? ''), salt, 32, {
+      N: params.N,
+      r: params.r,
+      p: params.p,
+      maxmem: SCRYPT_MAXMEM,
+    });
+  } catch {
+    // The values do not make a key the app can derive (too much memory, a salt that is not one): a damaged file.
+    throw httpError(400, DAMAGED, 'lock_damaged');
+  }
 }
 
 function sealed(plaintext, session) {
@@ -66,10 +73,15 @@ function parseEnvelope(text) {
   } catch {
     throw httpError(400, DAMAGED);
   }
+  // The cost of the key is read from the file, so a damaged or hostile envelope picks how long the app is stuck
+  // deriving it: scrypt with `p` of 64 held the backend for seconds. A note this app locked has the values it wrote.
   const validParams = envelope && Number.isInteger(envelope.N) && envelope.N >= 2 && envelope.N <= 2 ** 20
-    && (envelope.N & (envelope.N - 1)) === 0 && Number.isInteger(envelope.r) && Number.isInteger(envelope.p);
+    && (envelope.N & (envelope.N - 1)) === 0
+    && Number.isInteger(envelope.r) && envelope.r >= 1 && envelope.r <= MAX_KDF.r
+    && Number.isInteger(envelope.p) && envelope.p >= 1 && envelope.p <= MAX_KDF.p
+    && envelope.N * envelope.r * envelope.p <= MAX_KDF.work;
   if (!envelope || envelope.v !== 1 || envelope.kdf !== 'scrypt' || !validParams) {
-    throw httpError(400, 'Unsupported lock format');
+    throw httpError(400, 'Unsupported lock format', 'lock_format');
   }
   return envelope;
 }

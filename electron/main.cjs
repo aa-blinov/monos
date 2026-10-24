@@ -343,6 +343,9 @@ function createWindow(port) {
   });
 
   if (process.platform !== 'darwin') mainWindow.setMenu(null);
+  // The window's title is set from the note that is open (menu:state below). The page names its own title for a
+  // browser tab ("Trash — Monos"); here that would replace the note's.
+  mainWindow.webContents.on('page-title-updated', (event) => event.preventDefault());
   mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
     try {
       if (new URL(targetUrl).origin !== appOrigin) event.preventDefault();

@@ -6,6 +6,7 @@
   import { cardExcerpt } from '../lib/card-excerpt.js';
   import { relativeDay } from '../lib/date-format.js';
   import { conflictedNotes } from '../lib/git-conflicts.js';
+  import { hasConflictMarkers } from '../lib/conflict-markers.js';
   import { agentTouched } from '../lib/agent-review.js';
   import { displayFolderName, locale, localizedText } from '../lib/strings.js';
 
@@ -53,10 +54,23 @@
 
   function handleContextMenu(event) {
     event.preventDefault();
-    dispatch('context', { note, x: event.clientX, y: event.clientY });
+    // The Menu key and Shift+F10 raise the same event as a right click, but with no mouse button down (a ⌃-click on
+    // a Mac has its button down). The menu opens at the card then, and takes the keyboard.
+    const byKeyboard = event.buttons === 0 && !event.ctrlKey;
+    const opener = event.currentTarget;
+    const rect = byKeyboard ? opener?.getBoundingClientRect?.() : null;
+    dispatch('context', {
+      note,
+      x: rect ? rect.left + Math.min(32, rect.width / 2) : event.clientX,
+      y: rect ? rect.top + Math.min(32, rect.height / 2) : event.clientY,
+      byKeyboard,
+      opener,
+    });
   }
 
-  $: inConflict = Boolean(note?.path) && $conflictedNotes.has(note.path);
+  // The list says it (`conflict`), the sync's own list says it, and an excerpt that still carries the markers says it:
+  // raw `<<<<<<<` lines are never shown as the note's text.
+  $: inConflict = (Boolean(note?.path) && $conflictedNotes.has(note.path)) || note?.conflict === true || hasConflictMarkers(note?.excerpt);
   $: accent = note?.color || 'var(--border-subtle)';
   $: tags = Array.isArray(note?.tags) ? note.tags : [];
   $: compactTags = tags.slice(0, 2);
@@ -66,6 +80,12 @@
   $: visibleExcerpt = highlight && query ? searchSnippet(excerpt, query, compact ? 56 : 180) : excerpt;
   $: pathLabel = (visiblePath(note?.path) || '').replace(/^[^/]+/, (top) => displayFolderName(top, $localizedText));
   $: visibleName = String(note?.name || '');
+  // A search that matched far into a long title shows the part of the title around the match: cut at the end,
+  // the card would highlight nothing and the person would not see why it was found.
+  $: titleLimit = compact ? 40 : 28;
+  // Only when the match is past what the title shows: a title that starts with the match stays whole, with its full name.
+  $: matchAt = highlight && query ? visibleName.toLowerCase().indexOf(query.trim().toLowerCase().split(/\s+/)[0] || '\u0000') : -1;
+  $: shownName = matchAt > titleLimit - 8 ? searchSnippet(visibleName, query, titleLimit) : visibleName;
   $: cardDateValue = note?.modified || note?.lastOpened;
   $: cardDatePrefix = note?.modified ? $localizedText.app.board.modified : $localizedText.app.board.opened;
   // The card shows the day; the tooltip says what the date is and gives the exact moment.
@@ -96,13 +116,13 @@
   <span class="pointer-events-none absolute -right-12 -top-16 h-32 w-32 rounded-full bg-[var(--note-glow)] blur-2xl"></span>
 
   <!-- `line-clamp` sets its own display: a `block` beside it wins and the title runs to any length. -->
-  <span class="relative shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'block truncate text-lg sm:text-xl'} font-bold leading-tight tracking-tight break-anywhere">
+  <span class="relative shrink-0 font-serif {compact ? 'line-clamp-2 text-base' : 'block truncate text-lg sm:text-xl'} font-bold leading-tight tracking-tight break-words">
     {#if note?.pinned}
       <!-- Pinned notes lead the board; the pin says why this one is first. -->
       <Pin class="mr-1.5 inline-block h-3.5 w-3.5 -translate-y-px align-baseline text-[var(--text-tertiary)]" fill="currentColor" strokeWidth="1.7" aria-label={$localizedText.app.board.pinned} data-testid="card-pinned" />
     {/if}
     {#if highlight && query}
-      {@html highlightExcerpt(visibleName, query)}
+      {@html highlightExcerpt(shownName, query)}
     {:else}
       {visibleName}
     {/if}
@@ -114,7 +134,11 @@
   {/if}
 
   <span class="relative mt-2 block shrink-0 {compact ? 'compact-excerpt text-xs leading-relaxed' : 'desktop-excerpt text-sm leading-relaxed'} text-[var(--text-secondary)] break-anywhere">
-    {#if visibleExcerpt}
+    {#if inConflict}
+      <span data-testid="card-conflict-excerpt"><span class="font-bold uppercase tracking-[0.12em] text-[var(--red-text)]">{$localizedText.app.board.conflict}</span> {$localizedText.app.board.conflictHint}</span>
+    {:else if note?.locked === true}
+      <span class="italic text-[var(--text-tertiary)]" data-testid="card-locked-excerpt">{$localizedText.lock.lockedTitle}</span>
+    {:else if visibleExcerpt}
       {#if highlight && query}
         {@html highlightExcerpt(visibleExcerpt, query)}
       {:else}
@@ -184,7 +208,7 @@
             {/if}
             {#if inConflict}
               <!-- A note that changed on two devices says so on the board, not only once it is opened. -->
-              <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>
+              <span class="text-[length:var(--text-whisper)] uppercase tracking-[0.12em] text-[var(--red-text)]" data-testid="card-conflict" title={$localizedText.app.board.conflictHint}>{$localizedText.app.board.conflict}</span>
             {/if}
           </span>
         </span>

@@ -92,6 +92,11 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `callouts.js` | `calloutMarker` reads an Obsidian callout marker (`[!warning] Title`) from a quote's first line, `calloutTone` picks its colour family, `unescapeCalloutMarkers` keeps the marker bare when the note is saved |
 | `soft-break.js` | `SoftBreak`, a TipTap node for a single newline inside a paragraph: the editor shows it as a space, and saving writes the newline back |
 | `blank-line.js` | `EditableParagraph` writes an empty line as `&nbsp;` (Obsidian's convention) so it survives a save, and `isBlankLineNode` reads it back as an empty paragraph |
+| `note-url.js` | `noteRoute` builds a note's address with every path segment encoded (a name with `#`, `%`, `?` stays one address); `repairPercentEncoding` mends a broken `%` in a typed address |
+| `note-source.js` | Cuts a note's text into top-level blocks and writes the document back block by block: a block nobody touched keeps its original text and gap, so an edit elsewhere never respells it |
+| `note-markdown.js` | `createNoteMarkdown(editor)`: remembers the text a note was opened from and serializes the document through `note-source.js`; the editor's only way to produce Markdown |
+| `markdown-fidelity.js` | Serializer overrides that escape only what would read back as something else (`[^1]`, `a < b`, `~sub~`, `\|` in tables) and keep list start, `)` delimiter, bullet marker and tightness |
+| `document-title.js` | The browser tab's title per route ("Trash — Monos", "CV — Monos") |
 | `search-field.js` | `SEARCH_INPUT_CLASS`, `SEARCH_ICON_CLASS`, `SEARCH_BUTTON_CLASS`, `SEARCH_CLEAR_CLASS`, and `*_COMPACT_CLASS` a size down — the board search's look, shared by every search box (`SearchField.svelte`, the header, the palette, the terminal's find bar) |
 | `search-field.test.js` | The board look, and every search box in the app built from it |
 | `service-worker.js` | `shouldRegisterServiceWorker` says whether the app registers its install worker (`public/sw.js`): a production build, HTTPS and a browser that supports it |

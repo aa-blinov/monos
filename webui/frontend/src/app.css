@@ -37,6 +37,20 @@
   --aqua: var(--ui-success);
   --text-whisper: var(--ui-text-whisper);
   --text-whisper-lg: var(--ui-text-whisper-lg);
+
+  /* The colour of text that says "error", "warning" or "done". The raw palette colours are fills (a dot, a border);
+     as text on paper or on a tinted banner they fall to 2.5:1 on some palettes. The kit's `-text` variants are
+     darkened (lightened in the dark modes) a little further so every palette keeps 4.5:1 on the page, on the second
+     surface and on a banner tinted with the colour itself. A test measures all twelve pairs. */
+  --red-text: color-mix(in srgb, var(--ui-danger-text) 85%, black);
+  --yellow-text: color-mix(in srgb, var(--ui-warning-text) 85%, black);
+  --green-text: color-mix(in srgb, var(--ui-success-text) 85%, black);
+}
+
+:root[data-mode="dark"] {
+  --red-text: color-mix(in srgb, var(--ui-danger-text) 85%, white);
+  --yellow-text: color-mix(in srgb, var(--ui-warning-text) 85%, white);
+  --green-text: color-mix(in srgb, var(--ui-success-text) 85%, white);
 }
 
 /* The kit themes set color-scheme at the root; Monos keeps that on form
@@ -283,11 +297,11 @@ input[type="number"]::-webkit-outer-spin-button {
 /* The `[!type]` marker hides while the caret is elsewhere; the title is bold, on its own line. */
 .ProseMirror blockquote.callout, .ProseMirror blockquote.callout p { font-style: normal; }
 .ProseMirror blockquote.callout .callout-marker { display: none; }
-.ProseMirror blockquote.callout .callout-title { font-weight: 700; font-style: normal; color: var(--callout-tone); }
+.ProseMirror blockquote.callout .callout-title { font-weight: 700; font-style: normal; color: var(--callout-text, var(--callout-tone)); }
 .ProseMirror blockquote.callout .callout-title + span[data-soft-break] { display: block; height: 0.35em; }
-.ProseMirror blockquote.callout-green { --callout-tone: var(--green); }
-.ProseMirror blockquote.callout-yellow { --callout-tone: var(--yellow); }
-.ProseMirror blockquote.callout-red { --callout-tone: var(--red); }
+.ProseMirror blockquote.callout-green { --callout-tone: var(--green); --callout-text: var(--green-text); }
+.ProseMirror blockquote.callout-yellow { --callout-tone: var(--yellow); --callout-text: var(--yellow-text); }
+.ProseMirror blockquote.callout-red { --callout-tone: var(--red); --callout-text: var(--red-text); }
 .note-embed-body > :first-child { margin-top: 0; }
 .note-embed-body > :last-child { margin-bottom: 0; }
 .note-embed-body h3, .note-embed-body h4,

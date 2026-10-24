@@ -260,7 +260,7 @@
 
 <section class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="properties-view">
   <div class="mx-auto max-w-6xl space-y-5">
-    <header class="space-y-2">
+    <div class="space-y-2">
       <div class="mb-5">
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.properties.tableTitle}</h1>
         <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.properties.tableHint}</p>
@@ -288,7 +288,7 @@
         <summary class="min-h-10 cursor-pointer py-2">{$localizedText.properties.syntaxTitle}</summary>
         <p class="pb-2">{$localizedText.properties.syntaxHint}</p>
       </details>
-    </header>
+    </div>
 
     {#if keys.length > 0}
       <div class="flex flex-wrap items-center gap-2" role="group" aria-label={$localizedText.properties.columns}>
@@ -321,7 +321,7 @@
     {#if status === 'loading'}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.loading}</p>
     {:else if status === 'error'}
-      <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.properties.loadFailed}</p>
+      <p role="alert" class="text-xs text-[var(--red-text)]">{$localizedText.properties.loadFailed}</p>
     {:else if keys.length === 0 && !query.trim()}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.properties.noProperties}</p>
     {:else if rows.length === 0}
@@ -349,7 +349,7 @@
             {#each rows as row (row.path)}
               <tr class="group border-t border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]">
                 <td class="sticky left-0 z-[1] bg-[var(--bg-primary)] px-3 py-2 group-hover:bg-[var(--bg-secondary)]">
-                  <Button variant="quiet" size="sm" class="block max-w-[14rem] truncate text-left normal-case max-sm:max-w-[9rem]" on:click={() => openRow(row)}>{row.title}</Button>
+                  <Button variant="quiet" size="sm" class="max-w-[14rem] justify-start text-left normal-case max-sm:max-w-[9rem]" on:click={() => openRow(row)}><span class="min-w-0 truncate">{row.title}</span></Button>
                 </td>
                 {#each columns || [] as key (key)}
                   <td class="px-1 py-1 text-[var(--text-secondary)]">
@@ -365,7 +365,7 @@
                           class="h-8 w-full min-w-[7rem] px-2 text-xs"
                         />
                       </div>
-                      {#if editError}<span role="alert" class="mt-0.5 block text-[length:var(--text-whisper)] text-[var(--red)]">{editError}</span>{/if}
+                      {#if editError}<span role="alert" class="mt-0.5 block text-[length:var(--text-whisper)] text-[var(--red-text)]">{editError}</span>{/if}
                     {:else}
                       <Button
                         variant="quiet"

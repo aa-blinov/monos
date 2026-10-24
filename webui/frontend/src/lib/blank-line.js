@@ -16,6 +16,10 @@ export function isBlankLineNode(node) {
   return text.length > 0 && [...text].every((character) => character === NO_BREAK_SPACE);
 }
 
+// A note written block by block (note-source.js) hands the serializer one top-level block at a time, so the
+// parent it sees has a single child. The real number of blocks is set here around such a call.
+export const blockContext = { topLevelCount: null };
+
 export const EditableParagraph = Paragraph.extend({
   addStorage() {
     return {
@@ -23,7 +27,8 @@ export const EditableParagraph = Paragraph.extend({
         serialize(state, node, parent) {
           // An empty note and an empty list item are not lines the person made: they stay empty in the file.
           // `&nbsp;` is for an empty line among other content.
-          const alone = parent?.childCount === 1;
+          const atTop = parent?.type?.name === 'doc' && blockContext.topLevelCount !== null;
+          const alone = atTop ? blockContext.topLevelCount === 1 : parent?.childCount === 1;
           if (node.content.size === 0 && !alone) state.write(BLANK_LINE);
           else state.renderInline(node);
           state.closeBlock(node);

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { closeDb } from './database.js';
+import { apiErrorBodies, errorResponse } from './api-errors.js';
 import { ROOT_DIR, NOTES_DIR } from './config.js';
 import { indexAllFiles } from './indexing.js';
 import { ensureAgentSkill } from './agent-skill.js';
@@ -119,7 +120,7 @@ function requireAccessToken(req, res, next) {
   });
   if (!authorized) {
     if (req.path.startsWith('/api/')) {
-      res.status(401).json({ detail: 'Access token required' });
+      res.status(401).json({ detail: 'Access token required', code: 'access_token_required' });
     } else {
       res.status(401).type('html').send(ACCESS_PAGE);
     }
@@ -133,25 +134,17 @@ function requireAccessToken(req, res, next) {
   next();
 }
 
-// Errors Express passes on (a broken JSON body, a body over the limit, a sync throw in a
-// route) go out as the same {"detail"} JSON as other API errors instead of Express's HTML
-// page with a stack trace. The stack of a server error goes to the server log instead.
-const BODY_ERROR_DETAILS = new Map([
-  ['entity.parse.failed', 'Request body is not valid JSON'],
-  ['entity.too.large', 'Request body is too large'],
-]);
-
+// Errors Express passes on (a broken JSON body, a body over the limit, a sync throw in a route) go out as the same
+// {"detail","code"} JSON as other API errors instead of Express's HTML page with a stack trace. The stack of a
+// server error goes to the server log instead (api-errors.js).
 function sendJsonError(err, req, res, next) {
   // A response that has already started cannot take a JSON body; hand it to Express.
   if (res.headersSent) {
     next(err);
     return;
   }
-  const status = [err.status, err.statusCode]
-    .find((code) => Number.isInteger(code) && code >= 400 && code <= 599) ?? 500;
-  if (status >= 500) console.error('Request failed:', err);
-  const fallback = status >= 500 ? 'Internal server error' : 'Bad request';
-  res.status(status).json({ detail: BODY_ERROR_DETAILS.get(err.type) ?? fallback });
+  const { status, body } = errorResponse(err);
+  res.status(status).json(body);
 }
 
 const app = express();
@@ -163,7 +156,13 @@ app.use(cors({
     callback(null, origin && isAllowedOrigin(origin) ? origin : false);
   },
 }));
+app.use(apiErrorBodies);
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
+// A request without a body has none to read: a route that takes fields from it must find an empty object, not throw.
+app.use((req, res, next) => {
+  if (req.body === undefined || req.body === null) req.body = {};
+  next();
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -200,6 +199,10 @@ registerLanRoutes(app, { listening: currentListening });
 registerStorageRoutes(app);
 registerEventRoutes(app);
 registerAgentRoutes(app);
+// An address under /api that no route answers is a JSON 404, not the page of the app or Express's HTML.
+app.use('/api', (req, res) => {
+  res.status(404).json({ detail: 'Not found', code: 'not_found' });
+});
 // Last, so it catches errors from every route registered above.
 app.use(sendJsonError);
 
@@ -214,6 +217,17 @@ function registerFrontendStatic() {
 
   if (!frontendDist || !fs.existsSync(indexPath)) return;
 
+  // A page address with a broken percent sequence ("/notes/100%%20done.md") is still a page address:
+  // static serving would answer it with an error instead of handing it to the app.
+  app.use((req, res, next) => {
+    let malformed = false;
+    try { decodeURIComponent(req.path); } catch { malformed = true; }
+    if (malformed && !req.path.startsWith('/api/') && req.path !== '/health') {
+      res.sendFile(indexPath);
+      return;
+    }
+    next();
+  });
   app.use(express.static(frontendDist));
   // Express 5 reads a bare '*' as a path-to-regexp pattern and throws; a regex
   // keeps the SPA fallback for every page address, root included.
@@ -243,19 +257,26 @@ export function startServer({ port = 8000, host } = {}) {
     return Promise.resolve({ app, server, port: server.address().port });
   }
 
-  // The assistants' guide to this folder, made once and then left alone (a failure here must not stop the app).
-  try { ensureAgentSkill(); } catch (error) { console.error('Could not write the agent skill:', error); }
-  // An unreadable note is skipped inside the pass (indexing.js); a failure of the pass itself must not stop the app.
-  try { indexAllFiles(); } catch (error) { console.error('Could not index the notes:', error); }
-  startNotesWatcher();
   registerFrontendStatic();
   registerSignalHandlers();
 
   const bindHost = host || bindHostFor();
   return new Promise((resolve, reject) => {
-    const nextServer = app.listen(port, bindHost, () => {
+    // Express 5 hands a failure to listen (a busy port) to this callback as its first argument; the server it
+    // would have returned is not there then.
+    const nextServer = app.listen(port, bindHost, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
       server = nextServer;
       boundHost = bindHost;
+      // Only a server that listens owns the folder: a second one that lost the port must not index it or watch it.
+      // The assistants' guide to this folder is made once and then left alone (a failure here must not stop the app).
+      try { ensureAgentSkill(); } catch (skillError) { console.error('Could not write the agent skill:', skillError); }
+      // An unreadable note is skipped inside the pass (indexing.js); a failure of the pass itself must not stop the app.
+      try { indexAllFiles(); } catch (indexError) { console.error('Could not index the notes:', indexError); }
+      startNotesWatcher();
       resolve({ app, server, port: server.address().port });
     });
 

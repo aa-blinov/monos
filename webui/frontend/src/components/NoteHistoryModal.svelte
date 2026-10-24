@@ -92,7 +92,7 @@
     if (line.startsWith('+++') || line.startsWith('---')) return 'text-[var(--text-tertiary)]';
     if (line.startsWith('@@')) return 'text-[var(--blue)]';
     if (line.startsWith('+')) return 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--text-primary)_7%,transparent)]';
-    if (line.startsWith('-')) return 'text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)]';
+    if (line.startsWith('-')) return 'text-[var(--red-text)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)]';
     return 'text-[var(--text-secondary)]';
   }
 
@@ -158,7 +158,7 @@
 
       <div class="min-w-0">
         {#if error}
-          <p class="mb-3 text-xs text-[var(--red)]">{error}</p>
+          <p class="mb-3 text-xs text-[var(--red-text)]">{error}</p>
         {/if}
         {#if !selected}
           <p class="text-sm text-[var(--text-secondary)]">{$localizedText.history.pickRevision}</p>

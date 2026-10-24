@@ -47,7 +47,9 @@ test('следующая заметка без HTML снова открывае�
   await expect(page.getByTestId('raw-html-notice')).toHaveCount(0);
 });
 
-test('обычный режим при сохранении приводит разметку к единому виду', async ({ page }) => {
+// Behaviour changed on purpose (QA J6): a block nobody touched is written back as it was read; only the block
+// the person edited goes through the serializer. The note is not tidied behind the person's back.
+test('обычный режим при сохранении не переписывает нетронутые блоки', async ({ page }) => {
   const title = uniqueTitle('Tidy Note');
   const body = 'Setext\n======\n\n* star\n* two\n\n__bold__ and _it_\n\n1) one\n2) two\n\n***\n';
   const notePath = await make(page, title, body);
@@ -58,11 +60,7 @@ test('обычный режим при сохранении приводит р�
   await page.keyboard.type('QQ');
   await waitForSavedContent(page, notePath, 'QQ');
   const saved = await read(page, notePath);
-  expect(saved).toContain('# Setext');
-  expect(saved).toContain('- star\n- two');
-  expect(saved).toContain('**bold** and *it*');
-  expect(saved).toContain('1. one\n2. two');
-  expect(saved).toContain('\n---\n');
+  expect(saved).toContain('Setext\n======\n\n* star\n* two\n\n__bold__ and _it_\n\n1) one\n2) twoQQ\n\n***');
 });
 
 test('режим «Исходный Markdown» сохраняет текст как написан', async ({ page }) => {

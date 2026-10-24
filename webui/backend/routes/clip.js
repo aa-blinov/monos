@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { httpError, nowISO, safePathName } from '../utils.js';
+import { requireThisComputer, sendError } from './helpers.js';
 
 const TOKEN_BYTES = 32;
 const MAX_TITLE = 200;
@@ -86,7 +87,11 @@ function resolveClipFolder(rawFolder) {
   const target = path.resolve(NOTES_DIR, folder);
   const notesRoot = path.resolve(NOTES_DIR);
   if (target !== notesRoot && !target.startsWith(notesRoot + path.sep)) {
-    throw httpError(403, 'Folder must stay inside notes');
+    throw httpError(403, 'Folder must stay inside notes', 'outside_notes');
+  }
+  // `.git` and the app's own folders are not places for a clip.
+  if (path.relative(notesRoot, target).split(path.sep).some((segment) => segment.startsWith('.'))) {
+    throw httpError(403, 'This folder is not available', 'hidden_path');
   }
   return target;
 }
@@ -133,7 +138,10 @@ export function registerClipRoutes(app, { appOrigins } = {}) {
     return new Set(sources.map(normalizeOrigin)).has(origin);
   };
 
-  app.get('/api/clip/token', (req, res) => {
+  // The token is the key to writing notes from outside, so it is shown to this computer only. The access token of
+  // other devices does not reach here (the path is exempt from it), and a request that came across the network, or
+  // through a proxy, carries no right to read it: without an Origin header it used to be handed to anyone.
+  app.get('/api/clip/token', requireThisComputer, (req, res) => {
     try {
       const origin = normalizeOrigin(req.get('Origin'));
       // Reading the token is not gated by it, so it is limited to the app itself.
@@ -142,7 +150,7 @@ export function registerClipRoutes(app, { appOrigins } = {}) {
       }
       res.json({ token });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -179,7 +187,7 @@ export function registerClipRoutes(app, { appOrigins } = {}) {
       const relative = path.relative(NOTES_DIR, absolute).split(path.sep).join('/');
       res.status(201).json({ path: `notes/${relative}`, title: title || safePathName(fileName, '.md') });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

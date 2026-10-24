@@ -21,8 +21,9 @@
 
   // The one thing most people came to do: a filled button, the only one on the screen. The folder and sync paths
   // stay quiet text buttons; they matter to some people, not to everyone.
-  const primaryAction = 'inline-flex min-h-11 items-center rounded-ui bg-[var(--text-primary)] px-5 text-xs font-bold uppercase tracking-widest text-[var(--bg-primary)] transition hover:opacity-85';
-  const secondaryAction = 'inline-flex min-h-9 items-center text-xs uppercase tracking-widest text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]';
+  // The kit's own variant colour (`text-ink`) is an equal-weight utility and used to win over the label colour,
+  // which made the label the colour of its own background; `!` is what keeps the label readable.
+  const primaryAction = '!bg-[var(--text-primary)] !text-[var(--bg-primary)] hover:!opacity-85';
   const kbd = 'rounded-ui border border-[var(--border-subtle)] px-1.5 py-0.5 text-[length:var(--text-whisper-lg)] text-[var(--text-primary)]';
 
   $: text = $localizedText.app.welcome;
@@ -38,7 +39,7 @@
       <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.writeTitle}</h2>
       <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.writeText}</p>
       <div class="mt-4 flex flex-wrap gap-x-6">
-        <Button variant="ghost" size="sm" type="button" class={primaryAction} on:click={() => dispatch('newNote')}>{text.writeAction}</Button>
+        <Button variant="primary" size="lg" type="button" class={primaryAction} data-testid="welcome-write-action" on:click={() => dispatch('newNote')}>{text.writeAction}</Button>
       </div>
     </section>
 
@@ -52,7 +53,7 @@
           <Button variant="ghost" size="md" on:click={() => dispatch('importArchive')}>{text.importAction}</Button>
         </div>
         {#if importStatus}<p class="mt-3 text-xs text-[var(--text-tertiary)]" role="status">{importStatus}</p>{/if}
-        {#if importError}<p class="mt-3 text-xs text-[var(--red)]" role="alert">{importError}</p>{/if}
+        {#if importError}<p class="mt-3 text-xs text-[var(--red-text)]" role="alert">{importError}</p>{/if}
       </section>
 
       <section class="flex flex-col rounded-ui border border-[var(--border-subtle)] p-5" data-testid="welcome-sync">

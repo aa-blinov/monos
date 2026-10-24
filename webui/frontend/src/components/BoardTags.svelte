@@ -124,7 +124,7 @@
           data-testid="board-tags-more"
           aria-haspopup="dialog"
           aria-expanded={open}
-          class="h-[38px] max-w-[8rem] sm:max-w-none sm:border-dashed sm:bg-transparent sm:font-normal sm:text-ink-soft"
+          class="h-[38px] max-sm:h-[46px] max-w-[8rem] sm:max-w-none sm:border-dashed sm:bg-transparent sm:font-normal sm:text-ink-soft"
           on:click={toggle}
         >
           <span class="min-w-0 truncate sm:hidden">{$boardTag || $localizedText.app.board.tagsLabel}</span>

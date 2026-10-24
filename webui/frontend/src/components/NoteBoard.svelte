@@ -1,5 +1,6 @@
 <script>
   import { cardExcerpt } from '../lib/card-excerpt.js';
+  import { hasConflictMarkers } from '../lib/conflict-markers.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
   import { ChevronDown, Copy, ExternalLink, FolderOpen, Palette, PanelTop, Pin, Plus } from 'lucide-svelte';
@@ -44,6 +45,33 @@
       margin: CONTEXT_MENU_MARGIN,
     });
     contextMenuPos = { x: next.x, y: next.y };
+    // From the keyboard (the Menu key, Shift+F10) the first item takes focus; with the mouse the menu itself does,
+    // so Esc and the arrows are heard and no ring is drawn on an item nobody chose.
+    if (contextMenu.byKeyboard) contextMenuEl.querySelector('button')?.focus();
+    else contextMenuEl.focus({ preventScroll: true });
+  }
+
+  // Arrows, Home and End move through the items (and the colour swatches after them); Esc and Tab close the menu and
+  // give focus back to the card it came from.
+  function handleMenuKeys(event) {
+    const items = [...(contextMenuEl?.querySelectorAll('button') ?? [])];
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (event.key === 'Escape' || event.key === 'Tab') {
+      event.preventDefault();
+      closeContextMenu({ restoreFocus: true });
+    }
   }
   // The board's own width, not the window's: the sidebar takes its share.
   let boardWidth = 0;
@@ -57,7 +85,12 @@
       notesSignature = nextSignature;
       // A reset (a pin toggled, a note changed) keeps the excerpts already read for the cards.
       const loaded = new Map(orderedNotes.filter(hasRealExcerpt).map((note) => [note.path, note.excerpt]));
-      orderedNotes = notes.map((note) => (!hasRealExcerpt(note) && loaded.has(note.path) ? { ...note, excerpt: loaded.get(note.path) } : note));
+      // What reading a card's note taught (locked, conflicted) is kept the same way, until the list says it itself.
+      const learned = new Map(orderedNotes.filter((note) => note.locked || note.conflict).map((note) => [note.path, { locked: note.locked, conflict: note.conflict }]));
+      orderedNotes = notes.map((note) => {
+        const withExcerpt = !hasRealExcerpt(note) && loaded.has(note.path) ? { ...note, excerpt: loaded.get(note.path) } : note;
+        return learned.has(note.path) ? { ...learned.get(note.path), ...withExcerpt } : withExcerpt;
+      });
       hydrateMissingExcerpts(notes);
     }
   }
@@ -118,8 +151,13 @@
     closeContextMenu();
   }
 
-  function closeContextMenu() {
+  let menuOpener = null;
+
+  function closeContextMenu({ restoreFocus = false } = {}) {
+    const opener = menuOpener;
+    menuOpener = null;
     contextMenu = { show: false, x: 0, y: 0, note: null };
+    if (restoreFocus === true && opener?.isConnected) opener.focus();
   }
 
   function createNote() {
@@ -137,17 +175,28 @@
 
   async function hydrateMissingExcerpts(nextNotes) {
     const candidates = nextNotes
-      .filter((note) => note?.path && !hasRealExcerpt(note) && !hydratedExcerptPaths.has(note.path))
+      // A locked note has no text to read until it is opened with its passphrase, and a conflicted one has the
+      // other devices' markers in it: neither is fetched for a card.
+      .filter((note) => note?.path && !note.locked && !note.conflict && !hasRealExcerpt(note) && !hydratedExcerptPaths.has(note.path))
       .slice(0, 24);
 
     for (const note of candidates) {
       hydratedExcerptPaths.add(note.path);
       try {
         const data = await loadFileContent(note.path);
+        if (hasConflictMarkers(data.content)) {
+          orderedNotes = orderedNotes.map((item) => item.path === note.path ? { ...item, conflict: true } : item);
+          continue;
+        }
         const excerpt = cardExcerptFromContent(data.content);
         orderedNotes = orderedNotes.map((item) => item.path === note.path ? { ...item, excerpt } : item);
       } catch (error) {
-        console.error('Failed to hydrate board excerpt:', error);
+        // 423: a locked note answers that way until it is unlocked. That is its state, not a failure to log.
+        if (error?.status === 423) {
+          orderedNotes = orderedNotes.map((item) => item.path === note.path ? { ...item, locked: true } : item);
+        } else {
+          console.error('Failed to hydrate board excerpt:', error);
+        }
       }
     }
   }
@@ -247,8 +296,9 @@
   }
 
   function handleCardContext(event) {
-    const { note, x, y } = event.detail;
-    contextMenu = { show: true, note, x, y };
+    const { note, x, y, byKeyboard = false, opener = null } = event.detail;
+    menuOpener = opener;
+    contextMenu = { show: true, note, x, y, byKeyboard };
   }
 
 </script>
@@ -259,9 +309,9 @@
 <!-- The tags and the order filter the board, so they stay in sight while the cards scroll under them.
      The bar sits one step (1rem) below and above the content: the page's own top padding is taken down to
      that step, and the background reaches up over what is left, so a card cannot show in the strip above. -->
-<div class="sticky top-0 z-30 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] pb-4 before:absolute before:inset-x-0 before:bottom-full before:h-4 before:bg-[var(--bg-primary)] before:content-[''] sm:-top-2 sm:-mt-2 lg:-top-4 lg:-mt-4">
+<div class="sticky top-0 z-30 mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] pb-4 before:absolute before:inset-x-0 before:bottom-full before:h-4 before:bg-[var(--bg-primary)] before:content-[''] sm:-top-2 sm:-mt-2 lg:-top-4 lg:-mt-4">
   <BoardTags on:choose={(event) => chooseTag(event.detail)} />
-  <div data-testid="board-toolbar" class="relative z-30 ml-auto inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
+  <div data-testid="board-toolbar" class="relative z-30 ml-auto inline-flex items-center gap-1 max-sm:p-0 rounded-ui border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-primary)_65%,transparent)] p-1 shadow-sm shadow-black/5 backdrop-blur-sm">
     <Menu
       items={sortMenuItems}
       label={$localizedText.app.board.sortLabel}
@@ -278,7 +328,7 @@
           id="board-sort"
           {...triggerProps}
           aria-label={`${$localizedText.app.board.sortLabel}: ${currentSortLabel}`}
-          class="inline-flex h-7 max-sm:!min-h-0 cursor-pointer items-center gap-1 rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {open ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
+          class="inline-flex h-7 max-sm:!h-11 max-sm:!min-h-11 cursor-pointer items-center gap-1 rounded-ui bg-transparent px-2 text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)] transition hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] {open ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : ''}"
           on:click={toggle}
         >
           <span class="truncate">{currentSortLabel}</span>
@@ -288,7 +338,7 @@
     </Menu>
     <span class="mx-1 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true"></span>
     <TooltipIconButton
-      class="flex h-7 items-center gap-1.5 rounded-ui px-2 text-[length:var(--text-whisper-lg)] transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
+      class="flex h-7 items-center gap-1.5 rounded-ui px-2 max-sm:h-11 max-sm:min-w-11 max-sm:justify-center text-[length:var(--text-whisper-lg)] transition {$boardGroupByColor ? 'font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'}"
       label={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltip={$boardGroupByColor ? $localizedText.app.board.ungroupByColor : $localizedText.app.board.groupByColor}
       tooltipAlign="end"
@@ -374,12 +424,12 @@
 {#if contextMenu.show}
   <div
     bind:this={contextMenuEl}
-    class="fixed z-[130] w-48 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+    class="fixed z-[130] w-48 max-sm:w-72 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
     style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     role="menu"
     tabindex="-1"
     on:click|stopPropagation
-    on:keydown={(event) => event.key === 'Escape' && closeContextMenu()}
+    on:keydown={handleMenuKeys}
   >
     <Button variant="ghost" size="sm" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
       <Pin size="14" strokeWidth="1.7" fill={contextMenu.note?.pinned ? 'currentColor' : 'none'} aria-hidden="true" /> {contextMenu.note?.pinned ? $localizedText.sidebar.context.unpin : $localizedText.sidebar.context.pin}
@@ -404,14 +454,16 @@
       </div>
       <div class="grid grid-cols-5 gap-1.5">
         {#each colorOptions as color}
+          <!-- The swatch is 24px; on a phone the button around it is 44px, the size of a finger. -->
           <IconButton
             bare
             tooltipText=""
-            class="h-6 w-6 rounded-full border transition hover:scale-110 {contextMenu.note?.color === color ? 'border-[var(--text-primary)]' : 'border-transparent'}"
-            style="background: {color};"
+            class="group flex h-6 w-6 items-center justify-center max-sm:h-11 max-sm:w-11"
             label={$localizedText.app.board.applyColor(color)}
             on:click={() => recolorNote(contextMenu.note, color)}
-          ></IconButton>
+          >
+            <span class="block h-6 w-6 rounded-full border transition group-hover:scale-110 {contextMenu.note?.color === color ? 'border-[var(--text-primary)]' : 'border-transparent'}" style="background: {color};"></span>
+          </IconButton>
         {/each}
       </div>
     </div>

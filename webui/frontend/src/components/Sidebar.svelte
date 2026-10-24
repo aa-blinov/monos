@@ -6,6 +6,7 @@
   import { Button, Card, FieldControl, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
+  import { gitFailureText } from '../lib/git-sync.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
   import { terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
   import { agentReviewOpen, syncBlockedByReview } from '../lib/agent-review.js';
@@ -1036,7 +1037,7 @@
       ? $localizedText.sidebar.syncFailed
       : $localizedText.sidebar.syncWithGit;
   $: syncRowTooltip = autoPullState?.error
-    ? ($localizedText.settings.gitReasons[autoPullState.error.reason] || autoPullState.error.detail || '')
+    ? gitFailureText(autoPullState.error, $localizedText.settings, '')
     : '';
 
   async function handleSync() {    if (isSyncing) return;
@@ -1100,7 +1101,7 @@
     bulkBusy = true;
     bulkError = '';
     try {
-      const created = await duplicateNoteRequest(target);
+      const created = await duplicateNoteRequest(target, $localizedText.sidebar.context.duplicateSuffix);
       await loadTree();
       dispatch('noteDuplicated', created);
     } catch (error) {
@@ -1346,7 +1347,7 @@
             size="sm"
             data-testid="open-conflict"
             on:click={openFirstConflict}
-            class="h-7 w-full justify-start gap-2 px-2 normal-case text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
+            class="h-7 w-full justify-start gap-2 px-2 normal-case text-[var(--red-text)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
           >
             <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" aria-hidden="true"></span>
             <span class="truncate">{$conflictedNotes.size > 0 ? $localizedText.sidebar.conflictNotice($conflictedNotes.size) : $localizedText.sidebar.conflictFilesNotice($conflictedFiles.size)}</span>
@@ -1479,7 +1480,7 @@
         </Button>
         <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
       {/if}
-      <Button variant="ghost" size="sm" on:click={() => handleContextAction('delete')} role="menuitem" class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red)] transition">
+      <Button variant="ghost" size="sm" on:click={() => handleContextAction('delete')} role="menuitem" class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red-text)] transition">
         {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
       </Button>
     </div>
@@ -1506,7 +1507,7 @@
         on:keydown={(e) => { if ((e.detail ?? e).key === 'Enter') applyBulkTag(); }}
       />
       {#if bulkError}
-        <p class="text-sm text-[var(--red)]">{bulkError}</p>
+        <p class="text-sm text-[var(--red-text)]">{bulkError}</p>
       {/if}
       <div class="flex gap-2">
         <Button variant="primary" size="md" data-testid="bulk-tag-apply" disabled={bulkBusy || !bulkTagValue.trim()} class="flex-1" on:click={applyBulkTag}>{$localizedText.sidebar.context.addTag}</Button>
@@ -1550,7 +1551,7 @@
         <label for="folder-name" class="block text-xs uppercase tracking-widest text-[var(--text-secondary)] mb-2">{$localizedText.sidebar.modals.folderName}</label>
         <FieldControl id="folder-name" type="text" bind:value={newFolderNameInput} placeholder={$localizedText.sidebar.modals.folderPlaceholder} on:keydown={(e) => { const key = (e.detail ?? e).key; if (key === 'Enter' && newFolderNameInput.trim() && !folderNameProblem) createFolder(); if (key === 'Escape') showCreateFolderModal = false; }} />
         {#if folderNameProblem && folderNameProblem !== 'empty'}
-          <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(folderNameProblem)}</p>
+          <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red-text)]">{$localizedText.sidebar.nameProblem(folderNameProblem)}</p>
         {/if}
       </div>
       <div class="flex gap-6 mt-12">
@@ -1627,7 +1628,7 @@
               on:input={() => { templateError = ''; templateDuplicatePath = ''; }}
             />
             {#if templateTitleProblem && templateTitleProblem !== 'empty'}
-              <p role="alert" class="mt-2 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(templateTitleProblem)}</p>
+              <p role="alert" class="mt-2 text-xs leading-relaxed text-[var(--red-text)]">{$localizedText.sidebar.nameProblem(templateTitleProblem)}</p>
             {/if}
           </div>
           <div>
@@ -1680,7 +1681,7 @@
 
         {#if templateError}
           <div role="alert" class="rounded-ui mt-5 border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-            <p class="text-sm leading-relaxed text-[var(--red)]">{templateError}</p>
+            <p class="text-sm leading-relaxed text-[var(--red-text)]">{templateError}</p>
             {#if templateDuplicatePath}
               <div class="mt-3 flex flex-wrap gap-4">
                 <Button variant="secondary" size="md" on:click={openExistingTemplateNote}>{$localizedText.sidebar.modals.openExisting}</Button>

@@ -131,7 +131,7 @@
             tooltipText=""
             label={$localizedText.properties.remove.replace('{name}', property.key)}
             disabled={busy}
-            class="shrink-0 px-1 text-sm text-[var(--text-tertiary)] hover:text-[var(--red)]"
+            class="shrink-0 px-1 text-sm text-[var(--text-tertiary)] hover:text-[var(--red-text)]"
             on:click={() => remove(property)}
           >×</IconButton>
         </li>
@@ -196,6 +196,6 @@
   </form>
 
   {#if error}
-    <p role="alert" class="text-xs text-[var(--red)]">{error}</p>
+    <p role="alert" class="text-xs text-[var(--red-text)]">{error}</p>
   {/if}
 </div>

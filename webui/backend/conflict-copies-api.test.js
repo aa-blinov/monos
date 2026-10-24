@@ -29,7 +29,9 @@ test('копия в обслуживании списана с оригинал�
   const moved = await fetch(`${base}/api/file?path=${encodeURIComponent(copyPath)}`, { method: 'DELETE' });
   assert.equal(moved.status, 200);
   assert.equal((await moved.json()).message, 'Moved to trash');
-  assert.ok(fs.existsSync(path.join(notesDir, 'Plan (conflicted copy 2026-10-15 MacBook).md')), 'the file stays until it is emptied from the trash');
+  // The trash is the `.trash` folder of the notes folder: the file rests there until it is emptied from the trash.
+  assert.equal(fs.existsSync(path.join(notesDir, 'Plan (conflicted copy 2026-10-15 MacBook).md')), false);
+  assert.ok(fs.existsSync(path.join(notesDir, '.trash', 'Plan (conflicted copy 2026-10-15 MacBook).md')), 'the file rests in .trash');
 
   const after = await (await fetch(`${base}/api/notes/maintenance`)).json();
   assert.equal(after.conflictCopyCount, 0);

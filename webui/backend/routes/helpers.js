@@ -1,17 +1,16 @@
 import { isThisComputerRequest } from '../lan-access.js';
+import { withoutConflictMarkers } from '../conflict-markers.js';
+
+export { sendError } from '../api-errors.js';
 
 // Settings that change this computer's own setup (access from other devices, where the notes live)
 // are answered to this computer only, whatever token a device has.
 export function requireThisComputer(req, res, next) {
   if (!isThisComputerRequest({ remoteAddress: req.socket.remoteAddress, headers: req.headers })) {
-    res.status(403).json({ detail: 'Only this computer can change this setting' });
+    res.status(403).json({ detail: 'Only this computer can change this setting', code: 'this_computer_only' });
     return;
   }
   next();
-}
-
-export function sendError(res, error) {
-  res.status(error.statusCode || 500).json({ detail: error.message });
 }
 
 export function normalizeMentionText(value) {
@@ -44,13 +43,21 @@ export function stripFrontmatter(content) {
 }
 
 export function noteCardPayload(entry) {
+  const trashed = Boolean(entry.trashed_at);
+  const conflict = Boolean(entry.conflict);
+  // The text a card shows is the note's own. A conflicted note shows this device's side without the markers, and a
+  // locked one has none: its text is sealed and the index holds nothing of it.
+  const text = entry.content ? (conflict ? withoutConflictMarkers(entry.content) : entry.content) : '';
   return {
-    path: entry.path,
+    // A note in the trash is named by the place it was deleted from: that is what the page shows and what it sends
+    // back to restore it. Its own place under `.trash/` is `trashPath`.
+    path: trashed && entry.original_path ? entry.original_path : entry.path,
+    ...(trashed ? { trashPath: entry.path } : {}),
     name: entry.title?.trim() || entry.name.replace('.md', ''),
     // The opening of the note with its line breaks: the card turns lists and headings into readable
     // text, and it needs the lines to know where one item ends.
-    excerpt: entry.content
-      ? stripFrontmatter(entry.content).trim().slice(0, 600)
+    excerpt: text
+      ? stripFrontmatter(text).trim().slice(0, 600)
       : '',
     color: entry.color || null,
     category: entry.category || '',
@@ -60,5 +67,7 @@ export function noteCardPayload(entry) {
     boardOrder: entry.board_order ?? null,
     pinned: Boolean(entry.pinned),
     trashedAt: entry.trashed_at || null,
+    locked: Boolean(entry.locked),
+    conflict,
   };
 }

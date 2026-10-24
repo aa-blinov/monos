@@ -49,7 +49,7 @@
     <Button variant="ghost" size="sm"
       type="button"
       class={getModalButtonClass('primary', {
-        extraClass: danger ? 'py-2 text-[var(--red)]' : 'py-2',
+        extraClass: danger ? 'py-2 text-[var(--red-text)]' : 'py-2',
       })}
       on:click={confirm}
     >

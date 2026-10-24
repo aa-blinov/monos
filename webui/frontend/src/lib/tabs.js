@@ -14,7 +14,7 @@ export function normalizeTabsSetting(value) {
 }
 
 /** The saved choice: 'off' | '2' | '4'. */
-export const tabsToSpaces = persisted('tabsToSpaces', 'off', { deserialize: normalizeTabsSetting });
+export const tabsToSpaces = persisted('tabsToSpaces', 'off', { server: true, deserialize: normalizeTabsSetting });
 
 const ORDERED_ITEM = /^\s*\d+[.)]\s/;
 

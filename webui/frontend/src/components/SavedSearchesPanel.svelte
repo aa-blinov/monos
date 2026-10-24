@@ -133,7 +133,7 @@
       {/if}
 
       {#if error}
-        <p class="text-sm text-[var(--red)]">{error}</p>
+        <p class="text-sm text-[var(--red-text)]">{error}</p>
       {/if}
 
       {#if $savedSearches.length === 0}

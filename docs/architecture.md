@@ -18,6 +18,10 @@ Monos is a local-first desktop application built from a web frontend, a local HT
 | `webui/backend/watcher.js` | Watches the folder and announces what changed over `GET /api/events`. |
 | `webui/backend/notes-folder.js` | The folder the person chose, and the index that belongs to it. |
 | `webui/backend/lan-access.js` | The optional serving of the notes to the network. |
+| `webui/backend/trash.js`, `trash-store.js` | The trash: notes move to `.trash/` with a sidecar file, restore, and the one-off move of a trash that lived only in the index. |
+| `webui/backend/folder-config.js` | Folder icons and colours in `.monos/folders.json`; the table in the index is a copy. |
+| `webui/backend/api-errors.js` | Every error answered as `{ detail, code }`, with no path of this computer in it. |
+| `webui/backend/html-safety.js` | The filter for the HTML made from a note (print sheet, published site). |
 | `webui/frontend/src/App.svelte` | The composition root and the cross-feature state. |
 | `webui/frontend/src/stores.js` | The global stores: the theme, the view mode, the board. |
 | `webui/frontend/src/components/` | One component per concern. |

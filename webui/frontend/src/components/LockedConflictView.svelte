@@ -66,7 +66,7 @@
 
 <div class="space-y-4" data-testid="locked-conflict">
   <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-    <p class="flex items-center gap-2 text-sm font-bold text-[var(--red)]">
+    <p class="flex items-center gap-2 text-sm font-bold text-[var(--red-text)]">
       <Lock size="14" strokeWidth="1.7" aria-hidden="true" />{text.lockedConflictTitle}
     </p>
     <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{text.lockedConflictHint}</p>
@@ -88,7 +88,7 @@
           {text.lockedConflictOpen}
         </Button>
       </div>
-      {#if error}<p role="alert" class="text-xs text-[var(--red)]">{error}</p>{/if}
+      {#if error}<p role="alert" class="text-xs text-[var(--red-text)]">{error}</p>{/if}
     </form>
   {/if}
 

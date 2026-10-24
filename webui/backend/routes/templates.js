@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NOTES_DIR } from '../config.js';
 import { nowISO } from '../utils.js';
+import { sendError } from './helpers.js';
 
 const TEMPLATE_SETTINGS_DIR = path.join(NOTES_DIR, '.monos');
 const TEMPLATE_SETTINGS_PATH = path.join(TEMPLATE_SETTINGS_DIR, 'templates.json');
@@ -69,7 +70,7 @@ export function registerTemplateRoutes(app) {
     try {
       res.json(readTemplateSettings());
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -80,7 +81,7 @@ export function registerTemplateRoutes(app) {
       }
       res.json(writeTemplateSettings(req.body));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

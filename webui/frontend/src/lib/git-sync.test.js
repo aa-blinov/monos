@@ -211,3 +211,13 @@ test('одно и то же событие не повторяется кажд�
   assert.equal(backgroundEvent({ ok: false, detail: 'no network' }, { error: { detail: 'no network' } }), null);
   assert.equal(backgroundEvent({ ok: true, conflicts: true }, { conflicts: true }), null);
 });
+
+test('gitFailureText: сперва reason, потом code, потом слова сервера, потом запасной текст', async () => {
+  const { gitFailureText } = await import('./git-sync.js');
+  const texts = { gitReasons: { 'token-rejected': 'rejected' }, gitCodes: { invalid_branch: 'bad branch', bad_token: 'bad token' } };
+  assert.equal(gitFailureText({ reason: 'token-rejected', code: 'bad_token' }, texts, 'fallback'), 'rejected');
+  assert.equal(gitFailureText({ code: 'invalid_branch', detail: 'fatal: …' }, texts, 'fallback'), 'bad branch');
+  assert.equal(gitFailureText({ detail: 'something plain' }, texts, 'fallback'), 'something plain');
+  assert.equal(gitFailureText({ detail: 'git stderr' }, texts, 'fallback', { useDetail: false }), 'fallback');
+  assert.equal(gitFailureText(null, texts, 'fallback'), 'fallback');
+});

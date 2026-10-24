@@ -11,7 +11,7 @@ export const SEARCH_INPUT_CLASS = `${SEARCH_SURFACE} pl-10 text-sm`;
 /** The same box a size down (h-8), for a bar that shares its row with other small controls: the terminal's find. */
 export const SEARCH_INPUT_COMPACT_CLASS = `${SEARCH_SURFACE} pl-8 text-xs`;
 export const SEARCH_ICON_COMPACT_CLASS = 'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]';
-export const SEARCH_BUTTON_COMPACT_CLASS = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]';
+export const SEARCH_BUTTON_COMPACT_CLASS = 'inline-flex h-7 w-7 max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-ui text-[var(--text-secondary)] transition hover:bg-[color-mix(in_srgb,var(--bg-tertiary)_35%,transparent)] hover:text-[var(--text-primary)]';
 
 export const SEARCH_ICON_CLASS = 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]';
 

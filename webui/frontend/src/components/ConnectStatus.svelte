@@ -28,7 +28,7 @@
     </p>
     <p class="mt-1 text-[var(--text-tertiary)]">{text.connectingHint}</p>
   {:else if phase === 'error'}
-    <p class="text-[var(--red)]" role="alert">{message || text.connectFailed}</p>
+    <p class="text-[var(--red-text)]" role="alert">{message || text.connectFailed}</p>
   {:else if phase === 'conflicts'}
     <p class="flex items-start gap-2 text-[var(--text-primary)]" role="status">
       <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--red)]" aria-hidden="true"></span>

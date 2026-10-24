@@ -6,6 +6,10 @@ import { NOTES_DIR } from '../config.js';
 import { relPath, resolveNotesPath, safePathName, httpError, readTextFile } from '../utils.js';
 import { rewriteAttachmentReferences } from '../attachment-refs.js';
 import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
+import { namedReferences, referencedPaths } from '../attachment-scan.js';
+import { trashedNoteFiles } from '../trash-store.js';
+import { sendError } from './helpers.js';
+import { uploadError } from '../api-errors.js';
 
 const ATTACHMENTS_DIR = '_attachments';
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -31,10 +35,6 @@ const upload = multer({
     cb(httpError(400, 'Only image and PDF files are allowed'));
   },
 });
-
-function sendError(res, error) {
-  res.status(error.statusCode || 500).json({ detail: error.message });
-}
 
 function normalizePosixPath(value) {
   return String(value || '').replace(/\\/g, '/');
@@ -85,9 +85,10 @@ function assertAttachmentPathForNote(notePath, itemPath) {
 
 function assertAnyAttachmentPath(itemPath) {
   const fullPath = resolveNotesPath(itemPath);
-  const parts = normalizePosixPath(itemPath).split('/');
-  if (!parts.includes(ATTACHMENTS_DIR)) {
-    throw httpError(403, 'Attachment path required');
+  // Judged by the place the file really has: `_attachments/../Welcome.md` is the note Welcome.md, not a picture.
+  const folders = relPath(fullPath).split('/').slice(0, -1);
+  if (!folders.includes(ATTACHMENTS_DIR)) {
+    throw httpError(403, 'Attachment path required', 'not_an_attachment');
   }
   return fullPath;
 }
@@ -96,7 +97,7 @@ export function registerAttachmentRoutes(app) {
   function uploadAttachment(req, res, next) {
     upload.single('file')(req, res, (error) => {
       if (error) {
-        sendError(res, error);
+        sendError(res, uploadError(error));
         return;
       }
       next();
@@ -227,46 +228,6 @@ function collectFiles(dir, out = []) {
   return out;
 }
 
-function resolveReferencedPaths(noteFullPath, markdown) {
-  const noteDir = path.dirname(noteFullPath);
-  const found = new Set();
-  // Images `![](…)` and plain links `[name](…)` both keep a file in use (a PDF is linked, not embedded).
-  for (const match of String(markdown || '').matchAll(/\]\(([^)\s]+)/g)) {
-    let target = match[1].trim();
-    if (/^(https?:|data:)/i.test(target)) continue;
-    try {
-      target = decodeURI(target);
-    } catch {
-      // A malformed escape is still a path we can try as-is.
-    }
-    const full = path.resolve(noteDir, target);
-    if (!full.startsWith(path.resolve(noteDir) + path.sep)) continue;
-    found.add(path.resolve(full));
-  }
-  return found;
-}
-
-// Obsidian and the editor name a file rather than a path: `![[pic.png]]` and `[[report.pdf|the report]]`
-// mean a file of that name wherever it sits in the notes, and an HTML <img src> may carry a path. A file
-// whose name is written anywhere counts as in use.
-function namedReferences(markdown) {
-  const names = new Set();
-  const text = String(markdown || '');
-  for (const match of text.matchAll(/\[\[([^\]|#\n]+)/g)) names.add(fileNameOf(match[1]));
-  for (const match of text.matchAll(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi)) names.add(fileNameOf(match[1]));
-  return names;
-}
-
-function fileNameOf(target) {
-  let name = String(target).trim();
-  try {
-    name = decodeURI(name);
-  } catch {
-    // A malformed escape is still a name we can try as written.
-  }
-  return name.split('/').pop();
-}
-
 // The text a note is read from for its references. A locked note is unreadable until it is unlocked in
 // this session: null tells the caller that the pictures it uses are unknown.
 function referenceTextOf(notePath) {
@@ -296,11 +257,11 @@ function folderOfAttachment(file) {
 // What each note points at, remembered by the note's size and modification time: a list of the whole vault
 // reads only the notes that changed since the last one. A locked note is never remembered (its text is only
 // readable while it is unlocked in this session).
-const referenceCache = new Map(); // absolute note path -> { signature, paths, names }
+const referenceCache = new Map(); // absolute note path and base folder -> { signature, paths, names }
 const REFERENCE_CACHE_LIMIT = 20000;
 
 /** @returns {{ locked: true } | { locked: false, paths: Set<string>, names: Set<string> }} */
-function noteReferences(notePath) {
+function noteReferences(notePath, baseDir = '') {
   let signature = '';
   try {
     const stats = fs.statSync(notePath);
@@ -308,40 +269,48 @@ function noteReferences(notePath) {
   } catch {
     return { locked: false, paths: new Set(), names: new Set() };
   }
-  const cached = referenceCache.get(notePath);
+  const cacheKey = `${notePath}|${baseDir}`;
+  const cached = referenceCache.get(cacheKey);
   if (cached && cached.signature === signature) return { locked: false, paths: cached.paths, names: cached.names };
   const stored = readTextFile(notePath);
   const sealed = isLockedNote(stored);
   const text = sealed ? referenceTextOf(notePath) : stored;
   if (text === null) return { locked: true };
-  const result = { paths: resolveReferencedPaths(notePath, text), names: namedReferences(text) };
+  const result = { paths: referencedPaths(baseDir || path.dirname(notePath), text), names: namedReferences(text) };
   if (!sealed) {
     if (referenceCache.size >= REFERENCE_CACHE_LIMIT) referenceCache.clear();
-    referenceCache.set(notePath, { signature, ...result });
+    referenceCache.set(cacheKey, { signature, ...result });
   }
   return { locked: false, ...result };
 }
 
 function listAttachments() {
   const allFiles = collectFiles(NOTES_DIR);
-  const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
+  // A note in the trash still shows its pictures once it is brought back, so it keeps them in use, read from the
+  // folder it was deleted from.
+  const notes = [
+    ...allFiles.filter((file) => /\.(md|markdown)$/i.test(file)).map((file) => ({ file, baseDir: '' })),
+    ...trashedNoteFiles().map(({ file, originalDir, originalApp }) => ({ file, baseDir: originalDir, originalApp })),
+  ];
   const byPath = new Map();
   const byName = new Map();
   let lockedNotes = 0;
-  for (const note of notes) {
-    const references = noteReferences(note);
+  for (const { file: note, baseDir, originalApp } of notes) {
+    const references = noteReferences(note, baseDir);
     if (references.locked) {
       lockedNotes += 1;
       continue;
     }
-    const entry = { path: relPath(note), title: path.basename(note).replace(/\.(md|markdown)$/i, '') };
+    const entry = { path: originalApp || relPath(note), title: path.basename(note).replace(/\.(md|markdown)$/i, '') };
+    // Listed as a user so the picture is kept; the flag tells the page that this note is in the trash.
+    const kind = baseDir ? { trashed: true } : {};
     for (const target of references.paths) {
       if (!byPath.has(target)) byPath.set(target, new Map());
-      byPath.get(target).set(entry.path, { ...entry, via: 'link' });
+      byPath.get(target).set(entry.path, { ...entry, via: 'link', ...kind });
     }
     for (const name of references.names) {
       if (!byName.has(name)) byName.set(name, new Map());
-      byName.get(name).set(entry.path, { ...entry, via: 'name' });
+      byName.get(name).set(entry.path, { ...entry, via: 'name', ...kind });
     }
   }
   const items = allFiles
@@ -578,20 +547,24 @@ export function registerOrphanRoutes(app) {
     try {
       res.json(listAttachments());
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
   app.get('/api/attachments/orphans', (_req, res) => {
     try {
       const allFiles = collectFiles(NOTES_DIR);
-      const notes = allFiles.filter((file) => /\.(md|markdown)$/i.test(file));
+      const notes = [
+        ...allFiles.filter((file) => /\.(md|markdown)$/i.test(file)).map((file) => ({ file, baseDir: '' })),
+        // A note in the trash keeps its pictures in use: they are needed again when it is restored.
+        ...trashedNoteFiles().map(({ file, originalDir }) => ({ file, baseDir: originalDir })),
+      ];
 
       const referenced = new Set();
       const named = new Set();
       let lockedNotes = 0;
-      for (const note of notes) {
-        const references = noteReferences(note);
+      for (const { file: note, baseDir } of notes) {
+        const references = noteReferences(note, baseDir);
         if (references.locked) {
           lockedNotes += 1;
           continue;
@@ -624,7 +597,7 @@ export function registerOrphanRoutes(app) {
 
       res.json({ orphans, totalSize: orphans.reduce((sum, item) => sum + item.size, 0), lockedNotes: 0 });
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

@@ -26,7 +26,7 @@ const printSource = read(BACKEND, 'routes', 'print.js');
 test('печать прогоняет код через lowlight', () => {
   assert.match(printSource, /import \{ common, createLowlight \} from 'lowlight'/);
   assert.match(printSource, /createLowlight\(common\)/);
-  assert.match(printSource, /renderMarkdownToHtml[\s\S]*?highlightCodeBlocks\(html\)/);
+  assert.match(printSource, /renderMarkdownToHtml[\s\S]*?highlightCodeBlocks\(sanitizeHtml\(html\)\)/);
 });
 
 test('обход hast-дерева не теряет текст и классы', () => {
@@ -179,11 +179,9 @@ test('есть эндпоинт неиспользуемых вложений', 
 
 test('эндпоинт считает вложение использованным по ссылке из заметки', () => {
   // Референсы собираются из markdown самих заметок: иначе в отчёт попадали бы
-  // все файлы подряд.
-  assert.ok(
-    /resolveReferencedPaths[\s\S]*matchAll\(\/\\\]/.test(attachmentsSource),
-    'ссылки собираются из текста заметки — по одному пути на файл',
-  );
+  // все файлы подряд. Сборщик ссылок живёт в attachment-scan.js.
+  const scanSource = read(BACKEND, 'attachment-scan.js');
+  assert.ok(/matchAll\(\/\\\]\\\(/.test(scanSource), 'ссылки собираются из текста заметки — по одному пути на файл');
   assert.match(attachmentsSource, /referenced\.has/);
 });
 

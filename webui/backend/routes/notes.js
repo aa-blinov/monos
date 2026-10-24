@@ -4,13 +4,16 @@ import { getDb } from '../database.js';
 import { parseFrontmatterMetadata, searchEntries, parseSearchQuery } from '../search.js';
 import { searchFts } from '../fts.js';
 import { NOTES_DIR } from '../config.js';
-import { assertFileName, folderLinkPatterns, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath, writeFileAtomic } from '../utils.js';
+import { assertFileName, canonicalAppPath, folderLinkPatterns, headingLinkPattern, httpError, linkNameCandidates, noteLinkNames, nowISO, readTextFile, readTextForRewrite, relPath, resolveNotesChildPath, resolveNotesPath, writeFileAtomic } from '../utils.js';
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { parseStoredProperties } from '../properties.js';
 import { isEncryptedSecret, protectSecret, revealSecret } from './secret-store.js';
 import { noteCardPayload, parseTags } from './helpers.js';
-import { requireBodyFields, requireStringField } from './validate.js';
+import { requireBodyFields } from './validate.js';
+import { isThisComputerRequest } from '../lan-access.js';
+import { findTrashedRow, restoreFromTrash } from '../trash.js';
+import { sendError } from './helpers.js';
 
 // The value a table column compares by, or null when the note does not have the property.
 function tableCell(row, sort) {
@@ -47,17 +50,25 @@ export function registerNoteRoutes(app) {
     try {
       requireBodyFields(req, 'title');
       const { category, tags, content } = req.body;
+      if (typeof req.body.title !== 'string') throw httpError(400, 'title must be text', 'invalid_title');
+      if (category !== undefined && category !== null && typeof category !== 'string') throw httpError(400, 'category must be text', 'invalid_category');
+      if (tags !== undefined && tags !== null && (!Array.isArray(tags) || tags.some((tag) => typeof tag !== 'string'))) {
+        throw httpError(400, 'tags must be a list of text', 'invalid_tags');
+      }
+      if (content !== undefined && content !== null && typeof content !== 'string') throw httpError(400, 'content must be text', 'invalid_content');
       // Название заметки — её имя на диске. То, что ОС не создаст, отклоняем сразу,
       // а не заменяем тихо: пользователь видит, что именно не так.
-      const title = assertFileName(String(req.body.title).trim());
+      const title = assertFileName(req.body.title.trim());
       const fileName = title + '.md';
-      const dirPath = category ? resolveNotesChildPath(category) : NOTES_DIR;
+      // Every folder of the category is a name the system has to be able to create, not only the last one.
+      const dirPath = category ? resolveNotesChildPath(category, { forCreate: true }) : NOTES_DIR;
       fs.mkdirSync(dirPath, { recursive: true });
       if (category) indexDirectoryTree(dirPath);
 
       const filePath = path.join(dirPath, fileName);
       // The file is the only copy of its text, so a name that is taken is refused,
       // never written over. The existing path lets the UI open that note instead.
+      // A note in the trash does not take its name: it rests in `.trash/` and comes back under another one if need be.
       if (fs.existsSync(filePath)) {
         // "Open or create" (today's note): the note that already has this name is the answer, not an error.
         if (req.body.openIfExists === true) {
@@ -65,6 +76,7 @@ export function registerNoteRoutes(app) {
         }
         return res.status(409).json({
           detail: `A note named "${fileName.replace(/\.md$/, '')}" already exists in this folder.`,
+          code: 'exists',
           path: relPath(filePath),
         });
       }
@@ -73,11 +85,10 @@ export function registerNoteRoutes(app) {
 
       const relativePath = relPath(filePath);
       indexFile(filePath, noteContent);
-      getDb().prepare('UPDATE notes_index SET trashed_at = NULL WHERE path = ?').run(relativePath);
 
       res.json({ path: relativePath, name: fileName, isDir: false });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -87,34 +98,43 @@ export function registerNoteRoutes(app) {
    * The copy keeps the body and the metadata, loses the pin — a duplicate is
    * not something you were working on, and a stale pin on both copies is how a
    * pinned list grows by accident. The name gets a numeric suffix only if the
-   * obvious one is taken, so duplicating twice reads «Копия», «Копия 2».
+   * obvious one is taken, so duplicating twice reads «Копия», «Копия 2» (the word is the `suffix` the page sends).
    */
   app.post('/api/notes/duplicate', (req, res) => {
     try {
       const { path: requestPath } = req.query;
       if (typeof requestPath !== 'string' || !requestPath) {
-        return res.status(400).json({ detail: 'path is required' });
+        return res.status(400).json({ detail: 'path is required', code: 'path_required' });
       }
+      // The word added to the name is the interface's own language ("copy", "копия"): the page sends it, English is
+      // what a client that sends nothing gets.
+      const requested = req.body?.suffix ?? req.query.suffix;
+      if (requested !== undefined && requested !== null && typeof requested !== 'string') {
+        throw httpError(400, 'suffix must be text', 'invalid_suffix');
+      }
+      const suffix = typeof requested === 'string' && requested.trim() ? requested.trim() : 'copy';
+      assertFileName(`${suffix}.md`);
+      if (suffix.length > 40) throw httpError(400, 'suffix is too long', 'invalid_suffix');
       const sourcePath = resolveNotesPath(requestPath);
       if (!fs.existsSync(sourcePath) || fs.statSync(sourcePath).isDirectory()) {
-        return res.status(404).json({ detail: 'Note not found' });
+        return res.status(404).json({ detail: 'Note not found', code: 'not_found' });
       }
 
       const dir = path.dirname(sourcePath);
       const base = path.basename(sourcePath, path.extname(sourcePath));
       const extension = path.extname(sourcePath);
-      let fileName = `${base} копия${extension}`;
+      let fileName = `${base} ${suffix}${extension}`;
       let counter = 2;
       while (fs.existsSync(path.join(dir, fileName))) {
-        fileName = `${base} копия ${counter}${extension}`;
+        fileName = `${base} ${suffix} ${counter}${extension}`;
         counter += 1;
       }
 
       const targetPath = path.join(dir, fileName);
-      const content = readTextFile(sourcePath);
+      const content = readTextForRewrite(sourcePath);
       const metadata = parseFrontmatterMetadata(content);
       const nextContent = upsertFrontmatter(content, {
-        title: `${metadata.title || base} копия`,
+        title: `${metadata.title || base} ${suffix}`,
         category: metadata.category,
         tags: metadata.tags,
         pinned: false,
@@ -128,7 +148,7 @@ export function registerNoteRoutes(app) {
         isDir: false,
       });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -162,7 +182,14 @@ export function registerNoteRoutes(app) {
           missing.push(requestPath);
           continue;
         }
-        const content = readTextFile(absolute);
+        let content;
+        try {
+          content = readTextForRewrite(absolute);
+        } catch {
+          // A note whose bytes text cannot hold is left as it is, and named among those that were not changed.
+          missing.push(requestPath);
+          continue;
+        }
         const metadata = parseFrontmatterMetadata(content);
         const has = metadata.tags.includes(cleanTag);
         if (remove && !has) continue;
@@ -184,7 +211,7 @@ export function registerNoteRoutes(app) {
 
       res.json({ changed, missing, tag: cleanTag });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -234,7 +261,7 @@ export function registerNoteRoutes(app) {
 
       res.json(entries.map(noteCardPayload));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -250,7 +277,7 @@ export function registerNoteRoutes(app) {
       ).get(...filter.params);
       res.json({ total: row?.total ?? 0 });
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -271,44 +298,48 @@ export function registerNoteRoutes(app) {
 
       res.json(entries.map(noteCardPayload));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
+  // Brings a note back from the trash. The path is the one the trash list gives (where the note was deleted from),
+  // which is also the one a page has when it undoes a deletion. A note that is not in the trash and is there is
+  // answered as restored: undoing twice is not an error.
   app.post('/api/notes/restore', (req, res) => {
     try {
-      const { path: filePath } = req.query;
-      const fullPath = resolveNotesPath(filePath);
-      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
-      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
-
-      const restoredAt = nowISO();
+      const { path: requestPath } = req.query;
+      const appPath = canonicalAppPath(requestPath);
+      if (!appPath) throw httpError(400, 'Path required', 'path_required');
       const db = getDb();
-      const changed = db.prepare('UPDATE notes_index SET trashed_at = NULL, last_opened = ? WHERE path = ? AND is_dir = 0')
-        .run(restoredAt, filePath);
-      if (changed.changes === 0) return res.status(404).json({ detail: 'File not found' });
-
-      const entry = db.prepare(`
+      const withColor = `
         SELECT notes_index.*, folder_config.color
         FROM notes_index
         LEFT JOIN folder_config ON folder_config.path = notes_index.path
-        WHERE notes_index.path = ? AND notes_index.is_dir = 0
-      `).get(filePath);
+        WHERE notes_index.path = ? AND notes_index.is_dir = 0`;
+      const row = findTrashedRow(db, appPath);
+      if (!row) {
+        const live = db.prepare(withColor).get(appPath);
+        if (live && !live.trashed_at) return res.json(noteCardPayload(live));
+        return res.status(404).json({ detail: 'File not found', code: 'not_found' });
+      }
 
-      res.json(entry ? noteCardPayload(entry) : { path: filePath });
+      const restored = restoreFromTrash(db, row);
+      const entry = db.prepare(withColor).get(restored.path);
+      res.json({ ...(entry ? noteCardPayload(entry) : { path: restored.path }), ...(restored.renamed ? { renamed: true } : {}) });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
   app.post('/api/notes/touch', (req, res) => {
     try {
-      const { path: filePath } = req.query;
-      const fullPath = resolveNotesPath(filePath);
-      if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: 'File not found' });
-      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory' });
-      const current = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
-      if (current?.trashed_at) return res.status(410).json({ detail: 'File is in trash' });
+      const fullPath = resolveNotesPath(req.query.path);
+      const filePath = relPath(fullPath);
+      if (!fs.existsSync(fullPath)) {
+        if (findTrashedRow(getDb(), filePath)) return res.status(410).json({ detail: 'File is in trash', code: 'trashed' });
+        return res.status(404).json({ detail: 'File not found', code: 'not_found' });
+      }
+      if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: 'Path is a directory', code: 'is_directory' });
 
       const openedAt = nowISO();
       const db = getDb();
@@ -324,7 +355,7 @@ export function registerNoteRoutes(app) {
 
       res.json(entry ? noteCardPayload(entry) : { path: filePath, lastOpened: openedAt });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -336,13 +367,16 @@ export function registerNoteRoutes(app) {
       const uniquePaths = [...new Set(paths)].slice(0, 200);
       if (uniquePaths.length === 0) return res.status(400).json({ detail: 'Paths required' });
 
-      for (const filePath of uniquePaths) {
-        const fullPath = resolveNotesPath(filePath);
-        if (!fs.existsSync(fullPath)) return res.status(404).json({ detail: `File not found: ${filePath}` });
-        if (fs.statSync(fullPath).isDirectory()) return res.status(400).json({ detail: `Path is a directory: ${filePath}` });
-        const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
-        if (note?.trashed_at) return res.status(410).json({ detail: `File is in trash: ${filePath}` });
-      }
+      uniquePaths.splice(0, uniquePaths.length, ...uniquePaths.map((item) => {
+        const fullPath = resolveNotesPath(item);
+        const filePath = relPath(fullPath);
+        if (!fs.existsSync(fullPath)) {
+          if (findTrashedRow(getDb(), filePath)) throw httpError(410, `File is in trash: ${filePath}`, 'trashed');
+          throw httpError(404, `File not found: ${filePath}`, 'not_found');
+        }
+        if (fs.statSync(fullPath).isDirectory()) throw httpError(400, `Path is a directory: ${filePath}`, 'is_directory');
+        return filePath;
+      }));
 
       const db = getDb();
       const updateOrder = db.prepare('UPDATE notes_index SET board_order = ? WHERE path = ? AND is_dir = 0');
@@ -364,15 +398,15 @@ export function registerNoteRoutes(app) {
 
       res.json(entries.map(noteCardPayload));
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
   app.post('/api/search', (req, res) => {
     try {
-      const { query, search_content } = req.body;
+      const { query, search_content } = req.body || {};
       if (query !== undefined && typeof query !== 'string') {
-        return res.status(400).json({ detail: 'query must be a string' });
+        return res.status(400).json({ detail: 'query must be a string', code: 'invalid_query' });
       }
       const db = getDb();
       const searchContent = Boolean(search_content);
@@ -407,7 +441,7 @@ export function registerNoteRoutes(app) {
 
       res.json(searchEntries(entries, { query, searchContent }));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -458,15 +492,15 @@ export function registerNoteRoutes(app) {
         keys: [...keyUse.values()].sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)).slice(0, 60),
       });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
   app.get('/api/notes/backlinks', (req, res) => {
     try {
-      const { path: filePath } = req.query;
+      const filePath = canonicalAppPath(req.query.path);
       const db = getDb();
-      const note = db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath);
+      const note = filePath ? db.prepare('SELECT * FROM notes_index WHERE path = ?').get(filePath) : null;
       if (!note || note.trashed_at) return res.json([]);
 
       // A link reaches the note by its file name, its title or an alias, optionally followed by a
@@ -494,7 +528,7 @@ export function registerNoteRoutes(app) {
         type,
       })));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -557,7 +591,7 @@ export function registerNoteRoutes(app) {
         duplicate: duplicates.has(`${entry.name}.md`),
       })));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -608,7 +642,7 @@ export function registerNoteRoutes(app) {
 
       res.json({ path: rows[0].path, name: rows[0].name.replace(/\.md$/i, ''), isDir: false });
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -631,7 +665,7 @@ export function registerNoteRoutes(app) {
 
       res.json([...tagSet].sort());
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -653,7 +687,7 @@ export function registerNoteRoutes(app) {
       ).all();
       res.json(rows);
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -696,7 +730,7 @@ export function registerNoteRoutes(app) {
 
       res.json(stats);
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -748,7 +782,12 @@ export function registerNoteRoutes(app) {
       // пометку о нём берём из сырых байтов и возвращаем при записи. Иначе
       // переименование тега молча переписывало бы файл уже без BOM.
       const hasBom = fs.readFileSync(absolute).subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf]));
-      const content = readTextFile(absolute);
+      let content;
+      try {
+        content = readTextForRewrite(absolute);
+      } catch {
+        continue;
+      }
       const metadata = parseFrontmatterMetadata(content);
       const updated = upsertFrontmatter(content, {
         title: metadata.title,
@@ -773,7 +812,7 @@ export function registerNoteRoutes(app) {
       }
       res.json({ changed: rewriteTag(from, target) });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -781,9 +820,17 @@ export function registerNoteRoutes(app) {
     try {
       res.json({ changed: rewriteTag(req.body?.tag, null) });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
+
+  // Credentials are for this computer only: another device that got in with the access token reads the preferences,
+  // never the GitHub token, and cannot replace it.
+  const SECRET_SETTINGS = ['git_token', 'git_token_protected'];
+  const SETTING_KEY = /^[A-Za-z0-9_.:-]{1,64}$/;
+  const MAX_SETTINGS_PER_REQUEST = 200;
+  const MAX_SETTING_TEXT = 8192;
+  const fromThisComputer = (req) => isThisComputerRequest({ remoteAddress: req.socket.remoteAddress, headers: req.headers });
 
   app.get('/api/settings', async (req, res) => {
     try {
@@ -793,6 +840,11 @@ export function registerNoteRoutes(app) {
         try { settings[row.key] = JSON.parse(row.value); }
         catch { settings[row.key] = row.value; }
       }
+      if (!fromThisComputer(req)) {
+        for (const key of SECRET_SETTINGS) delete settings[key];
+        res.json(settings);
+        return;
+      }
       // The frontend needs a working token to query the repo list; it must not
       // receive the keychain blob.
       if (typeof settings.git_token === 'string' && isEncryptedSecret(settings.git_token)) {
@@ -801,19 +853,48 @@ export function registerNoteRoutes(app) {
       }
       res.json(settings);
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
+
+  // Preferences: a name and a text, a number, a true/false (or null to clear it). Anything bigger is not a preference.
+  function checkedSettings(body) {
+    const entries = Object.entries(body);
+    if (entries.length > MAX_SETTINGS_PER_REQUEST) throw httpError(400, 'Too many settings at once', 'too_many_settings');
+    for (const [key, value] of entries) {
+      if (!SETTING_KEY.test(key)) throw httpError(400, `The setting name "${key.slice(0, 40)}" is not allowed`, 'invalid_setting');
+      const primitive = value === null || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value));
+      if (primitive) continue;
+      if (typeof value === 'string' && value.length <= MAX_SETTING_TEXT) continue;
+      throw httpError(400, `The setting "${key}" must be a short text, a number or true/false`, 'invalid_setting');
+    }
+    return entries;
+  }
+
+  // A text that reads as another JSON value ("3", "true") is stored quoted, so it comes back as the text it was.
+  const storedSetting = (value) => {
+    if (typeof value !== 'string') return JSON.stringify(value);
+    try { JSON.parse(value); return JSON.stringify(value); } catch { return value; }
+  };
 
   app.post('/api/settings', async (req, res) => {
     try {
       if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({ detail: 'Request body must be an object' });
+        return res.status(400).json({ detail: 'Request body must be an object', code: 'invalid_body' });
       }
       const db = getDb();
+      const payload = Object.fromEntries(checkedSettings(req.body));
+      const ignored = [];
+      if (!fromThisComputer(req)) {
+        for (const key of SECRET_SETTINGS) {
+          if (key in payload) {
+            delete payload[key];
+            ignored.push(key);
+          }
+        }
+      }
       // The git token is a credential, not a preference: wrap it in the OS
       // keychain before it ever reaches the settings table.
-      const payload = { ...req.body };
       if (typeof payload.git_token === 'string' && payload.git_token) {
         const { value, protectedAtRest } = await protectSecret(payload.git_token);
         payload.git_token = value;
@@ -822,15 +903,15 @@ export function registerNoteRoutes(app) {
       const transaction = db.transaction((data) => {
         const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
         for (const [key, value] of Object.entries(data)) {
-          upsert.run(key, typeof value === 'string' ? value : JSON.stringify(value));
+          upsert.run(key, storedSetting(value));
         }
       });
       // `payload`, not `req.body`: the git token must be stored in its
       // protected form, not the one that arrived.
       transaction(payload);
-      res.json({ message: 'Saved' });
+      res.json({ message: 'Saved', ...(ignored.length ? { ignored } : {}) });
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

@@ -30,7 +30,7 @@ test('разметка собирается не на каждое нажати�
 test('flushMarkdown отдаёт накопленное досрочно и сбрасывает таймер', () => {
   assert.match(rich, /export function flushMarkdown\(\)/);
   assert.match(rich, /function flushMarkdown\(\)[\s\S]{0,200}clearTimeout\(markdownTimer\)/);
-  assert.match(rich, /pendingMarkdown = null/);
+  assert.match(rich, /markdownDirty = false/);
 });
 
 test('редактор сбрасывает разметку перед сохранением', () => {

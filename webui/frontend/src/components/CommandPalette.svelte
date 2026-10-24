@@ -334,6 +334,20 @@
 
   let returnFocusEl = null;
 
+  function keepFocusInDialog(event) {
+    if (event.key !== 'Tab') return;
+    event.preventDefault();
+    inputEl?.focus();
+  }
+
+  // Escape works wherever focus is: in the field, on a result, or nowhere in particular after a click on the
+  // dialog's own text (focus then falls to the page, and a handler on the dialog never hears the key).
+  function handleWindowKeydown(event) {
+    if (!open || event.key !== 'Escape' || event.defaultPrevented) return;
+    event.preventDefault();
+    close();
+  }
+
   async function activatePalette() {
     returnFocusEl = typeof document !== 'undefined' ? document.activeElement : null;
     lastOpen = true;
@@ -412,18 +426,21 @@
   $: if (activeIndex >= filteredItems.length) activeIndex = 0;
 </script>
 
+<svelte:window on:keydown={handleWindowKeydown} />
+
 {#if open}
   <div class="fixed inset-0 z-[300] flex items-start justify-center bg-black/20 px-4 pt-[12vh] backdrop-blur-sm" role="presentation">
     <Button variant="ghost" size="sm" class="absolute inset-0 cursor-default" tabindex="-1" aria-label={$localizedText.commandPalette.close} on:click={close}></Button>
 
-    <!-- Esc must work wherever focus is inside the dialog (a result, the backdrop), not only in the field. -->
+    <!-- The field is the dialog's only tab stop (the results are chosen with the arrows, by aria-activedescendant), so
+         Tab stays on it; Esc is heard wherever focus is (the window handler above). -->
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
       class="relative w-full max-w-2xl overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] shadow-2xl"
       role="dialog"
       aria-modal="true"
       aria-label={mode === 'notes' ? $localizedText.commandPalette.quickSwitcher : $localizedText.commandPalette.title}
-      on:keydown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); close(); } }}
+      on:keydown={keepFocusInDialog}
     >
       <div class="border-b border-[var(--border-subtle)] px-5 py-4">
         <div class="mb-3 flex items-center justify-between gap-4">
@@ -460,7 +477,7 @@
         />
       </div>
 
-      <div id="command-palette-results" role="listbox" class="max-h-[55vh] overflow-y-auto py-2">
+      <div id="command-palette-results" role="listbox" tabindex="-1" class="max-h-[55vh] overflow-y-auto py-2">
         {#if isLoading && !filteredItems.length}
           <div class="px-5 py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">{$localizedText.commandPalette.loading}</div>
         {:else if filteredItems.length}
@@ -492,7 +509,7 @@
             <div class="px-5 py-3 text-[length:var(--text-whisper)] uppercase tracking-widest text-[var(--text-tertiary)]">{$localizedText.commandPalette.loading}</div>
           {/if}
         {:else if error}
-          <div class="px-5 py-8 text-sm text-[var(--red)]">{error}</div>
+          <div class="px-5 py-8 text-sm text-[var(--red-text)]">{error}</div>
         {:else}
           <div class="px-5 py-8 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
             {$localizedText.commandPalette.noResults}

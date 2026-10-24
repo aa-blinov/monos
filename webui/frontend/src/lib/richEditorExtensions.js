@@ -4,7 +4,6 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
-import { defaultMarkdownSerializer } from 'prosemirror-markdown';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
@@ -13,6 +12,7 @@ import { SoftBreak } from './soft-break.js';
 import { EditableParagraph } from './blank-line.js';
 import { Markdown } from 'tiptap-markdown';
 import { search } from 'prosemirror-search';
+import { MarkdownFidelity, serializeImage } from './markdown-fidelity.js';
 
 // 150 блоков в хранилище уже размечены языком (105 bash, 19 python, 8 shell…),
 // а редактор их игнорировал. `common` покрывает 11 языков из 12 встречающихся;
@@ -59,10 +59,15 @@ const AttachmentImage = Image.extend({
     ];
   },
 
+  // `wiki`: the picture was written as `![[name.png]]` and is written back that way.
+  addAttributes() {
+    return { ...this.parent?.(), wiki: { default: false, rendered: false } };
+  },
+
   addStorage() {
     return {
       markdown: {
-        serialize: defaultMarkdownSerializer.nodes.image,
+        serialize: serializeImage,
         parse: {},
       },
     };
@@ -75,6 +80,24 @@ const FindInNote = Extension.create({
   name: 'findInNote',
   addProseMirrorPlugins() {
     return [search()];
+  },
+});
+
+// The note's title is the page's one level-1 heading. A `# Heading` in the text is a heading of the note, so a screen
+// reader announces it one level down; the file keeps its `#`.
+const BodyHeadingLevel = Extension.create({
+  name: 'bodyHeadingLevel',
+  addGlobalAttributes() {
+    return [{
+      types: ['heading'],
+      attributes: {
+        ariaLevel: {
+          default: null,
+          parseHTML: () => null,
+          renderHTML: (attributes) => (attributes.level === 1 ? { 'aria-level': '2' } : {}),
+        },
+      },
+    }];
   },
 });
 
@@ -119,6 +142,8 @@ export function createRichEditorExtensions(placeholder, {
     ExternalLinks,
     SoftBreak,
     FindInNote,
+    BodyHeadingLevel,
+    MarkdownFidelity,
     Markdown.configure({ html: false, tightLists: true, bulletListMarker: '-', linkify: true, breaks: false, transformPastedText: true }),
   ];
 }

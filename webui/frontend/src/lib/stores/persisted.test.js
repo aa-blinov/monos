@@ -158,3 +158,99 @@ test('persisted validate получает уже десериализованн�
     assert.equal(get(store), 'large');
   });
 });
+
+// A fresh copy of the module: the registry of synced stores lives in module scope.
+let copy = 0;
+async function freshModule() {
+  copy += 1;
+  return import(`./persisted.js?copy=${copy}`);
+}
+
+test('предпочтения с server: true приходят с сервера, когда localStorage пуст (новый origin)', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    // Launch 1: the person picks a wide column. It goes to localStorage and, after a pause, to the server.
+    globalThis.localStorage = new MemoryStorage();
+    const sent = [];
+    const width = mod.persisted('contentWidth', 'medium', { server: true });
+    const columns = mod.persisted('boardColumns', '3', { server: true });
+    mod.startPreferenceSync({}, (payload) => sent.push(payload));
+    width.set('wide');
+    mod.flushPreferences();
+    assert.deepEqual(sent, [{ contentWidth: 'wide' }]);
+    const server = { contentWidth: 'wide' };
+
+    // Launch 2: another port, so another origin and an empty localStorage. The server's copy fills the stores.
+    const second = await freshModule();
+    globalThis.localStorage = new MemoryStorage();
+    const width2 = second.persisted('contentWidth', 'medium', { server: true });
+    second.persisted('boardColumns', '3', { server: true });
+    assert.equal(get(width2), 'medium');
+    second.startPreferenceSync(server, () => assert.fail('nothing was changed, nothing is sent'));
+    assert.equal(get(width2), 'wide');
+    assert.equal(globalThis.localStorage.getItem('contentWidth'), 'wide', 'the quick copy follows');
+    assert.ok(columns);
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('значение из localStorage, которого нет на сервере, уезжает на сервер один раз', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage({ lineHeight: 'relaxed', boardSort: 'title' });
+    mod.persisted('lineHeight', 'normal', { server: true });
+    mod.persisted('boardSort', 'modified', { server: true });
+    mod.persisted('boardColumns', '3', { server: true });
+    const sent = [];
+    mod.startPreferenceSync({ boardSort: 'opened' }, (payload) => sent.push(payload));
+    // The server's choice wins where it has one; the rest moves up.
+    assert.deepEqual(sent, [{ lineHeight: 'relaxed' }]);
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('значение с сервера, не прошедшее проверку, не принимается', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    const kind = mod.persisted('attachmentsKind', 'all', { server: true, validate: (v) => ['all', 'image', 'pdf'].includes(v) });
+    mod.startPreferenceSync({ attachmentsKind: 'junk' }, () => {});
+    assert.equal(get(kind), 'all');
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('preferenceSnapshot даёт текущие значения в том виде, в каком их хранит сервер', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    const flag = mod.persisted('boardGroupByColor', false, { server: true, serialize: (v) => String(v), deserialize: (s) => s === 'true' });
+    mod.persisted('lineHeight', 'normal', { server: true });
+    flag.set(true);
+    assert.deepEqual(mod.preferenceSnapshot(), { boardGroupByColor: 'true', lineHeight: 'normal' });
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('смена, сделанная при применении серверных значений, на сервер не возвращается', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    mod.persisted('lineHeight', 'normal', { server: true });
+    const sent = [];
+    mod.startPreferenceSync({ lineHeight: 'relaxed' }, (payload) => sent.push(payload));
+    mod.flushPreferences();
+    assert.deepEqual(sent, []);
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});

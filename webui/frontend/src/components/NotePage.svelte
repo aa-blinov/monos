@@ -2,7 +2,8 @@
   export function getFileFromCleanPath(cleanPath) {
     if (!cleanPath) return null;
 
-    const decodedPath = decodeURIComponent(cleanPath);
+    // The router has decoded the address already; a second decode broke "100% done" and turned "a%2Fb" into "a/b".
+    const decodedPath = cleanPath;
     const fullPath = `notes/${decodedPath}`;
     const name = decodedPath.split('/').pop();
 

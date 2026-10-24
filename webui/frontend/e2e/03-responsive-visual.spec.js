@@ -20,6 +20,9 @@ test.beforeAll(() => {
 
 test.beforeEach(async ({ page }) => {
   await prepareMonos(page);
+  // Grouping by colour is kept on the server, and the page writes it a moment after the click, so a reset at the
+  // end of a test can lose the race. Start every viewport from "not grouped": the button is then named "Group".
+  await page.request.post('/api/settings', { data: { boardGroupByColor: 'false' } });
   await page.addInitScript(() => {
     localStorage.setItem('noteView', 'board');
     localStorage.setItem('boardColumns', '3');

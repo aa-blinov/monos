@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { NOTES_DIR } from '../config.js';
 import { nowISO } from '../utils.js';
+import { sendError } from './helpers.js';
 
 /**
  * Saved searches.
@@ -78,7 +79,7 @@ export function registerSavedSearchRoutes(app) {
     try {
       res.json(readSavedSearches());
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -89,7 +90,7 @@ export function registerSavedSearchRoutes(app) {
       }
       res.json(writeSavedSearches(req.body));
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

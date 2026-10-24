@@ -27,7 +27,8 @@ describe('редактор не теряет картинки при сериа�
 
   it('картинка из вставки ![[…]] остаётся в выходе', () => {
     const editor = makeEditor('# Заметка\n\n![[image-2.png]]\n');
-    expect(editor.storage.markdown.getMarkdown()).toContain('_attachments/image-2.png');
+    // The embed is written the way the note had it (`![[…]]`), not respelled as a Markdown image.
+    expect(editor.storage.markdown.getMarkdown()).toContain('![[image-2.png]]');
   });
 
   it('картинка переживает правку в соседнем абзаце', () => {

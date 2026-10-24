@@ -7,7 +7,7 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
-  import { unescapeCalloutMarkers } from '../lib/callouts.js';
+  import { createNoteMarkdown } from '../lib/note-markdown.js';
   import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
   import { isMarkdownBurst } from '../lib/markdown-burst.js';
   import { shortcutLabel } from '../lib/shortcut-label.js';
@@ -142,7 +142,10 @@
   // переключение заметки, сырой режим, выгрузка), сперва вызывает flushMarkdown().
   const MARKDOWN_FLUSH_DELAY = 250;
   let markdownTimer = null;
-  let pendingMarkdown = null;
+  // Something changed since the text was last handed over; it is written out when the pause comes, not per key.
+  let markdownDirty = false;
+  // Where each block of the note came from in the file, so a block nobody touched is written back as it was.
+  let noteMarkdown = null;
 
   const WIKI_SUGGESTION_LIMIT = 8;
 
@@ -180,14 +183,9 @@
     { id: 'horizontalRule', markdown: '---', run: () => editor.chain().focus().setHorizontalRule().run() },
   ];
 
-  function normalizeWikiLinkMarkdown(markdown) {
-    return String(markdown || '')
-      .replace(/\\\[\\\[/g, '[[')
-      .replace(/\\\]\\\]/g, ']]');
-  }
-
   function editorMarkdown(ed = editor) {
-    return unescapeCalloutMarkers(normalizeWikiLinkMarkdown(ed?.storage.markdown?.getMarkdown?.() || ''));
+    if (ed && ed === editor && noteMarkdown) return noteMarkdown.serialize();
+    return content || '';
   }
 
   /**
@@ -200,9 +198,9 @@
       clearTimeout(markdownTimer);
       markdownTimer = null;
     }
-    if (pendingMarkdown === null || !editor) return;
-    const md = pendingMarkdown;
-    pendingMarkdown = null;
+    if (!markdownDirty || !editor) return;
+    markdownDirty = false;
+    const md = editorMarkdown(editor);
     lastEmittedMarkdown = md;
     onUpdate(md);
   }
@@ -295,7 +293,7 @@
       editable,
       onUpdate: ({ editor: ed }) => {
         if (!editable) return;
-        pendingMarkdown = editorMarkdown(ed);
+        markdownDirty = true;
         if (markdownTimer) clearTimeout(markdownTimer);
         markdownTimer = setTimeout(() => {
           markdownTimer = null;
@@ -328,6 +326,8 @@
       },
     });
     editor.mount(editorEl);
+    noteMarkdown = createNoteMarkdown(editor);
+    noteMarkdown.remember(content || '');
     lastAppliedContent = content || '';
   }
 
@@ -342,6 +342,7 @@
       .setMeta('addToHistory', false)
       .setContent(markdownToEditorContent(nextContent), { emitUpdate: false })
       .run();
+    noteMarkdown?.remember(nextContent);
   }
 
   // The link the caret is in. While the editor has focus a small bar under it opens the note, offers to
@@ -1245,7 +1246,7 @@
             <span class="max-w-full truncate text-xs font-medium leading-tight">{suggestion.name}</span>
             {#if suggestion.duplicate}
               <span
-                class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.1em] text-[var(--red)]"
+                class="shrink-0 text-[length:var(--text-whisper)] font-bold uppercase tracking-[0.1em] text-[var(--red-text)]"
                 title={$localizedText.sourceEditor.duplicateName}
               >{$localizedText.sourceEditor.duplicateNameShort}</span>
             {/if}
@@ -1339,7 +1340,7 @@
   }
   :global(.ProseMirror .math-block .katex-display) { margin: 0; }
   :global(.ProseMirror .math-error) {
-    color: var(--red);
+    color: var(--red-text);
     font-family: var(--font-mono, monospace);
     white-space: pre-wrap;
   }
@@ -1361,12 +1362,12 @@
   }
   :global(.ProseMirror .editor-image-frame) { display: inline-flex; max-width: 100%; flex-direction: column; align-items: center; gap: 0.4rem; margin: 1.25rem 0; vertical-align: top; }
   :global(.ProseMirror img.editor-image) { max-width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--border-subtle); }
-  :global(.ProseMirror .editor-image-caption) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.72em; line-height: 1.35; opacity: 0.72; }
+  :global(.ProseMirror .editor-image-caption) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.72em; line-height: 1.35; }
   /* Toolbar buttons are square icons; the items of the menus here are rows and keep their own layout. */
   /* The toolbar's buttons are TooltipIconButtons, children of this component, so a plain selector never reached
-     them and they stayed 28px on a phone. On a phone they are 40px (the strip scrolls sideways, so a larger
-     button costs tools on screen: 40 keeps seven in view, 44 would show six); with a pointer they tighten to 28px. */
-  [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
+     them and they stayed 28px on a phone. On a phone they are 44px, the size of a finger (the strip scrolls sideways, so a larger
+     button costs tools on screen: 44 shows six of them); with a pointer they tighten to 28px. */
+  [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
   @media (min-width: 640px) { [data-more-tools] :global(button:not([role='menuitem']):not([role='menuitemradio']):not([role='option'])) { min-width: 28px; min-height: 28px; } }
 
   .toolbar-scroll::-webkit-scrollbar { height: 3px; }

@@ -26,7 +26,7 @@ function parseTags(rawTags) {
 }
 
 function extractSearchTerms(query) {
-  const cleanQuery = String(query || '').replace(/^#/, '').trim();
+  const cleanQuery = String(query || '').normalize('NFC').replace(/^#/, '').trim();
   if (!cleanQuery) return { cleanQuery: '', terms: [] };
 
   const terms = Array.from(new Set(
@@ -43,15 +43,27 @@ function extractSearchTerms(query) {
   };
 }
 
-/** Split on whitespace, keeping a quoted run in one piece. */
+/**
+ * Split on whitespace, keeping a quoted run in one piece. A quote opens a run only where a word (or the value of an
+ * operator) begins and a closing quote follows; anywhere else it is a character of the text, so `dont"stop` is searched
+ * as written instead of as `dontstop`.
+ */
 function tokenizeQuery(input) {
   const tokens = [];
+  const text = String(input || '');
   let buffer = '';
   let inQuote = false;
-  for (const char of String(input || '')) {
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
     if (char === '"') {
-      inQuote = !inQuote;
-      continue;
+      if (inQuote) {
+        inQuote = false;
+        continue;
+      }
+      if ((buffer === '' || buffer.endsWith(':')) && text.indexOf('"', index + 1) !== -1) {
+        inQuote = true;
+        continue;
+      }
     }
     if (!inQuote && /\s/.test(char)) {
       if (buffer) tokens.push(buffer);
@@ -76,7 +88,8 @@ function readOperatorToken(token) {
 }
 
 function pushTerm(bucket, value) {
-  const lower = String(value || '').toLowerCase().trim();
+  // In the form the text is compared in (NFC): a query typed or pasted decomposed finds composed text and back.
+  const lower = String(value || '').normalize('NFC').toLowerCase().trim();
   if (lower) bucket.push(lower);
 }
 
@@ -97,7 +110,8 @@ function pushTerm(bucket, value) {
  * @returns {{ text: string[], body: { terms: string[], negated: boolean }, updated: { values: string[], negated: boolean } }}
  */
 export function parseSearchQuery(rawQuery) {
-  const tokens = tokenizeQuery(String(rawQuery || '').replace(/^#/, ''));
+  // In the form the text is compared in (NFC): a query typed or pasted decomposed finds composed text, and back.
+  const tokens = tokenizeQuery(String(rawQuery || '').normalize('NFC').replace(/^#/, ''));
   const text = [];
   const body = { terms: [], negated: false };
   // Значения и исключения лежат раздельно. Один флаг negated на корзину
@@ -601,6 +615,8 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
         tags: parseTags(entry.tags),
         score: ranked.score,
         lastOpened: entry.last_opened,
+        locked: Boolean(entry.locked),
+        conflict: Boolean(entry.conflict),
       };
     })
     .filter(Boolean)

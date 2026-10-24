@@ -136,11 +136,11 @@
 
     <div class="grid gap-4">
       <section>
-        <div class="mb-4 flex items-end justify-between gap-4">
+        <div class="mb-4 flex items-center justify-between gap-4">
           <div>
             <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">{$localizedText.templates.myTemplates}</h2>
           </div>
-          <Button variant="ghost" size="md" on:click={openNewTemplate}>
+          <Button variant="ghost" size="md" class="px-0" on:click={openNewTemplate}>
             <Plus size="16" strokeWidth="1.7" aria-hidden="true" />
             <span>{$localizedText.templates.newTemplate}</span>
           </Button>
@@ -165,7 +165,7 @@
                     <TooltipIconButton type="button" class="h-9 w-9 rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" label={$localizedText.templates.edit} tooltip={$localizedText.templates.edit} on:click={() => editTemplate(template)}>
                       <Pencil size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
-                    <TooltipIconButton type="button" class="h-9 w-9 rounded-ui text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => requestRemoveCustomTemplate(template)}>
+                    <TooltipIconButton type="button" class="h-9 w-9 rounded-ui text-[var(--red-text)] hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)]" label={$localizedText.templates.delete} tooltip={$localizedText.templates.delete} on:click={() => requestRemoveCustomTemplate(template)}>
                       <Trash2 size="16" strokeWidth="1.7" aria-hidden="true" />
                     </TooltipIconButton>
                   </div>

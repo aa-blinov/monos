@@ -49,6 +49,31 @@ export const saveFileContent = (filePath, rawContent, baseVersion = '') => {
   return post('/api/file', baseVersion ? { content, base_version: baseVersion } : { content }, { query: { path: filePath } });
 };
 
+// A keepalive request outlives the page that sent it, but the browser caps its body at 64 KiB.
+export const LEAVING_SAVE_LIMIT = 60 * 1024;
+
+/**
+ * Hand the text to the browser for the moment the page goes away, when nothing that waits for an answer is of any
+ * use. Answers whether it was sent: a text too long for a keepalive request is left to the "leave this page?"
+ * question that the browser asks while the note is unsaved.
+ */
+export function saveFileContentOnLeave(filePath, rawContent, baseVersion = '') {
+  const content = replaceTabs(rawContent, readStore(tabsToSpaces));
+  const body = JSON.stringify(baseVersion ? { content, base_version: baseVersion } : { content });
+  if (body.length > LEAVING_SAVE_LIMIT || typeof fetch !== 'function') return false;
+  try {
+    fetch(`/api/file?path=${encodeURIComponent(filePath)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const saveFileMetadata = (filePath, payload) =>
   put('/api/file/metadata', payload, { query: { path: filePath } });
 
@@ -71,9 +96,12 @@ export const renameAttachment = (notePath, attachmentPath, newName) =>
 
 export const saveSettingsRequest = (payload) => post('/api/settings', payload);
 
-/** Копия заметки рядом с оригиналом. */
-export const duplicateNoteRequest = (filePath) =>
-  post('/api/notes/duplicate', null, { query: { path: filePath } });
+/**
+ * Копия заметки рядом с оригиналом. `suffix` — слово в имени копии на языке интерфейса («copy» / «копия»):
+ * без него сервер берёт нейтральное английское.
+ */
+export const duplicateNoteRequest = (filePath, suffix = '') =>
+  post('/api/notes/duplicate', suffix ? { suffix } : null, { query: { path: filePath } });
 
 /**
  * Массовое действие над тегами: добавить или снять тег у списка заметок.

@@ -80,12 +80,20 @@ export function splitFrontmatter(content) {
  * @returns {string}
  */
 export function replaceFrontmatterBody(content, body) {
-  const match = headerMatch(String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/));
+  const raw = String(content || '');
+  const match = headerMatch(raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/));
   const eol = match && match[0].includes('\r\n') ? '\r\n' : '\n';
-  const nextBody = String(body || '').replace(/^\s*\n/, '').replace(/\r?\n/g, eol);
+  const nextBody = String(body || '').replace(/^\s*\n/, '');
   if (!match) return nextBody;
+  const converted = nextBody.replace(/\r?\n/g, eol);
   const block = match[0].replace(/\r?\n$/, '');
-  return `${block}${eol}${eol}${nextBody}`;
+  // The blank lines between the fence and the text stay as the person left them; a note that had no text yet
+  // gets one blank line.
+  const afterFence = raw.slice(match[0].length);
+  const separator = afterFence.trim() === ''
+    ? `${eol}${eol}`
+    : (match[0].endsWith('\n') ? eol : '') + (afterFence.match(/^\s*\n/)?.[0] ?? '');
+  return `${block}${separator}${converted}`;
 }
 
 /**

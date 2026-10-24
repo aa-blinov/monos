@@ -14,15 +14,51 @@ const NODE_TYPE_MAP = {
 
 // prosemirror-markdown turns a newline inside a paragraph into a space. The editor keeps it as a soft break node
 // (see soft-break.js), so saving writes the newline back. Same parser, one more node.
+// The same schema also carries what the stock one drops and the file therefore lost on the next save: the
+// strikethrough mark (`~~x~~`), the number a list starts from, the `)` of `7)` and the marker of a bullet list.
+const baseNodes = markdownSchema.spec.nodes;
 const softBreakSchema = new Schema({
-  nodes: markdownSchema.spec.nodes.append({
-    softBreak: { inline: true, group: 'inline', leaf: true, selectable: false },
+  nodes: baseNodes
+    .update('ordered_list', {
+      ...baseNodes.get('ordered_list'),
+      attrs: { ...baseNodes.get('ordered_list').attrs, delimiter: { default: '.' } },
+    })
+    // A setext heading may span lines ("title\ncontinued\n---"); with no place for the line break in the stock heading
+    // the parser dropped its whole text.
+    .update('heading', { ...baseNodes.get('heading'), content: '(text | image | softBreak)*' })
+    .update('bullet_list', {
+      ...baseNodes.get('bullet_list'),
+      attrs: { ...baseNodes.get('bullet_list').attrs, marker: { default: '-' } },
+    })
+    .append({
+      softBreak: { inline: true, group: 'inline', leaf: true, selectable: false },
+    }),
+  marks: markdownSchema.spec.marks.append({
+    strike: { toDOM: () => ['s', 0] },
   }),
-  marks: markdownSchema.spec.marks,
 });
-const softBreakParser = new MarkdownParser(softBreakSchema, defaultMarkdownParser.tokenizer, {
+// markdown-it is already shipped with the parser; its commonmark preset leaves `~~` out, so it is switched on here
+// on a tokenizer of our own (the stock one is shared with whoever else imports the parser).
+const MarkdownIt = defaultMarkdownParser.tokenizer.constructor;
+const tokenizer = new MarkdownIt('commonmark', { html: false }).enable('strikethrough');
+const softBreakParser = new MarkdownParser(softBreakSchema, tokenizer, {
   ...defaultMarkdownParser.tokens,
   softbreak: { node: 'softBreak' },
+  s: { mark: 'strike' },
+  bullet_list: {
+    block: 'bullet_list',
+    getAttrs: (token, tokens, index) => ({
+      ...defaultMarkdownParser.tokens.bullet_list.getAttrs(token, tokens, index),
+      marker: token.markup || '-',
+    }),
+  },
+  ordered_list: {
+    block: 'ordered_list',
+    getAttrs: (token, tokens, index) => ({
+      ...defaultMarkdownParser.tokens.ordered_list.getAttrs(token, tokens, index),
+      delimiter: token.markup === ')' ? ')' : '.',
+    }),
+  },
 });
 
 const MARK_TYPE_MAP = {
@@ -38,6 +74,11 @@ function normalizeForTipTapSchema(node) {
   if (!node || typeof node !== 'object') return node;
   const next = { ...node };
   if (next.type) next.type = mapType(next.type, NODE_TYPE_MAP);
+  // The editor's ordered list calls the first number `start`.
+  if (next.type === 'orderedList' && next.attrs && 'order' in next.attrs) {
+    const { order, ...rest } = next.attrs;
+    next.attrs = { ...rest, start: order };
+  }
   // A `&nbsp;` line is an empty paragraph again (see blank-line.js).
   if (next.type === 'paragraph' && isBlankLineNode(next)) delete next.content;
   if (Array.isArray(next.marks)) {
@@ -153,7 +194,7 @@ function convertTaskLists(nodes) {
     if (node?.type === 'bulletList' && Array.isArray(node.content)) {
       const items = node.content.map((item) => convertListItemToTaskItem(item));
       if (items.length > 0 && items.every((item) => item?.type === 'taskItem')) {
-        return [descendIntoItems({ type: 'taskList', content: items })];
+        return [descendIntoItems({ type: 'taskList', attrs: listShape(node), content: items })];
       }
 
       // Смешанный список: обычные пункты и задачи рядом. Раньше такой список
@@ -168,7 +209,7 @@ function convertTaskLists(nodes) {
         else runs.push({ kind, items: [item] });
       }
       return runs.map((run) => descendIntoItems(
-        run.kind === 'task' ? { type: 'taskList', content: run.items } : { ...node, content: run.items },
+        run.kind === 'task' ? { type: 'taskList', attrs: listShape(node), content: run.items } : { ...node, content: run.items },
       ));
     }
 
@@ -180,6 +221,12 @@ function convertTaskLists(nodes) {
 
   // map выше может вернуть массивы (смешанный список режется на группы).
   return converted.flat();
+}
+
+// A task list is the bullet list it came from: loose stays loose, tight stays tight, `*` stays `*`.
+function listShape(list) {
+  const { tight, marker } = list.attrs || {};
+  return { tight: tight !== false, marker: marker || '-' };
 }
 
 function convertListItemToTaskItem(item) {
@@ -373,6 +420,8 @@ function embedImageNode(target) {
       src: `_attachments/${target}`,
       alt: name.replace(/\.[^.]+$/, '') || 'image',
       title: null,
+      // Written back as `![[…]]`: the note was written that way and stays that way.
+      wiki: true,
     },
   };
 }

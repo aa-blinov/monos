@@ -50,6 +50,6 @@
     class="rounded-ui border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
   >{$localizedText.lock.unlock}</Button>
   {#if error}
-    <p role="alert" class="text-xs text-[var(--red)]">{error}</p>
+    <p role="alert" class="text-xs text-[var(--red-text)]">{error}</p>
   {/if}
 </form>

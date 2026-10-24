@@ -72,6 +72,12 @@ webui/
     database.js     # SQLite (better-sqlite3)
     search.js       # Логика поиска и ранжирования
     search.test.js  # Тесты поиска на node:test
+    trash.js        # Корзина: перенос в .trash/, восстановление, миграция из индекса
+    trash-store.js  # Пути корзины и sidecar (.trash.json)
+    folder-config.js # Иконки и цвета папок: файл .monos/folders.json
+    api-errors.js   # Ответ об ошибке {detail, code} без путей и стеков
+    html-safety.js  # Фильтр HTML из заметок (печать, сайт)
+    support/vault.js # Стенд для тестов: бэкенд на временной папке
   frontend/         # Svelte SPA
     src/
       components/   # Svelte компоненты
@@ -91,13 +97,15 @@ notes/              # Markdown заметки
 | GET    | `/api/tree`                      | Дерево директорий         |
 | GET    | `/api/file?path=`                | Читать файл               |
 | POST   | `/api/file?path=`                | Сохранить файл            |
-| DELETE | `/api/file?path=`                | Удалить                   |
+| DELETE | `/api/file?path=`                | В корзину (`.trash/`), папка целиком; `permanent=1` — насовсем |
 | POST   | `/api/file/rename?path=`         | Переименовать             |
 | POST   | `/api/file/move?source=&target=` | Переместить               |
 | GET    | `/api/file-info?path=`           | Инфо о файле              |
 | PUT    | `/api/file/metadata?path=`       | Обновить метаданные       |
 | POST   | `/api/notes/create`              | Создать заметку           |
 | GET    | `/api/notes/recent`              | Последние открытые        |
+| GET    | `/api/notes/trash`               | Корзина (путь — откуда удалена) |
+| POST   | `/api/notes/restore?path=`       | Из корзины на место       |
 | POST   | `/api/search`                    | Поиск                     |
 | GET    | `/api/notes/backlinks?path=`     | Обратные ссылки           |
 | GET    | `/api/notes/resolve-link?name=`  | Найти заметку по названию |
@@ -260,6 +268,13 @@ notes/              # Markdown заметки
 - **A new file under `webui/frontend/src/lib/` needs two things.** A sibling `foo.test.js`, and a line in `docs/LIB.md`. `node --test docs/docs-freshness.test.js` fails on a module without a test or on a module the map does not mention, and CI runs that file.
 - **Two locales, no fallback.** Every string in `webui/frontend/src/lib/strings.js` exists in the `en` and in the `ru` block, and a test compares the key sets. A key in one block only fails the suite.
 - **Theme values come from `lib/themes.js`.** Components read CSS variables and never hardcode a colour. A size is written `text-[length:var(--text-whisper)]`, because Tailwind reads a bare `var()` as a colour, and a literal `px` size ignores the interface size setting.
+
+- **A note in the trash is keyed by its place under `.trash/`, and the API names it by where it came from.** The index row of a trashed note has `path = notes/.trash/Projects/Plan.md`, `original_path = notes/Projects/Plan.md` and `trashed_at` (all three come from the file and its `.trash.json` sidecar, `trash-store.js`). `noteCardPayload` answers `path` = the original and `trashPath` = the real one, because the trash page restores by `path` and an undo restores by the path it deleted. Never ask `notes_index WHERE path = ?` with a path from a request to learn whether a note is in the trash: it is not there under that path; use `findTrashedRow(db, appPath)` (`trash.js`). Everything that lists live notes still filters `trashed_at`, and `listAttachments` reads the notes in the trash from the folder they came from, or a picture only a trashed note shows would be offered for deletion. Never write a new "trashed" state into the index alone: the file moves first (`moveNoteToTrash`).
+- **`resolveNotesPath` refuses any segment that starts with a dot.** `.git`, `.monos` and `.trash` are not places a request may name (a write into `.git/config` is code execution on the next git call). The app reaches its own files by absolute paths; a route that must name a hidden path passes `allowHidden` and says why. The path is also made canonical there (`./`, `//`, a trailing slash, `a/../b`), and a route that looks the note up in the index uses `relPath(fullPath)`, never the string it was sent.
+- **Every API error is `{ detail, code }`.** Throw `httpError(status, message, code)` and answer with `sendError(res, error)` (`api-errors.js`): an error raised on purpose keeps its words, anything else is logged and answered as a 500 `internal` without its message, and `scrubPaths` takes this computer's folders out of every `detail`. A route that writes `res.status(409).json({ detail })` by hand still gets the default code for 409. Unknown `/api/*` addresses are a JSON 404.
+- **Icons and colours of folders: the file is the truth** (`.monos/folders.json`, `folder-config.js`). Change them only through `setFolderConfig`/`moveFolderConfig`/`removeFolderConfig`, which write the file and then the `folder_config` table; `relocateIndexRows` calls the move for you.
+- **HTML made from a note goes through `html-safety.js`.** The print sheet and the published site run `sanitizeHtml` over what Markdown produced, and a link target is judged by the scheme a browser would read (entities decoded, whitespace and control characters removed, then an allow-list). Do not add a second place that renders note HTML without it.
+- **A test sets `NOTES_ROOT` before any import that reaches `config.js`.** `ROOT_DIR` and `NOTES_DIR` are read once, when the module loads, and a static `import` of `utils.js`, `note-lock.js` or `indexing.js` at the top of a test file loads it before the first line runs. The test then indexes the real repository's `notes/` and `.data/notes.db`. Use `support/vault.js` (`bootVault`), or import dynamically after setting the variable.
 
 ## Style / safety rails
 

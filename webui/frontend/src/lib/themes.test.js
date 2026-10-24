@@ -374,3 +374,47 @@ test('--text-tertiary читается (4.5:1) на обоих фонах во �
     assert.ok(!/text-\[var\(--text-muted\)\]/.test(source), `${file}: --text-muted как цвет текста (не проходит 4.5:1 в 11 из 12 пар)`);
   }
 });
+
+// The palette that is drawn comes from the kit (themes.css); these tokens are what Monos reads on top of it.
+const kitCss = fs.readFileSync(new URL('../../node_modules/@monos/ui/src/styles/themes.css', import.meta.url), 'utf8');
+const appCss = fs.readFileSync(new URL('../app.css', import.meta.url), 'utf8');
+
+function kitPalettes() {
+  return [...kitCss.matchAll(/\[data-theme="(\w+)"\]\[data-mode="(\w+)"\]\s*\{([^}]*)\}/g)].map(([, name, mode, body]) => ({
+    name,
+    mode,
+    vars: Object.fromEntries([...body.matchAll(/--ui-([\w-]+):\s*(#[0-9a-fA-F]{6})/g)].map((match) => [match[1], hexToRgb(match[2])])),
+  }));
+}
+const rgbToHex = (rgb) => `#${rgb.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+const mixRgb = (a, b, share) => a.map((value, index) => Math.round(value * share + b[index] * (1 - share)));
+
+test('текст ошибки, предупреждения и «готово» читается (4.5:1) на бумаге, на втором слое и на плашке своего цвета во всех 12 парах', () => {
+  const tokens = [['--red-text', 'danger-text', 'danger'], ['--yellow-text', 'warning-text', 'warning'], ['--green-text', 'success-text', 'success']];
+  const palettes = kitPalettes();
+  assert.equal(palettes.length, 12);
+  for (const [token, textKey, toneKey] of tokens) {
+    // The token as app.css writes it: a share of the kit's text colour, the rest black (light) or white (dark).
+    const light = appCss.match(new RegExp(`${token}:\\s*color-mix\\(in srgb, var\\(--ui-${textKey}\\) (\\d+)%, black\\)`));
+    const dark = appCss.match(new RegExp(`:root\\[data-mode="dark"\\]\\s*\\{[^}]*${token}:\\s*color-mix\\(in srgb, var\\(--ui-${textKey}\\) (\\d+)%, white\\)`));
+    assert.ok(light && dark, `${token} записан в app.css для светлой и тёмной тем`);
+    for (const { name, mode, vars } of palettes) {
+      const share = Number((mode === 'dark' ? dark : light)[1]) / 100;
+      const colour = mixRgb(vars[textKey], mode === 'dark' ? [255, 255, 255] : [0, 0, 0], share);
+      const surfaces = [vars.bg, vars.surface, mixRgb(vars[toneKey], vars.bg, 0.08), mixRgb(vars[toneKey], vars.bg, 0.1)];
+      for (const surface of surfaces) {
+        const ratio = contrast(rgbToHex(colour), rgbToHex(surface));
+        assert.ok(ratio >= 4.5, `${name}.${mode}: ${token} ${rgbToHex(colour)} даёт ${ratio.toFixed(2)}:1 на ${rgbToHex(surface)}`);
+      }
+    }
+  }
+});
+
+test('цвета красный, жёлтый и зелёный не стоят в компонентах как цвет текста: для текста есть -text', () => {
+  const dir = new URL('../components/', import.meta.url);
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.svelte'))) {
+    const source = fs.readFileSync(new URL(file, dir), 'utf8');
+    assert.ok(!/text-\[var\(--(red|yellow|green)\)\]/.test(source), `${file}: text-[var(--red|yellow|green)] — для текста берут --…-text`);
+  }
+  assert.ok(!/opacity:\s*0\.72/.test(fs.readFileSync(new URL('../components/RichEditor.svelte', import.meta.url), 'utf8')), 'подпись под картинкой без прозрачности: она роняла контраст ниже 4.5:1');
+});

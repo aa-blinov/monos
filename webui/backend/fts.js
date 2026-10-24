@@ -25,6 +25,11 @@ const FTS_TABLE = 'notes_fts';
 // whole table: one pass per note made indexing grow with the square of the vault (a minute at 5000 notes).
 // Rows are deleted by rowid instead, and this table is where the rowid comes from.
 const FTS_IDS = 'notes_fts_ids';
+// What the rows of the index look like. 2: text and queries are both in Unicode form NFC, and a double quote is
+// stored as it is (version 1 doubled it and normalised nothing, so `dont"stop` and a decomposed `Café` were never
+// found). An index of an older format is filled again from the notes.
+const FTS_META = 'notes_fts_meta';
+const FTS_FORMAT = '2';
 const MIN_TRIGRAM_LENGTH = 3;
 // Above this share of the corpus, narrowing buys nothing: the plain scan
 // already has to touch every row, and the index only adds an oversized
@@ -58,7 +63,17 @@ export function ensureFtsSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       path TEXT NOT NULL UNIQUE
     );
+    CREATE TABLE IF NOT EXISTS ${FTS_META} (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
+  // An index with no rows has none of an older format to distrust: it is written in the current one from the start.
+  // One that has rows and no marker was made before the marker existed, and is filled again.
+  const marked = db.prepare(`SELECT 1 FROM ${FTS_META} WHERE key = 'format'`).get();
+  if (!marked && (db.prepare(`SELECT COUNT(*) AS c FROM ${FTS_TABLE}`).get()?.c ?? 0) === 0) {
+    db.prepare(`INSERT INTO ${FTS_META} (key, value) VALUES ('format', ?)`).run(FTS_FORMAT);
+  }
 }
 
 // Statements are compiled once per connection: compiling them again for every note was a visible share of a reindex.
@@ -78,35 +93,35 @@ function ftsRowId(db, notePath, create) {
   return Number(stmt(db, 'newId', `INSERT INTO ${FTS_IDS} (path) VALUES (?)`).run(notePath).lastInsertRowid);
 }
 
-function quote(value) {
-  return String(value ?? '').replace(/"/g, '""');
-}
+// The same text in the same Unicode form on both sides: macOS file names and pasted text come decomposed (NFD), what a
+// person types is composed (NFC), and trigrams of the two do not match.
+const nfc = (value) => String(value ?? '').normalize('NFC');
 
 /**
  * Turn a user term into a safe trigram substring query, or `null` when trigram
  * cannot represent it.
  *
  * Punctuation is kept on purpose: trigram indexes arbitrary characters, and
- * `b.md` has to match the file name `b.md`. Only double quotes are escaped,
- * because the term is wrapped in a quoted FTS phrase.
+ * `b.md` has to match the file name `b.md`. A double quote is doubled, which
+ * is how a quoted FTS phrase holds one: `dont"stop` is found as written.
  */
 function ftsTerm(term) {
-  const cleaned = String(term || '').replace(/"/g, '').trim();
+  const cleaned = nfc(term).trim();
   if (!cleaned) return null;
   // A term shorter than a trigram would match nothing, and returning "no
   // matches" is how an accelerator quietly eats real results.
   if ([...cleaned].length < MIN_TRIGRAM_LENGTH) return null;
-  return `"${quote(cleaned)}"`;
+  return `"${cleaned.replace(/"/g, '""')}"`;
 }
 
 function writeFtsRow(db, id, note) {
   stmt(db, 'insert', `INSERT INTO ${FTS_TABLE} (rowid, path, name, title, tags, content) VALUES (?, ?, ?, ?, ?, ?)`).run(
     id,
-    note.path,
-    quote(note.name || ''),
-    quote(note.title || ''),
-    quote(note.tags || ''),
-    quote(note.content || '')
+    nfc(note.path),
+    nfc(note.name),
+    nfc(note.title),
+    nfc(note.tags),
+    nfc(note.content)
   );
 }
 
@@ -137,6 +152,7 @@ export function rebuildFts(db) {
     db.exec(`DELETE FROM ${FTS_TABLE}`);
     db.exec(`DELETE FROM ${FTS_IDS}`);
     for (const row of items) writeFtsRow(db, ftsRowId(db, row.path, true), row);
+    db.prepare(`INSERT OR REPLACE INTO ${FTS_META} (key, value) VALUES ('format', ?)`).run(FTS_FORMAT);
   });
   fill(rows);
   return rows.length;
@@ -158,7 +174,10 @@ export function ftsInSync(db) {
   // The rowid map must agree too: an index from before the map existed has rows nothing can delete by rowid.
   let mapped = -1;
   try { mapped = db.prepare(`SELECT COUNT(*) AS c FROM ${FTS_IDS}`).get()?.c ?? 0; } catch { /* no map yet */ }
-  return indexed === expected && indexed > 0 && mapped === indexed;
+  // Rows written by an older format cannot be trusted either way, even when they are all there.
+  let format = null;
+  try { format = db.prepare(`SELECT value FROM ${FTS_META} WHERE key = 'format'`).get()?.value ?? null; } catch { /* no marker yet */ }
+  return indexed === expected && indexed > 0 && mapped === indexed && format === FTS_FORMAT;
 }
 
 /**
@@ -215,8 +234,11 @@ export function searchFts(db, parsed, { searchContent = false } = {}) {
   try {
     // Column filters (`title : term`) are FTS query syntax, so they belong in a
     // MATCH clause, not in WHERE.
+    // The path comes from the rowid map, not from the text index: the text index keeps it in Unicode form NFC for
+    // searching, and the disk may spell it otherwise.
     rows = db.prepare(`
-      SELECT path FROM ${FTS_TABLE} WHERE ${FTS_TABLE} MATCH ?
+      SELECT ids.path AS path FROM ${FTS_TABLE} JOIN ${FTS_IDS} ids ON ids.id = ${FTS_TABLE}.rowid
+      WHERE ${FTS_TABLE} MATCH ?
     `).all(clauses.join(' AND '));
   } catch {
     // A malformed query must never take search down; fall back to the scan.
@@ -233,19 +255,18 @@ export function searchFts(db, parsed, { searchContent = false } = {}) {
 /**
  * The notes whose text may contain one of these phrases — a superset of the real mentions, for the caller to
  * confirm. `null` when the index cannot answer (out of step, or a phrase shorter than a trigram), so the caller
- * reads every note instead. Each phrase is asked in both Unicode forms: names come off the disk decomposed.
+ * reads every note instead.
  */
 export function pathsMentioning(db, phrases) {
   if (!ftsInSync(db)) return null;
-  const forms = new Set();
-  for (const phrase of phrases) {
-    forms.add(phrase.normalize('NFC'));
-    forms.add(phrase.normalize('NFD'));
-  }
-  const terms = [...forms].map(ftsTerm);
+  // The index holds NFC text, so a phrase is asked in NFC whatever form it arrives in.
+  const terms = [...new Set(phrases.map(nfc))].map(ftsTerm);
   if (!terms.length || terms.some((term) => !term)) return null;
   try {
-    return db.prepare(`SELECT path FROM ${FTS_TABLE} WHERE ${FTS_TABLE} MATCH ?`)
+    return db.prepare(`
+      SELECT ids.path AS path FROM ${FTS_TABLE} JOIN ${FTS_IDS} ids ON ids.id = ${FTS_TABLE}.rowid
+      WHERE ${FTS_TABLE} MATCH ?
+    `)
       .all(terms.map((term) => `content : ${term}`).join(' OR '))
       .map((row) => row.path);
   } catch {
