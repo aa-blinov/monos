@@ -98,6 +98,8 @@ const CORPUS = {
   'long ordered list': '9. nine\n10. ten\n11. eleven\n',
   'backslashes and stars': 'C:\\Users\\me and 2 * 3 and a*b*c\n',
   'brackets that are not links': 'Array[0] and [x] and [[Wiki link]]\n',
+  'mixed list with several runs': '- a\n- [ ] b\n- [x] c\n- d\n- [ ] e\n',
+  'table with alignment': '| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |\n',
   crlf: 'one\r\n\r\ntwo\r\n\r\n- a\r\n- b\r\n',
 };
 
@@ -182,6 +184,11 @@ const EDITED_BLOCKS = {
   'table pipe': ['| a | b |\n| --- | --- |\n| x \\| y | 2 |\n', '2', '3', '| a | b |\n| --- | --- |\n| x \\| y | 3 |\n'],
   'star bullets': ['* one\n* two\n', 'two', 'EDITED', '* one\n* EDITED\n'],
   'loose list': ['- one\n\n- two\n', 'two', 'EDITED', '- one\n\n- EDITED\n'],
+  'mixed bullet and task list': ['- plain\n- [ ] task\n- plain again\n', 'task', 'EDITED', '- plain\n- [ ] EDITED\n- plain again\n'],
+  'mixed list edited in a plain item': ['- [x] done\n- plain\n- [ ] task\n', 'plain', 'EDITED', '- [x] done\n- EDITED\n- [ ] task\n'],
+  'loose mixed list': ['- plain\n\n- [ ] task\n\n- plain again\n', 'task', 'EDITED', '- plain\n\n- [ ] EDITED\n\n- plain again\n'],
+  'nested mixed list': ['- parent\n  - plain\n  - [ ] task\n- other\n', 'task', 'EDITED', '- parent\n  - plain\n  - [ ] EDITED\n- other\n'],
+  'table alignment': ['| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |\n', '2', 'EDITED', '| a | b | c |\n| :--- | :---: | ---: |\n| 1 | EDITED | 3 |\n'],
 };
 for (const [name, [markdown, needle, next, expected]] of Object.entries(EDITED_BLOCKS)) {
   test(`${name}: the edited block is written without damage, and saving twice gives the same text`, () => {

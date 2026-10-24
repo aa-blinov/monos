@@ -164,9 +164,10 @@ function mayTouch(previousKind, nextKind) {
  * @param {object|null} map from buildSourceMap, or null to write everything with `renderBlock`
  * @param {Array} nodes the document's top-level nodes
  * @param {(node: object, index: number) => string} renderBlock
- * @param {{ isTrailingGap?: (node: object, previous: object|null) => boolean }} [options]
+ * @param {{ isTrailingGap?: (node: object, previous: object|null) => boolean, joinGap?: (node: object, previous: object) => string|null }} [options]
+ *   `joinGap` names the gap of a node that goes on the list before it (a mixed list cut in pieces by the editor)
  */
-export function writeWithSource(map, nodes, renderBlock, { isTrailingGap = () => false } = {}) {
+export function writeWithSource(map, nodes, renderBlock, { isTrailingGap = () => false, joinGap = () => null } = {}) {
   const pieces = [];
   let previous = null;
   let previousOrigin = -1;
@@ -190,13 +191,16 @@ export function writeWithSource(map, nodes, renderBlock, { isTrailingGap = () =>
       if (map) {
         // The gap the note had after the block before; for a block edited in place, the gap of the block it replaces.
         const slot = previousOrigin >= 0 ? previousOrigin : (map.count === nodes.length ? index - 1 : -1);
-        const wanted = slot >= 0 ? map.blocks[slot]?.gap : undefined;
+        // The last block has no gap after it: a block written behind it is a new one and needs its blank line.
+        const recorded = slot >= 0 ? map.blocks[slot]?.gap : undefined;
+        const wanted = recorded?.includes('\n') ? recorded : undefined;
         const tightOk = origin >= 0 && origin === previousOrigin + 1;
         const previousKind = previousOrigin >= 0 ? map.blocks[previousOrigin].kind : kindOfNode(previous);
         const nextKind = origin >= 0 ? map.blocks[origin].kind : kindOfNode(node);
         if (wanted !== undefined && (tightOk || BLANK_LINE.test(wanted) || mayTouch(previousKind, nextKind))) gap = wanted;
       }
-      pieces.push(gap);
+      const joined = joinGap(node, previous);
+      pieces.push(joined === null ? gap : joined);
     }
     pieces.push(text);
     previous = nodes[index + consumed - 1];

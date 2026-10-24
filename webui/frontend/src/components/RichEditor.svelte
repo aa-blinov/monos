@@ -987,7 +987,7 @@
     </div>
   {/if}
   <!-- Toolbar: one scrolling row on a phone, the everyday buttons plus "More tools" on a desktop -->
-  <div class="relative flex items-center gap-1 px-4 py-1.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
+  <div class="relative flex items-center gap-1 px-4 py-1.5 short:py-0.5 lg:py-2 border-b border-[var(--note-page-border,var(--border-subtle))] bg-[var(--note-page-panel,var(--bg-primary))]" role="presentation" on:mousedown|preventDefault data-more-tools>
     <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto toolbar-scroll" role="toolbar" aria-label={$localizedText.richEditor.toolbar} tabindex="0" bind:this={toolbarEl}>
     <!-- Undo/Redo -->
     <TooltipIconButton on:click={cmd('undo')} disabled={!canUndo} class="p-1.5 rounded-ui hover:bg-[var(--bg-secondary)] transition disabled:opacity-20" label={shortcutLabel($localizedText.richEditor.undo)}><Undo2 size="16" strokeWidth="1.7" aria-hidden="true" /></TooltipIconButton>

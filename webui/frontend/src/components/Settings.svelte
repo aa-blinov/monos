@@ -983,7 +983,7 @@
               on:change={handleImportChange}
               class="sr-only"
             />
-            <Button variant="ghost" size="md" on:click={openArchivePicker} disabled={isImporting}>
+            <Button variant="ghost" size="md" class="justify-start px-0" on:click={openArchivePicker} disabled={isImporting}>
               {isImporting ? $localizedText.settings.importing : $localizedText.settings.chooseArchive}
             </Button>
             <span class="max-w-full truncate text-xs text-[var(--text-secondary)]">{selectedArchiveName || $localizedText.settings.noArchiveSelected}</span>

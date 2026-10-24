@@ -604,6 +604,7 @@ const enText = {
       },
       duplicateNote: 'A note with this name already exists in this folder. Choose another name',
       trashedNote: 'A note with this name is in the Trash',
+      trashedName: 'A note with this name is in the Trash. Restore it, or choose another name',
       restoreFailed(message) {
         return `Could not restore the note: ${message}`;
       },
@@ -1898,6 +1899,7 @@ const ruText = {
       },
       duplicateNote: 'Заметка с таким названием уже есть в этой папке. Выберите другое название',
       trashedNote: 'Заметка с таким названием лежит в корзине',
+      trashedName: 'Заметка с таким названием лежит в корзине. Восстановите её или выберите другое название',
       restoreFailed(message) {
         return `Не удалось восстановить заметку: ${message}`;
       },
