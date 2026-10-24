@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.37 — 2026-10-24
+
+### Changed
+
+- The interface kit is `@monos/ui` 1.5.0: typefaces with a picker, iPhone and
+  Android profiles, a mind map and a sectioned landing page. The app itself
+  looks the same; it keeps its own font list in Settings.
+
 ## 1.16.36 — 2026-10-24
 
 ### Fixed
