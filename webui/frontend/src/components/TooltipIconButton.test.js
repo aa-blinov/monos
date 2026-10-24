@@ -36,3 +36,27 @@ test('фокус с клавиатуры показывает подсказку
   await vi.advanceTimersByTimeAsync(600);
   expect(screen.queryByRole('tooltip')).toBeNull();
 });
+
+test('подсказка получает координаты и не выходит за правый край окна (кнопка у самого края)', async () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 900 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 700 });
+  const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top });
+  const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function mock() {
+    if (this.getAttribute('role') === 'tooltip') return rect(0, 0, 50, 35);
+    if (this.tagName === 'BUTTON') return rect(856, 664, 28, 28);
+    return rect(856, 664, 28, 28);
+  });
+  try {
+    render(TooltipIconButton, { label: 'More', tooltip: 'Ещё', tooltipPosition: 'top', tooltipAlign: 'end' });
+    await fireEvent.mouseEnter(screen.getByRole('button').parentElement);
+    await vi.advanceTimersByTimeAsync(500);
+    const style = screen.getByRole('tooltip').getAttribute('style') || '';
+    // Without coordinates the box is drawn over the button and runs past the window edge (it did, 906 > 900).
+    expect(style).toMatch(/left: \d+px/);
+    const left = Number(style.match(/left: (\d+)px/)[1]);
+    expect(left + 50).toBeLessThanOrEqual(900 - 12);
+    expect(style).toMatch(/top: \d+px/);
+  } finally {
+    spy.mockRestore();
+  }
+});
