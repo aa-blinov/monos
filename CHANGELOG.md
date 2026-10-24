@@ -17,6 +17,17 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.3 — 2026-10-24
+
+### Fixed
+
+- Text buttons in the first-run cards and in the New note dialog line up with the text above them instead of standing
+  16px to the right of it.
+- 1.17.2 was tagged but never published: its macOS Intel build could not download headers from electronjs.org. Its only
+  change, the sound library in the Linux package, is part of this release.
+- The packaged macOS app (arm64) was built and run for this release: native menu, window, backend on a random port,
+  Cyrillic note create and search, the New note command from the Note menu.
+
 ## 1.17.2 — 2026-10-24
 
 ### Fixed

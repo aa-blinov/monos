@@ -49,8 +49,8 @@
         <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.haveTitle}</h2>
         <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.haveText}</p>
         <div class="mt-4 flex flex-wrap gap-x-6">
-          <Button variant="ghost" size="md" on:click={() => dispatch('chooseFolder')}>{text.folderAction}</Button>
-          <Button variant="ghost" size="md" on:click={() => dispatch('importArchive')}>{text.importAction}</Button>
+          <Button variant="ghost" size="md" class="!px-0" on:click={() => dispatch('chooseFolder')}>{text.folderAction}</Button>
+          <Button variant="ghost" size="md" class="!px-0" on:click={() => dispatch('importArchive')}>{text.importAction}</Button>
         </div>
         {#if importStatus}<p class="mt-3 text-xs text-[var(--text-tertiary)]" role="status">{importStatus}</p>{/if}
         {#if importError}<p class="mt-3 text-xs text-[var(--red-text)]" role="alert">{importError}</p>{/if}
@@ -61,7 +61,7 @@
         <h2 class="mt-4 text-base font-bold text-[var(--text-primary)]">{text.syncTitle}</h2>
         <p class="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">{text.syncText}</p>
         <div class="mt-4 flex flex-wrap gap-x-6">
-          <Button variant="ghost" size="md" on:click={() => dispatch('connectSync')}>{text.syncAction}</Button>
+          <Button variant="ghost" size="md" class="!px-0" on:click={() => dispatch('connectSync')}>{text.syncAction}</Button>
         </div>
       </section>
     {/if}
