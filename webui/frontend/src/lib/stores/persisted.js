@@ -52,9 +52,43 @@ let sendPreferences = null;
 let sendTimer = null;
 const SEND_DELAY = 300;
 
+// A choice the server has not confirmed yet. Reloading right after a click can let the page's first read of the
+// settings overtake the write that the closing page sent, and the server's older value would then undo the choice.
+// The browser's copy keeps the unconfirmed value itself (not just a mark: the quick copy of a key can be reset to its
+// default by then), and on the next load it wins over the server and is sent again.
+const PENDING_KEY = 'monosPendingPreferences';
+
+function readPending() {
+  try {
+    const parsed = JSON.parse(storage()?.getItem(PENDING_KEY) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed).filter(([, raw]) => typeof raw === 'string'));
+  } catch {
+    return {};
+  }
+}
+
+function writePending(pending) {
+  try {
+    if (Object.keys(pending).length) storage()?.setItem(PENDING_KEY, JSON.stringify(pending));
+    else storage()?.removeItem(PENDING_KEY);
+  } catch {
+    // A store that refuses a write only loses the safety net.
+  }
+}
+
+function settle(sent, response) {
+  // A write the server refused is still pending; one that went through is not, unless the choice has changed since.
+  if (response && response.ok === false) return;
+  const pending = readPending();
+  for (const [key, raw] of Object.entries(sent)) if (pending[key] === raw) delete pending[key];
+  writePending(pending);
+}
+
 function queuePreference(key, raw) {
   if (raw === null || raw === undefined || !sendPreferences) return;
   unsent[key] = raw;
+  writePending({ ...readPending(), [key]: raw });
   clearTimeout(sendTimer);
   sendTimer = setTimeout(flushPreferences, SEND_DELAY);
 }
@@ -70,7 +104,7 @@ export function flushPreferences() {
     payload[key] = unsent[key];
     delete unsent[key];
   }
-  Promise.resolve(sendPreferences(payload)).catch(() => {});
+  Promise.resolve(sendPreferences(payload)).then((response) => settle(payload, response)).catch(() => {});
 }
 
 /**
@@ -83,10 +117,20 @@ export function flushPreferences() {
 export function startPreferenceSync(settings, send) {
   sendPreferences = send;
   const upload = {};
+  const pending = readPending();
   applyingServerValues = true;
   try {
     for (const [key, entry] of serverStores) {
       const raw = settings?.[key];
+      if (pending[key] !== undefined) {
+        // Chosen here a moment ago and not confirmed by the server: the older server value must not win.
+        const value = entry.deserialize(pending[key]);
+        if (!entry.validate || entry.validate(value)) {
+          if (!Object.is(entry.read(), value)) entry.store.set(value);
+          upload[key] = pending[key];
+          continue;
+        }
+      }
       if (raw !== undefined && raw !== null && typeof raw !== 'object') {
         const value = entry.deserialize(String(raw));
         if (!entry.validate || entry.validate(value)) {
@@ -102,7 +146,14 @@ export function startPreferenceSync(settings, send) {
     applyingServerValues = false;
   }
   preferencesReady = true;
-  if (Object.keys(upload).length) Promise.resolve(send(upload)).catch(() => {});
+  if (Object.keys(upload).length) {
+    const sent = { ...upload };
+    Promise.resolve(send(upload)).then((response) => settle(sent, response)).catch(() => {});
+  }
+  // A leftover for a key that is no longer synced would never be cleared otherwise.
+  const kept = readPending();
+  for (const key of Object.keys(kept)) if (!serverStores.has(key)) delete kept[key];
+  writePending(kept);
 }
 
 /** Every synced preference as the server stores it, so a form that saves the whole settings object cannot put old values back. */
