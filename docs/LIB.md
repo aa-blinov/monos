@@ -166,6 +166,7 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `context-menu-position.test.js` | Bottom overflow, left overflow, exact fit |
 | `menu-style.js` | `menuPanelClass`, `menuItemClass`, `menuDangerClass`, `menuSeparatorClass` — one look for every menu the app draws itself (panel, left-aligned sentence-case rows, destructive row, separator), the same as the kit's `Menu` |
 | `menu-style.test.js` | Rows are left aligned and one size, no literal colours, the destructive row changes only colour |
+| `terminal-header-layout.test.js` | The terminal header's structure, read from the source (the page has no terminal): tabs in their own shrinking box, menu and hide at the right, the agent button in a row of its own flush right |
 | `dashboard.js` | `buildDashboardSections(notes, opts)` — what cards appear on the home view, in what order, with what grouping |
 | `dashboard.test.js` | Empty notes, mixed categories, color grouping on/off |
 

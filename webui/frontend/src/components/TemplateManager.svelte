@@ -237,7 +237,7 @@
 </div>
 
 {#if showFormModal}
-  <ModalShell title={form.id ? $localizedText.templates.edit : $localizedText.templates.newTemplate} widthClass="w-[min(94vw,52rem)] max-h-[88vh] overflow-hidden flex flex-col" closeOnEscape={true} on:close={closeForm}>
+  <ModalShell title={form.id ? $localizedText.templates.edit : $localizedText.templates.newTemplate} widthClass="w-[min(94vw,52rem)] max-h-[88vh]" fill closeOnEscape={true} on:close={closeForm}>
     <div class="min-h-0 overflow-y-auto pr-1">
       <div class="grid gap-4">
       <div>

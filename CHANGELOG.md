@@ -17,6 +17,20 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.10 — 2026-10-24
+
+### Fixed
+
+- The terminal's tab strip scrolls when the shells do not fit, and the shell that was just opened or picked is brought
+  into view. The strip had no room of its own (a `<div>` around it was never closed), so the buttons at the right
+  moved with every shell and the sixth one ran past the window edge.
+- The "Create from template" dialog scrolls the way it was meant to. The whole dialog used to grow taller than the
+  window and scroll as one (the buttons left the screen) because the kit's Modal wraps its content in a block that
+  did not take the height of the window. Now the template list and the preview scroll each in their own column and the
+  buttons stay at the bottom; the template editor form is the same. Template cards read left aligned like the rest.
+- "Run Claude Code" and "Review changes" have a row of their own under the tabs, flush right, and stay where they are
+  however many shells are open. The menu and the hide button stay at the right of the tab row.
+
 ## 1.17.9 — 2026-10-24
 
 ### Fixed
