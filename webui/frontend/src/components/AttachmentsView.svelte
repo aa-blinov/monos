@@ -340,13 +340,13 @@
       {#if lockedNotes === 0}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-0 text-xs text-[var(--text-tertiary)]">
           {#if unusedItems.length > 0}
-          <Button variant="ghost" size="sm" type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-8">{$localizedText.attachments.reviewUnused}</Button>
+          <Button variant="ghost" size="sm" type="button" data-testid="attachments-review-unused" on:click={reviewUnused} class="min-h-8 !px-0">{$localizedText.attachments.reviewUnused}</Button>
           <span data-testid="attachments-unused-summary">{$localizedText.attachments.unusedSummary(unusedItems.length, formatAttachmentSize(unusedSize, $locale))}</span>
           {#if !selecting}
-            <Button variant="ghost" size="sm" type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8">{$localizedText.attachments.select}</Button>
+            <Button variant="ghost" size="sm" type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8 !px-0">{$localizedText.attachments.select}</Button>
           {/if}
           {/if}
-          <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8">{$localizedText.attachments.removed}</Button>
+          <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8 !px-0">{$localizedText.attachments.removed}</Button>
         </div>
       {/if}
 
@@ -382,14 +382,14 @@
                 aria-pressed={selecting ? selected.has(item.path) : undefined}
                 title={selecting && !isUnused(item) ? $localizedText.attachments.cannotSelectUsed : undefined}
                 on:click={() => pick(item)}
-                class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
+                class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-0 bg-[var(--bg-secondary)] !p-0 {selecting && !isUnused(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
               >
                 {#if !broken.has(item.path)}
                   <img src={thumbUrl(item)} alt="" loading="lazy" decoding="async" class="h-full w-full {item.kind === 'pdf' ? 'object-cover object-top' : oddShape.has(item.path) ? 'object-cover object-top' : 'object-contain'}" on:load={(event) => { const ratio = event.currentTarget.naturalWidth / (event.currentTarget.naturalHeight || 1); if ((ratio < 0.5 || ratio > 3) && !oddShape.has(item.path)) oddShape = new Set([...oddShape, item.path]); }} on:error={() => { broken = new Set([...broken, item.path]); }} />
                 {:else if item.kind === 'image'}
                   <span class="flex flex-col items-center gap-2 px-2 text-center text-[var(--text-tertiary)]" title={$localizedText.attachments.brokenImage}>
                     <ImageOff size="24" strokeWidth="1.7" aria-hidden="true" />
-                    <span class="text-xs">{$localizedText.attachments.brokenImage}</span>
+                    <span class="whitespace-normal text-xs">{$localizedText.attachments.brokenImage}</span>
                   </span>
                 {:else}
                   <span class="flex flex-col items-center gap-2 text-[var(--text-secondary)]">
@@ -414,10 +414,10 @@
                 {:else}
                   <div class="space-y-0.5" data-testid="attachment-notes">
                     {#each (expanded.has(item.path) ? item.usedBy : item.usedBy.slice(0, 2)) as note (note.path)}
-                      <Button variant="quiet" size="sm" class="w-full justify-start truncate px-0 text-left" title={note.path} on:click={() => openNote(note)}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</Button>
+                      <Button variant="quiet" size="sm" class="w-full justify-start truncate !px-0 text-left" title={note.path} on:click={() => openNote(note)}>{note.title}{#if note.via === 'name'} <span class="ml-1 text-[length:var(--text-whisper)] text-[var(--text-tertiary)]" title={$localizedText.attachments.byNameHint}>({$localizedText.attachments.byName})</span>{/if}</Button>
                     {/each}
                     {#if item.usedBy.length > 2}
-                      <Button variant="quiet" size="sm" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="px-0" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</Button>
+                      <Button variant="quiet" size="sm" data-testid="attachment-more-notes" aria-expanded={expanded.has(item.path)} class="!px-0" on:click={() => toggleExpanded(item.path)}>{expanded.has(item.path) ? $localizedText.attachments.showLess : $localizedText.attachments.showAll(item.usedBy.length)}</Button>
                     {/if}
                   </div>
                 {/if}

@@ -471,7 +471,7 @@
     {#if focusNode}
       <div class="absolute left-3 top-3 flex max-w-[80%] items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 pl-3 pr-1 text-xs text-[var(--text-secondary)]" data-testid="map-focus">
         <span class="min-w-0 truncate">{$localizedText.map.around(focusNode.title)}</span>
-        <Button variant="ghost" size="sm" type="button" class="inline-flex h-7 shrink-0 items-center gap-1 rounded-ui px-2 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.map.showAll} on:click={clearFocus}>
+        <Button variant="ghost" size="sm" type="button" class="inline-flex h-7 shrink-0 items-center gap-1 rounded-ui !px-2 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" aria-label={$localizedText.map.showAll} on:click={clearFocus}>
           <X size="12" strokeWidth="1.7" aria-hidden="true" />{$localizedText.map.showAll}
         </Button>
       </div>
