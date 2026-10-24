@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.9 — 2026-10-24
+
+### Fixed
+
+- macOS no longer says that "support for Intel apps is ending" for the Apple-silicon app. The packages with native code
+  (better-sqlite3, node-pty) ship a prebuilt binary for every system and processor, and the build had copied them all
+  into the app, among them an Intel `spawn-helper`. After packaging, a macOS build now keeps the prebuilds of its own
+  processor only (`scripts/prune-prebuilds.cjs`): no Mach-O file other than arm64 is left in the arm64 app, and the
+  database and the terminal files still load.
+
 ## 1.17.8 — 2026-10-24
 
 ### Fixed

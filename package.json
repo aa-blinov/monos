@@ -1,6 +1,6 @@
 {
   "name": "monos",
-  "version": "1.17.8",
+  "version": "1.17.9",
   "engines": {
     "node": ">=22"
   },
@@ -39,6 +39,7 @@
   "build": {
     "appId": "app.monos.notes",
     "productName": "Monos",
+    "afterPack": "scripts/prune-prebuilds.cjs",
     "afterSign": "scripts/adhoc-sign.cjs",
     "directories": {
       "output": "release"
