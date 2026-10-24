@@ -41,10 +41,15 @@ function createFetchMock(overrides = {}) {
     if (url === '/api/settings') {
       return jsonResponse(overrides.settings ?? {
         theme: 'nord',
-        git_token: 'ghp_test',
+        // The contract: the settings say a token is stored, the secret route hands it over on demand.
+        git_token_set: true,
         git_owner: 'alice',
         git_repo: 'alice/notes',
       });
+    }
+
+    if (url === '/api/settings/secret?key=git_token') {
+      return overrides.secret ? overrides.secret() : jsonResponse({ value: 'ghp_test' });
     }
 
     if (url === '/api/git/status') {
@@ -502,4 +507,66 @@ test('Settings: ширина контента и межстрочный инте
 
   expect(get(contentWidth)).toBe('narrow');
   expect(get(lineHeight)).toBe('relaxed');
+});
+
+test('Settings: сохранённый токен не запрашивается, пока блок GitHub не показан', async () => {
+  // A browser with IntersectionObserver: the block is out of view until the observer says otherwise.
+  let notify;
+  const original = globalThis.IntersectionObserver;
+  globalThis.IntersectionObserver = class {
+    constructor(callback) { notify = callback; }
+    observe() {}
+    disconnect() {}
+  };
+  try {
+    const fetchMock = createFetchMock();
+    globalThis.fetch = fetchMock;
+    window.fetch = fetchMock;
+    render(Settings);
+
+    // Signed in from the flag alone, without the token ever leaving the keychain.
+    await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.reset })).toBeTruthy());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const asked = () => fetchMock.mock.calls.map(([url]) => String(url));
+    expect(asked().some((url) => url.includes('/api/settings/secret'))).toBe(false);
+    expect(asked().some((url) => url.includes('token='))).toBe(false);
+
+    notify([{ isIntersecting: true }]);
+    await waitFor(() => expect(screen.getByRole('option', { name: 'alice/wiki' })).toBeTruthy());
+    expect(asked().filter((url) => url.includes('/api/settings/secret'))).toHaveLength(1);
+  } finally {
+    globalThis.IntersectionObserver = original;
+  }
+});
+
+test('Settings: токен, взятый из хранилища, не уезжает обратно при сохранении', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+  render(Settings);
+  await waitFor(() => expect(screen.getByRole('option', { name: 'alice/wiki' })).toBeTruthy());
+
+  await fireEvent.change(screen.getByLabelText(uiText.settings.repository), { target: { value: 'alice/notes' } });
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => url === '/api/settings' && init?.method === 'POST')).toBe(true));
+  for (const [url, init] of fetchMock.mock.calls) {
+    if (url !== '/api/settings' || init?.method !== 'POST') continue;
+    const body = JSON.parse(init.body);
+    expect('git_token' in body, 'a saved form carries no token').toBe(false);
+    expect('git_token_set' in body, 'and no flag').toBe(false);
+  }
+});
+
+test('Settings: выход из GitHub просит сервер очистить токен явно, пустой текст его не стирает', async () => {
+  const fetchMock = createFetchMock();
+  globalThis.fetch = fetchMock;
+  window.fetch = fetchMock;
+  render(Settings);
+  await waitFor(() => expect(screen.getByRole('button', { name: uiText.settings.reset })).toBeTruthy());
+
+  await fireEvent.click(screen.getByRole('button', { name: uiText.settings.reset }));
+  await fireEvent.click(await screen.findByRole('button', { name: uiText.settings.resetGitAction }));
+  await waitFor(() => {
+    const clear = fetchMock.mock.calls.find(([url, init]) => url === '/api/settings' && init?.method === 'POST' && 'git_token' in JSON.parse(init.body));
+    expect(clear && JSON.parse(clear[1].body).git_token).toBe(null);
+  });
 });

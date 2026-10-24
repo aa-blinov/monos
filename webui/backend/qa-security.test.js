@@ -99,7 +99,11 @@ lanTest('B13: the GitHub token is for this computer only; preferences are plain 
   const saved = await vault.post('/api/settings', { body: { git_token: 'ghp_secret_token_value', boardColumns: '3', width: 640, tabsToSpaces: true } });
   assert.equal(saved.status, 200);
   const local = (await vault.get('/api/settings')).data;
-  assert.equal(local.git_token, 'ghp_secret_token_value', 'this computer still reads it');
+  // The contract changed on purpose: the settings no longer carry the token (reading it wakes the keychain, which
+  // freezes the app behind a password dialog); this computer asks the secret route for it.
+  assert.equal(local.git_token, undefined);
+  assert.equal(local.git_token_set, true);
+  assert.equal((await vault.get('/api/settings/secret', { query: { key: 'git_token' } })).data.value, 'ghp_secret_token_value', 'this computer still reads it');
   const lan = await vault.get('/api/settings', { host: lanAddress, headers: bearer });
   assert.equal(lan.status, 200);
   assert.equal(lan.data.git_token, undefined, 'another device never receives the token');
@@ -112,7 +116,7 @@ lanTest('B13: the GitHub token is for this computer only; preferences are plain 
   const overwrite = await vault.post('/api/settings', { host: lanAddress, headers: bearer, body: { git_token: 'attacker', sortMode: 'title' } });
   assert.equal(overwrite.status, 200);
   assert.deepEqual(overwrite.data.ignored, ['git_token']);
-  assert.equal((await vault.get('/api/settings')).data.git_token, 'ghp_secret_token_value', 'the stored token was not replaced');
+  assert.equal((await vault.get('/api/settings/secret', { query: { key: 'git_token' } })).data.value, 'ghp_secret_token_value', 'the stored token was not replaced');
   assert.equal((await vault.get('/api/settings', { host: lanAddress, headers: bearer })).data.sortMode, 'title', 'an ordinary preference from a device is stored');
 });
 

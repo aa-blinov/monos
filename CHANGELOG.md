@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.5 — 2026-10-24
+
+### Fixed
+
+- The app no longer freezes on launch while macOS asks for the keychain password. Loading the settings used to decrypt
+  the GitHub token every time, and after an update the keychain asks again (the signature changes), so the window stayed
+  empty until the password was typed. The settings now answer with `git_token_set` only; the token is read from the
+  keychain on its own route when a GitHub call really needs it (the sync section of Settings coming into view, a
+  sync). Signing out clears the token at once. Saving the settings never writes an empty token over the stored one.
+
 ## 1.17.4 — 2026-10-24
 
 ### Fixed
