@@ -267,18 +267,19 @@
             </div>
           {:else if duplicatePath}
             <div class="mt-3 flex flex-wrap gap-3">
-              <Button variant="secondary" size="md" on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</Button>
-              <Button variant="primary" size="md" on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</Button>
+              <Button variant="secondary" size="md" class="!px-0" on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</Button>
+              <Button variant="primary" size="md" class="!px-0" on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</Button>
             </div>
           {/if}
         {/if}
       </div>
     </div>
     <div class="flex gap-6 mt-10">
-      <Button variant="secondary" size="md" on:click={onClose}>{$localizedText.sidebar.modals.cancel}</Button>
+      <Button variant="secondary" size="md" class="!px-0" on:click={onClose}>{$localizedText.sidebar.modals.cancel}</Button>
       <Button
         variant="primary"
         size="md"
+        class="!px-0"
         on:click={submitCreateNote}
         disabled={isCreating || blockedName}
       >
