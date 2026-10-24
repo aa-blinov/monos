@@ -1,6 +1,7 @@
 import { MarkdownParser, defaultMarkdownParser, schema as markdownSchema } from 'prosemirror-markdown';
 import { Schema } from '@tiptap/pm/model';
 import { convertMarkdownExtras } from './markdown-extras.js';
+import { extendedMarkdownPlugin } from './markdown-extended.js';
 import { isBlankLineNode } from './blank-line.js';
 
 const NODE_TYPE_MAP = {
@@ -32,19 +33,30 @@ const softBreakSchema = new Schema({
     })
     .append({
       softBreak: { inline: true, group: 'inline', leaf: true, selectable: false },
+      // `[^1]` in the text and `[^1]: text` as a block (see markdown-extended.js).
+      footnoteRef: { inline: true, group: 'inline', atom: true, attrs: { label: { default: '' } } },
+      footnoteDefinition: { group: 'block', content: 'inline*', defining: true, attrs: { label: { default: '' } } },
     }),
   marks: markdownSchema.spec.marks.append({
     strike: { toDOM: () => ['s', 0] },
+    highlight: { toDOM: () => ['mark', 0] },
+    subscript: { toDOM: () => ['sub', 0] },
+    superscript: { toDOM: () => ['sup', 0] },
   }),
 });
 // markdown-it is already shipped with the parser; its commonmark preset leaves `~~` out, so it is switched on here
 // on a tokenizer of our own (the stock one is shared with whoever else imports the parser).
 const MarkdownIt = defaultMarkdownParser.tokenizer.constructor;
-const tokenizer = new MarkdownIt('commonmark', { html: false }).enable('strikethrough');
+const tokenizer = new MarkdownIt('commonmark', { html: false }).enable('strikethrough').use(extendedMarkdownPlugin);
 const softBreakParser = new MarkdownParser(softBreakSchema, tokenizer, {
   ...defaultMarkdownParser.tokens,
   softbreak: { node: 'softBreak' },
   s: { mark: 'strike' },
+  mark: { mark: 'highlight' },
+  sub: { mark: 'subscript' },
+  sup: { mark: 'superscript' },
+  footnote_ref: { node: 'footnoteRef', getAttrs: (token) => ({ label: token.meta.label }) },
+  footnote_def: { block: 'footnoteDefinition', getAttrs: (token) => ({ label: token.meta.label }) },
   bullet_list: {
     block: 'bullet_list',
     getAttrs: (token, tokens, index) => ({
@@ -551,7 +563,38 @@ export function plainTextDocument(text) {
   };
 }
 
+function collectFootnoteLabels(node, labels) {
+  if (!node || typeof node !== 'object') return labels;
+  if (node.type === 'footnoteDefinition') labels.add(node.attrs?.label);
+  if (Array.isArray(node.content)) node.content.forEach((child) => collectFootnoteLabels(child, labels));
+  return labels;
+}
+
+function demoteFootnoteRefs(node, labels) {
+  if (!Array.isArray(node?.content)) return node;
+  return {
+    ...node,
+    content: node.content.map((child) => (
+      child?.type === 'footnoteRef' && !labels.has(child.attrs?.label)
+        ? { type: 'text', text: `[^${child.attrs.label}]` }
+        : demoteFootnoteRefs(child, labels)
+    )),
+  };
+}
+
+/**
+ * A `[^1]` is a reference only when the note has a `[^1]:` definition; without one it is the text it looks like.
+ * Decided on the finished document, because a table cell is parsed on its own and cannot see the definitions.
+ */
+export function demoteDanglingFootnotes(doc) {
+  return demoteFootnoteRefs(doc, collectFootnoteLabels(doc, new Set()));
+}
+
 export function markdownToEditorContent(markdown) {
+  return demoteDanglingFootnotes(parsedNote(markdown));
+}
+
+function parsedNote(markdown) {
   const source = String(markdown || '').replace(/\u0000/g, '');
   if (!source.trim()) return plainTextDocument('');
 

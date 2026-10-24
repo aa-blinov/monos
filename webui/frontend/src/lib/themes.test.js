@@ -418,3 +418,22 @@ test('цвета красный, жёлтый и зелёный не стоят 
   }
   assert.ok(!/opacity:\s*0\.72/.test(fs.readFileSync(new URL('../components/RichEditor.svelte', import.meta.url), 'utf8')), 'подпись под картинкой без прозрачности: она роняла контраст ниже 4.5:1');
 });
+
+test('выделение маркером (==текст==) читается (4.5:1) на бумаге и на втором слое во всех 12 парах', () => {
+  const source = fs.readFileSync(new URL('../components/RichEditor.svelte', import.meta.url), 'utf8');
+  const tint = source.match(/\.ProseMirror mark\) \{[^}]*background: color-mix\(in srgb, var\(--yellow\) (\d+)%, transparent\)/);
+  const light = source.match(/\.ProseMirror mark\) \{[^}]*color: color-mix\(in srgb, var\(--text-primary\) (\d+)%, black\)/);
+  const dark = source.match(/data-mode='dark'\] \.ProseMirror mark\) \{[^}]*color: color-mix\(in srgb, var\(--text-primary\) (\d+)%, white\)/);
+  assert.ok(tint && light && dark, 'стиль mark записан в RichEditor.svelte для светлой и тёмной тем');
+  const palettes = kitPalettes();
+  assert.equal(palettes.length, 12);
+  for (const { name, mode, vars } of palettes) {
+    const share = Number((mode === 'dark' ? dark : light)[1]) / 100;
+    const text = mixRgb(vars.ink, mode === 'dark' ? [255, 255, 255] : [0, 0, 0], share);
+    for (const surface of [vars.bg, vars.surface]) {
+      const marked = mixRgb(vars.warning, surface, Number(tint[1]) / 100);
+      const ratio = contrast(rgbToHex(text), rgbToHex(marked));
+      assert.ok(ratio >= 4.5, `${name}.${mode}: текст в маркере ${rgbToHex(text)} на ${rgbToHex(marked)} даёт ${ratio.toFixed(2)}:1`);
+    }
+  }
+});

@@ -54,10 +54,15 @@ test('меню команд встаёт под знаком «/», пункты
   await expect(selected()).toHaveAccessibleName('Heading 1');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
+  await expect(selected()).toHaveAccessibleName('Heading 3');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   await expect(selected()).toHaveAccessibleName('Bullet list');
   await page.keyboard.press('ArrowUp');
-  await expect(selected()).toHaveAccessibleName('Heading 2');
+  await expect(selected()).toHaveAccessibleName('Heading 4');
 
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
   await page.keyboard.press('ArrowUp');
   await expect(selected()).toHaveAccessibleName('Heading 1');
   // Up from the first item wraps to the last one, and down from the last wraps back.
@@ -66,8 +71,7 @@ test('меню команд встаёт под знаком «/», пункты
   await page.keyboard.press('ArrowDown');
   await expect(selected()).toHaveAccessibleName('Heading 1');
 
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
+  for (let step = 0; step < 4; step += 1) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Tab');
   await expect(listbox).toHaveCount(0);
   await expect(page.locator('.ProseMirror ul > li')).toHaveCount(1);

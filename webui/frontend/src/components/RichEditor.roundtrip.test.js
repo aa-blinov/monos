@@ -105,6 +105,15 @@ const CORPUS = {
   'table without outer pipes': 'a | b\n:-- | --:\n1 | 2\n',
   'headings five and six': '##### Five\n\n###### Six\n\nText under them\n',
   crlf: 'one\r\n\r\ntwo\r\n\r\n- a\r\n- b\r\n',
+  highlight: 'A ==marked== word, ==two words== and ==*styled* **text**==.\n',
+  'subscript and superscript': 'H~2~O, CO~2~ and x^2^, E = mc^2^, 10^-3^.\n',
+  'footnote with a URL definition': 'See[^1] and[^two].\n\n[^1]: https://example.com\n[^two]: A note with ==highlight== and H~2~O.\n',
+  'all of them together': 'Water is H~2~O[^w], ==important==, and x^2^ is ~~wrong~~.\n\n[^w]: See ==chapter 2==.\n',
+  'lookalikes in prose': 'a == b, ~5 minutes, x^2, 2^10 and 3^4, [^9] alone, == and ~ and ^ and \\==x== and \\~y\\~.\n',
+  'marks in a list, a quote and a table': '- ==one== and H~2~O\n- x^2^\n\n> ==quoted== text[^1]\n\n| a | b |\n| --- | --- |\n| ==x== | y[^1] |\n| H~2~O | z^2^ |\n\n[^1]: Shared.\n',
+  'definitions apart from their references': 'First[^a].\n\n[^a]: Defined early.\n\nSecond[^b].\n\n[^b]: Defined late.\n\nThe end.\n',
+  'marks and footnotes with CRLF': 'A ==b== H~2~O x^2^[^1]\r\n\r\n[^1]: n\r\n',
+  'marks next to code': '`==x==` and ==y== and ```` `a` ````\n\n```\n==code== H~2~O x^2^ [^1]\n```\n',
 };
 
 for (const [name, markdown] of Object.entries(CORPUS)) {
@@ -165,6 +174,9 @@ const EDIT_CASES = {
   'tasks and tables': ['Intro', 'Intro\n\n- [ ] one\n  - [x] nested\n- [x] two\n\n| a | b |\n| --- | --- |\n| x \\| y | 2 |\n'],
   'blank lines': ['one', 'one\n\n\n\ntwo\n\n&nbsp;\n\nthree\n'],
   strikethrough: ['This', 'This is ~~gone~~ and H~2~O.\n\ntwo\n'],
+  highlight: ['Intro', 'Intro\n\nA ==marked== word.\n\nOutro ==too==.\n'],
+  'sub and sup': ['Intro', 'Intro\n\nH~2~O and x^2^.\n\n- ==a==\n- b^1^\n'],
+  'footnote definitions': ['Intro', 'Intro[^1]\n\n[^1]: https://example.com\n[^2]: Second.\n\nOutro.\n'],
 };
 for (const [name, [needle, markdown]] of Object.entries(EDIT_CASES)) {
   test(`${name}: an edit in one paragraph leaves the others untouched`, () => {
@@ -195,6 +207,18 @@ const EDITED_BLOCKS = {
   'table alignment': ['| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |\n', '2', 'EDITED', '| a | b | c |\n| :--- | :---: | ---: |\n| 1 | EDITED | 3 |\n'],
   // The edited table is written by the table writer, so the short delimiters come out in the usual long form.
   'table with short alignment, edited': ['| a | b |\n| :-- | --: |\n| 1 | 2 |\n', '2', 'EDITED', '| a | b |\n| :--- | ---: |\n| 1 | EDITED |\n'],
+  'inside a highlight': ['A ==marked== word.\n', 'marked', 'EDITED', 'A ==EDITED== word.\n'],
+  'inside a subscript': ['H~2~O and x^2^.\n', '2', 'EDITED', 'H~EDITED~O and x^2^.\n'],
+  'inside a superscript': ['H~2~O and x^2^.\n', 'and', 'EDITED', 'H~2~O EDITED x^2^.\n'],
+  'a superscript edited': ['H~2~O and x^2^ end\n', 'end', 'EDITED', 'H~2~O and x^2^ EDITED\n'],
+  'text beside marks': ['Say ==a== then H~2~O then x^2^.\n', 'Say', 'EDITED', 'EDITED ==a== then H~2~O then x^2^.\n'],
+  'a highlight with outer spaces edited': ['==marked== word\n', 'word', 'EDITED', '==marked== EDITED\n'],
+  'lookalikes survive an edit': ['a == b and ~5 minutes and x^2 and [^9] here\n', 'here', 'EDITED', 'a == b and ~5 minutes and x^2 and [^9] EDITED\n'],
+  'a footnote reference edited around': ['A claim[^1] here.\n\n[^1]: https://example.com\n', 'here', 'EDITED', 'A claim[^1] EDITED.\n\n[^1]: https://example.com\n'],
+  'footnote definition with marks': ['See[^1].\n\n[^1]: A ==marked== note.\n', 'note', 'EDITED', 'See[^1].\n\n[^1]: A ==marked== EDITED.\n'],
+  'two definitions, the first edited': ['See[^1][^2].\n\n[^1]: one\n[^2]: two\n', 'one', 'EDITED', 'See[^1][^2].\n\n[^1]: EDITED\n[^2]: two\n'],
+  'two definitions, the second edited': ['See[^1][^2].\n\n[^1]: one\n[^2]: two\n', 'two', 'EDITED', 'See[^1][^2].\n\n[^1]: one\n[^2]: EDITED\n'],
+  'marks in a table cell': ['| a | b |\n| --- | --- |\n| ==x== | H~2~O |\n', 'a', 'EDITED', '| EDITED | b |\n| --- | --- |\n| ==x== | H~2~O |\n'],
   'heading five keeps its level': ['##### Five\n\nText\n', 'Five', 'Fiver', '##### Fiver\n\nText\n'],
 };
 for (const [name, [markdown, needle, next, expected]] of Object.entries(EDITED_BLOCKS)) {
@@ -230,3 +254,45 @@ for (const name of readdirSync(DOCS).filter((file) => file.endsWith('.md'))) {
     expect(changed.length).toBe(1);
   });
 }
+
+// Text the person types that looks like a mark is written so that it reads back as the same text.
+test('typed text that looks like a mark is written escaped and reads back as text', () => {
+  for (const [typed, expected] of [['==x==', '\\==x\\=='], ['~x~', '\\~x\\~'], ['x^2^', 'x\\^2\\^']]) {
+    const { editor, note } = open('start\n');
+    replaceText(editor, 'start', typed);
+    const written = note.serialize();
+    expect(written).toBe(`${expected}\n`);
+    const again = open(written);
+    expect(again.editor.state.doc.firstChild.textContent).toBe(typed);
+    expect(again.note.serialize()).toBe(written);
+  }
+});
+
+test('the marks and the footnotes are nodes of the editor document', () => {
+  const { editor } = open('A ==h== H~2~O x^2^[^1]\n\n[^1]: note\n');
+  const kinds = new Set();
+  editor.state.doc.descendants((node) => {
+    kinds.add(node.type.name);
+    node.marks.forEach((mark) => kinds.add(mark.type.name));
+  });
+  for (const kind of ['highlight', 'subscript', 'superscript', 'footnoteRef', 'footnoteDefinition']) expect(kinds.has(kind)).toBe(true);
+  expect(editor.getHTML()).toContain('<mark>h</mark>');
+  expect(editor.getHTML()).toContain('<sub>2</sub>');
+});
+
+test('toggling a mark on a selection writes it as the Markdown it came from', () => {
+  for (const [command, written] of [['toggleHighlight', '==word=='], ['toggleSubscript', '~word~'], ['toggleSuperscript', '^word^']]) {
+    const { editor, note } = open('a word b\n');
+    const { from, to } = findText(editor, 'word');
+    editor.chain().setTextSelection({ from, to })[command]().run();
+    expect(note.serialize()).toBe(`a ${written} b\n`);
+  }
+});
+
+test('Enter at the end of a footnote definition leaves it for a paragraph', () => {
+  const { editor, note } = open('See[^1].\n\n[^1]: note\n');
+  editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+  editor.commands.splitBlock();
+  expect(editor.state.doc.lastChild.type.name).toBe('paragraph');
+  expect(note.serialize()).toBe('See[^1].\n\n[^1]: note\n');
+});

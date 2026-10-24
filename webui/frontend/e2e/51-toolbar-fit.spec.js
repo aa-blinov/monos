@@ -16,14 +16,14 @@ test('панель форматирования: что влезает, то н�
   await prepareMonos(page);
   await openNote(page, 1600);
   const more = page.locator('[data-more-tools] button[aria-haspopup="menu"]');
-  await expect(page.getByTestId('toolbar-extras').getByRole('button')).toHaveCount(6);
+  await expect(page.getByTestId('toolbar-extras').getByRole('button')).toHaveCount(9);
   await expect(more).toHaveCount(0);
 
   await page.setViewportSize({ width: 560, height: 800 });
-  await expect.poll(async () => page.getByTestId('toolbar-extras').getByRole('button').count()).toBeLessThan(6);
+  await expect.poll(async () => page.getByTestId('toolbar-extras').getByRole('button').count()).toBeLessThan(9);
   await more.click();
   const shown = await page.getByTestId('toolbar-extras').getByRole('button').count();
-  await expect(page.getByRole('menuitem')).toHaveCount(6 - shown);
+  await expect(page.getByRole('menuitem')).toHaveCount(9 - shown);
 });
 
 // Pinned notes fold to one row, and a long list scrolls inside a third of the panel instead of taking all of it.
