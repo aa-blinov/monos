@@ -17,6 +17,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.2 — 2026-10-24
+
+### Fixed
+
+- The Linux `.deb` now declares the sound library it needs (`libasound2t64 | libasound2`). A minimal Ubuntu install
+  without it could not start the app at all. The package was installed and run in an Ubuntu 24.04 container for this
+  check: the app starts, the backend answers, a note named `C# notes` is created and trashed to `notes/.trash`.
+
 ## 1.17.1 — 2026-10-24
 
 ### Fixed
