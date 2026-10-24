@@ -8,6 +8,7 @@ import { NOTES_DIR, ROOT_DIR } from '../config.js';
 import { revealSecret } from './secret-store.js';
 import { getDb } from '../database.js';
 import { httpError, notesRelativePath, readTextFile, writeFileAtomic } from '../utils.js';
+import { sendError } from './helpers.js';
 import { indexAllFiles, indexPaths } from '../indexing.js';
 import { isLockedNote, rememberSession, sealWithSession, sessionFor, unlockContent } from '../note-lock.js';
 import { pendingReview, takeKeptForSync } from '../agent-review.js';
@@ -58,9 +59,28 @@ export function explainGitError(error) {
   return null;
 }
 
+// The word a client can act on for each reason `explainGitError` finds; every other git failure is `git_failed`.
+const GIT_REASON_CODES = {
+  'token-read-only': 'token_read_only',
+  'token-rejected': 'bad_token',
+  'repo-not-visible': 'repo_not_found',
+};
+
 function gitFailure(res, error) {
+  // An error raised on purpose (an httpError) keeps its status and its code.
+  if (error?.statusCode) return sendError(res, error);
   const explained = explainGitError(error);
-  return res.status(500).json({ detail: explained?.detail || error.message || String(error), ...(explained ? { reason: explained.reason } : {}) });
+  return res.status(500).json({
+    detail: explained?.detail || error?.message || String(error),
+    code: explained ? GIT_REASON_CODES[explained.reason] : 'git_failed',
+    ...(explained ? { reason: explained.reason } : {}),
+  });
+}
+
+/** What a failure to reach GitHub is: the network, never the person's mistake. */
+function githubFailure(res, error) {
+  if (error?.statusCode) return sendError(res, error);
+  return res.status(502).json({ detail: 'GitHub could not be reached. Check the connection and try again.', code: 'repo_unreachable' });
 }
 
 function toGitError(error) {
@@ -738,6 +758,61 @@ async function fetchGithubJson(token, apiPath, { withMeta = false } = {}) {
   return data;
 }
 
+const REPO_NAME = /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/;
+
+function checkedToken(value) {
+  if (typeof value !== 'string' || !value.trim()) throw httpError(400, 'A token is required', 'token_required');
+  return value.trim();
+}
+
+function checkedRepo(value) {
+  if (typeof value !== 'string' || !REPO_NAME.test(value.trim())) {
+    throw httpError(400, 'The repository is written owner/name', 'invalid_repo');
+  }
+  return value.trim();
+}
+
+/**
+ * A branch name git accepts. Checked before anything is created: a name git refuses used to fail halfway through
+ * the setup, with the repository made and the remote added, and git's own message in the answer.
+ */
+export function checkedBranch(value) {
+  const name = typeof value === 'string' ? value.trim() : '';
+  let valid = name.length > 0 && name.length <= 200 && !name.startsWith('-');
+  if (valid) {
+    try {
+      execFileSync('git', ['check-ref-format', '--branch', name], { stdio: 'ignore', timeout: 10000 });
+    } catch {
+      valid = false;
+    }
+  }
+  if (!valid) throw httpError(400, 'This is not a name git accepts for a branch', 'invalid_branch');
+  return name;
+}
+
+/**
+ * Asks GitHub and turns what it answers into an error a client can act on: the token was refused (401, `bad_token`),
+ * it may not do this (403), the repository is not visible to it (404, `repo_not_found`), GitHub could not be reached
+ * (502, `repo_unreachable`), or the answer was not what the API gives (502, `github_unexpected`).
+ */
+async function githubRequest(token, apiPath) {
+  let result;
+  try {
+    result = await fetchGithubJson(token, apiPath, { withMeta: true });
+  } catch {
+    throw httpError(502, 'GitHub could not be reached. Check the connection and try again.', 'repo_unreachable');
+  }
+  const { data, status, headers } = result;
+  if (status === 401) throw httpError(401, 'GitHub did not accept the token. It may have expired or been revoked; create a new one.', 'bad_token');
+  if (status === 403) {
+    if (headers?.['x-ratelimit-remaining'] === '0') throw httpError(429, 'GitHub is limiting requests for now. Try again in a few minutes.', 'github_rate_limited');
+    throw httpError(403, 'GitHub did not allow this with this token. Check its permissions.', 'github_forbidden');
+  }
+  if (status === 404) throw httpError(404, 'GitHub cannot see this repository with this token. Check the name, and that the token\'s repository access includes it.', 'repo_not_found');
+  if (status >= 400) throw httpError(502, 'GitHub answered something unexpected', 'github_unexpected');
+  return result;
+}
+
 /**
  * Scopes worth naming out loud.
  *
@@ -828,13 +903,57 @@ export function pathAtRevision(sha, safePath) {
   return safePath;
 }
 
+const gitSettingsPath = () => path.join(ROOT_DIR, '.data', 'git_settings.json');
+
+// What the notes folder and the app's settings were before a setup began, to put back if it does not finish.
+function snapshotBeforeSetup() {
+  const hadRepo = isGitRepo();
+  let remote = null;
+  let branch = null;
+  if (hadRepo) {
+    try { remote = gitExec(['remote', 'get-url', 'origin']); } catch { remote = null; }
+    try { branch = gitExec(['branch', '--show-current']) || null; } catch { branch = null; }
+  }
+  const nameRow = getDb().prepare('SELECT value FROM settings WHERE key = ?').get('device_name');
+  return {
+    hadRepo,
+    remote,
+    branch,
+    settingsText: fs.existsSync(gitSettingsPath()) ? fs.readFileSync(gitSettingsPath(), 'utf-8') : null,
+    deviceName: nameRow ? nameRow.value : null,
+    hadAttributes: fs.existsSync(path.join(NOTES_DIR, '.gitattributes')),
+    hadIgnore: fs.existsSync(path.join(NOTES_DIR, '.gitignore')),
+  };
+}
+
+function undoSetup(snapshot) {
+  const attempt = (step) => { try { step(); } catch { /* the rest is still put back */ } };
+  if (!snapshot.hadRepo) {
+    // The repository was made by this setup: it goes, with its first commit and the remote. The notes are untouched.
+    attempt(() => fs.rmSync(path.join(NOTES_DIR, '.git'), { recursive: true, force: true }));
+    if (!snapshot.hadAttributes) attempt(() => fs.rmSync(path.join(NOTES_DIR, '.gitattributes'), { force: true }));
+    if (!snapshot.hadIgnore) attempt(() => fs.rmSync(path.join(NOTES_DIR, '.gitignore'), { force: true }));
+  } else {
+    attempt(() => (snapshot.remote ? gitExec(['remote', 'set-url', 'origin', snapshot.remote]) : gitExec(['remote', 'remove', 'origin'])));
+    if (snapshot.branch) attempt(() => gitExec(['checkout', '-q', snapshot.branch]));
+  }
+  attempt(() => {
+    if (snapshot.settingsText === null) fs.rmSync(gitSettingsPath(), { force: true });
+    else fs.writeFileSync(gitSettingsPath(), snapshot.settingsText);
+  });
+  attempt(() => {
+    if (snapshot.deviceName === null) getDb().prepare('DELETE FROM settings WHERE key = ?').run('device_name');
+    else getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('device_name', snapshot.deviceName);
+  });
+}
+
 export function registerGitRoutes(app) {
   // The device's name: what the history and the conflict screens call it ("Phone, today 14:35").
   app.get('/api/device', (_req, res) => {
     try {
       res.json({ name: storedDeviceName(), suggested: suggestedDeviceName() });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -846,37 +965,47 @@ export function registerGitRoutes(app) {
       applyDeviceNameToRepo(name);
       res.json({ name });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
   app.post('/api/git/setup', async (req, res) => {
+    let snapshot = null;
     try {
-      const { token, repo, branch, acknowledgePublic } = req.body;
+      const { acknowledgePublic } = req.body;
       const device_name = cleanDeviceName(req.body.device_name) || storedDeviceName() || suggestedDeviceName();
-      if (!token || !repo || !branch) return res.status(400).json({ detail: 'Missing token, repo, or branch' });
-
+      if (!req.body.token || !req.body.repo || !req.body.branch) {
+        return res.status(400).json({ detail: 'Missing token, repo, or branch', code: 'missing_fields' });
+      }
+      // Everything the person typed is checked before anything is made: a name git refuses used to fail halfway,
+      // with the repository made and the remote added already.
+      const authToken = checkedToken(req.body.token);
+      const repo = checkedRepo(req.body.repo);
+      const branch = checkedBranch(req.body.branch);
       const remoteUrl = buildGithubRemoteUrl(repo);
-      const authToken = token.trim();
 
       // Refuse to push notes into a public repository unless the caller has
       // explicitly acknowledged it. `git init` + `push` used to run straight
       // through, so a mistyped repo name could publish the whole vault.
       if (acknowledgePublic !== true) {
-        const { data, status } = await fetchGithubJson(
-          authToken,
-          `/repos/${String(repo).trim()}`,
-          { withMeta: true },
-        );
-        if (status === 200 && (data?.private === false || data?.visibility === 'public')) {
+        let data = null;
+        try {
+          data = (await githubRequest(authToken, `/repos/${repo}`)).data;
+        } catch (error) {
+          // A repository this token cannot see tells nothing about its visibility; the push says whether it exists.
+          if (error.apiCode !== 'repo_not_found') throw error;
+        }
+        if (data?.private === false || data?.visibility === 'public') {
           return res.status(409).json({
             detail: 'This repository is public. Notes pushed there become public, and stay in the git history.',
+            code: 'public_repo',
             publicRepo: true,
             repository: data?.full_name || repo,
           });
         }
       }
 
+      snapshot = snapshotBeforeSetup();
       if (!isGitRepo()) {
         gitExec(['init']);
         gitExec(['remote', 'add', 'origin', remoteUrl]);
@@ -924,6 +1053,9 @@ export function registerGitRoutes(app) {
       indexAllFiles();
       res.json({ message: `Connected to ${repo}/${branch}`, conflicts: false });
     } catch (error) {
+      // A setup that did not finish leaves things as they were: no repository, remote or settings that say connected.
+      if (snapshot) undoSetup(snapshot);
+      if (error?.statusCode) return githubFailure(res, error);
       gitFailure(res, error);
     }
   });
@@ -978,7 +1110,7 @@ export function registerGitRoutes(app) {
         last_sync: settings.last_sync || null,
       });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -992,7 +1124,7 @@ export function registerGitRoutes(app) {
   app.get('/api/git/repo-check', async (req, res) => {
     try {
       const { token, repo } = req.query;
-      if (!token || !repo) return res.status(400).json({ detail: 'Token and repo are required' });
+      if (!token || !repo) return res.status(400).json({ detail: 'Token and repo are required', code: 'token_required' });
 
       const authToken = String(token).trim();
       const { data, status, headers } = await fetchGithubJson(
@@ -1002,10 +1134,10 @@ export function registerGitRoutes(app) {
       );
 
       if (status === 404) {
-        return res.status(404).json({ detail: 'Repository not found or not accessible' });
+        return res.status(404).json({ detail: 'Repository not found or not accessible', code: 'repo_not_found' });
       }
       if (status === 401) {
-        return res.status(401).json({ detail: 'Token rejected by GitHub' });
+        return res.status(401).json({ detail: 'Token rejected by GitHub', code: 'bad_token' });
       }
 
       const scopes = headers?.['x-oauth-scopes'] || '';
@@ -1024,40 +1156,41 @@ export function registerGitRoutes(app) {
         canPush: data?.permissions && typeof data.permissions.push === 'boolean' ? data.permissions.push : null,
       });
     } catch (error) {
-      res.status(500).json({ detail: error.message || 'Could not reach GitHub' });
+      githubFailure(res, error);
     }
   });
 
   app.get('/api/git/repos', async (req, res) => {
     try {
-      const { token } = req.query;
-      if (!token) return res.status(400).json({ detail: 'Token required' });
-      const repos = await fetchGithubJson(token, '/user/repos?per_page=100&sort=updated');
-      res.json(repos.map((repo) => repo.full_name));
+      const token = checkedToken(req.query.token);
+      const { data } = await githubRequest(token, '/user/repos?per_page=100&sort=updated');
+      if (!Array.isArray(data)) throw httpError(502, 'GitHub answered something unexpected', 'github_unexpected');
+      res.json(data.map((repo) => repo.full_name));
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      githubFailure(res, error);
     }
   });
 
   app.get('/api/git/branches', async (req, res) => {
     try {
-      const { token, repo } = req.query;
-      if (!token || !repo) return res.status(400).json({ detail: 'Token and repo required' });
-      const branches = await fetchGithubJson(token, `/repos/${repo}/branches?per_page=100`);
-      res.json(branches.map((branch) => branch.name));
+      const token = checkedToken(req.query.token);
+      const repo = checkedRepo(req.query.repo);
+      const { data } = await githubRequest(token, `/repos/${repo}/branches?per_page=100`);
+      if (!Array.isArray(data)) throw httpError(502, 'GitHub answered something unexpected', 'github_unexpected');
+      res.json(data.map((branch) => branch.name));
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      githubFailure(res, error);
     }
   });
 
   app.get('/api/git/user', async (req, res) => {
     try {
-      const { token } = req.query;
-      if (!token) return res.status(400).json({ detail: 'Token required' });
-      const user = await fetchGithubJson(token, '/user');
-      res.json({ login: user.login || 'unknown' });
+      const token = checkedToken(req.query.token);
+      const { data } = await githubRequest(token, '/user');
+      if (typeof data?.login !== 'string' || !data.login) throw httpError(502, 'GitHub answered something unexpected', 'github_unexpected');
+      res.json({ login: data.login });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      githubFailure(res, error);
     }
   });
 
@@ -1085,7 +1218,7 @@ export function registerGitRoutes(app) {
    */
   app.post('/api/git/locked-conflict', (req, res) => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       const requestPath = String(req.body?.path || '');
       const passphrase = req.body?.passphrase;
       if (typeof passphrase !== 'string' || !passphrase) return res.status(400).json({ detail: 'Enter the passphrase' });
@@ -1117,13 +1250,13 @@ export function registerGitRoutes(app) {
         sides: { ours: conflictSide('HEAD', safePath), theirs: conflictSide('MERGE_HEAD', safePath) },
       });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
   app.post('/api/git/resolve-note', async (req, res) => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       const { path: requestPath, content, keep } = req.body || {};
       const safePath = notesRelativePath(assertSafeGitPath(requestPath || ''));
       const absolute = path.join(NOTES_DIR, safePath);
@@ -1191,14 +1324,14 @@ export function registerGitRoutes(app) {
       indexAllFiles();
       res.json({ message: 'Conflict resolved', resolved: true, mergeCommitted, remaining: listUnmergedFiles() });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
   app.post('/api/git/pull', (req, res) => runGitTask(async () => {
     try {
       // An automatic round while Git is not connected is ordinary: a 400 here filled the console every round.
-      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
       finishResolvedMerge();
 
@@ -1249,14 +1382,14 @@ export function registerGitRoutes(app) {
       });
     } catch (error) {
       if (explainGitError(error)) return gitFailure(res, error);
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   }));
 
   async function syncRoute(req, res) {
     try {
       // An automatic round while Git is not connected is ordinary: a 400 here filled the console every round.
-      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return req.query.auto === '1' ? res.json({ skipped: 'not-connected' }) : res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       // Idempotent: an existing repo adopts the hygiene files on its next sync.
       writeRepoHygieneFiles();
       if (hasUnmergedFiles()) return res.json({ message: 'Conflicts detected', conflicts: true });
@@ -1357,7 +1490,7 @@ export function registerGitRoutes(app) {
         });
       res.json(log);
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -1404,7 +1537,7 @@ export function registerGitRoutes(app) {
 
       res.json({ revisions, tracked: true, path: safePath });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -1417,7 +1550,7 @@ export function registerGitRoutes(app) {
    */
   app.get('/api/git/history/content', async (req, res) => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       const safePath = assertSafeGitPath(req.query.path || '');
       const { sha } = req.query;
       if (!/^[0-9a-f]{7,40}$/.test(String(sha || ''))) {
@@ -1443,7 +1576,7 @@ export function registerGitRoutes(app) {
         changed: oldText !== currentText,
       });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -1455,7 +1588,7 @@ export function registerGitRoutes(app) {
    */
   app.post('/api/git/history/restore', async (req, res) => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       const safePath = assertSafeGitPath(req.body?.path || '');
       const { sha } = req.body || {};
       if (!/^[0-9a-f]{7,40}$/.test(String(sha || ''))) {
@@ -1474,7 +1607,7 @@ export function registerGitRoutes(app) {
 
       res.json({ message: 'Note restored', path: safePath, sha });
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
@@ -1506,14 +1639,14 @@ export function registerGitRoutes(app) {
       }
       res.json(details);
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
   // One side of a conflicted file as it is, so an image can be shown as an image when choosing between two.
   app.get('/api/git/conflict-file', (req, res) => {
     try {
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       // The conflict list names files relative to the notes folder, as git does.
       const safePath = assertSafeGitPath(String(req.query.path || '').replace(/^notes\//, ''));
       const stage = req.query.side === 'theirs' ? 3 : 2;
@@ -1527,14 +1660,14 @@ export function registerGitRoutes(app) {
       res.set('X-Content-Type-Options', 'nosniff');
       res.send(buffer);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 
   app.post('/api/git/conflicts/resolve', async (req, res) => {
     try {
       const { files, resolutions } = req.body;
-      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized' });
+      if (!isGitRepo()) return res.status(400).json({ detail: 'Git not initialized', code: 'git_not_initialized' });
       if (resolutions && typeof resolutions === 'object') {
         for (const [filePath, choice] of Object.entries(resolutions)) {
           // A file with no conflict in git (a note that only holds markers) has no sides to pick here:
@@ -1556,7 +1689,7 @@ export function registerGitRoutes(app) {
       indexAllFiles();
       res.json({ message: 'Conflicts resolved' });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      gitFailure(res, error);
     }
   });
 }

@@ -1,3 +1,15 @@
+import './repair-location.js'
+// The kit's FieldControl renders `<input>` through `<svelte:element>` with an (empty) children block, which the
+// Svelte dev runtime reports on every field. Production builds say nothing; here the development console is kept
+// readable until the kit renders `<input>` on its own (the warning names the element and nothing else).
+if (import.meta.env.DEV) {
+  const warn = console.warn.bind(console)
+  console.warn = (...args) => {
+    if (typeof args[0] === 'string' && /<svelte:element this="input">.*self-closing/.test(args[0])) return
+    warn(...args)
+  }
+}
+
 import App from './App.svelte'
 import './app.css'
 import { shouldRegisterServiceWorker } from './lib/service-worker.js'

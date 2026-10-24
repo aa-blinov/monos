@@ -777,11 +777,17 @@ apiTest('массовое тегирование требует и пути, и 
 apiTest('дублирование копирует заметку рядом и не занимает то же имя', async () => {
   const source = 'notes/Topic/Alpha.md';
 
-  const first = await requestJson(buildUrl('/api/notes/duplicate', { path: source }), { method: 'POST' });
+  // The word of the copy is the interface's own language: the page sends it (the default is English, see qa-names.test.js).
+  const duplicate = () => requestJson(buildUrl('/api/notes/duplicate', { path: source }), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ suffix: 'копия' }),
+  });
+  const first = await duplicate();
   assert.equal(first.response.status, 200);
   assert.equal(first.data.name, 'Alpha копия.md');
 
-  const second = await requestJson(buildUrl('/api/notes/duplicate', { path: source }), { method: 'POST' });
+  const second = await duplicate();
   assert.equal(second.response.status, 200);
   assert.equal(second.data.name, 'Alpha копия 2.md', 'второе копия не должна перезаписать первое');
 
@@ -1046,7 +1052,8 @@ apiTest('POST /api/settings и GET /api/settings сохраняют настро
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       theme: 'gruvbox',
-      featureFlags: { searchTests: true },
+      featureFlagSearchTests: true,
+      boardColumns: '3',
     }),
   });
 
@@ -1055,7 +1062,9 @@ apiTest('POST /api/settings и GET /api/settings сохраняют настро
   const settings = await requestJson(buildUrl('/api/settings'));
   assert.equal(settings.response.status, 200);
   assert.equal(settings.data.theme, 'gruvbox');
-  assert.deepEqual(settings.data.featureFlags, { searchTests: true });
+  assert.equal(settings.data.featureFlagSearchTests, true);
+  // A text that reads as a number comes back as the text it was.
+  assert.equal(settings.data.boardColumns, '3');
 });
 
 apiTest('PUT /api/templates сохраняет пользовательские шаблоны на диск', async () => {
@@ -1145,13 +1154,15 @@ apiTest('git-маршруты GitHub API возвращают ожидаемые
   });
 });
 
-apiTest('git-маршруты GitHub API возвращают 500 при сетевой ошибке', async () => {
+apiTest('git-маршруты GitHub API возвращают 502 repo_unreachable при сетевой ошибке', async () => {
   await withMockedFetch(createJsonGetMock({
     '/user/repos?per_page=100&sort=updated': new Error('network down'),
   }), async () => {
     const repos = await requestJson(buildUrl('/api/git/repos', { token: 'ghp_test' }));
-    assert.equal(repos.response.status, 500);
-    assert.match(repos.data.detail, /network down/);
+    // Not a 500 with the library's message: the network is not this app's failure, and the answer carries a code.
+    assert.equal(repos.response.status, 502);
+    assert.equal(repos.data.code, 'repo_unreachable');
+    assert.doesNotMatch(repos.data.detail, /network down/);
   });
 });
 
@@ -1714,6 +1725,9 @@ apiTest('POST /api/git/setup мержит remote с локальными зам�
       repo: 'test/setup-overlap',
       branch,
       device_name: 'Monos Setup Test',
+      // The visibility check asks GitHub, which now refuses a token it does not know before anything is made
+      // (qa-git.test.js); this test is about the merge, so it does not make that call.
+      acknowledgePublic: true,
     }),
   });
   assert.equal(setup.response.status, 200, JSON.stringify(setup.data));

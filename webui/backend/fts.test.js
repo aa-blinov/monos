@@ -112,8 +112,9 @@ test('операторы и кавычки в запросе не ломают F
   // а не префиксный запрос FTS.
   assert.deepEqual(searchFts(db, { text: ['rag*'], body: [] }), []);
   assert.deepEqual(searchFts(db, { text: ['rag)'], body: [] }), []);
-  // «rag» в c.md лежит только в теле — здесь поиск по содержимому выключен.
-  assert.deepEqual(searchFts(db, { text: ['rag"'], body: [] }), ['notes/a.md']);
+  // Кавычка — обычный символ текста (раньше она молча вырезалась из запроса, а в индекс писалась удвоенной):
+  // «rag"» такой подстроки нигде нет.
+  assert.deepEqual(searchFts(db, { text: ['rag"'], body: [] }), []);
 });
 
 test('body: ищет только в содержимом', () => {

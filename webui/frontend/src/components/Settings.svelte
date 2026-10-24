@@ -3,6 +3,8 @@
   import { ShieldAlert } from 'lucide-svelte';
   import { announceNotesPulled } from '../lib/note-refresh.js';
   import { get } from 'svelte/store';
+  import { preferenceSnapshot } from '../lib/stores/persisted.js';
+  import { detectPlatform } from '../lib/shortcut-label.js';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { Button, Card, FieldControl, SegmentedControl } from '@monos/ui';
   import ConflictResolver from './ConflictResolver.svelte';
@@ -10,7 +12,7 @@
   import { terminalBridge } from '../lib/terminal.js';
   import ConfirmModal from './ConfirmModal.svelte';
   import Checkbox from './Checkbox.svelte';
-  import { DEFAULT_SYNC_MINUTES, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
+  import { DEFAULT_SYNC_MINUTES, gitFailureText, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
   import { fontOptions, fontSizeOptions, editorFontSizeOptions, lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
@@ -361,7 +363,11 @@
     }
   }
   let archiveInput;
+  // Six palettes fit one row until the interface text grows: then a name such as "Catppuccin" would be cut, so two rows of three.
+  $: themeGridClass = ['large', 'xlarge'].includes($fontSize) ? 'sm:grid-cols-3' : 'sm:grid-cols-6';
   let gitError = '';
+  // The sentence about where the token is kept names the key store of this system.
+  const platform = detectPlatform();
 
   function getSelectedRepoFullName() {
     if (!settings.git_repo) return '';
@@ -454,7 +460,8 @@
 
   async function saveSettings() {
     try {
-      const payload = { ...settings, theme: $activeTheme, themeMode: $themeMode, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, locale: $locale };
+      // The form holds the settings as they were when the page opened: the live preferences go over them.
+      const payload = { ...settings, ...preferenceSnapshot(), theme: $activeTheme, themeMode: $themeMode, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, locale: $locale };
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -477,10 +484,16 @@
     isConnecting = true; gitError = '';
     try {
       const userR = await fetch(`/api/git/user?token=${encodeURIComponent(settings.git_token)}`);
-      if (!userR.ok) { gitError = $localizedText.settings.invalidToken; return; }
+      if (!userR.ok) {
+        gitError = gitFailureText(await userR.json().catch(() => ({})), $localizedText.settings, $localizedText.settings.invalidToken, { useDetail: false });
+        return;
+      }
       settings.git_owner = (await userR.json()).login;
       const reposR = await fetch(`/api/git/repos?token=${encodeURIComponent(settings.git_token)}`);
-      if (!reposR.ok) { gitError = $localizedText.settings.failedToFetchRepos; return; }
+      if (!reposR.ok) {
+        gitError = gitFailureText(await reposR.json().catch(() => ({})), $localizedText.settings, $localizedText.settings.failedToFetchRepos, { useDetail: false });
+        return;
+      }
       gitRepos = normalizeRepoList(await reposR.json());
       isAuthenticated = true;
       if (gitRepos.length === 1) settings.git_repo = getRepoOptionValue(gitRepos[0]);
@@ -559,7 +572,7 @@
         // The reason is shown where the button is, not only in the box above the form, out of sight.
         connectPhase = 'error';
         // The common causes have a sentence of their own in this language; anything else keeps the server's words.
-        connectMessage = $localizedText.settings.gitReasons[answer.reason] || answer.detail || $localizedText.settings.connectFailed;
+        connectMessage = gitFailureText(answer, $localizedText.settings, $localizedText.settings.connectFailed);
         return;
       }
       await checkGitStatus();
@@ -786,7 +799,7 @@
 
     <div class="min-w-0 space-y-8">
 
-    <section class="space-y-5 scroll-mt-16 lg:scroll-mt-6" id="settings-appearance" data-testid="appearance-section">
+    <section class="space-y-5 scroll-mt-24 lg:scroll-mt-6" id="settings-appearance" data-testid="appearance-section">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.appearance}</h2>
       <div>
         <label for="interface-language" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.interfaceLanguage}</label>
@@ -807,13 +820,14 @@
           bind:value={$themeMode}
           options={themeModeChoices}
           size="md"
+          class="max-sm:!h-[3.25rem]"
           on:change={saveSettings}
         />
       </div>
       <div>
         <div class="mb-2 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.colorTheme}</div>
       <!-- Each theme shows itself: its light and dark page with text and an accent, small enough for one row. -->
-      <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 {themeGridClass}">
         {#each Object.entries(themes) as [key, t]}
           <Card
             as="button"
@@ -910,7 +924,7 @@
       </div>
     </section>
 
-    <section class="space-y-5 scroll-mt-16 rounded-ui border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-data" data-testid="storage-section" use:revealSection={'storage'}>
+    <section class="space-y-5 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-data" data-testid="storage-section" use:revealSection={'storage'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.storageTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.storageHint}</p>
       {#if storageStatus === 'remote'}
@@ -918,22 +932,22 @@
       {:else if storage}
         <code class="rounded-ui block break-all border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_35%,transparent)] px-4 py-2.5 text-xs text-[var(--text-primary)]" data-testid="storage-folder">{storage.folder}</code>
         {#if storage.unavailable}
-          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
+          <p role="alert" class="text-xs text-[var(--red-text)]">{$localizedText.settings.storageUnavailable.replace('{folder}', storage.unavailable)}</p>
         {:else if storage.restartRequired}
           <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.storageRestart.replace('{folder}', storage.target)}</p>
         {/if}
         {#if storage.unreadable?.length}
-          <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.settings.storageUnreadable.replace('{files}', storage.unreadable.join(', '))}</p>
+          <p role="alert" class="text-xs text-[var(--red-text)]">{$localizedText.settings.storageUnreadable.replace('{files}', storage.unreadable.join(', '))}</p>
         {/if}
         <div class="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" disabled={storageBusy} data-testid="storage-choose" on:click={chooseStorage}>{$localizedText.settings.storageChoose}</Button>
+          <Button variant="secondary" size="sm" class="justify-start px-0" disabled={storageBusy} data-testid="storage-choose" on:click={chooseStorage}>{$localizedText.settings.storageChoose}</Button>
           {#if storage.target !== storage.defaultFolder}
             <Button variant="secondary" size="sm" disabled={storageBusy} data-testid="storage-reset" on:click={useDefaultStorage}>{$localizedText.settings.storageReset}</Button>
           {/if}
         </div>
       {/if}
       {#if storageError}
-        <p role="alert" class="text-xs text-[var(--red)]">{storageError}</p>
+        <p role="alert" class="text-xs text-[var(--red-text)]">{storageError}</p>
       {/if}
     </section>
 
@@ -947,10 +961,10 @@
         <div class="min-w-0">
           <div class="mb-1.5 block text-xs text-[var(--text-secondary)]">{$localizedText.settings.exportTitle}</div>
           <div class="flex flex-wrap gap-x-6 gap-y-2">
-          <Button variant="ghost" size="md" on:click={printAllNotes} disabled={isExporting || isImporting}>
+          <Button variant="ghost" size="md" class="justify-start px-0" on:click={printAllNotes} disabled={isExporting || isImporting}>
             {$localizedText.settings.printAllNotes}
           </Button>
-          <Button variant="ghost" size="md" on:click={exportNotes} disabled={isExporting}>
+          <Button variant="ghost" size="md" class="justify-start px-0" on:click={exportNotes} disabled={isExporting}>
             {isExporting ? $localizedText.settings.exporting : $localizedText.settings.exportNotes}
           </Button>
           </div>
@@ -981,18 +995,18 @@
         <div class="text-xs text-[var(--text-tertiary)]">{printStatus}</div>
       {/if}
       {#if printError}
-        <div class="text-xs text-[var(--red)]">{printError}</div>
+        <div class="text-xs text-[var(--red-text)]">{printError}</div>
       {/if}
       {#if backupStatus}
-        <div class="text-xs text-[var(--green)]">{backupStatus}</div>
+        <div class="text-xs text-[var(--green-text)]">{backupStatus}</div>
       {/if}
       {#if backupError}
-        <div class="text-xs text-[var(--red)]">{backupError}</div>
+        <div class="text-xs text-[var(--red-text)]">{backupError}</div>
       {/if}
     </section>
 
     <!-- GitHub Connection -->
-    <section class="space-y-5 scroll-mt-16 rounded-ui border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-sync" data-testid="sync-section" use:revealSection={'sync'}>
+    <section class="space-y-5 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-sync" data-testid="sync-section" use:revealSection={'sync'}>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
@@ -1003,7 +1017,7 @@
           {#each $localizedText.settings.tokenHelpSteps.slice(1) as step}
             <p>{step}</p>
           {/each}
-          <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNote}</p>
+          <p class="pt-1 text-[var(--text-tertiary)]">{$localizedText.settings.tokenHelpNoteByPlatform[platform]}</p>
         </div>
       </details>
 
@@ -1034,14 +1048,14 @@
 
       {#if repoSafety && !repoSafety.safe}
         <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.publicRepoTitle}</p>
+          <p class="text-sm font-bold text-[var(--red-text)]">{$localizedText.settings.publicRepoTitle}</p>
           <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.publicRepoHint}</p>
         </div>
       {/if}
 
       {#if repoSafety && repoSafety.canPush === false}
         <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3" data-testid="read-only-token">
-          <p class="text-sm font-bold text-[var(--red)]">{$localizedText.settings.readOnlyTokenTitle}</p>
+          <p class="text-sm font-bold text-[var(--red-text)]">{$localizedText.settings.readOnlyTokenTitle}</p>
           <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{$localizedText.settings.readOnlyTokenHint}</p>
         </div>
       {/if}
@@ -1059,7 +1073,7 @@
       {/if}
 
       {#if gitError}
-        <div class="text-xs rounded-ui bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red)]">{gitError}</div>
+        <div class="text-xs rounded-ui bg-[var(--bg-secondary)] px-3 py-2 text-[var(--red-text)]">{gitError}</div>
       {/if}
 
       <div class="grid grid-cols-2 gap-6">
@@ -1179,7 +1193,7 @@
               </div>
               {#if gitStatus.ahead > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.ahead(gitStatus.ahead)}</div>{/if}
               {#if gitStatus.behind > 0}<div class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.behind(gitStatus.behind)}</div>{/if}
-              {#if gitStatus.status === 'conflict'}<div class="text-xs text-[var(--red)]">{$localizedText.settings.conflictStatus}</div>{/if}
+              {#if gitStatus.status === 'conflict'}<div class="text-xs text-[var(--red-text)]">{$localizedText.settings.conflictStatus}</div>{/if}
               {#if gitStatus.last_sync}<div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.lastSync(relativeDay(gitStatus.last_sync, $locale, { today: $localizedText.app.board.today, yesterday: $localizedText.app.board.yesterday }))}</div>{/if}
             </div>
             <Button variant="ghost" size="md" on:click={handleSync} disabled={isSyncing || $editorState.saving || $editorState.dirty}>
@@ -1203,7 +1217,7 @@
 
     {/if}
 
-    <section class="space-y-5 scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-devices" data-testid="lan-section">
+    <section class="space-y-5 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-devices" data-testid="lan-section">
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.lanTitle}</h2>
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.lanHint}</p>
       <!-- Said before the switch, at reading size: the risk is part of the decision, not a footnote after it. -->
@@ -1214,7 +1228,7 @@
       {#if lanStatus === 'remote'}
         <p class="text-xs text-[var(--text-tertiary)]" data-testid="lan-remote">{$localizedText.settings.lanRemoteOnly}</p>
       {:else if lanStatus === 'error'}
-        <p class="text-xs text-[var(--red)]">{$localizedText.settings.lanLoadFailed}</p>
+        <p class="text-xs text-[var(--red-text)]">{$localizedText.settings.lanLoadFailed}</p>
       {:else if lanStatus === 'ready'}
         <Checkbox id="lan-enabled" checked={lan.enabled} disabled={lanBusy} on:change={(event) => toggleLanAccess(event.target.checked)}>
           {$localizedText.settings.lanToggle}
@@ -1269,10 +1283,10 @@
           <p role="status" class="text-xs text-[var(--text-secondary)]">{$localizedText.settings.lanRestart}</p>
         {/if}
         {#if lanNotice}
-          <p role="status" class="text-xs text-[var(--green)]">{lanNotice}</p>
+          <p role="status" class="text-xs text-[var(--green-text)]">{lanNotice}</p>
         {/if}
         {#if lanError}
-          <p role="alert" class="text-xs text-[var(--red)]">{lanError}</p>
+          <p role="alert" class="text-xs text-[var(--red-text)]">{lanError}</p>
         {/if}
       {/if}
       {#if confirmingLanRenew}
@@ -1312,12 +1326,12 @@
 
     <!-- The agent is for people who run one in the terminal: after what everyone needs (look, data, sync, devices). -->
     {#if terminalBridge}
-      <div id="settings-agent" class="scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
+      <div id="settings-agent" class="scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
         <AgentSettings />
       </div>
     {/if}
 
-    <details class="group scroll-mt-16 space-y-8 border-t border-[var(--border-subtle)] pt-6 lg:scroll-mt-6" id="settings-more" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
+    <details class="group scroll-mt-24 space-y-8 border-t border-[var(--border-subtle)] pt-6 lg:scroll-mt-6" id="settings-more" data-testid="advanced-settings" on:toggle={loadAdvancedReports}>
       <summary class="flex cursor-pointer list-none items-center justify-between gap-6 [&::-webkit-details-marker]:hidden after:shrink-0 after:text-lg after:leading-none after:text-[var(--text-secondary)] after:content-['+'] group-open:after:content-['−']">
         <span class="block">
           <span class="block text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.advanced}</span>
@@ -1343,10 +1357,10 @@
           <Button type="submit" variant="outline" size="sm" disabled={publishBusy || !publishFolder.trim()} data-testid="publish-button">{publishBusy ? $localizedText.settings.publishing : $localizedText.settings.publishButton}</Button>
         </form>
         {#if publishStatus}
-          <p role="status" class="text-xs text-[var(--green)] break-all">{publishStatus}</p>
+          <p role="status" class="text-xs text-[var(--green-text)] break-all">{publishStatus}</p>
         {/if}
         {#if publishError}
-          <p role="alert" class="text-xs text-[var(--red)]">{publishError}</p>
+          <p role="alert" class="text-xs text-[var(--red-text)]">{publishError}</p>
         {/if}
       </section>
 
@@ -1354,7 +1368,7 @@
       <section class="space-y-3">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.attachmentsTitle}</h2>
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.attachmentsMoved}</p>
-        <Button variant="ghost" size="md" data-testid="settings-open-attachments" on:click={() => dispatch('openAttachments')}>{$localizedText.settings.attachmentsOpen}</Button>
+        <Button variant="ghost" size="md" class="justify-start px-0" data-testid="settings-open-attachments" on:click={() => dispatch('openAttachments')}>{$localizedText.settings.attachmentsOpen}</Button>
       </section>
 
       <section class="space-y-5">
@@ -1362,7 +1376,7 @@
         {#if connectionStatus === 'loading'}
           <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsLoading}</div>
         {:else if connectionStatus === 'error'}
-          <div class="text-xs text-[var(--red)]">{$localizedText.settings.connectionsError}</div>
+          <div class="text-xs text-[var(--red-text)]">{$localizedText.settings.connectionsError}</div>
         {:else if connectionReport.broken.length + connectionReport.orphanCount + connectionReport.staleCount + connectionReport.conflictCopyCount === 0}
           <div class="text-xs text-[var(--text-tertiary)]">{$localizedText.settings.connectionsClean}</div>
         {:else}
@@ -1372,7 +1386,7 @@
               {#each connectionReport.broken as item (item.target)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
                   <span class="min-w-0 truncate text-xs text-[var(--text-primary)]">[[{item.target}]]</span>
-                  <Button variant="quiet" size="sm" class="min-w-0 shrink truncate" on:click={() => openNote(item.sources[0])}>{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</Button>
+                  <Button variant="quiet" size="sm" class="min-w-0 shrink" on:click={() => openNote(item.sources[0])}><span class="min-w-0 truncate">{$localizedText.settings.brokenLinkFrom.replace('{note}', noteNameOf(item.sources[0]))}</span></Button>
                 </li>
               {/each}
             </ul>
@@ -1382,7 +1396,7 @@
             <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="orphan-notes">
               {#each connectionReport.orphans as item (item.path)}
                 <li>
-                  <Button variant="ghost" size="sm" class="w-full justify-start truncate px-3 normal-case" on:click={() => openNote(item.path)}>{item.title}</Button>
+                  <Button variant="ghost" size="sm" class="w-full justify-start px-3 normal-case" on:click={() => openNote(item.path)}><span class="min-w-0 truncate">{item.title}</span></Button>
                 </li>
               {/each}
             </ul>
@@ -1408,7 +1422,7 @@
             <ul class="rounded-ui max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto border border-[var(--border-subtle)]" data-testid="conflict-copies">
               {#each connectionReport.conflictCopies as item (item.path)}
                 <li class="flex items-center justify-between gap-3 px-3 py-2">
-                  <Button variant="quiet" size="sm" class="min-w-0 truncate text-left" on:click={() => openNote(item.path)}>{item.title}</Button>
+                  <Button variant="quiet" size="sm" class="min-w-0 justify-start px-0 text-left" on:click={() => openNote(item.path)}><span class="min-w-0 truncate">{item.title}</span></Button>
                   <span class="hidden min-w-0 truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:block">
                     {item.kind === 'duplicate'
                       ? $localizedText.settings.conflictSameText.replace('{original}', noteNameOf(item.original))
@@ -1422,7 +1436,7 @@
               <div class="text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{$localizedText.settings.moreItems.replace('{count}', connectionReport.conflictCopyCount - connectionReport.conflictCopies.length)}</div>
             {/if}
             {#if copyError}
-              <p role="alert" class="text-xs text-[var(--red)]">{copyError}</p>
+              <p role="alert" class="text-xs text-[var(--red-text)]">{copyError}</p>
             {/if}
           {/if}
         {/if}
@@ -1460,7 +1474,7 @@
           {/if}
         </div>
         {#if clipperError}
-          <div class="text-xs text-[var(--red)]">{clipperError}</div>
+          <div class="text-xs text-[var(--red-text)]">{clipperError}</div>
         {/if}
       </section>
 
@@ -1470,7 +1484,7 @@
 
     <!-- The guide lives in the Help; Settings only points to it. Its own part, last: a person looking for
          instructions should not have to read the rest of Settings first. -->
-    <section id="settings-help" data-testid="settings-help" class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 scroll-mt-16 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
+    <section id="settings-help" data-testid="settings-help" class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6">
       <div class="min-w-0">
         <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.helpTitle}</h2>
         <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.settings.helpText}</p>

@@ -30,8 +30,9 @@ export const SoftBreak = Node.create({
             markdownIt.renderer.rules.softbreak = () => '<span data-soft-break></span>';
           },
         },
-        serialize(state) {
-          state.write('\n');
+        // A heading is one line in the file: a line break inside one would end it.
+        serialize(state, node, parent) {
+          state.write(parent?.type?.name === 'heading' ? ' ' : '\n');
         },
       },
     };

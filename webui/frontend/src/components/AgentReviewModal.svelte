@@ -61,7 +61,7 @@
     // A hunk header (`@@ -3,6 +3,6 @@`) is git's bookkeeping: shown as a quiet break between the changed places.
     if (line.startsWith('@@')) return 'text-[var(--text-tertiary)]';
     if (line.startsWith('+')) return 'text-[var(--text-primary)] bg-[color-mix(in_srgb,var(--green)_12%,transparent)]';
-    if (line.startsWith('-')) return 'text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)]';
+    if (line.startsWith('-')) return 'text-[var(--red-text)] bg-[color-mix(in_srgb,var(--red)_8%,transparent)]';
     return 'text-[var(--text-secondary)]';
   }
 </script>
@@ -81,7 +81,7 @@
             class="w-full flex flex-row items-start justify-start gap-2 px-2 py-1.5 text-left normal-case"
             data-testid="agent-review-item"
           >
-            <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green)]' : change.status === 'deleted' ? 'text-[var(--red)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>
+            <span class="mt-0.5 w-16 shrink-0 text-[length:var(--text-whisper)] uppercase tracking-[0.12em] {change.status === 'added' ? 'text-[var(--green-text)]' : change.status === 'deleted' ? 'text-[var(--red-text)]' : 'text-[var(--blue)]'}">{$localizedText.agentReview.status[change.status]}</span>
             <span class="min-w-0">
               <span class="block truncate text-sm text-[var(--text-primary)]">{label(change.path).name}</span>
               {#if label(change.path).folder}<span class="block truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{label(change.path).folder}</span>{/if}
@@ -106,7 +106,7 @@
           <pre class="rounded-ui max-h-[52vh] flex-1 overflow-auto border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-secondary)_25%,transparent)] p-3 font-mono text-xs leading-relaxed" data-testid="agent-review-diff">{#each diff.split('\n') as line}<span class="block {lineClass(line)}">{line.startsWith('@@') ? '⋯' : line || ' '}</span>{/each}</pre>
         {/if}
       {/if}
-      {#if error}<p class="mt-2 text-xs text-[var(--red)]">{error}</p>{/if}
+      {#if error}<p class="mt-2 text-xs text-[var(--red-text)]">{error}</p>{/if}
     </div>
   </div>
   <div class="mt-6 flex flex-wrap items-center justify-end gap-x-6 gap-y-2 border-t border-[var(--border-subtle)] pt-4">

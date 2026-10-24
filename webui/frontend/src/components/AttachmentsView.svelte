@@ -288,18 +288,18 @@
 
 <section bind:this={scroller} class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="attachments-view">
   <div class="mx-auto max-w-6xl space-y-5">
-    <header class="space-y-2">
+    <div class="space-y-2">
       <div class="mb-5">
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.attachments.title}</h1>
         <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.attachments.hint}</p>
       </div>
       <SearchField bind:value={query} on:input={narrowed} on:clear={narrowed} placeholder={$localizedText.attachments.search} testid="attachments-query" />
-    </header>
+    </div>
 
     {#if status === 'loading'}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.loading}</p>
     {:else if status === 'error'}
-      <p role="alert" class="flex items-center gap-4 text-xs text-[var(--red)]">
+      <p role="alert" class="flex items-center gap-4 text-xs text-[var(--red-text)]">
         {$localizedText.attachments.loadFailed}
         <Button variant="ghost" size="sm" type="button" data-testid="attachments-retry" on:click={() => { status = 'loading'; load(); }} class="min-h-8">{$localizedText.attachments.retry}</Button>
       </p>
@@ -485,7 +485,7 @@
       {#if trashStatus === 'loading'}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.loading}</p>
       {:else if trashStatus === 'error'}
-        <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.attachments.loadFailed}</p>
+        <p role="alert" class="text-xs text-[var(--red-text)]">{$localizedText.attachments.loadFailed}</p>
       {:else if !trashData || trashData.batches.length === 0}
         <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.removedEmpty}</p>
       {:else}

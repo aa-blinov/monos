@@ -3,6 +3,7 @@ import { indexAllFiles } from '../indexing.js';
 import { requireThisComputer } from './helpers.js';
 import { ensureCheckpoint, keepChange, reviewDiff, reviewList, revertChange } from '../agent-review.js';
 import { broadcast } from '../watcher.js';
+import { sendError } from './helpers.js';
 
 const pathsOf = (req) => (Array.isArray(req.body?.paths) ? req.body.paths.filter((item) => typeof item === 'string' && /^notes\//.test(item) && !item.includes('..')) : []);
 
@@ -19,7 +20,7 @@ export function registerAgentRoutes(app) {
       indexAllFiles();
       res.json({ created, files: agentRulesStatus() });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      sendError(res, error);
     }
   });
 
@@ -33,7 +34,7 @@ export function registerAgentRoutes(app) {
     try {
       res.json(reviewList());
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      sendError(res, error);
     }
   });
 
@@ -41,7 +42,7 @@ export function registerAgentRoutes(app) {
     try {
       res.json({ diff: reviewDiff(String(req.query.path || '')) });
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      sendError(res, error);
     }
   });
 
@@ -61,7 +62,7 @@ export function registerAgentRoutes(app) {
       broadcast({ type: 'agent-review' });
       res.json(reviewList());
     } catch (error) {
-      res.status(500).json({ detail: error.message || String(error) });
+      sendError(res, error);
     }
   });
 }

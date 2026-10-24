@@ -19,7 +19,7 @@ test('loadShellSettings возвращает theme/themeMode при успехе
 
   const result = await loadShellSettings(themes);
 
-  assert.deepEqual(result, { theme: 'nord', themeMode: 'dark' });
+  assert.deepEqual({ ...result, all: undefined }, { ...{ theme: 'nord', themeMode: 'dark' }, all: undefined });
 });
 
 test('loadShellSettings отбрасывает невалидный theme', async () => {
@@ -27,7 +27,7 @@ test('loadShellSettings отбрасывает невалидный theme', asyn
 
   const result = await loadShellSettings(themes);
 
-  assert.deepEqual(result, { themeMode: 'light' });
+  assert.deepEqual({ ...result, all: undefined }, { ...{ themeMode: 'light' }, all: undefined });
 });
 
 test('loadShellSettings отбрасывает невалидный themeMode', async () => {
@@ -35,7 +35,7 @@ test('loadShellSettings отбрасывает невалидный themeMode', 
 
   const result = await loadShellSettings(themes);
 
-  assert.deepEqual(result, { theme: 'nord' });
+  assert.deepEqual({ ...result, all: undefined }, { ...{ theme: 'nord' }, all: undefined });
 });
 
 test('loadShellSettings возвращает null на HTTP error', async () => {
@@ -67,5 +67,16 @@ test('loadShellSettings без themes map валидирует только them
 
   const result = await loadShellSettings(null);
 
-  assert.deepEqual(result, { themeMode: 'light' });
+  assert.deepEqual({ ...result, all: undefined }, { ...{ themeMode: 'light' }, all: undefined });
+});
+
+test('loadShellSettings отдаёт и весь объект настроек: из него читаются обычные предпочтения', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ theme: 'nord', contentWidth: 'wide' }) });
+  try {
+    const result = await loadShellSettings({ nord: {} });
+    assert.equal(result.all.contentWidth, 'wide');
+  } finally {
+    globalThis.fetch = original;
+  }
 });

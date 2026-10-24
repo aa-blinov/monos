@@ -20,7 +20,7 @@ export function notesMentioning(name) {
   const found = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+      if (entry.name.startsWith('_') || entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
@@ -51,7 +51,13 @@ function nameStillAnswers(db, notePath) {
  */
 export function planLinkUpdate(db, oldPath, newPath) {
   const renamed = nameOf(oldPath) !== nameOf(newPath);
-  if (!renamed || nameStillAnswers(db, oldPath)) return { relink: false, sources: [] };
+  if (!renamed) return { relink: false, sources: [] };
+  // Another note answers to the same name, so a bare `[[Name]]` may be meant for it and stays. A link that names
+  // this note through its folder can only mean this one, and follows it.
+  if (nameStillAnswers(db, oldPath)) {
+    const folder = path.posix.dirname(oldPath.replace(/^notes\/?/, ''));
+    return { relink: true, onlyFolder: folder === '.' ? '' : folder, sources: notesMentioning(nameOf(oldPath)) };
+  }
   return { relink: true, sources: notesMentioning(nameOf(oldPath)) };
 }
 
@@ -113,10 +119,10 @@ export function updateNotes(notePaths, transform) {
  * renamed note again, so its own outgoing links follow it. Without a change of name it only
  * refreshes the index.
  */
-export function refreshNotesAfterRename({ oldPath, newPath, relink, sources }) {
+export function refreshNotesAfterRename({ oldPath, newPath, relink, sources, onlyFolder = null }) {
   if (!relink) return updateNotes([newPath], (text) => ({ content: text, count: 0 }));
   const oldName = nameOf(oldPath);
   const newName = nameOf(newPath);
   const notePaths = [...new Set([newPath, ...sources.map((source) => (source === oldPath ? newPath : source))])];
-  return updateNotes(notePaths, (text) => rewriteWikiTargets(text, oldName, newName));
+  return updateNotes(notePaths, (text) => rewriteWikiTargets(text, oldName, newName, { onlyFolder }));
 }

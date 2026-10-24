@@ -49,7 +49,7 @@
         on:keydown={(event) => onKeydown(event.detail ?? event)}
       />
       {#if nameProblem && nameProblem !== 'empty'}
-        <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(nameProblem)}</p>
+        <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red-text)]">{$localizedText.sidebar.nameProblem(nameProblem)}</p>
       {/if}
     </div>
   </div>

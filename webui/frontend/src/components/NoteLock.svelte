@@ -78,6 +78,6 @@
     <Button variant="outline" size="sm" disabled={busy} on:click={removeLock}>{$localizedText.lock.removeLock}</Button>
   {/if}
   {#if error}
-    <p role="alert" class="text-xs text-[var(--red)]">{error}</p>
+    <p role="alert" class="text-xs text-[var(--red-text)]">{error}</p>
   {/if}
 </section>

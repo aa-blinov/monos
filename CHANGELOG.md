@@ -17,6 +17,45 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.0 — 2026-10-24
+
+A release-readiness pass: a QA review of the backend, the interface and the user paths, and the fixes it led to.
+
+### Security
+
+- With network access on, the clipper token is no longer handed to other devices, and the GitHub token is returned only
+  to this computer. Publishing and the settings routes that write outside the notes folder are this-computer only.
+- The notes folder's `.git`, `.monos` and any dot-folder can no longer be written, renamed or deleted through the API.
+  Paths are normalised once, so `notes/./Note.md` cannot dodge the trash and lock checks.
+- A published or printed note can no longer carry a script: links are checked against a scheme allow-list after entities
+  are decoded, and print and publish pages ship a restrictive Content-Security-Policy.
+- A zip import is bounded (per entry, in total and by entry count), checks every entry name first and either applies
+  fully or reports what it skipped; symlinks inside the notes folder are ignored.
+
+### Fixed
+
+- Notes with `#` or `%` in their name open again (the address is encoded segment by segment; a broken `%` in a page
+  address no longer returns an error).
+- The first-run "Start writing" button has a readable label and a 44px height.
+- The editor no longer rewrites a note behind your back: strikethrough, `\|` in table cells, footnotes, `![[embeds]]`,
+  fence languages, list numbering, `<` `>` `&`, task lists and the end of the file all survive; a block you did not
+  touch is written back byte for byte.
+- Deleting a note moves it to a hidden `.trash` folder next to its place, so the trash survives a rebuilt index, reaches
+  other devices through sync and is left out of exports. Deleting a folder goes to the trash too. Folder icons and
+  colours are kept in `.monos/folders.json`.
+- Moving a note carries its pictures along. A trashed note no longer blocks its name; the New note dialog offers to
+  restore it. Duplicates are named "copy" or "копия" to match the interface language.
+- Search finds text with a double quote and text typed in a different Unicode form (`Café`, decomposed `й`).
+- Saving never overwrites a file that is not valid UTF-8, and rejects names the system cannot hold on every folder
+  level. A case-only rename works on macOS.
+- Publishing builds the new site before replacing the old one. Errors from the API are `{ detail, code }` with no paths.
+- The last moments of typing are saved when a browser tab is closed or reloaded. Board sort, columns, grouping, content
+  width, line spacing and similar choices are kept on the server, so a new port on launch no longer resets them.
+- Phone layout: the note footer is one row of icons, touch targets are at least 44px, a short screen leaves room to
+  write, the trash notice no longer covers the sidebar footer, and the palette and the card menu work from the keyboard.
+- Contrast of error, warning and success text, long titles and the conflict-copy row, the tab title of every page, and a
+  real "Not found" page.
+
 ## 1.16.37 — 2026-10-24
 
 ### Changed

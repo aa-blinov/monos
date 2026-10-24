@@ -38,15 +38,15 @@
 
 <section class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="favorites-view">
   <div class="mx-auto max-w-3xl space-y-5">
-    <header class="mb-5">
+    <div class="mb-5">
       <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.favorites.title}</h1>
       <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.favorites.hint}</p>
-    </header>
+    </div>
 
     {#if status === 'loading'}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.favorites.loading}</p>
     {:else if status === 'error'}
-      <p role="alert" class="text-xs text-[var(--red)]">{$localizedText.favorites.loadFailed}</p>
+      <p role="alert" class="text-xs text-[var(--red-text)]">{$localizedText.favorites.loadFailed}</p>
     {:else if rows.length === 0}
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.favorites.empty}</p>
     {:else}

@@ -205,3 +205,51 @@ test('fencedBlockLanguages читает только info-строку', () => {
   assert.deepEqual(fencedBlockLanguages('```bash extra\nx\n```'), ['bash']);
   assert.deepEqual(fencedBlockLanguages('~~~\nno lang\n~~~'), ['']);
 });
+
+test('~~текст~~ открывается как зачёркнутый, а не как буквальные тильды', () => {
+  const doc = markdownToEditorContent('before ~~hello~~ after\n');
+  const [paragraph] = doc.content;
+  const struck = paragraph.content.find((node) => node.marks?.some((mark) => mark.type === 'strike'));
+  assert.equal(struck?.text, 'hello');
+  assert.ok(paragraph.content.every((node) => !String(node.text || '').includes('~~')));
+});
+
+test('одинарные тильды остаются текстом: ~sub~ не зачёркивание', () => {
+  const doc = markdownToEditorContent('H~2~O\n');
+  assert.equal(doc.content[0].content.map((node) => node.text).join(''), 'H~2~O');
+  assert.ok(doc.content[0].content.every((node) => !node.marks?.length));
+});
+
+test('нумерованный список помнит первый номер и скобку', () => {
+  const dotted = markdownToEditorContent('5. five\n6. six\n').content[0];
+  assert.equal(dotted.type, 'orderedList');
+  assert.equal(dotted.attrs.start, 5);
+  assert.equal(dotted.attrs.delimiter, '.');
+  const bracket = markdownToEditorContent('7) seven\n8) eight\n').content[0];
+  assert.equal(bracket.attrs.start, 7);
+  assert.equal(bracket.attrs.delimiter, ')');
+});
+
+test('список задач остаётся плотным или рыхлым, как в файле, и помнит маркер', () => {
+  const tight = markdownToEditorContent('* [ ] one\n  * [x] nested\n* [x] two\n').content[0];
+  assert.equal(tight.type, 'taskList');
+  assert.equal(tight.attrs.tight, true);
+  assert.equal(tight.attrs.marker, '*');
+  const loose = markdownToEditorContent('- [ ] one\n\n- [x] two\n').content[0];
+  assert.equal(loose.attrs.tight, false);
+});
+
+test('заголовок на несколько строк (setext) не теряет текст', () => {
+  const doc = markdownToEditorContent('first line\nsecond line\n---\n\nbody\n');
+  assert.equal(doc.content[0].type, 'heading');
+  const text = doc.content[0].content.map((node) => node.text || ' ').join('');
+  assert.match(text, /first line/);
+  assert.match(text, /second line/);
+});
+
+test('ячейка таблицы с \\| остаётся одной ячейкой', () => {
+  const table = markdownToEditorContent('| a | b |\n| --- | --- |\n| x \\| y | 2 |\n').content[0];
+  const row = table.content[1];
+  assert.equal(row.content.length, 2);
+  assert.equal(row.content[0].content[0].content[0].text, 'x | y');
+});

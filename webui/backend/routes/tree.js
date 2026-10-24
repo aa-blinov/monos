@@ -1,6 +1,7 @@
 import path from 'path';
 import { NOTES_DIR } from '../config.js';
 import { getDb } from '../database.js';
+import { sendError } from './helpers.js';
 
 export function registerTreeRoutes(app) {
   /**
@@ -76,7 +77,7 @@ export function registerTreeRoutes(app) {
       res.json(buildNode('notes'));
     } catch (error) {
       console.error('/api/tree error:', error);
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

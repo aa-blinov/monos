@@ -2,14 +2,22 @@ import fs from 'fs';
 import path from 'path';
 import { getDb } from '../database.js';
 import { NOTES_DIR } from '../config.js';
-import { assertFileName, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
+import { assertCreatableSegments, httpError, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { indexAllFiles } from '../indexing.js';
+import { COLOR_VALUE, ICON_NAME, setFolderConfig } from '../folder-config.js';
+import { sendError } from './helpers.js';
 
 // The item at fullPath, or the nearest one above it that exists. mkdir cannot make folders through a file.
 function nearestExisting(fullPath) {
   let current = fullPath;
   while (!fs.existsSync(current) && path.dirname(current) !== current) current = path.dirname(current);
   return current;
+}
+
+function checkedAppearance(value, name, pattern) {
+  if (value === undefined || value === null || value === '') return value;
+  if (typeof value !== 'string' || !pattern.test(value)) throw httpError(400, `The ${name} is not a valid value`, `invalid_${name}`);
+  return value;
 }
 
 export function registerDirectoryRoutes(app) {
@@ -30,37 +38,32 @@ export function registerDirectoryRoutes(app) {
       walk(NOTES_DIR);
       res.json(directories);
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
   app.post('/api/directory/create', (req, res) => {
     try {
-      let { path: dirPath } = req.query;
+      const { path: dirPath } = req.query;
       if (typeof dirPath !== 'string' || dirPath.trim() === '') {
-        return res.status(400).json({ detail: 'Path required' });
+        return res.status(400).json({ detail: 'Path required', code: 'path_required' });
       }
-      // Имя папки — последний сегмент пути; его ОС должна уметь создать.
-      assertFileName(path.basename(dirPath));
-      const fullPath = dirPath.startsWith('notes/')
+      const fullPath = dirPath === 'notes' || dirPath.startsWith('notes/')
         ? resolveNotesPath(dirPath, { allowRoot: true })
         : resolveNotesChildPath(dirPath);
+      // Every folder of the path is a name the system has to be able to create, not only the last one.
+      assertCreatableSegments(path.relative(NOTES_DIR, fullPath));
       // mkdir would fail on a file in the way and name the path in its error, so such a request is refused here.
       const nearest = nearestExisting(fullPath);
       if (!fs.statSync(nearest).isDirectory()) {
-        if (nearest === fullPath) return res.status(409).json({ detail: 'Target already exists' });
-        return res.status(400).json({ detail: 'Parent is not a folder' });
+        if (nearest === fullPath) return res.status(409).json({ detail: 'Target already exists', code: 'exists' });
+        return res.status(400).json({ detail: 'Parent is not a folder', code: 'not_a_folder' });
       }
       fs.mkdirSync(fullPath, { recursive: true });
       indexAllFiles();
       res.json({ message: 'Directory created' });
     } catch (error) {
-      // Only errors the app raises on purpose have a message to send; fs errors name a folder on this computer, so they are logged.
-      if (!error.statusCode) {
-        console.error('/api/directory/create error:', error);
-        return res.status(500).json({ detail: 'Internal server error' });
-      }
-      res.status(error.statusCode).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 
@@ -68,24 +71,27 @@ export function registerDirectoryRoutes(app) {
     try {
       const { path: itemPath } = req.query;
       if (typeof itemPath !== 'string' || itemPath.trim() === '') {
-        return res.status(400).json({ detail: 'Path required' });
+        return res.status(400).json({ detail: 'Path required', code: 'path_required' });
       }
-      const { icon, color } = req.body || {};
+      // Inside the notes folder, in the spelling the index uses; a folder the person has not made yet is fine.
+      const appPath = relPath(resolveNotesPath(itemPath, { allowRoot: true }));
+      const body = req.body || {};
+      const icon = checkedAppearance(body.icon, 'icon', ICON_NAME);
+      const color = checkedAppearance(body.color, 'color', COLOR_VALUE);
       const db = getDb();
-      const existing = db.prepare('SELECT * FROM folder_config WHERE path = ?').get(itemPath);
 
       if ((icon === null && color === null) || (icon === undefined && color === undefined)) {
-        if (existing) db.prepare('DELETE FROM folder_config WHERE path = ?').run(itemPath);
-      } else if (existing) {
-        if (icon !== undefined) db.prepare('UPDATE folder_config SET icon = ? WHERE path = ?').run(icon || null, itemPath);
-        if (color !== undefined) db.prepare('UPDATE folder_config SET color = ? WHERE path = ?').run(color || null, itemPath);
+        setFolderConfig(db, appPath, { icon: null, color: null });
       } else {
-        db.prepare('INSERT INTO folder_config (path, icon, color) VALUES (?, ?, ?)').run(itemPath, icon || null, color || null);
+        setFolderConfig(db, appPath, {
+          icon: icon === undefined ? undefined : icon || null,
+          color: color === undefined ? undefined : color || null,
+        });
       }
 
       res.json({ message: 'Icon updated' });
     } catch (error) {
-      res.status(500).json({ detail: error.message });
+      sendError(res, error);
     }
   });
 }

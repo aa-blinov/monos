@@ -237,25 +237,35 @@ test('App загружает shell главной страницы', async () =>
   expect(document.documentElement.classList.contains('dark')).toBe(false);
 }, 20000);
 
-test('App redirects unknown routes to dashboard instead of blank main', async () => {
+// Behaviour changed on purpose (QA J13): an unknown address used to be swapped silently for the last page.
+test('App shows a Not found page for an unknown address and keeps the address', async () => {
   window.history.pushState({}, '', '/Users/justcomex/Documents/obsidian/base.zip');
   navigate('/Users/justcomex/Documents/obsidian/base.zip', { replace: true });
   const { default: App } = await import('./App.svelte');
   render(App);
 
+  await waitFor(() => expect(screen.getByTestId('not-found')).toBeTruthy());
+  expect(window.location.pathname).toBe('/Users/justcomex/Documents/obsidian/base.zip');
+});
+
+test('the Not found page leads home', async () => {
+  window.history.pushState({}, '', '/nowhere');
+  navigate('/nowhere', { replace: true });
+  const { default: App } = await import('./App.svelte');
+  render(App);
+
+  await fireEvent.click(await screen.findByTestId('not-found-home'));
   await waitFor(() => expect(window.location.pathname).toBe('/'));
   expect(screen.getByText('search visible')).toBeTruthy();
 });
 
-test('App restores settings for unknown file paths when settings was last route', async () => {
-  sessionStorage.setItem('lastAppRoute', '/settings');
-  window.history.pushState({}, '', '/Users/justcomex/Documents/obsidian/base.zip');
-  navigate('/Users/justcomex/Documents/obsidian/base.zip', { replace: true });
+test('a note address with a percent sign or a hash in its name is a known address', async () => {
+  window.history.pushState({}, '', '/notes/100%25%20done.md');
+  navigate('/notes/100%25%20done.md', { replace: true });
   const { default: App } = await import('./App.svelte');
   render(App);
 
-  await waitFor(() => expect(window.location.pathname).toBe('/settings'));
-  expect(screen.getByTestId('settings-stub')).toBeTruthy();
+  expect(screen.queryByTestId('not-found')).toBeNull();
 });
 
 test('App показывает результаты поиска и открывает заметку по клику', async () => {

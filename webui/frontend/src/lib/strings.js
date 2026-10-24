@@ -290,6 +290,11 @@ const enText = {
       all: 'All',
       modalTitle: 'Which document do you want to return to?',
     },
+    notFound: {
+      title: 'Page not found',
+      text: 'There is no page at this address. The link may be old or mistyped; your notes are untouched',
+      home: 'Go to your notes',
+    },
     board: {
       eyebrow: 'Notes',
       title: 'Notes',
@@ -525,6 +530,8 @@ const enText = {
       addTag: 'Add a tag',
       tagSelected: (count) => `Tag ${count} notes`,
       duplicate: 'Duplicate',
+      // The word added to the name of the copy: "Welcome copy".
+      duplicateSuffix: 'copy',
       showInFinder: 'Show in Finder',
     },
     modals: {
@@ -559,6 +566,10 @@ const enText = {
       createNumbered(name) {
         return `Create as ${name}`;
       },
+      restoreIt: 'Restore it',
+      createAnotherName(name) {
+        return `Create with another name (${name})`;
+      },
       todayNote: 'Today’s note',
       todayNoteHint: 'One note per day in Daily notes. If today’s exists, it opens',
       fromTemplate: 'Note from template',
@@ -592,6 +603,10 @@ const enText = {
         return `Failed to create note: ${message}`;
       },
       duplicateNote: 'A note with this name already exists in this folder. Choose another name',
+      trashedNote: 'A note with this name is in the Trash',
+      restoreFailed(message) {
+        return `Could not restore the note: ${message}`;
+      },
       clipboardEmpty: 'Clipboard is empty. Copy some text first',
       clipboardUnavailable: 'Clipboard is not available in this browser',
       rename(message) {
@@ -603,7 +618,9 @@ const enText = {
       syncFailed: 'Sync failed:',
     },
     confirmDelete(name, isDir = false) {
-      return isDir ? `Delete ${name}?` : `Move ${name} to trash?`;
+      return isDir
+        ? `Move the folder ${name} and every note in it to the Trash? You can bring them back from the Trash`
+        : `Move ${name} to trash?`;
     },
     confirmDeleteMany(count) {
       return `Move ${count} selected notes to trash?`;
@@ -831,7 +848,12 @@ const enText = {
       '4. Permissions → Add permissions → Contents, then change its access from Read-only to Read and write',
       '5. Click Generate token, copy it and paste it below',
     ],
-    tokenHelpNote: 'The token opens only this one repository. Monos keeps it in the macOS keychain, not in a file',
+    // Where the system keeps it differs by platform: the sentence names the store the person actually has.
+    tokenHelpNoteByPlatform: {
+      mac: 'The token opens only this one repository. Monos keeps it in the macOS keychain, not in a file',
+      windows: 'The token opens only this one repository. Monos keeps it in the Windows credential store, not in a file',
+      linux: 'The token opens only this one repository. Monos keeps it in the system keyring, not in a file',
+    },
     autoUploadNotice: (minutes) => `After connecting, your changes go to GitHub by themselves every ${minutes} min. You can turn this off in Sync Settings below`,
     manualUploadNotice: 'After connecting, your changes go to GitHub when you press Sync Now',
     personalAccessToken: 'GitHub access token',
@@ -857,11 +879,17 @@ const enText = {
       'token-rejected': 'GitHub did not accept the token. It may have expired or been revoked; create a new one',
       'repo-not-visible': 'GitHub cannot see this repository with this token. Check the name, and that the token\'s repository access includes it',
     },
+    // The codes of the server's own answers (see the git routes), one plain sentence each.
+    gitCodes: {
+      invalid_branch: 'This is not a branch name Git accepts. Use letters, digits, and - _ / . with no spaces, for example main',
+      bad_token: 'GitHub did not accept this token. Check that it was copied whole, or create a new one',
+      repo_unreachable: 'Monos could not reach this repository. Check its name, that the token covers it, and your connection',
+    },
     tokenScopeTitle: 'This token has more access than Monos needs',
     tokenScopeHint: 'A fine-grained token limited to just this repository is enough. Anything wider also works, but a leaked token then reaches further than your notes',
     failedToFetchRepos: 'Failed to fetch repos',
     owner: 'Owner',
-    ownerPlaceholder: 'Your GitHub login, filled in after Authorize',
+    ownerPlaceholder: 'Your GitHub login',
     repository: 'Repository',
     select: 'Select...',
     loading: 'Loading...',
@@ -934,7 +962,6 @@ const enText = {
     lockMenu: 'Password protection…',
     pinUnpin: 'Unpin',
     // One word under each icon of the note's bottom bar on a phone, where the full labels do not fit.
-    footerShort: { folder: 'Folder', tags: 'Tags', due: 'Due', properties: 'Properties', links: 'Links' },
     propertyCategory: 'Folder',
     propertyCategoryEmpty: 'Choose folder',
     noFolder: 'No folder',
@@ -1530,6 +1557,11 @@ const ruText = {
       all: 'Все',
       modalTitle: 'К какому документу вернуться?',
     },
+    notFound: {
+      title: 'Страница не найдена',
+      text: 'По этому адресу страницы нет. Ссылка могла устареть или быть набрана с ошибкой; заметки на месте',
+      home: 'К заметкам',
+    },
     board: {
       eyebrow: 'Заметки',
       title: 'Заметки',
@@ -1789,6 +1821,7 @@ const ruText = {
         return `Тег для ${count} ${few ? 'заметки' : 'заметок'}`;
       },
       duplicate: 'Дублировать',
+      duplicateSuffix: 'копия',
       showInFinder: 'Показать в Finder',
     },
     modals: {
@@ -1827,6 +1860,10 @@ const ruText = {
       createNumbered(name) {
         return `Создать как ${name}`;
       },
+      restoreIt: 'Восстановить',
+      createAnotherName(name) {
+        return `Создать с другим именем (${name})`;
+      },
       todayNote: 'Заметка на сегодня',
       todayNoteHint: 'Одна заметка на день в «Ежедневнике». Если сегодняшняя уже есть, она откроется',
       fromTemplate: 'Заметка из шаблона',
@@ -1860,6 +1897,10 @@ const ruText = {
         return `Не удалось создать заметку: ${message}`;
       },
       duplicateNote: 'Заметка с таким названием уже есть в этой папке. Выберите другое название',
+      trashedNote: 'Заметка с таким названием лежит в корзине',
+      restoreFailed(message) {
+        return `Не удалось восстановить заметку: ${message}`;
+      },
       clipboardEmpty: 'Буфер обмена пуст. Сначала скопируйте текст',
       clipboardUnavailable: 'Буфер обмена недоступен в этом браузере',
       rename(message) {
@@ -1871,7 +1912,9 @@ const ruText = {
       syncFailed: 'Ошибка синхронизации:',
     },
     confirmDelete(name, isDir = false) {
-      return isDir ? `Удалить ${name}?` : `Переместить ${name} в корзину?`;
+      return isDir
+        ? `Переместить папку ${name} и все заметки в ней в корзину? Их можно вернуть из корзины`
+        : `Переместить ${name} в корзину?`;
     },
     confirmDeleteMany(count) {
       const mod10 = count % 10;
@@ -2108,7 +2151,11 @@ const ruText = {
       '4. В блоке «Permissions» нажмите «Add permissions», выберите «Contents» и вместо «Read-only» поставьте «Read and write»',
       '5. Нажмите «Generate token», скопируйте токен и вставьте его в поле ниже',
     ],
-    tokenHelpNote: 'Токен открывает только этот репозиторий. Monos хранит его в связке ключей macOS, а не в файле',
+    tokenHelpNoteByPlatform: {
+      mac: 'Токен открывает только этот репозиторий. Monos хранит его в связке ключей macOS, а не в файле',
+      windows: 'Токен открывает только этот репозиторий. Monos хранит его в хранилище учётных данных Windows, а не в файле',
+      linux: 'Токен открывает только этот репозиторий. Monos хранит его в системной связке ключей, а не в файле',
+    },
     autoUploadNotice: (minutes) => `После подключения ваши изменения сами уходят на GitHub каждые ${minutes} мин. Выключить можно в «Настройках синхронизации» ниже`,
     manualUploadNotice: 'После подключения ваши изменения уходят на GitHub по кнопке «Синхронизировать»',
     personalAccessToken: 'Токен доступа GitHub',
@@ -2134,11 +2181,16 @@ const ruText = {
       'token-rejected': 'GitHub не принял токен. Возможно, он истёк или отозван: создайте новый',
       'repo-not-visible': 'GitHub не видит этот репозиторий с этим токеном. Проверьте имя и что репозиторий выбран в доступе токена (Repository access)',
     },
+    gitCodes: {
+      invalid_branch: 'Git не принимает такое имя ветки. Используйте буквы, цифры и знаки - _ / . без пробелов, например main',
+      bad_token: 'GitHub не принял этот токен. Проверьте, что он скопирован целиком, или создайте новый',
+      repo_unreachable: 'Monos не смог добраться до репозитория. Проверьте его имя, что токен его покрывает, и соединение',
+    },
     tokenScopeTitle: 'У этого токена больше прав, чем нужно Monos',
     tokenScopeHint: 'Достаточно тонкого токена, ограниченного одним репозиторием. Более широкий тоже сработает, но утёкший токен дотянется дальше ваших заметок',
     failedToFetchRepos: 'Не удалось получить репозитории',
     owner: 'Владелец',
-    ownerPlaceholder: 'Ваш логин GitHub, подставится после «Авторизоваться»',
+    ownerPlaceholder: 'Ваш логин GitHub',
     repository: 'Репозиторий',
     select: 'Выберите...',
     loading: 'Загрузка...',
@@ -2216,7 +2268,6 @@ const ruText = {
     lockMenu: 'Защита паролем…',
     pinUnpin: 'Открепить',
     // Одно слово под каждой иконкой нижней панели заметки на телефоне, где полные подписи не помещаются.
-    footerShort: { folder: 'Папка', tags: 'Теги', due: 'Срок', properties: 'Поля', links: 'Связи' },
     propertyCategory: 'Папка',
     propertyCategoryEmpty: 'Выбрать папку',
     noFolder: 'Без папки',

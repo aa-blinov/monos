@@ -7,7 +7,7 @@ test('![[файл.pdf]] становится узлом PDF; картинки и
   const nodes = normalizeObsidianEmbeds('См. ![[Spec.pdf]] и ![[pic.png]] и ![[Заметка]]');
   assert.deepEqual(nodes.filter((node) => node.type !== 'text'), [
     { type: 'pdfEmbed', attrs: { name: 'Spec.pdf', src: '_attachments/Spec.pdf' } },
-    { type: 'image', attrs: { src: '_attachments/pic.png', alt: 'pic', title: null } },
+    { type: 'image', attrs: { src: '_attachments/pic.png', alt: 'pic', title: null, wiki: true } },
     { type: 'noteEmbed', attrs: { name: 'Заметка' } },
   ]);
 });

@@ -108,7 +108,7 @@
       <SearchField testid="tag-filter" placeholder={$localizedText.tags.filter} bind:value={filter} />
 
       {#if error}
-        <p class="text-sm text-[var(--red)]">{error}</p>
+        <p class="text-sm text-[var(--red-text)]">{error}</p>
       {/if}
 
       {#if loading}
@@ -139,10 +139,10 @@
                   <span class="truncate text-sm text-[var(--text-primary)]">{entry.tag}</span>
                 </Button>
                 <span class="shrink-0 tabular-nums text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{entry.count}</span>
-                <IconButton bare tooltipText="" data-testid="tag-rename" label={$localizedText.tags.rename(entry.tag)} class="h-7 w-7 shrink-0 text-ink-soft" on:click={() => startRename(entry.tag)}>
+                <IconButton bare tooltipText="" data-testid="tag-rename" label={$localizedText.tags.rename(entry.tag)} class="h-7 w-7 max-sm:h-11 max-sm:w-11 shrink-0 text-ink-soft" on:click={() => startRename(entry.tag)}>
                   <Pencil size="14" strokeWidth="1.7" aria-hidden="true" />
                 </IconButton>
-                <IconButton bare tooltipText="" data-testid="tag-delete" label={$localizedText.tags.drop(entry.tag)} class="h-7 w-7 shrink-0 text-ink-soft text-danger-text" on:click={() => askRemove(entry)}>
+                <IconButton bare tooltipText="" data-testid="tag-delete" label={$localizedText.tags.drop(entry.tag)} class="h-7 w-7 max-sm:h-11 max-sm:w-11 shrink-0 text-ink-soft text-danger-text" on:click={() => askRemove(entry)}>
                   <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />
                 </IconButton>
               {/if}

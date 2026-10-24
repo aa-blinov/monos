@@ -14,6 +14,14 @@ export function relPath(absolutePath) {
   return path.relative(ROOT_DIR, absolutePath).replace(/\\/g, '/');
 }
 
+// The same path written in any of the ways a client can spell it ("./notes/a.md", "notes//a.md", "notes/a.md/",
+// "notes/x/../a.md", backslashes) becomes one spelling, so an index lookup, the trash check and the lock check
+// all see the one path the file really has.
+function canonicalRequestPath(requestPath) {
+  const normalized = path.posix.normalize(requestPath.replace(/\\/g, '/')).replace(/\/+$/, '');
+  return normalized === '' ? '.' : normalized;
+}
+
 // The file a root-relative app path names. "notes/…" is inside the notes folder, wherever it is.
 function fromRootPath(requestPath) {
   if (requestPath === NOTES_PREFIX) return NOTES_DIR;
@@ -21,9 +29,11 @@ function fromRootPath(requestPath) {
   return path.resolve(ROOT_DIR, requestPath);
 }
 
-export function httpError(statusCode, message) {
+// `code` is the stable word a client can act on; the message is for a person and may change.
+export function httpError(statusCode, message, code) {
   const error = new Error(message);
   error.statusCode = statusCode;
+  if (code) error.apiCode = code;
   return error;
 }
 
@@ -53,45 +63,70 @@ function isRealPathInside(notesRoot, fullPath) {
   return real === null || isPathInside(fs.realpathSync(notesRoot), real);
 }
 
-export function resolveNotesPath(requestPath, { allowRoot = false } = {}) {
+/**
+ * Hidden folders (`.git`, `.monos`, `.trash`) belong to git and to the app, never to a request: a write into
+ * `.git/config` is code execution on the next git call, and a delete of `.git` is the loss of the history.
+ * The app reaches its own files by their absolute paths and passes `allowHidden` where a route may name one.
+ */
+function hasHiddenSegment(notesRoot, fullPath) {
+  return path.relative(notesRoot, fullPath).split(path.sep).some((segment) => segment.startsWith('.'));
+}
+
+export function resolveNotesPath(requestPath, { allowRoot = false, allowHidden = false } = {}) {
   if (typeof requestPath !== 'string' || requestPath.trim() === '') {
-    throw httpError(400, 'Path required');
+    throw httpError(400, 'Path required', 'path_required');
   }
 
   if (path.isAbsolute(requestPath)) {
-    throw httpError(403, 'Path must be inside notes');
+    throw httpError(403, 'Path must be inside notes', 'outside_notes');
   }
 
-  const fullPath = fromRootPath(requestPath);
+  const canonical = canonicalRequestPath(requestPath);
+  if (path.isAbsolute(canonical)) throw httpError(403, 'Path must be inside notes', 'outside_notes');
+  const fullPath = fromRootPath(canonical);
   const notesRoot = path.resolve(NOTES_DIR);
 
   if (!isPathInside(notesRoot, fullPath) || (!allowRoot && fullPath === notesRoot)) {
-    throw httpError(403, 'Path must be inside notes');
+    throw httpError(403, 'Path must be inside notes', 'outside_notes');
+  }
+
+  if (!allowHidden && hasHiddenSegment(notesRoot, fullPath)) {
+    throw httpError(403, 'This folder is not available', 'hidden_path');
   }
 
   if (!isRealPathInside(notesRoot, fullPath)) {
-    throw httpError(403, 'Path must be inside notes');
+    throw httpError(403, 'Path must be inside notes', 'outside_notes');
   }
 
   return fullPath;
 }
 
-export function resolveNotesChildPath(requestPath = '', { allowRoot = true } = {}) {
+/** A name for every segment of a path a request wants to create: the same rule as for the last one. */
+export function assertCreatableSegments(relativePath) {
+  for (const segment of String(relativePath).split(/[\\/]+/).filter(Boolean)) assertFileName(segment);
+}
+
+export function resolveNotesChildPath(requestPath = '', { allowRoot = true, forCreate = false } = {}) {
   if (typeof requestPath !== 'string') {
-    throw httpError(400, 'Path required');
+    throw httpError(400, 'Path required', 'path_required');
   }
 
   if (path.isAbsolute(requestPath)) {
-    throw httpError(403, 'Path must be inside notes');
+    throw httpError(403, 'Path must be inside notes', 'outside_notes');
   }
 
   const fullPath = path.resolve(NOTES_DIR, requestPath);
   const notesRoot = path.resolve(NOTES_DIR);
 
   if (!isPathInside(notesRoot, fullPath) || (!allowRoot && fullPath === notesRoot)) {
-    throw httpError(403, 'Path must be inside notes');
+    throw httpError(403, 'Path must be inside notes', 'outside_notes');
   }
 
+  if (hasHiddenSegment(notesRoot, fullPath)) {
+    throw httpError(403, 'This folder is not available', 'hidden_path');
+  }
+
+  if (forCreate) assertCreatableSegments(path.relative(notesRoot, fullPath));
   return fullPath;
 }
 
@@ -117,6 +152,7 @@ const NAME_PROBLEM_MESSAGES = {
   empty: 'Name required',
   'forbidden-characters': `Name must not contain these characters: ${FORBIDDEN_NAME_CHARACTERS}`,
   'edge-dot-or-space': 'Name must not end with a dot or a space',
+  hidden: 'Name must not start with a dot',
   reserved: 'This name is reserved by the system',
   'too-long': 'Name is too long',
 };
@@ -126,6 +162,9 @@ export function fileNameProblem(name) {
   if (typeof name !== 'string' || name.trim() === '') return 'empty';
   if (FORBIDDEN_NAME_CHARS.test(name)) return 'forbidden-characters';
   if (/[. ]$/.test(name)) return 'edge-dot-or-space';
+  // A name that starts with a dot is a hidden file: the indexer, the export and the folder walks all skip it,
+  // so a note called that would be written and then never found again.
+  if (name.startsWith('.')) return 'hidden';
   if (RESERVED_WINDOWS_NAME.test(name.replace(/\.[^.]*$/, ''))) return 'reserved';
   if (Buffer.byteLength(name, 'utf8') > MAX_NAME_BYTES) return 'too-long';
   return null;
@@ -133,7 +172,7 @@ export function fileNameProblem(name) {
 
 export function assertFileName(name) {
   const problem = fileNameProblem(name);
-  if (problem) throw httpError(400, NAME_PROBLEM_MESSAGES[problem]);
+  if (problem) throw httpError(400, NAME_PROBLEM_MESSAGES[problem], `name_${problem.replace(/-/g, '_')}`);
   return name;
 }
 
@@ -186,6 +225,40 @@ export function decodeTextBuffer(buffer) {
     return buffer.subarray(3).toString('utf-8');
   }
   return buffer.toString('utf-8').replace(/\u0000/g, '');
+}
+
+/**
+ * Whether a file's bytes survive being read as text and written back: null when they do, otherwise why they do not.
+ * `readTextFile` shows an invalid byte as U+FFFD and drops a NUL, so saving the text it returned would overwrite the
+ * original bytes with that damage. UTF-16 and a UTF-8 byte order mark are read as the text they are, and are not a problem.
+ */
+export function textFileProblem(buffer) {
+  if (buffer.length >= 2 && ((buffer[0] === 0xff && buffer[1] === 0xfe) || (buffer[0] === 0xfe && buffer[1] === 0xff))) return null;
+  const sampleLength = Math.min(buffer.length, 4096);
+  let evenNulls = 0;
+  let oddNulls = 0;
+  for (let index = 0; index < sampleLength; index += 1) {
+    if (buffer[index] !== 0) continue;
+    if (index % 2 === 0) evenNulls += 1;
+    else oddNulls += 1;
+  }
+  if (oddNulls > sampleLength / 8 && evenNulls < oddNulls / 4) return null;
+  if (buffer.includes(0)) return 'nul-bytes';
+  const body = buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf ? buffer.subarray(3) : buffer;
+  return Buffer.from(body.toString('utf-8'), 'utf-8').equals(body) ? null : 'not-utf8';
+}
+
+/**
+ * The text of a note that is about to be written back. A file whose bytes the text cannot reproduce is refused (409,
+ * `not_utf8` or `nul_bytes`): writing the text over it would replace what it could not read with U+FFFD.
+ */
+export function readTextForRewrite(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  const problem = textFileProblem(buffer);
+  if (problem) {
+    throw httpError(409, 'The note is not valid UTF-8 text, so it was left unchanged', problem === 'nul-bytes' ? 'nul_bytes' : 'not_utf8');
+  }
+  return decodeTextBuffer(buffer);
 }
 
 export function readTextFile(filePath) {
@@ -313,18 +386,45 @@ export function folderLinkPatterns(name) {
   return [`%/${escaped}`, `%/${escaped}#%`];
 }
 
-export function extractWikiLinks(content) {
-  const re = /\[\[(.*?)\]\]/g;
-  const links = [];
-  const source = stripCode(content);
-  let match;
+const LINE_TERMINATOR = /[\n\r\u2028\u2029]/g;
 
-  while ((match = re.exec(source)) !== null) {
-    const target = wikiLinkTarget(match[1]);
+/**
+ * The `[[…]]` spans of a text, as `/\[\[(.*?)\]\]/g` finds them, in one pass. The regular expression retries every `[[`
+ * against the rest of the line, so a line of `[[` or `[[a]` repeated took seconds to save (the work grew with the
+ * square of the line). Here the next `]]` and the next line break are looked up once and reused: a `[[` that cannot
+ * close before the line ends rules out every `[[` before that line break too.
+ * @returns {Iterable<{ index: number, length: number, inner: string }>}
+ */
+export function* wikiLinkSpans(text) {
+  let position = 0;
+  let nextClose = -2;
+  let nextBreak = -2;
+  while (position < text.length) {
+    const open = text.indexOf('[[', position);
+    if (open === -1) return;
+    if (nextClose !== -1 && nextClose < open + 2) nextClose = text.indexOf(']]', open + 2);
+    if (nextClose === -1) return;
+    if (nextBreak !== -1 && nextBreak < open + 2) {
+      LINE_TERMINATOR.lastIndex = open + 2;
+      const found = LINE_TERMINATOR.exec(text);
+      nextBreak = found ? found.index : -1;
+    }
+    if (nextBreak !== -1 && nextBreak < nextClose) {
+      position = nextBreak + 1;
+      continue;
+    }
+    yield { index: open, length: nextClose + 2 - open, inner: text.slice(open + 2, nextClose) };
+    position = nextClose + 2;
+  }
+}
+
+export function extractWikiLinks(content) {
+  const links = [];
+  for (const span of wikiLinkSpans(stripCode(content))) {
+    const target = wikiLinkTarget(span.inner);
     // `[[#Heading]]` points into the same note, so it links to no other note.
     if (target && !target.startsWith('#')) links.push(target);
   }
-
   return links;
 }
 
@@ -345,8 +445,11 @@ export function headingLinkPattern(name) {
  * around the name and anything in code stay as they are. Only the exact name changes:
  * `[[oldName Notes]]` is another note and is left alone. A target with code inside it is
  * left alone too. Returns the new text and how many links changed.
+ * With `onlyFolder` (the folder of the renamed note, relative to the notes folder) only the links that name the note
+ * through that folder change: `[[Folder/Old]]` is this note whatever else is called `Old`, but a bare `[[Old]]` may be
+ * meant for the other note that answers to the name.
  */
-export function rewriteWikiTargets(content, oldName, newName) {
+export function rewriteWikiTargets(content, oldName, newName, { onlyFolder = null } = {}) {
   const text = String(content || '');
   const source = stripCode(text);
   const wanted = String(oldName).normalize('NFC');
@@ -355,7 +458,8 @@ export function rewriteWikiTargets(content, oldName, newName) {
   let last = 0;
   let count = 0;
 
-  for (const match of source.matchAll(/\[\[(.*?)\]\]/g)) {
+  for (const span of wikiLinkSpans(source)) {
+    const match = { index: span.index, 0: source.slice(span.index, span.index + span.length), 1: span.inner };
     const start = match.index + 2;
     const inner = text.slice(start, start + match[1].length);
     const pipe = inner.indexOf('|');
@@ -371,6 +475,11 @@ export function rewriteWikiTargets(content, oldName, newName) {
     const folderedName = !wholeName && slash > 0 && slash < namePart.length - 1
       && namePart.slice(slash + 1).normalize('NFC') === wanted;
     if (!wholeName && !folderedName) continue;
+    if (onlyFolder !== null) {
+      const linkFolder = folderedName ? namePart.slice(0, slash).normalize('NFC') : null;
+      const mine = String(onlyFolder).normalize('NFC');
+      if (linkFolder === null || !(mine === linkFolder || mine.endsWith(`/${linkFolder}`))) continue;
+    }
     const folder = folderedName ? namePart.slice(0, slash + 1) : '';
     const leading = rawTarget.match(/^\s*/)[0];
     const trailing = rawTarget.slice(leading.length + trimmed.length);
@@ -463,4 +572,16 @@ export function humanSize(bytes) {
   const units = ['B', 'KB', 'MB', 'GB'];
   const index = Math.floor(Math.log(bytes) / Math.log(1024));
   return (bytes / Math.pow(1024, index)).toFixed(1) + ' ' + units[index];
+}
+
+/**
+ * The app path (`notes/…`) a request path names, in its one canonical spelling, or null when it does not name a place
+ * under the notes folder. Hidden folders are not refused here: this is for looking a path up (is it in the trash?),
+ * and `resolveNotesPath` is what decides whether a request may touch the file.
+ */
+export function canonicalAppPath(requestPath) {
+  if (typeof requestPath !== 'string' || requestPath.trim() === '' || path.isAbsolute(requestPath)) return null;
+  const canonical = canonicalRequestPath(requestPath);
+  if (canonical !== NOTES_PREFIX && !canonical.startsWith(`${NOTES_PREFIX}/`)) return null;
+  return canonical;
 }

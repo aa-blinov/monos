@@ -63,7 +63,7 @@ export async function runSyncRound() {
         return result;
       }
       // A failed round is told about: the notes stop coming, and the person must know why.
-      const result = { ok: false, detail: data.detail, reason: data.reason };
+      const result = { ok: false, detail: data.detail, reason: data.reason, code: data.code };
       onRoundResult?.(result);
       return result;
     }
@@ -141,3 +141,20 @@ export function stopAutoSync() {
 }
 
 export const isSyncInFlight = () => inFlight;
+
+/**
+ * A refused git request in words: the old `reason` and the new `code` of the answer each have a sentence of their
+ * own in the interface language. `useDetail` lets the server's own sentence stand when neither has one (the
+ * connect form does; the token check would rather say "invalid token" than show git's words).
+ *
+ * @param {{ reason?: string, code?: string, detail?: string }} answer the body of the refusal
+ * @param {{ gitReasons?: object, gitCodes?: object }} texts the `settings` strings
+ * @param {string} fallback
+ * @param {{ useDetail?: boolean }} [options]
+ */
+export function gitFailureText(answer, texts, fallback, { useDetail = true } = {}) {
+  return texts?.gitReasons?.[answer?.reason]
+    || texts?.gitCodes?.[answer?.code]
+    || (useDetail ? answer?.detail : '')
+    || fallback;
+}

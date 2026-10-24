@@ -22,6 +22,9 @@ import { get } from 'svelte/store';
   import { themes } from './lib/themes.js';
   import { fontOptions, fontSizeOptions, lineHeightOptions, contentWidthOptions, editorFontSizeOptions } from './lib/fonts.js';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
+  import { noteRoute } from './lib/note-url.js';
+  import { documentTitle } from './lib/document-title.js';
+  import { startPreferenceSync, flushPreferences } from './lib/stores/persisted.js';
   import { localizedText, locale } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand, editorAction, menuState, updateMenuState } from './stores.js';
   import { pinnedNotes, pinsKnown } from './lib/sidebar-pinned.js';
@@ -40,26 +43,14 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   import { dismissTrashedNotice, trashedNotice, undoTrash, UNDO_TRASH_MS } from './lib/trash-undo.js';
   import { gitConnected, markUnsent, refreshConflicts, scheduleSyncRefresh } from './lib/git-conflicts.js';
   import FirstRunWelcome from './components/FirstRunWelcome.svelte';
+  import NotFound from './components/NotFound.svelte';
   import { agentRequest, launchAgent, noteLinkRequest, terminalBridge, terminalOpen, toggleTerminal } from './lib/terminal.js';
   import { listenForNoteChanges } from './lib/notes-events.js';
   import { agentReviewOpen, refreshAgentReview, syncBlockedByReview } from './lib/agent-review.js';
   import AgentReviewModal from './components/AgentReviewModal.svelte';
 
-  const LAST_APP_ROUTE_KEY = 'lastAppRoute';
-
-  function storedLastKnownRoute() {
-    if (typeof sessionStorage === 'undefined') return '/';
-    const storedRoute = sessionStorage.getItem(LAST_APP_ROUTE_KEY) || '/';
-    return isKnownAppRoute(storedRoute) ? storedRoute : '/';
-  }
-
-  const initialRouteWasUnknown = typeof window !== 'undefined' && !isKnownAppRoute(window.location.pathname);
-  const initialRoutePath = typeof window !== 'undefined' && isKnownAppRoute(window.location.pathname)
-    ? window.location.pathname
-    : storedLastKnownRoute();
-  if (initialRouteWasUnknown) {
-    window.history.replaceState({}, '', initialRoutePath);
-  }
+  // An address the app does not know is shown as such (the Not found page), not silently swapped for another page.
+  const initialRoutePath = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   let tagPanelOpen = false;
   let isDarkMode = false;
@@ -87,11 +78,14 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     showNotice(parts.join(', '));
   }
 
+  onMount(() => {
+    window.addEventListener('pagehide', flushPreferences);
+    return () => window.removeEventListener('pagehide', flushPreferences);
+  });
   onMount(() => window.addEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
   onDestroy(() => window.removeEventListener(NOTE_LINKS_UPDATED_EVENT, showLinksNotice));
   let systemThemeSignal = 0;
   let routePath = initialRoutePath;
-  let lastKnownAppRoute = initialRoutePath;
   $: isDashboardRoute = routePath === '/';
   $: isNoteOpen = routePath.startsWith('/notes/');
   $: showHeaderBack = !isDashboardRoute;
@@ -169,23 +163,6 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
 
   function setRoutePath(pathname) {
     routePath = pathname;
-    if (isKnownAppRoute(pathname)) {
-      lastKnownAppRoute = pathname;
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(LAST_APP_ROUTE_KEY, pathname);
-    }
-  }
-
-  function replaceUnknownRouteWithLastKnown() {
-    const fallbackRoute = isKnownAppRoute(lastKnownAppRoute) ? lastKnownAppRoute : '/';
-    routePath = fallbackRoute;
-    if (fallbackRoute === '/') $noteView = 'board';
-    if (fallbackRoute.startsWith('/notes/')) $noteView = 'list';
-    if (typeof window !== 'undefined' && window.location.pathname !== fallbackRoute) {
-      window.history.replaceState({}, '', fallbackRoute);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    } else {
-      navigate(fallbackRoute, { replace: true });
-    }
   }
 
   // The wide window remembers whether its sidebar was open; a narrow window always starts with it closed,
@@ -224,6 +201,12 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
       toggleTerminal();
       return;
     }
+    // Help: ⌘/ is the desktop menu's accelerator; in a browser (no menu) the page answers the same key.
+    if ((e.metaKey || e.ctrlKey) && key === '/' && !e.altKey) {
+      e.preventDefault();
+      openHelp();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && key === 'o') {
       e.preventDefault();
       openCommandPalette('notes');
@@ -260,6 +243,8 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   $: menuBridge?.setLocale($locale);
   // The document speaks it too: a screen reader reads the page with the right voice.
   $: document.documentElement.lang = $locale;
+  // The tab names the page: "Trash — Monos", "CV — Monos" for a note.
+  $: document.title = documentTitle({ route: routePath, noteTitle: $menuState.noteTitle, texts: $localizedText });
   // The menu also shows what the window shows: the checkmarks and the items that need a note.
   // The settings window has no note of its own, so it reports an empty state.
   $: updateMenuState(isSettingsWindow
@@ -432,7 +417,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     }
     if (result.ok === false) {
       // A background round that failed: the sidebar row says so. No window over the text being written.
-      autoPullState = { conflicts: false, received: 0, error: { reason: result.reason || '', detail: result.detail || '' } };
+      autoPullState = { conflicts: false, received: 0, error: { reason: result.reason || '', code: result.code || '', detail: result.detail || '' } };
       return;
     }
     syncBlockedByReview.set([]);
@@ -448,10 +433,6 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     setSidebarOpen(true);
     updateMobileState();
     setRoutePath(window.location.pathname);
-    if (initialRouteWasUnknown) navigate(routePath, { replace: true });
-    if (!isKnownAppRoute(routePath)) {
-      replaceUnknownRouteWithLastKnown();
-    }
     if (routePath === '/') $noteView = 'board';
     // A link to a note opens that note, also in a fresh window or from another device, where the
     // remembered view is still the board.
@@ -493,9 +474,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     const handlePopState = () => {
       setRoutePath(window.location.pathname);
       if (!isKnownAppRoute(routePath)) {
-        replaceUnknownRouteWithLastKnown();
-        if (routePath !== '/') clearSearch();
-        if (routePath === '/') void loadHomeRecentNotes();
+        clearSearch();
         return;
       }
       if (routePath === '/') {
@@ -518,8 +497,21 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
 
   $: if ($searchUrlReady && isDashboardRoute) syncSearchUrl($searchQuery);
 
+  // keepalive: the last choice before the window closes still gets there.
+  function sendPreferences(payload) {
+    return fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  }
+
   async function applyShellSettings() {
     const settings = await loadShellSettings(themes);
+    // The ordinary preferences come from the server's copy: the packaged app opens on a new port every launch, and
+    // the browser's localStorage belongs to the origin. Offline there is nothing to take, and nothing is synced.
+    if (settings) startPreferenceSync(settings.all, sendPreferences);
     if (settings?.theme) $activeTheme = settings.theme;
     if (settings?.themeMode) $themeMode = settings.themeMode;
     applyTheme($activeTheme, isDarkMode);
@@ -903,7 +895,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   function handleNavigate(event) {
     if (isDashboardRoute) rememberBoardScrollPosition();
     $noteView = 'list';
-    const nextPath = `/notes/${normalizeNotePath(event.detail.path)}`;
+    const nextPath = noteRoute(event.detail.path);
     setRoutePath(nextPath);
     navigate(nextPath);
     if (event.detail.path && sidebarComponent) sidebarComponent.setSelected(event.detail.path);
@@ -960,7 +952,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   async function handleNoteRenamed(event) {
     const note = event.detail;
     if (!note?.path) return;
-    const nextPath = `/notes/${normalizeNotePath(note.path)}`;
+    const nextPath = noteRoute(note.path);
     setRoutePath(nextPath);
     navigate(nextPath, { replace: true });
     if (sidebarComponent) {
@@ -1134,7 +1126,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
             on:dblclick={resetSidebarWidth}
             on:keydown={handleSidebarResizeKeydown}
           >
-            <span class="absolute inset-y-0 right-0 w-px bg-transparent transition group-hover:bg-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] group-focus:bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)]"></span>
+            <span class="absolute inset-y-0 right-0 w-px bg-transparent transition group-hover:bg-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] group-focus:bg-[color-mix(in_srgb,var(--text-secondary)_40%,transparent)] group-focus-visible:w-0.5 group-focus-visible:bg-[var(--text-primary)]"></span>
           </TooltipIconButton>
         {/if}
       </nav>
@@ -1271,9 +1263,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
           </div>
         </Route>
         <Route path="*">
-          {#if lastKnownAppRoute === '/settings'}
-            <Settings on:archivePickerOpened={rememberSettingsRoute} on:navigate={handleNavigate} on:notesImported={handleNotesImported} on:openHelp={openHelp} />
-          {/if}
+          <NotFound on:home={goHome} />
         </Route>
         {/if}
       </main>
@@ -1339,29 +1329,35 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     on:select={searchByTag}
     on:changed={() => { if (headerComponent?.loadTags) headerComponent.loadTags(); if (sidebarComponent?.loadTree) sidebarComponent.loadTree(); }}
   />
-  {#if $trashedNotice || undoTrashError}
-    <div
-      class="fixed bottom-6 left-1/2 z-[200] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 animate-toast-in sm:left-6 sm:translate-x-0"
-      role="status"
-      on:mouseenter={() => trashNoticeHeld = true}
-      on:mouseleave={() => trashNoticeHeld = false}
-      on:focusin={() => trashNoticeHeld = true}
-      on:focusout={() => trashNoticeHeld = false}
-    >
-      <div class="flex items-center gap-4 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 text-sm shadow-2xl">
-        {#if undoTrashError}
-          <span class="min-w-0 flex-1 text-[var(--red)]">{undoTrashError}</span>
-          <Button variant="text" size="sm" on:click={() => undoTrashError = ''}>{$localizedText.app.dismiss}</Button>
-        {:else}
-          <span class="min-w-0 flex-1 truncate">{$localizedText.app.trashed($trashedNotice.notes.length === 1 ? $trashedNotice.notes[0].name : '', $trashedNotice.notes.length)}</span>
-          <Button variant="text" size="sm" class="shrink-0" on:click={undoLastTrash}>{$localizedText.app.undoTrash}</Button>
-        {/if}
-      </div>
-    </div>
-  {/if}
-  {#if notice}
-    <div class="fixed bottom-6 left-6 z-[200] animate-toast-in" role="status">
-      <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 max-w-xs text-sm shadow-2xl">{notice}</div>
+  <!-- The notices stand at the bottom centre, a little above the foot of the page: in the corner they covered the
+       sidebar's foot ("Other", "Settings") and, on a phone, the note's own foot. -->
+  {#if $trashedNotice || undoTrashError || notice}
+    <div class="pointer-events-none fixed inset-x-4 bottom-16 z-[200] flex flex-col items-center gap-2" data-testid="notices">
+      {#if $trashedNotice || undoTrashError}
+        <div
+          class="pointer-events-auto w-full max-w-sm animate-toast-in"
+          role="status"
+          on:mouseenter={() => trashNoticeHeld = true}
+          on:mouseleave={() => trashNoticeHeld = false}
+          on:focusin={() => trashNoticeHeld = true}
+          on:focusout={() => trashNoticeHeld = false}
+        >
+          <div class="flex items-center gap-4 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 text-sm shadow-2xl">
+            {#if undoTrashError}
+              <span class="min-w-0 flex-1 text-[var(--red-text)]">{undoTrashError}</span>
+              <Button variant="text" size="sm" on:click={() => undoTrashError = ''}>{$localizedText.app.dismiss}</Button>
+            {:else}
+              <span class="min-w-0 flex-1 truncate">{$localizedText.app.trashed($trashedNotice.notes.length === 1 ? $trashedNotice.notes[0].name : '', $trashedNotice.notes.length)}</span>
+              <Button variant="text" size="sm" class="shrink-0" on:click={undoLastTrash}>{$localizedText.app.undoTrash}</Button>
+            {/if}
+          </div>
+        </div>
+      {/if}
+      {#if notice}
+        <div class="pointer-events-auto max-w-xs animate-toast-in" role="status">
+          <div class="rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 text-sm shadow-2xl">{notice}</div>
+        </div>
+      {/if}
     </div>
   {/if}
 </Router>

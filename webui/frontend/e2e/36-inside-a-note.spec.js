@@ -191,10 +191,12 @@ test('ширина контента: заголовок и шапка не дв�
     title: await page.getByLabel('Note Title').boundingBox(),
     text: await page.locator('.ProseMirror').boundingBox(),
   });
+  await page.request.post('/api/settings', { data: { contentWidth: 'wide' } });
   await page.evaluate(() => localStorage.setItem('contentWidth', 'wide'));
   await page.reload();
   await expect(page.locator('.ProseMirror')).toBeVisible();
   const wide = await measure();
+  await page.request.post('/api/settings', { data: { contentWidth: 'narrow' } });
   await page.evaluate(() => localStorage.setItem('contentWidth', 'narrow'));
   await page.reload();
   await expect(page.locator('.ProseMirror')).toBeVisible();

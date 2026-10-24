@@ -26,7 +26,7 @@
 
 <div class="space-y-4" data-testid="conflict-deleted">
   <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)] px-4 py-3">
-    <p class="text-sm font-bold text-[var(--red)]">
+    <p class="text-sm font-bold text-[var(--red-text)]">
       {deletedHere ? text.conflictDeletedHereTitle(otherDevice) : text.conflictDeletedThereTitle(otherDevice)}
     </p>
     <p class="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{text.conflictDeletedHint}</p>
@@ -45,7 +45,7 @@
         data-testid="conflict-delete-note"
         disabled={busy}
         on:click={() => dispatch('keep', { side: deleteSide })}
-        class="text-xs font-bold uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30"
+        class="text-xs font-bold uppercase tracking-widest text-[var(--red-text)] transition enabled:hover:opacity-70 disabled:opacity-30"
       >
         {text.conflictDeleteNote}
       </Button>

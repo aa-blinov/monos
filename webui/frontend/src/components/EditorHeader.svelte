@@ -138,7 +138,8 @@
       {#if fileInfo}
         <!-- One sentence: the parts follow each other separated by commas. As plain text the line wraps
              like a sentence, so a narrow column never scatters the parts over several rows. -->
-        <div class="mt-1.5 min-w-0 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)]" data-testid="note-meta">
+        <!-- On a short screen (a phone turned sideways) the line is the first thing to give way: the text needs the room. -->
+        <div class="mt-1.5 min-w-0 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)] [@media(max-height:480px)]:hidden" data-testid="note-meta">
           <!-- The date comes first and is always there; when the note was made is in the tooltip. -->
           <span class="meta-part inline text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}

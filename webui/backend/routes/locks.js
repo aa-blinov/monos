@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { getDb } from '../database.js';
-import { httpError, readTextFile, resolveNotesPath, writeFileAtomic } from '../utils.js';
+import { httpError, readTextFile, relPath, resolveNotesPath, writeFileAtomic } from '../utils.js';
+import { findTrashedRow } from '../trash.js';
 import { indexFile } from '../indexing.js';
 import { rewriteNoteFile } from '../link-rename.js';
 import { forgetSession, isLockedNote, lockContent, rememberSession, unlockContent } from '../note-lock.js';
@@ -12,9 +13,10 @@ import { sendError } from './helpers.js';
 
 function noteFile(filePath) {
   const fullPath = resolveNotesPath(filePath);
-  if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) throw httpError(404, 'File not found');
-  const note = getDb().prepare('SELECT trashed_at FROM notes_index WHERE path = ?').get(filePath);
-  if (note?.trashed_at) throw httpError(410, 'File is in trash');
+  if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+    if (findTrashedRow(getDb(), relPath(fullPath))) throw httpError(410, 'File is in trash', 'trashed');
+    throw httpError(404, 'File not found', 'not_found');
+  }
   return fullPath;
 }
 
@@ -34,7 +36,7 @@ export function registerLockRoutes(app) {
   // Seals the note with a passphrase. It stays open for this session, and a restart asks for the passphrase.
   app.post('/api/file/lock', (req, res) => {
     try {
-      const filePath = requireQueryPath(req);
+      const filePath = relPath(resolveNotesPath(requireQueryPath(req)));
       const fullPath = noteFile(filePath);
       const passphrase = passphraseOf(req);
       if (isLockedNote(readTextFile(fullPath))) throw httpError(400, 'The note is already locked');
@@ -55,7 +57,7 @@ export function registerLockRoutes(app) {
   // Opens a locked note for this session with its passphrase.
   app.post('/api/file/unlock', (req, res) => {
     try {
-      const filePath = requireQueryPath(req);
+      const filePath = relPath(resolveNotesPath(requireQueryPath(req)));
       const fullPath = noteFile(filePath);
       const stored = readTextFile(fullPath);
       if (!isLockedNote(stored)) throw httpError(400, 'The note is not locked');
@@ -70,7 +72,7 @@ export function registerLockRoutes(app) {
   // Closes the note again: until it is unlocked with its passphrase, its text cannot be read.
   app.post('/api/file/relock', (req, res) => {
     try {
-      const filePath = requireQueryPath(req);
+      const filePath = relPath(resolveNotesPath(requireQueryPath(req)));
       const fullPath = noteFile(filePath);
       if (!isLockedNote(readTextFile(fullPath))) throw httpError(400, 'The note is not locked');
       forgetSession(filePath);
@@ -83,7 +85,7 @@ export function registerLockRoutes(app) {
   // Removes the lock: the note is written back as plain text. This is the only way its text leaves the seal.
   app.post('/api/file/unprotect', (req, res) => {
     try {
-      const filePath = requireQueryPath(req);
+      const filePath = relPath(resolveNotesPath(requireQueryPath(req)));
       const fullPath = noteFile(filePath);
       const stored = readTextFile(fullPath);
       if (!isLockedNote(stored)) throw httpError(400, 'The note is not locked');

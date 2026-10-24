@@ -11,7 +11,7 @@ export const homeRecentError = writable(null);
 /** The tag the board is narrowed to ('' for all notes) and how many notes it holds in all. */
 export const boardTag = writable('');
 // The board's order: 'modified' | 'opened' | 'title'. The tag is not kept: it is a look at one topic, not a setting.
-export const boardSort = persisted('boardSort', 'modified');
+export const boardSort = persisted('boardSort', 'modified', { server: true });
 export const homeRecentTotal = writable(null);
 export const homeTags = writable([]);
 

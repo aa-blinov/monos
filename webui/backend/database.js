@@ -106,6 +106,20 @@ function initTables() {
     db.exec('ALTER TABLE notes_index ADD COLUMN name_nfc TEXT');
   }
 
+  // Where a note in the trash was before it went. The row of a trashed note is keyed by the file's own place under
+  // `.trash/`; this is the path the person knows it by (see trash-store.js).
+  if (!noteColumns.includes('original_path')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN original_path TEXT');
+  }
+  // Whether the note is sealed with a passphrase, and whether it still holds merge markers: the board draws both
+  // without opening the file. A row from before these columns is read again by the next pass.
+  if (!noteColumns.includes('locked')) {
+    db.exec('ALTER TABLE notes_index ADD COLUMN locked INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE notes_index ADD COLUMN conflict INTEGER NOT NULL DEFAULT 0');
+    db.exec('UPDATE notes_index SET modified_at = NULL WHERE is_dir = 0');
+  }
+
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notes_original_path ON notes_index(original_path)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_modified_at ON notes_index(modified_at)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_board_order ON notes_index(board_order)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notes_trashed_at ON notes_index(trashed_at)');

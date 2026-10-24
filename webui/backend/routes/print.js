@@ -3,10 +3,11 @@ import path from 'path';
 import { marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { NOTES_DIR } from '../config.js';
-import { httpError, readTextFile, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
-import { getDb } from '../database.js';
+import { httpError, readTextFile, relPath, resolveNotesChildPath, resolveNotesPath } from '../utils.js';
 import { buildExportBundle } from '../export-bundle.js';
 import { isLockedNote, readWithSession, sessionFor } from '../note-lock.js';
+import { noteHtmlHeaders, NOTE_PAGE_POLICY, sanitizeHtml } from '../html-safety.js';
+import { sendError } from './helpers.js';
 
 const TEXT_EXTENSIONS = new Set(['.md', '.markdown']);
 const SKIPPED_SEGMENTS = new Set(['.git', '.monos', '__MACOSX']);
@@ -188,29 +189,31 @@ export function stripFrontmatter(markdown) {
   return looksLikeYaml ? text.slice(match[0].length) : text;
 }
 
+// A sheet is made in one go from the whole note; past this size the renderer runs out of stack and the answer is
+// a failure that says nothing, so the note is refused with a reason instead.
+const MAX_PRINT_CHARS = 4_000_000;
+
 function renderMarkdownToHtml(markdown, absoluteDir) {
-  const html = marked.parse(stripFrontmatter(markdown), { async: false });
-  return inlineAttachments(highlightCodeBlocks(html), absoluteDir);
+  if (String(markdown).length > MAX_PRINT_CHARS) throw httpError(413, 'The note is too large to print', 'note_too_large');
+  let html;
+  try {
+    html = marked.parse(stripFrontmatter(markdown), { async: false });
+  } catch {
+    throw httpError(422, 'The note could not be rendered', 'render_failed');
+  }
+  // The text of a note is not trusted: raw HTML in it, and the target of every link, are filtered (html-safety.js)
+  // before the sheet is coloured and its pictures are inlined.
+  return inlineAttachments(highlightCodeBlocks(sanitizeHtml(html)), absoluteDir);
 }
 
 function wrapDocument(title, metaLine, bodyHtml) {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${NOTE_PAGE_POLICY}"><title>${escapeHtml(title)}</title>
 <style>${STYLESHEET}</style></head>
 <body><main class="sheet">
 ${metaLine ? `<div class="meta">${escapeHtml(metaLine)}</div>` : ''}
 ${bodyHtml}
 </main></body></html>`;
-}
-
-/** Paths of notes in the trash: the file stays where it was, only the index knows. */
-function trashedPaths() {
-  try {
-    const rows = getDb().prepare("SELECT path FROM notes_index WHERE trashed_at IS NOT NULL AND trashed_at != ''").all();
-    return new Set(rows.map((row) => row.path));
-  } catch {
-    return new Set();
-  }
 }
 
 function collectNotes(root) {
@@ -228,7 +231,8 @@ function collectNotes(root) {
       return;
     }
     for (const entry of entries) {
-      if (entry.name.startsWith('.') || SKIPPED_SEGMENTS.has(entry.name)) continue;
+      // A link may lead out of the notes, to files that are not notes of this vault.
+      if (entry.name.startsWith('.') || SKIPPED_SEGMENTS.has(entry.name) || entry.isSymbolicLink()) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) found.push(full);
@@ -246,8 +250,9 @@ export function buildNoteDocument(requestPath) {
     throw httpError(400, 'Only Markdown notes can be printed');
   }
   const title = path.basename(filePath, path.extname(filePath));
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) throw httpError(404, 'Note not found', 'not_found');
   const stored = readTextFile(filePath);
-  const session = sessionFor(requestPath);
+  const session = sessionFor(relPath(filePath));
   const text = isLockedNote(stored) ? (session ? readWithSession(stored, session) : null) : stored;
   // A locked note prints only while it is unlocked in this session; a sealed note is never printed.
   if (text === null) throw httpError(423, 'Unlock the note to print it');
@@ -263,10 +268,8 @@ export function buildTreeDocument(requestPath = '') {
   const files = collectNotes(root);
   if (files.length === 0) throw httpError(404, 'No notes found in this folder');
 
-  const trashed = trashedPaths();
+  // The notes in the trash rest in a hidden folder, which the walk above does not enter.
   const printable = files.filter((filePath) => {
-    const rel = path.relative(path.resolve(NOTES_DIR), filePath).split(path.sep).join('/');
-    if (trashed.has(rel) || trashed.has(`notes/${rel}`)) return false;
     // A sealed note is never printed in a book: its text is unreadable here, and ciphertext is not a chapter.
     return !isLockedNote(readTextFile(filePath));
   });
@@ -330,18 +333,22 @@ async function renderPdfWithElectron(html, fileName) {
 export function registerPrintRoutes(app) {
   app.get('/api/print/note', (req, res) => {
     try {
-      res.type('html').send(buildNoteDocument(req.query.path).html);
+      const { html } = buildNoteDocument(req.query.path);
+      noteHtmlHeaders(res);
+      res.type('html').send(html);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || 'Print failed' });
+      sendError(res, error);
     }
   });
 
   app.get('/api/print/tree', (req, res) => {
     try {
       const requestPath = typeof req.query.path === 'string' ? req.query.path : '';
-      res.type('html').send(buildTreeDocument(requestPath).html);
+      const { html } = buildTreeDocument(requestPath);
+      noteHtmlHeaders(res);
+      res.type('html').send(html);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || 'Print failed' });
+      sendError(res, error);
     }
   });
 
@@ -356,7 +363,7 @@ export function registerPrintRoutes(app) {
       }
       res.type('application/zip').set('X-Bundle-Name', encodeURIComponent(bundle.fileName)).send(bundle.buffer);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || 'Export failed' });
+      sendError(res, error);
     }
   });
 
@@ -371,7 +378,7 @@ export function registerPrintRoutes(app) {
       }
       res.json(result);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ detail: error.message || 'Print failed' });
+      sendError(res, error);
     }
   });
 }

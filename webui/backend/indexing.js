@@ -8,6 +8,11 @@ import { NOTES_DIR } from './config.js';
 import { upsertFrontmatter } from './frontmatter.js';
 import { readProperties } from './properties.js';
 import { isLockedNote } from './note-lock.js';
+import { looksConflicted } from './conflict-markers.js';
+import { loadFolderConfig } from './folder-config.js';
+import { TRASH_NAME, SIDECAR_SUFFIX, isSidecarName, trashInfo } from './trash-store.js';
+// trash.js indexes the notes it moves, so the two import each other; neither uses the other while loading.
+import { migrateLegacyTrash } from './trash.js';
 import { extractWikiLinks, nowISO, readTextFile, relPath, resolveNotesPath, writeFileAtomic } from './utils.js';
 
 function parseCachedTags(rawTags) {
@@ -84,6 +89,19 @@ export function indexFile(filePath, storedContent) {
       metadata.pinned ? 1 : 0,
       JSON.stringify(properties)
     );
+  }
+
+  if (!isDir) {
+    const sealed = isLockedNote(storedContent);
+    db.prepare('UPDATE notes_index SET locked = ?, conflict = ? WHERE path = ?')
+      .run(sealed ? 1 : 0, !sealed && looksConflicted(content) ? 1 : 0, relativePath);
+    // A note in the trash is told from the others by its place, not by the index: the sidecar next to it says
+    // where it came from and when it went (trash-store.js).
+    const trash = trashInfo(filePath);
+    if (trash) {
+      db.prepare('UPDATE notes_index SET trashed_at = ?, original_path = ?, board_order = NULL WHERE path = ?')
+        .run(trash.trashedAt, trash.originalApp, relativePath);
+    }
   }
 
   db.prepare('DELETE FROM note_links WHERE source_path = ?').run(relativePath);
@@ -192,10 +210,12 @@ export function migrateCachedMetadataToFrontmatter(db = getDb()) {
 function indexHolds(row, filePath, storedContent, stats) {
   if (!row) return false;
   const content = isLockedNote(storedContent) ? '' : storedContent;
+  const trash = trashInfo(filePath);
   return row.modified_at === stats.mtime.toISOString()
     && row.content === content
     && row.name === path.basename(filePath)
-    && row.parent_path === path.dirname(relPath(filePath)).replace(/\\/g, '/');
+    && row.parent_path === path.dirname(relPath(filePath)).replace(/\\/g, '/')
+    && (!trash || (row.trashed_at === trash.trashedAt && row.original_path === trash.originalApp));
 }
 
 // Per connection: the prepared statements, and whether the one-off metadata migration has run.
@@ -205,6 +225,7 @@ function contextOf(db) {
   if (!context) {
     context = {
       migrated: false,
+      trashMigrated: false,
       rowOf: db.prepare('SELECT * FROM notes_index WHERE path = ?'),
       insertDir: db.prepare(`
         INSERT INTO notes_index (path, name, name_nfc, is_dir, parent_path, content, date_created, modified_at, last_opened)
@@ -285,6 +306,13 @@ function indexSubtree(db, dir, seen) {
   }
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
+    // A link may lead out of the folder, to files that are not notes of this vault, and then they would turn up in
+    // search, on the board and in a print. A link is skipped whole, and any row it had is swept as gone.
+    if (entry.isSymbolicLink()) continue;
+    if (dir === NOTES_DIR && entry.name === TRASH_NAME && entry.isDirectory()) {
+      indexTrash(db, fullPath, seen);
+      continue;
+    }
     seen?.add(relPath(fullPath));
 
     if (entry.isDirectory()) {
@@ -297,6 +325,31 @@ function indexSubtree(db, dir, seen) {
     // The agent's rule files at the top of the folder (AGENTS.md, CLAUDE.md…) are not notes.
     if (isAgentRuleFile(fullPath)) continue;
     if (isNoteFile(entry.name)) indexNoteSafely(db, fullPath);
+  }
+}
+
+/**
+ * The notes in `.trash/`: indexed like any note, marked by their place (see indexFile). The trash has no folder rows,
+ * so it never shows in the tree, and its sidecar files are not notes.
+ */
+function indexTrash(db, dir, seen) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    for (const row of contextOf(db).familyOf.all(relPath(dir), relPath(dir))) seen?.add(row.path);
+    skipUnreadable(dir, error);
+    return;
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) {
+      indexTrash(db, fullPath, seen);
+    } else if (isNoteFile(entry.name) && !isSidecarName(entry.name)) {
+      seen?.add(relPath(fullPath));
+      indexNoteSafely(db, fullPath);
+    }
   }
 }
 
@@ -320,6 +373,13 @@ export function indexAllFiles() {
     migrateCachedMetadataToFrontmatter(db);
     context.migrated = true;
   }
+  // A trash that lived in the index only moves into `.trash/` before anything is read, once per start.
+  if (!context.trashMigrated) {
+    migrateLegacyTrash(db);
+    context.trashMigrated = true;
+  }
+  // The icons and colours come from their file; a vault that only has them in the table gets the file first.
+  loadFolderConfig(db);
 
   // One transaction for the whole pass: every statement committing on its own made each note cost a disk sync.
   db.transaction(() => {
@@ -377,17 +437,31 @@ export function indexPaths(fullPaths) {
       ensured.add(absolute);
     };
     for (const fullPath of fullPaths) {
-      const absolute = path.resolve(fullPath);
+      let absolute = path.resolve(fullPath);
       const relative = path.relative(notesRoot, absolute);
       if (!relative || relative.startsWith('..')) continue;
-      if (relative.split(path.sep).some(isHiddenSegment)) continue;
+      const segments = relative.split(path.sep);
+      const inTrash = segments[0] === TRASH_NAME;
+      if (inTrash && segments.length === 1) {
+        indexTrash(db, absolute, null);
+        continue;
+      }
+      // A file under a hidden folder is not a note; the trash is the one hidden folder that holds notes.
+      if (segments.slice(inTrash ? 1 : 0).some(isHiddenSegment)) continue;
+      // The file that says where a trashed note came from changes with the note: the note is the one to read again.
+      if (inTrash && absolute.endsWith(SIDECAR_SUFFIX)) absolute = absolute.slice(0, -SIDECAR_SUFFIX.length);
       // This look decides again whatever it was before: readable, unreadable, or gone.
       unreadable.delete(underNotes(absolute));
 
       let stats = null;
-      try { stats = fs.statSync(absolute); } catch { /* gone */ }
-      if (!stats) {
+      try { stats = fs.lstatSync(absolute); } catch { /* gone */ }
+      if (!stats || stats.isSymbolicLink()) {
         forgetPath(db, relPath(absolute));
+        continue;
+      }
+      if (inTrash) {
+        if (stats.isDirectory()) indexTrash(db, absolute, null);
+        else if (isNoteFile(path.basename(absolute)) && !isSidecarName(path.basename(absolute))) indexNoteSafely(db, absolute);
         continue;
       }
       ensureAncestors(path.dirname(absolute));

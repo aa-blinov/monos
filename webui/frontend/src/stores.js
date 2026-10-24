@@ -20,11 +20,11 @@ function initialThemeMode() {
 
 export const activeTheme = persisted('theme', 'gruvbox');
 export const themeMode = writable(initialThemeMode());
-export const fontFamily = persisted('fontFamily', 'JetBrains Mono');
-export const fontSize = persisted('fontSize', 'medium');
-export const lineHeight = persisted('lineHeight', 'normal');
-export const editorFontSize = persisted('editorFontSize', 'md');
-export const noteView = persisted('noteView', 'board');
+export const fontFamily = persisted('fontFamily', 'JetBrains Mono', { server: true });
+export const fontSize = persisted('fontSize', 'medium', { server: true });
+export const lineHeight = persisted('lineHeight', 'normal', { server: true });
+export const editorFontSize = persisted('editorFontSize', 'md', { server: true });
+export const noteView = persisted('noteView', 'board', { server: true });
 // The native menu asks the open note to change its view: focus mode and the structure column.
 export const editorViewCommand = writable(null);
 // What the window shows right now: the native menu draws its checkmarks from this and greys out
@@ -35,19 +35,21 @@ export const menuState = writable({ hasNote: false, editable: true, outline: fal
 export function updateMenuState(patch) {
   menuState.update((state) => ({ ...state, ...patch }));
 }
-export const boardColumns = persisted('boardColumns', '3');
+export const boardColumns = persisted('boardColumns', '3', { server: true });
 export const boardGroupByColor = persisted('boardGroupByColor', false, {
+  server: true,
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
 });
 // Оглавление на десктопе свёрнуто в узкую полоску; на телефоне не используется.
 export const outlineHidden = persisted('outlineHidden', false, {
+  server: true,
   serialize: (v) => String(v),
   deserialize: (s) => s === 'true',
 });
 // The Attachments page remembers how it was sorted and which type it showed.
-export const attachmentsSort = persisted('attachmentsSort', 'new', { validate: (v) => ['new', 'size', 'name', 'notes'].includes(v) });
-export const attachmentsKind = persisted('attachmentsKind', 'all', { validate: (v) => ['all', 'image', 'pdf'].includes(v) });
+export const attachmentsSort = persisted('attachmentsSort', 'new', { server: true, validate: (v) => ['new', 'size', 'name', 'notes'].includes(v) });
+export const attachmentsKind = persisted('attachmentsKind', 'all', { server: true, validate: (v) => ['all', 'image', 'pdf'].includes(v) });
 
 // «Закреплённые» в боковой панели можно свернуть до одной строки; выбор помнится.
 export const pinnedCollapsed = persisted('pinnedCollapsed', false, {
@@ -57,12 +59,14 @@ export const pinnedCollapsed = persisted('pinnedCollapsed', false, {
 
 // Ширина колонки «Структура» на десктопе: тянется за левый край, помнится между запусками.
 export const outlineWidth = persisted('outlineWidth', clampOutlineWidth(), {
+  server: true,
   deserialize: clampOutlineWidth,
 });
 
 // The default column is Medium (about 100 characters a line). Everyone who still has the old default, Very wide,
 // is moved once: a saved «wide» cannot be told from a choice, so the choice is made again in the three-dot menu.
 export const contentWidth = persisted('contentWidth', 'medium', {
+  server: true,
   migrate: (saved, read) => {
     if (!saved) return 'medium';
     if (read('contentWidthDefaultMedium') !== 'true' && saved === 'wide') return 'medium';

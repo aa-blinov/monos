@@ -100,7 +100,7 @@
         {$localizedText.trash.loading}
       </div>
     {:else if error}
-      <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm text-[var(--red)]">
+      <div class="rounded-ui border border-[color-mix(in_srgb,var(--red)_35%,transparent)] bg-[color-mix(in_srgb,var(--red)_12%,transparent)] px-4 py-3 text-sm text-[var(--red-text)]">
         {error}
       </div>
     {:else if notes.length === 0}
@@ -141,7 +141,7 @@
                 >{$localizedText.trash.restore}</Button>
                 <Button variant="danger" size="sm"
                   type="button"
-                  class="whitespace-nowrap text-xs uppercase tracking-widest text-[var(--red)] transition enabled:hover:opacity-70 disabled:opacity-30"
+                  class="whitespace-nowrap text-xs uppercase tracking-widest text-[var(--red-text)] transition enabled:hover:opacity-70 disabled:opacity-30"
                   disabled={busyPath === note.path}
                   on:click={() => requestDeleteForever(note)}
                 >{$localizedText.trash.deleteForever}</Button>

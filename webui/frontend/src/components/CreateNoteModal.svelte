@@ -4,6 +4,7 @@
   import { localeDate } from '../lib/date-format.js';
   import { fileNameProblem } from '../lib/file-name.js';
   import { createNoteRequest } from '../lib/sidebar-api.js';
+  import { loadFileContent, restoreNoteRequest } from '../lib/editor-api.js';
   import { Button, Card, FieldControl } from '@monos/ui';
 
   export let open = false;
@@ -18,13 +19,17 @@
   let createError = '';
   // Set only when the backend refused the name (409): the note that already has it.
   let duplicatePath = '';
+  // Set when the name belongs to a note in the Trash: it can be restored, or the new note takes another name.
+  let trashedPath = '';
+  let restoring = false;
   let titleInput;
   $: if (titleInput) {
     titleInput.onkeydown = (event) => {
       if (event.key === 'Enter' && !blockedName) submitCreateNote();
       if (event.key === 'Escape') onClose();
     };
-    if (open) titleInput.focus();
+    // preventScroll: on a short screen focusing the field scrolled the dialog past its title and close button.
+    if (open) titleInput.focus({ preventScroll: true });
   }
 
   $: if (open) {
@@ -35,11 +40,16 @@
     isCreating = false;
     createError = '';
     duplicatePath = '';
+    trashedPath = '';
+    restoring = false;
   }
 
   // A taken name is refused by the backend (409). Today's note opens the one that
   // already exists; any other name stays in the field with the reason shown.
+  const isTrashedClash = (err) => err?.status === 409 && err.body?.code === 'trashed' && Boolean(err.body?.path);
+
   function createFailureText(err) {
+    if (isTrashedClash(err)) return $localizedText.sidebar.errors.trashedNote;
     return err.status === 409 ? $localizedText.sidebar.errors.duplicateNote : $localizedText.sidebar.errors.createNote(err.message);
   }
 
@@ -53,7 +63,12 @@
       onClose();
       onCreated(data, title);
     } catch (err) {
-      if (err.status === 409 && err.body?.path) {
+      if (isTrashedClash(err)) {
+        // Today's note is in the Trash: the dialog stays and says so, instead of opening a note that is not there.
+        newNoteTitle = title;
+        trashedPath = err.body.path;
+        createError = createFailureText(err);
+      } else if (err.status === 409 && err.body?.path) {
         onClose();
         onCreated({ path: err.body.path, name: `${title}.md`, isDir: false }, title);
       } else {
@@ -94,18 +109,49 @@
       onCreated(data, title);
     } catch (err) {
       createError = createFailureText(err);
-      duplicatePath = typed && err.status === 409 && err.body?.path ? err.body.path : '';
+      trashedPath = typed && isTrashedClash(err) ? err.body.path : '';
+      duplicatePath = typed && err.status === 409 && err.body?.path && !trashedPath ? err.body.path : '';
     } finally {
       isCreating = false;
     }
   }
 
   // The name is taken: offer the note that has it, or the same name with a number after it.
-  function openExistingNote() {
+  async function openExistingNote() {
     const title = newNoteTitle.trim();
     const path = duplicatePath;
+    // A server that still counts a note in the Trash as holding the name answers 409 with its path; opening it
+    // is refused (410). The dialog says what happened and offers the Trash's way out, instead of closing on nothing.
+    try {
+      await loadFileContent(path);
+    } catch (err) {
+      if (err?.status === 410) {
+        trashedPath = path;
+        duplicatePath = '';
+        createError = $localizedText.sidebar.errors.trashedNote;
+        return;
+      }
+    }
     onClose();
     onCreated({ path, name: `${title}.md`, isDir: false }, title);
+  }
+
+  async function restoreTrashedNote() {
+    if (restoring || !trashedPath) return;
+    const path = trashedPath;
+    try {
+      restoring = true;
+      createError = '';
+      const restored = await restoreNoteRequest(path);
+      const restoredPath = restored?.path || path;
+      const name = restoredPath.split('/').pop() || `${newNoteTitle.trim()}.md`;
+      onClose();
+      onCreated({ path: restoredPath, name, isDir: false }, name.replace(/\.md$/i, ''));
+    } catch (err) {
+      createError = $localizedText.sidebar.errors.restoreFailed(err?.message || String(err));
+    } finally {
+      restoring = false;
+    }
   }
 
   async function createNumberedCopy() {
@@ -205,16 +251,21 @@
           bind:inputEl={titleInput}
           type="text"
           bind:value={newNoteTitle}
-          on:input={() => { createError = ''; duplicatePath = ''; }}
+          on:input={() => { createError = ''; duplicatePath = ''; trashedPath = ''; }}
           placeholder={$localizedText.sidebar.modals.noteTitlePlaceholder}
         />
         <p class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--text-tertiary)]">{$localizedText.sidebar.modals.titleHint}</p>
         {#if titleProblem && titleProblem !== 'empty'}
-          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{$localizedText.sidebar.nameProblem(titleProblem)}</p>
+          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red-text)]">{$localizedText.sidebar.nameProblem(titleProblem)}</p>
         {/if}
         {#if createError}
-          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red)]">{createError}</p>
-          {#if duplicatePath}
+          <p role="alert" class="mt-3 max-w-lg text-xs leading-relaxed text-[var(--red-text)]">{createError}</p>
+          {#if trashedPath}
+            <div class="mt-3 flex flex-wrap gap-3">
+              <Button variant="primary" size="md" on:click={restoreTrashedNote} disabled={restoring} data-testid="restore-trashed-note">{$localizedText.sidebar.modals.restoreIt}</Button>
+              <Button variant="secondary" size="md" on:click={createNumberedCopy} data-testid="create-another-name">{$localizedText.sidebar.modals.createAnotherName(`${newNoteTitle.trim()} 2`)}</Button>
+            </div>
+          {:else if duplicatePath}
             <div class="mt-3 flex flex-wrap gap-3">
               <Button variant="secondary" size="md" on:click={openExistingNote}>{$localizedText.sidebar.modals.openExisting}</Button>
               <Button variant="primary" size="md" on:click={createNumberedCopy}>{$localizedText.sidebar.modals.createNumbered(`${newNoteTitle.trim()} 2`)}</Button>

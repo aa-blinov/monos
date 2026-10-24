@@ -82,3 +82,47 @@ test('setItemColorRequest: POST /api/directory/icon?path=...', async () => {
   assert.equal(lastCall.url, '/api/directory/icon?path=notes%2Fz.md');
   assert.match(lastCall.body, /#ff0000/);
 });
+
+test('saveFileContentOnLeave отправляет текст keepalive-запросом с базовой версией', async () => {
+  const { saveFileContentOnLeave } = await import('./editor-api.js');
+  const calls = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = (url, init) => { calls.push({ url, init }); return Promise.resolve({ ok: true }); };
+  try {
+    assert.equal(saveFileContentOnLeave('notes/C# notes.md', 'text', 'v1'), true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, '/api/file?path=notes%2FC%23%20notes.md');
+    assert.equal(calls[0].init.keepalive, true);
+    assert.deepEqual(JSON.parse(calls[0].init.body), { content: 'text', base_version: 'v1' });
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('saveFileContentOnLeave не шлёт то, что не поместится в keepalive (64 КиБ)', async () => {
+  const { saveFileContentOnLeave } = await import('./editor-api.js');
+  const original = globalThis.fetch;
+  let sent = 0;
+  globalThis.fetch = () => { sent += 1; return Promise.resolve({ ok: true }); };
+  try {
+    assert.equal(saveFileContentOnLeave('notes/a.md', 'x'.repeat(70 * 1024)), false);
+    assert.equal(sent, 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('duplicateNoteRequest отправляет слово для имени копии, если оно есть', async () => {
+  const { duplicateNoteRequest } = await import('./editor-api.js');
+  const calls = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { calls.push({ url, init }); return { ok: true, json: async () => ({ path: 'notes/a copy.md' }) }; };
+  try {
+    await duplicateNoteRequest('notes/a.md', 'копия');
+    assert.deepEqual(JSON.parse(calls[0].init.body), { suffix: 'копия' });
+    await duplicateNoteRequest('notes/a.md');
+    assert.equal(calls[1].init.body, undefined);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
