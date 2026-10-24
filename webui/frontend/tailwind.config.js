@@ -1,3 +1,4 @@
+import plugin from 'tailwindcss/plugin';
 import monosPreset from '@monos/ui/tailwind-preset';
 
 /** @type {import('tailwindcss').Config} */
@@ -46,6 +47,10 @@ export default {
       }
     }
   },
-  plugins: [],
+  plugins: [
+    // A short screen: a phone on its side, or any screen while the on-screen keyboard is up (keyboard-state.js).
+    // The text needs the height, so the header and the toolbar give up their padding there.
+    plugin(({ addVariant }) => addVariant('short', ['@media (max-height: 480px)', ':root[data-keyboard] &'])),
+  ],
   darkMode: 'class'
 }

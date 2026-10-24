@@ -208,9 +208,15 @@ function convertTaskLists(nodes) {
         if (last && last.kind === kind) last.items.push(item);
         else runs.push({ kind, items: [item] });
       }
-      return runs.map((run) => descendIntoItems(
-        run.kind === 'task' ? { type: 'taskList', attrs: listShape(node), content: run.items } : { ...node, content: run.items },
-      ));
+      return runs.map((run, at) => {
+        // Every piece after the first is the same list continued: `continues` lets the writer join them again.
+        const shape = at ? { continues: true } : {};
+        return descendIntoItems(
+          run.kind === 'task'
+            ? { type: 'taskList', attrs: { ...listShape(node), ...shape }, content: run.items }
+            : { ...node, attrs: { ...node.attrs, ...shape }, content: run.items },
+        );
+      });
     }
 
     if (Array.isArray(node?.content)) {
@@ -271,6 +277,13 @@ function splitTableRow(line) {
   return trimmed.split(/(?<!\\)\|/).map((cell) => cell.replace(/\\\|/g, '|').trim());
 }
 
+const ALIGN_OF = { ':--': 'left', ':-:': 'center', '--:': 'right' };
+function delimiterAlign(cell) {
+  const compact = cell.replace(/\s+/g, '');
+  const key = (compact.startsWith(':') ? ':' : '-') + '-' + (compact.endsWith(':') ? ':' : '-');
+  return ALIGN_OF[key] || null;
+}
+
 function isTableDelimiterLine(line) {
   const cells = splitTableRow(line);
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, '')));
@@ -286,10 +299,10 @@ function inlineCellContent(markdown) {
   return markdown.trim() ? [{ type: 'text', text: markdown.trim() }] : undefined;
 }
 
-function tableCell(type, value) {
+function tableCell(type, value, align = null) {
   return {
     type,
-    attrs: { colspan: 1, rowspan: 1, colwidth: null },
+    attrs: { colspan: 1, rowspan: 1, colwidth: null, align },
     content: [{
       type: 'paragraph',
       content: inlineCellContent(value),
@@ -297,12 +310,12 @@ function tableCell(type, value) {
   };
 }
 
-function tableRow(cells, width, cellType = 'tableCell') {
+function tableRow(cells, width, cellType = 'tableCell', aligns = []) {
   const paddedCells = [...cells];
   while (paddedCells.length < width) paddedCells.push('');
   return {
     type: 'tableRow',
-    content: paddedCells.slice(0, width).map((cell) => tableCell(cellType, cell)),
+    content: paddedCells.slice(0, width).map((cell, column) => tableCell(cellType, cell, aligns[column] || null)),
   };
 }
 
@@ -311,11 +324,12 @@ function markdownTableNode(lines) {
   if (header.length < 2 || !isTableDelimiterLine(lines[1])) return null;
   const bodyRows = lines.slice(2).map(splitTableRow);
   const width = Math.max(header.length, ...bodyRows.map((row) => row.length));
+  const aligns = splitTableRow(lines[1]).map(delimiterAlign);
   return {
     type: 'table',
     content: [
-      tableRow(header, width, 'tableHeader'),
-      ...bodyRows.map((row) => tableRow(row, width)),
+      tableRow(header, width, 'tableHeader', aligns),
+      ...bodyRows.map((row) => tableRow(row, width, 'tableCell', aligns)),
     ],
   };
 }

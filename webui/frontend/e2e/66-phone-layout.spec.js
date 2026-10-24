@@ -83,14 +83,14 @@ for (const [width, height] of [[390, 844], [360, 740], [390, 420]]) {
   });
 }
 
-test('на низком телефоне 390x420 тексту остаётся не меньше 40% высоты', async ({ page }) => {
+test('на низком телефоне 390x420 тексту остаётся не меньше 55% высоты', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 420 });
   const route = await makeNote(page, `Short ${Date.now()}`);
   await page.goto(route);
   const surface = page.getByTestId('rich-editor-surface');
   await expect(surface).toBeVisible();
   const box = await surface.boundingBox();
-  expect(box.height).toBeGreaterThanOrEqual(420 * 0.4);
+  expect(box.height).toBeGreaterThanOrEqual(420 * 0.55);
 });
 
 test('уведомление «в корзину» не закрывает подвал боковой панели', async ({ page }) => {

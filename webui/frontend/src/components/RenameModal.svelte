@@ -16,7 +16,14 @@
   export let sectionLabel = '';
   export let noteLabel = '';
 
+  /** A reason the server refused the name, shown under the field until the name is changed. */
+  export let serverProblem = '';
+  /** Offered beside the reason when the name belongs to a note in the Trash. */
+  export let canRestore = false;
+
   let newName = currentName;
+  let submittedName = null;
+  $: staleProblem = submittedName !== null && newName !== submittedName;
   $: if (currentName !== undefined) newName = currentName;
   // Новое имя станет именем файла: то, что ОС не создаст, называем до отправки.
   $: nameProblem = fileNameProblem(newName);
@@ -25,6 +32,7 @@
 
   function submit() {
     if (!newName.trim() || newName === currentName || nameProblem) return;
+    submittedName = newName;
     dispatch('submit', { newName });
   }
 
@@ -50,6 +58,14 @@
       />
       {#if nameProblem && nameProblem !== 'empty'}
         <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red-text)]">{$localizedText.sidebar.nameProblem(nameProblem)}</p>
+      {/if}
+      {#if serverProblem && !staleProblem}
+        <p role="alert" class="mt-3 text-xs leading-relaxed text-[var(--red-text)]" data-testid="rename-problem">{serverProblem}</p>
+        {#if canRestore}
+          <div class="mt-3">
+            <Button variant="secondary" size="md" on:click={() => dispatch('restore')} disabled={busy} data-testid="restore-trashed-note">{$localizedText.sidebar.modals.restoreIt}</Button>
+          </div>
+        {/if}
       {/if}
     </div>
   </div>

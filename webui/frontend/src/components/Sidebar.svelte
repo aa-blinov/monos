@@ -57,7 +57,8 @@
     syncRequest,
     checkGitStatus,
   } from '../lib/sidebar-api.js';
-  import { bulkTagRequest, duplicateNoteRequest, loadFileContent, loadFileInfo, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
+  import { bulkTagRequest, duplicateNoteRequest, loadFileContent, loadFileInfo, restoreNoteRequest, saveFileContent, uploadAttachment } from '../lib/editor-api.js';
+  import { clashPath, isTrashedNameClash } from '../lib/trashed-clash.js';
   import { announceNoteLinksUpdated, announceNotesPulled, flushOpenNote } from '../lib/note-refresh.js';
   import {
     convertImageToWebp,
@@ -165,6 +166,8 @@
   let showRenameModal = false;
   /** @type {string} */
   let renameNewName = '';
+  let renameServerProblem = '';
+  let renameRestorePath = '';
   /** @type {string} */
   let renameOldName = '';
   let renameTarget = null;
@@ -369,6 +372,8 @@
     renameTarget = null;
     renameNewName = '';
     renameOldName = '';
+    renameServerProblem = '';
+    renameRestorePath = '';
   }
 
   function recentPathLabel(note) {
@@ -926,7 +931,30 @@
       await loadTree();
       await loadDirectories();
     } catch (err) {
-      error = $localizedText.sidebar.errors.rename(err.message);
+      if (isTrashedNameClash(err)) {
+        // The Trash holds that name: the dialog stays open and says so, with a way to bring that note back.
+        renameServerProblem = $localizedText.sidebar.errors.trashedName;
+        renameRestorePath = clashPath(target.path, renameRequestName(nextInputName, target.name, target.isDir));
+      } else {
+        error = $localizedText.sidebar.errors.rename(err.message);
+      }
+    } finally {
+      isCreating = false;
+    }
+  }
+
+  async function restoreTrashedForRename() {
+    const path = renameRestorePath;
+    if (!path || isCreating) return;
+    try {
+      isCreating = true;
+      await restoreNoteRequest(path);
+      closeRenameModal();
+      await loadTree();
+      await loadDirectories();
+    } catch (err) {
+      renameServerProblem = $localizedText.sidebar.errors.restoreFailed(err?.message || String(err));
+      renameRestorePath = '';
     } finally {
       isCreating = false;
     }
@@ -998,7 +1026,7 @@
       if (activeMoveIndex >= 0) navigateToPath(movedPaths[activeMoveIndex], false);
       else if (movedPaths.length === 1) navigateToPath(movedPaths[0], false);
     } catch (err) {
-      error = $localizedText.sidebar.errors.move(err.message);
+      error = isTrashedNameClash(err) ? $localizedText.sidebar.errors.trashedName : $localizedText.sidebar.errors.move(err.message);
     }
   }
 
@@ -1523,8 +1551,11 @@
     isDir={renameTarget?.isDir}
     currentName={renameOldName}
     busy={isCreating}
+    serverProblem={renameServerProblem}
+    canRestore={Boolean(renameRestorePath)}
     sectionLabel={$localizedText.sidebar.modals.section}
     noteLabel={$localizedText.sidebar.modals.note}
+    on:restore={restoreTrashedForRename}
     on:close={closeRenameModal}
     on:submit={(e) => { renameNewName = e.detail.newName; renameItem(); }}
   />

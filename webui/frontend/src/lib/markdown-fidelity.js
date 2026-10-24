@@ -94,7 +94,36 @@ export function serializeOrderedList(state, node, parent, index) {
 }
 
 export function serializeBulletList(state, node) {
+  // A bullet or task run cut from a mixed list goes on in the same list: no blank line, no second list.
+  if (node.attrs.continues && state.closed && LIST_NODES.has(state.closed.type.name)) {
+    state.flushClose(state.closed.attrs.tight === false ? 2 : 1);
+  }
   return state.renderList(node, '  ', () => `${node.attrs.marker || '-'} `);
+}
+
+const LIST_NODES = new Set(['bulletList', 'taskList']);
+
+/** Whether this node is the rest of the mixed list that the node before it began (see markdown-editor-content.js). */
+export function continuesList(node, previous) {
+  return Boolean(node?.attrs?.continues && previous && LIST_NODES.has(previous.type.name) && LIST_NODES.has(node.type.name));
+}
+
+const ALIGN_ROW = { left: ':---', center: ':---:', right: '---:' };
+
+// The stock table writer puts `---` under every column, so a column set to `:---:` or `---:` lost it as soon as
+// the table was edited. The alignment is kept on the header cells and written back under them.
+export function serializeTable(state, node, parent, index, stock) {
+  const header = node.firstChild;
+  const aligns = [];
+  header?.forEach((cell) => aligns.push(cell.attrs.align || null));
+  const start = state.out.length;
+  stock(state, node, parent, index);
+  if (!aligns.some(Boolean)) return;
+  const written = state.out.slice(start).split('\n');
+  const first = written.findIndex((line) => line.startsWith('| '));
+  if (first < 0 || !/^\| --- (\| --- )*\|$|^\| --- \|$/.test(written[first + 1] || '')) return;
+  written[first + 1] = `| ${aligns.map((align) => ALIGN_ROW[align] || '---').join(' | ')} |`;
+  state.out = state.out.slice(0, start) + written.join('\n');
 }
 
 // A fence is longer than any run of backticks inside it, or the first run in the code would end the block.
@@ -139,6 +168,18 @@ export const MarkdownFidelity = Extension.create({
     return [
       { types: ['orderedList'], attributes: { delimiter: { default: '.', rendered: false } } },
       { types: ['bulletList', 'taskList'], attributes: { marker: { default: '-', rendered: false } } },
+      // Set on the second and later pieces of a list that mixed bullets and tasks, so that it is written as one list.
+      { types: ['bulletList', 'taskList'], attributes: { continues: { default: false, rendered: false } } },
+      {
+        types: ['tableHeader', 'tableCell'],
+        attributes: {
+          align: {
+            default: null,
+            parseHTML: (element) => element.style?.textAlign || null,
+            renderHTML: (attributes) => (attributes.align ? { style: `text-align: ${attributes.align}` } : {}),
+          },
+        },
+      },
       { types: ['taskList'], attributes: { tight: { default: true, rendered: false } } },
     ];
   },
@@ -152,7 +193,13 @@ export const MarkdownFidelity = Extension.create({
     Object.defineProperty(serializer, 'nodes', {
       configurable: true,
       get() {
-        return { ...stock.call(this), ...overrides };
+        const nodes = stock.call(this);
+        const stockTable = nodes.table;
+        return {
+          ...nodes,
+          ...overrides,
+          table: stockTable && ((state, node, parent, index) => serializeTable(state, node, parent, index, stockTable)),
+        };
       },
     });
   },

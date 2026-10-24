@@ -79,6 +79,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `help-content.test.js` | Same sections and topics in both languages, no empty or repeated topics, common questions are findable |
 | `help-search.js` | `searchHelp(sections, query)`, `plainText` — every word must match, title matches first, ё as е, an excerpt around the match |
 | `help-search.test.js` | Ranking, ё, Markdown marks ignored, empty query |
+| `keyboard-state.js` | `keyboardIsUp`, `watchKeyboard` — marks the root `data-keyboard` while the on-screen keyboard is up, so the `short` variant compacts the header and toolbar |
+| `keyboard-state.test.js` | Needs a focused field and a lost keyboard of height; marks and clears the root |
+| `trashed-clash.js` | `isTrashedNameClash`, `clashPath` — a rename or move into a name held by a note in the Trash is told apart from a plain clash, and the path to restore is named |
+| `trashed-clash.test.js` | Only 409 with the trashed code counts; the path is the new name in the same folder |
 | `trash-undo.js` | `announceTrashed`, `trashedNote`, `undoTrash`, `trashedNotice` — a note moved to the trash can be brought back (pinned again) from the app's notice for a few seconds |
 | `trash-undo.test.js` | Name and pin remembered, a newer notice wins, undo restores and re-pins |
 | `qr-code.js` | `qrPath(text)` — a QR code as one SVG path with its quiet zone, made locally for the phone-access address |

@@ -17,6 +17,19 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.1 — 2026-10-24
+
+### Fixed
+
+- A note that ends with a horizontal rule, a code fence, a table or a list no longer gets its last block glued to the
+  text you type after it (`***` followed by `QQ` was written as `***QQ`, which destroyed the rule). The desktop
+  builds of 1.17.0 stopped on this, so 1.17.0 has no installers; 1.17.1 replaces it.
+- A mixed bullet and task list stays one list after an edit, and table column alignment survives an edit.
+- On a short phone screen the editor keeps 61% of the height for text (the header, toolbar and footer compact when the
+  keyboard is up), and renaming a note into the name of a trashed one explains itself and offers to restore it.
+- The interface kit is `@monos/ui` 1.5.3: no Svelte warning from its fields, and a focus trap that skips controls
+  that are not in the tab order.
+
 ## 1.17.0 — 2026-10-24
 
 A release-readiness pass: a QA review of the backend, the interface and the user paths, and the fixes it led to.

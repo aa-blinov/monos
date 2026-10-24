@@ -55,8 +55,9 @@ test('обычный режим при сохранении не перепис�
   const notePath = await make(page, title, body);
   await openNote(page, title);
   await expect(page.locator('.ProseMirror')).toBeVisible();
-  await page.locator('.ProseMirror').click();
-  await page.keyboard.press('ControlOrMeta+End');
+  // The caret goes where the test says, not where a click at the bottom happens to land.
+  await page.locator('.ProseMirror ol li').last().click();
+  await page.keyboard.press('End');
   await page.keyboard.type('QQ');
   await waitForSavedContent(page, notePath, 'QQ');
   const saved = await read(page, notePath);

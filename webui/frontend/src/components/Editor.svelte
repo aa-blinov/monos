@@ -47,6 +47,7 @@
   import { isFavoriteProperties, setFavoriteRequest } from '../lib/favorites.js';
   import { replaceTabs, tabsToSpaces } from '../lib/tabs.js';
   import { flushOpenNote } from '../lib/note-refresh.js';
+  import { isTrashedNameClash } from '../lib/trashed-clash.js';
   import { createFolderRequest, createNoteRequest, loadDirectoriesRequest, loadTagsRequest, moveItemRequest, renameItemRequest } from '../lib/sidebar-api.js';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
   import { conflictedFiles, conflictedNotes, conflictNotePath, refreshConflicts } from '../lib/git-conflicts.js';
@@ -561,7 +562,9 @@
       announceNoteLinksUpdated(data);
       dispatch('renamed', { path: data.path, name: data.name, isDir: false });
     } catch (error) {
-      saveMessage = error?.status === 409
+      saveMessage = isTrashedNameClash(error)
+        ? $localizedText.sidebar.errors.trashedName
+        : error?.status === 409
         ? $localizedText.sidebar.errors.duplicateNote
         : $localizedText.sidebar.errors.rename(error?.message || String(error));
       editedTitle = currentName;
@@ -1288,7 +1291,9 @@
       dispatch('renamed', { path: nextPath, name, isDir: false });
       showToast($localizedText.editor.movedToFolder(folderLabel(target)));
     } catch (error) {
-      showToast(error?.status === 409 ? $localizedText.editor.moveExists(folderLabel(target)) : $localizedText.editor.moveFailed, 5000);
+      showToast(isTrashedNameClash(error)
+        ? $localizedText.sidebar.errors.trashedName
+        : error?.status === 409 ? $localizedText.editor.moveExists(folderLabel(target)) : $localizedText.editor.moveFailed, 5000);
     }
   }
 
@@ -1747,7 +1752,7 @@
     <!-- Нижняя панель: свойства заметки открываются окошками над ней, поэтому текст
          не сдвигается. Во время загрузки следующей заметки панель inert: её контролы
          относятся к запрошенной заметке, а текст ещё от прежней. -->
-    <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-12 max-sm:gap-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
+    <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-12 short:max-sm:h-11 max-sm:gap-0 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
       <div class="flex min-w-0 flex-1 items-center gap-2 transition-opacity max-sm:gap-0" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
         <div class="relative min-w-0 max-sm:shrink-0 sm:flex-1" data-panel-anchor="category">

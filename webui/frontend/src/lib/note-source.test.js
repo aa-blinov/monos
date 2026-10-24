@@ -114,3 +114,45 @@ test('CRLF notes are written back with CRLF', () => {
   const map = buildSourceMap(markdown, nodes);
   assert.equal(writeWithSource(map, [nodes[0], fakeNode('paragraph', 'TWO')], (node) => node.text), 'one\r\n\r\nTWO\r\n');
 });
+
+// A block written after the last block of the note, or between two others, is a block of its own: whatever the
+// blocks around it ended with (the last block has no gap after it at all), a blank line separates them.
+const TRAILING_KINDS = {
+  'rule ***': ['***', 'horizontalRule'],
+  'rule ---': ['---', 'horizontalRule'],
+  'code fence': ['```js\nlet a;\n```', 'codeBlock'],
+  'tilde fence': ['~~~\nx\n~~~', 'codeBlock'],
+  table: ['| a | b |\n| - | - |\n| 1 | 2 |', 'table'],
+  list: ['- one\n- two', 'bulletList'],
+  'ordered list': ['1) one\n2) two', 'orderedList'],
+  blockquote: ['> quoted', 'blockquote'],
+  heading: ['# Title', 'heading'],
+  'setext heading': ['Title\n=====', 'heading'],
+  'html comment': ['<!-- note -->', 'paragraph'],
+  paragraph: ['plain', 'paragraph'],
+};
+for (const [name, [block, type]] of Object.entries(TRAILING_KINDS)) {
+  for (const finalNewline of ['', '\n']) {
+    for (const eol of ['\n', '\r\n']) {
+      const label = `${name}, ${finalNewline ? 'with' : 'without'} final newline, ${eol === '\n' ? 'LF' : 'CRLF'}`;
+      const source = `Intro\n\n${block}${finalNewline}`.replace(/\n/g, eol);
+      const intro = fakeNode('paragraph', 'Intro');
+      const last = fakeNode(type, block);
+      const render = (node) => (node.text === 'QQ' ? 'QQ' : node.text);
+
+      test(`a new block after a trailing ${label} is separated by a blank line`, () => {
+        const nodes = [intro, last];
+        const map = buildSourceMap(source, nodes);
+        const out = writeWithSource(map, [...nodes, fakeNode('paragraph', 'QQ')], render);
+        assert.equal(out, `Intro\n\n${block}\n\nQQ${finalNewline}`.replace(/\n/g, eol));
+      });
+
+      test(`a new block before a ${label} is separated by a blank line`, () => {
+        const nodes = [intro, last];
+        const map = buildSourceMap(source, nodes);
+        const out = writeWithSource(map, [intro, fakeNode('paragraph', 'QQ'), last], render);
+        assert.equal(out, `Intro\n\nQQ\n\n${block}${finalNewline}`.replace(/\n/g, eol));
+      });
+    }
+  }
+}

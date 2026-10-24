@@ -1,6 +1,7 @@
 import { unescapeCalloutMarkers } from './callouts.js';
 import { blockContext } from './blank-line.js';
 import { markdownToEditorContent } from './markdown-editor-content.js';
+import { continuesList } from './markdown-fidelity.js';
 import { buildSourceMap, writeWithSource } from './note-source.js';
 
 // The serializer writes `\[\[` for the brackets of a wiki link; the file has them bare.
@@ -53,7 +54,10 @@ export function createNoteMarkdown(editor) {
     serialize() {
       if (!editor?.storage.markdown) return '';
       const nodes = topLevelNodes(editor);
-      return writeWithSource(sourceMap, nodes, (node) => renderBlock(node, nodes.length), { isTrailingGap: isEditorTrailingParagraph });
+      return writeWithSource(sourceMap, nodes, (node) => renderBlock(node, nodes.length), {
+        isTrailingGap: isEditorTrailingParagraph,
+        joinGap: (node, previous) => (continuesList(node, previous) ? (previous.attrs.tight === false ? '\n\n' : '\n') : null),
+      });
     },
   };
 }

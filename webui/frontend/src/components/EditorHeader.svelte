@@ -65,7 +65,7 @@
 
 <!-- The note's own header is the only bar above it: back, the sidebar and the trash share a row with the
      folder path, so the text starts high and the note's colour covers one block, not two. -->
-<header class="relative isolate overflow-hidden px-4 pb-2 lg:px-12 lg:pb-3 space-y-1 lg:space-y-2">
+<header class="relative isolate overflow-hidden px-4 pb-2 lg:px-12 lg:pb-3 space-y-1 lg:space-y-2 short:pb-0 short:space-y-0">
   <!-- The note's colour, set by the editor: the same tint and glow its card has on the board. `!mt-0`: the
        header's vertical spacing must not push these layers down from its top edge. -->
   <span class="pointer-events-none absolute inset-0 -z-10 !mt-0 bg-[var(--note-header-tint,transparent)]" aria-hidden="true"></span>
@@ -73,7 +73,7 @@
        edges and shows a band; the gradient fades out on its own. -->
   <span class="pointer-events-none absolute inset-0 -z-10 !mt-0" style="background: radial-gradient(ellipse 45% 160% at 100% 0%, var(--note-header-glow, transparent), transparent 70%);" aria-hidden="true"></span>
   <!-- The bar row matches the app header: 56px tall, its icons 16px from the edges, wherever the text column sits. -->
-  <div class="!mt-0 flex min-h-14 min-w-0 items-center gap-1 lg:-mx-8">
+  <div class="!mt-0 flex min-h-14 min-w-0 items-center gap-1 short:min-h-11 lg:-mx-8">
     <TooltipIconButton on:click={onBack} class={navButtonClass} label={$localizedText.header.back} tooltip={$localizedText.header.back} tooltipAlign="start">
       <ArrowLeft class="h-5 w-5" strokeWidth="1.7" aria-hidden="true" />
     </TooltipIconButton>
@@ -133,13 +133,13 @@
         title={titleLocked ? $localizedText.editor.conflictPropertiesLocked : undefined}
         aria-label={$localizedText.editorHeader.noteTitle}
         placeholder={$localizedText.editorHeader.noteTitle}
-        class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 !border-none"
+        class="text-lg lg:text-2xl leading-tight font-serif font-medium tracking-tight bg-transparent outline-none w-full py-1.5 short:py-0.5 !border-none"
       />
       {#if fileInfo}
         <!-- One sentence: the parts follow each other separated by commas. As plain text the line wraps
              like a sentence, so a narrow column never scatters the parts over several rows. -->
         <!-- On a short screen (a phone turned sideways) the line is the first thing to give way: the text needs the room. -->
-        <div class="mt-1.5 min-w-0 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)] [@media(max-height:480px)]:hidden" data-testid="note-meta">
+        <div class="mt-1.5 min-w-0 text-[length:var(--text-whisper)] lg:text-[length:var(--text-whisper-lg)] short:hidden" data-testid="note-meta">
           <!-- The date comes first and is always there; when the note was made is in the tooltip. -->
           <span class="meta-part inline text-[var(--text-tertiary)]" title="{$localizedText.editorHeader.created} {formatDateTime(fileInfo.created)}">
             {$localizedText.editorHeader.modified} {formatDateTime(fileInfo.modified)}
