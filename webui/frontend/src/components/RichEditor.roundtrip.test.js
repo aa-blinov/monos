@@ -100,6 +100,10 @@ const CORPUS = {
   'brackets that are not links': 'Array[0] and [x] and [[Wiki link]]\n',
   'mixed list with several runs': '- a\n- [ ] b\n- [x] c\n- d\n- [ ] e\n',
   'table with alignment': '| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |\n',
+  'table with short alignment rows': '| a | b | c |\n| :-- | :-: | --: |\n| 1 | 2 | 3 |\n',
+  'table with one-dash rows': '| a | b |\n| - | - |\n| 1 | 2 |\n',
+  'table without outer pipes': 'a | b\n:-- | --:\n1 | 2\n',
+  'headings five and six': '##### Five\n\n###### Six\n\nText under them\n',
   crlf: 'one\r\n\r\ntwo\r\n\r\n- a\r\n- b\r\n',
 };
 
@@ -189,6 +193,9 @@ const EDITED_BLOCKS = {
   'loose mixed list': ['- plain\n\n- [ ] task\n\n- plain again\n', 'task', 'EDITED', '- plain\n\n- [ ] EDITED\n\n- plain again\n'],
   'nested mixed list': ['- parent\n  - plain\n  - [ ] task\n- other\n', 'task', 'EDITED', '- parent\n  - plain\n  - [ ] EDITED\n- other\n'],
   'table alignment': ['| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |\n', '2', 'EDITED', '| a | b | c |\n| :--- | :---: | ---: |\n| 1 | EDITED | 3 |\n'],
+  // The edited table is written by the table writer, so the short delimiters come out in the usual long form.
+  'table with short alignment, edited': ['| a | b |\n| :-- | --: |\n| 1 | 2 |\n', '2', 'EDITED', '| a | b |\n| :--- | ---: |\n| 1 | EDITED |\n'],
+  'heading five keeps its level': ['##### Five\n\nText\n', 'Five', 'Fiver', '##### Fiver\n\nText\n'],
 };
 for (const [name, [markdown, needle, next, expected]] of Object.entries(EDITED_BLOCKS)) {
   test(`${name}: the edited block is written without damage, and saving twice gives the same text`, () => {

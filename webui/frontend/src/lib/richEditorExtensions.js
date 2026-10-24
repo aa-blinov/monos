@@ -108,7 +108,8 @@ export function createRichEditorExtensions(placeholder, {
 } = {}) {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3, 4] },
+      // All six, as Markdown has them: a level the schema does not list is drawn as level 1 (an H5 came out as big as an H1).
+      heading: { levels: [1, 2, 3, 4, 5, 6] },
       link: { openOnClick: false },
       // Штатный CodeBlock не умеет подсветку — его заменяет CodeBlockLowlight.
       codeBlock: false,

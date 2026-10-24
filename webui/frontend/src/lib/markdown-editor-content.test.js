@@ -253,3 +253,27 @@ test('ячейка таблицы с \\| остаётся одной ячейк�
   assert.equal(row.content.length, 2);
   assert.equal(row.content[0].content[0].content[0].text, 'x | y');
 });
+
+test('a delimiter row of one or two dashes is a table, as in GFM: `:--`, `--:`, `:-:`, `-`', () => {
+  for (const [name, row] of Object.entries({ left: '| :-- | :-- |', right: '| --: | --: |', center: '| :-: | :-: |', 'one dash': '| - | - |', 'mixed': '| :-- | --: |' })) {
+    const doc = markdownToEditorContent(`Intro\n\n| a | b |\n${row}\n| 1 | 2 |\n\nOutro\n`);
+    const kinds = doc.content.map((node) => node.type);
+    assert.ok(kinds.includes('table'), `${name}: a table, got ${kinds.join(',')}`);
+  }
+});
+
+test('the alignment of a short delimiter is read: `:--` left, `--:` right, `:-:` centre', () => {
+  const table = markdownToEditorContent('| a | b | c |\n| :-- | :-: | --: |\n| 1 | 2 | 3 |\n').content[0];
+  const header = table.content[0].content;
+  assert.deepEqual(header.map((cell) => cell.attrs.align), ['left', 'center', 'right']);
+});
+
+test('a table with no outer pipes and short delimiters is a table too', () => {
+  const kinds = markdownToEditorContent('Intro\n\na | b\n:-- | --:\n1 | 2\n').content.map((node) => node.type);
+  assert.ok(kinds.includes('table'), kinds.join(','));
+});
+
+test('a line of dashes under a sentence is still not a table', () => {
+  const kinds = markdownToEditorContent('Just a sentence\n---\n').content.map((node) => node.type);
+  assert.ok(!kinds.includes('table'), kinds.join(','));
+});

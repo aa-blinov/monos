@@ -1,6 +1,6 @@
 {
   "name": "monos",
-  "version": "1.17.10",
+  "version": "1.17.11",
   "engines": {
     "node": ">=22"
   },
