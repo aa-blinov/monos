@@ -5,6 +5,7 @@
   import SearchField from './SearchField.svelte';
   import { Button, Card, FieldControl, Sidebar as KitSidebar, SidebarItem, SidebarSection } from '@monos/ui';
   import { announceTrashed, trashedNote } from '../lib/trash-undo.js';
+  import { menuDangerClass, menuItemClass, menuPanelClass, menuSeparatorClass } from '../lib/menu-style.js';
   import { loadSavedSearches, savedSearches } from '../lib/saved-searches.js';
   import { gitFailureText } from '../lib/git-sync.js';
   import { conflictedFiles, conflictedNotes, refreshConflicts, revealConflicts } from '../lib/git-conflicts.js';
@@ -1440,65 +1441,65 @@
       role="menu"
       tabindex="-1"
       on:keydown={handleContextMenuKeys}
-      class="fixed rounded-ui bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl py-2 z-[100] w-48 outline-none"
+      class="fixed z-[100] w-56 {menuPanelClass}"
       style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
-        <Button variant="ghost" size="sm" on:click={() => handleContextAction('newNote')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newNote}</Button>
-        <Button variant="ghost" size="sm" on:click={() => handleContextAction('newFolder')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.newFolder}</Button>
-        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+        <Button variant="quiet" size="md" on:click={() => handleContextAction('newNote')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.newNote}</Button>
+        <Button variant="quiet" size="md" on:click={() => handleContextAction('newFolder')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.newFolder}</Button>
+        <div class={menuSeparatorClass} role="separator"></div>
       {/if}
       {#if !contextMenu.isDir}
         {#if isPinned(contextMenu.targetPath)}
-          <Button variant="ghost" size="sm" on:click={() => handleContextAction('unpin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.unpin}</Button>
+          <Button variant="quiet" size="md" on:click={() => handleContextAction('unpin')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.unpin}</Button>
         {:else}
-          <Button variant="ghost" size="sm" on:click={() => handleContextAction('pin')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.pin}</Button>
+          <Button variant="quiet" size="md" on:click={() => handleContextAction('pin')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.pin}</Button>
         {/if}
         {#if contextFavorite}
-          <Button variant="ghost" size="sm" data-testid="context-favorite" on:click={() => handleContextAction('unfavorite')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.editor.favoriteRemove}</Button>
+          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('unfavorite')} class={menuItemClass} role="menuitem">{$localizedText.editor.favoriteRemove}</Button>
         {:else}
-          <Button variant="ghost" size="sm" data-testid="context-favorite" on:click={() => handleContextAction('favorite')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.editor.favoriteAdd}</Button>
+          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('favorite')} class={menuItemClass} role="menuitem">{$localizedText.editor.favoriteAdd}</Button>
         {/if}
-        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+        <div class={menuSeparatorClass} role="separator"></div>
       {/if}
-      <Button variant="ghost" size="sm" on:click={() => handleContextAction('setIcon')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.editIcon}</Button>
-      <Button variant="ghost" size="sm" on:click={() => handleContextAction('rename')} class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition" role="menuitem">{$localizedText.sidebar.context.rename}</Button>
+      <Button variant="quiet" size="md" on:click={() => handleContextAction('setIcon')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.editIcon}</Button>
+      <Button variant="quiet" size="md" on:click={() => handleContextAction('rename')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.rename}</Button>
       {#if !contextMenu.isDir}
-        <Button variant="ghost" size="sm"
+        <Button variant="quiet" size="md"
           type="button"
           data-testid="bulk-tag"
           role="menuitem"
           on:click={() => { bulkTagPaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [contextMenu.targetPath]; showBulkTagPrompt = true; bulkTagValue = ''; bulkError = ''; closeContextMenu(); }}
-          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
+          class={menuItemClass}
         >
           {contextMenu.selectionPaths?.length > 1
             ? $localizedText.sidebar.context.tagSelected(contextMenu.selectionPaths.length)
             : $localizedText.sidebar.context.addTag}
         </Button>
-        <Button variant="ghost" size="sm"
+        <Button variant="quiet" size="md"
           type="button"
           data-testid="duplicate-note"
           role="menuitem"
           on:click={() => { duplicateTarget = contextMenu.targetPath; closeContextMenu(); duplicateNote(); }}
-          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
+          class={menuItemClass}
         >
           {$localizedText.sidebar.context.duplicate}
         </Button>
-        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+        <div class={menuSeparatorClass} role="separator"></div>
       {/if}
       {#if canRevealInFinder}
-        <Button variant="ghost" size="sm"
+        <Button variant="quiet" size="md"
           type="button"
           data-testid="show-in-finder"
           role="menuitem"
           on:click={() => revealInFinder(contextMenu.targetPath)}
-          class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[var(--border-subtle)] focus-visible:bg-[var(--border-subtle)] transition"
+          class={menuItemClass}
         >
           {$localizedText.sidebar.context.showInFinder}
         </Button>
-        <div class="h-[1px] bg-[var(--border-subtle)] my-1"></div>
+        <div class={menuSeparatorClass} role="separator"></div>
       {/if}
-      <Button variant="ghost" size="sm" on:click={() => handleContextAction('delete')} role="menuitem" class="w-full text-left px-4 py-2 text-xs uppercase tracking-widest outline-none hover:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red-text)] transition">
+      <Button variant="quiet" size="md" on:click={() => handleContextAction('delete')} role="menuitem" class="{menuItemClass} {menuDangerClass}">
         {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
       </Button>
     </div>

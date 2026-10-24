@@ -1,5 +1,6 @@
 <script>
   import { cardExcerpt } from '../lib/card-excerpt.js';
+  import { menuDangerClass, menuItemClass, menuPanelClass, menuSeparatorClass } from '../lib/menu-style.js';
   import { hasConflictMarkers } from '../lib/conflict-markers.js';
   import { createEventDispatcher, onMount, tick } from 'svelte';
   import { boardColumnCount, boardSort, boardTag, fittingColumnCounts, homeRecentTotal, loadHomeRecentNotes, loadHomeTags } from '../lib/dashboard.js';
@@ -424,31 +425,31 @@
 {#if contextMenu.show}
   <div
     bind:this={contextMenuEl}
-    class="fixed z-[130] w-48 max-sm:w-72 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-lg shadow-black/10"
+    class="fixed z-[130] w-56 max-sm:w-72 overflow-hidden {menuPanelClass}"
     style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     role="menu"
     tabindex="-1"
     on:click|stopPropagation
     on:keydown={handleMenuKeys}
   >
-    <Button variant="ghost" size="sm" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
+    <Button variant="quiet" size="md" role="menuitem" data-testid="card-pin-toggle" on:click={() => togglePin(contextMenu.note)} class={menuItemClass}>
       <Pin size="14" strokeWidth="1.7" fill={contextMenu.note?.pinned ? 'currentColor' : 'none'} aria-hidden="true" /> {contextMenu.note?.pinned ? $localizedText.sidebar.context.unpin : $localizedText.sidebar.context.pin}
     </Button>
-    <Button variant="ghost" size="sm" role="menuitem" on:click={() => openFull(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
+    <Button variant="quiet" size="md" role="menuitem" on:click={() => openFull(contextMenu.note)} class={menuItemClass}>
       <ExternalLink size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.openFull}
     </Button>
-    <Button variant="ghost" size="sm" role="menuitem" on:click={() => revealNote(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
+    <Button variant="quiet" size="md" role="menuitem" on:click={() => revealNote(contextMenu.note)} class={menuItemClass}>
       <PanelTop size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.editorHeader.revealInTree}
     </Button>
-    <Button variant="ghost" size="sm" role="menuitem" on:click={() => copyPath(contextMenu.note)} class="w-full justify-start gap-2 px-3 normal-case">
+    <Button variant="quiet" size="md" role="menuitem" on:click={() => copyPath(contextMenu.note)} class={menuItemClass}>
       <Copy size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.copyPath}
     </Button>
     {#if canRevealInFinder}
-      <Button variant="ghost" size="sm" role="menuitem" data-testid="card-show-in-finder" on:click={() => revealInFinder(contextMenu.note?.path)} class="w-full justify-start gap-2 px-3 normal-case">
+      <Button variant="quiet" size="md" role="menuitem" data-testid="card-show-in-finder" on:click={() => revealInFinder(contextMenu.note?.path)} class={menuItemClass}>
         <FolderOpen size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.showInFinder}
       </Button>
     {/if}
-    <div class="mt-1 border-t border-[var(--border-subtle)] px-3 py-2">
+    <div class="mt-1 border-t border-line px-4 py-2">
       <div class="mb-2 flex items-center gap-2 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-secondary)]">
         <Palette size="12" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.app.board.color}
       </div>
