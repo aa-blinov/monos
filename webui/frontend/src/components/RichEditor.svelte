@@ -1146,8 +1146,10 @@
         {#each wikiLinkHere.status.matches as match}
           <span role="presentation" on:mousedown|preventDefault>
           <Button variant="ghost" size="sm" class="w-full flex-col items-start justify-start gap-0 normal-case" on:click={() => openWikiNote(match)}>
-            <span class="max-w-full truncate text-sm">{match.name}</span>
-            <span class="max-w-full truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{match.path.startsWith('notes/') ? match.path.slice(6) : match.path}</span>
+            <span class="flex min-w-0 max-w-full flex-col items-start">
+              <span class="max-w-full truncate text-sm">{match.name}</span>
+              <span class="max-w-full truncate text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{match.path.startsWith('notes/') ? match.path.slice(6) : match.path}</span>
+            </span>
           </Button>
         </span>
         {/each}

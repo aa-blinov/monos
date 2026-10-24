@@ -134,7 +134,7 @@
                 <Button variant="primary" size="sm" data-testid="tag-rename-save" disabled={busy} on:click={confirmRename}>{$localizedText.tags.save}</Button>
                 <Button variant="secondary" size="sm" on:click={() => editing = null}>{$localizedText.tags.cancel}</Button>
               {:else}
-                <Button variant="ghost" size="sm" class="min-w-0 flex-1 justify-start gap-2 px-2 normal-case" on:click={() => openTag(entry.tag)}>
+                <Button variant="ghost" size="sm" class="min-w-0 flex-1 justify-start gap-2 !px-2 normal-case" on:click={() => openTag(entry.tag)}>
                   <Hash size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
                   <span class="truncate text-sm text-[var(--text-primary)]">{entry.tag}</span>
                 </Button>

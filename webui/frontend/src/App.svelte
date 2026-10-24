@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from 'svelte';
 import { get } from 'svelte/store';
   import { Router, Route, navigate } from 'svelte-routing';
+  import { Button } from '@monos/ui';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
   import NoteBoard from './components/NoteBoard.svelte';
@@ -1227,13 +1228,9 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
                     <p class="mt-3 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
                       {$localizedText.app.board.loadFailedHint}
                     </p>
-                    <button
-                      type="button"
-                      class="mt-8 text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] transition hover:opacity-70"
-                      on:click={() => loadHomeRecentNotes()}
-                    >
+                    <Button class="mt-8" on:click={() => loadHomeRecentNotes()}>
                       {$localizedText.app.board.retry}
-                    </button>
+                    </Button>
                   </div>
                 {:else if $homeRecentLoading}
                   <div class="py-16 text-center text-xs uppercase tracking-widest text-[var(--text-secondary)]">
@@ -1354,10 +1351,10 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
       <div class="flex items-center gap-4 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-5 py-3 text-sm shadow-2xl">
         {#if undoTrashError}
           <span class="min-w-0 flex-1 text-[var(--red)]">{undoTrashError}</span>
-          <button type="button" class="inline-flex min-h-9 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition" on:click={() => undoTrashError = ''}>{$localizedText.app.dismiss}</button>
+          <Button variant="text" size="sm" on:click={() => undoTrashError = ''}>{$localizedText.app.dismiss}</Button>
         {:else}
           <span class="min-w-0 flex-1 truncate">{$localizedText.app.trashed($trashedNotice.notes.length === 1 ? $trashedNotice.notes[0].name : '', $trashedNotice.notes.length)}</span>
-          <button type="button" class="inline-flex min-h-9 shrink-0 items-center text-xs uppercase tracking-widest font-bold hover:opacity-60 transition" on:click={undoLastTrash}>{$localizedText.app.undoTrash}</button>
+          <Button variant="text" size="sm" class="shrink-0" on:click={undoLastTrash}>{$localizedText.app.undoTrash}</Button>
         {/if}
       </div>
     </div>

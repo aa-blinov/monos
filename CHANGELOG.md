@@ -17,6 +17,24 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.16.36 — 2026-10-24
+
+### Fixed
+
+- The board's retry button and the trash notice's dismiss and undo buttons are
+  kit `Button`s; the last native text buttons were left behind by the move onto
+  `@monos/ui`.
+- The phone note footer: the Folder and Links buttons stack the icon over the
+  label again, and the property buttons wrap to a second row instead of
+  overlapping the History and Export icons.
+- Rows that put `justify-between` on a kit `Button` (related notes, attachment
+  folders, a Settings list) spread their name and count again, and the
+  ambiguous wiki-link picker stacks the name over the path. Both came from the
+  kit `Button` label wrapper; the app is on `@monos/ui` 1.3.1.
+- Attachments: the thumbnails, the note links and the row above the grid lose
+  the kit button's side padding, so they line up with the cards and the broken
+  image label is no longer cut.
+
 ## 1.16.35 — 2026-10-22
 
 ### Changed

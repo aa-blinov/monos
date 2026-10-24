@@ -1727,8 +1727,8 @@
          относятся к запрошенной заметке, а текст ещё от прежней. -->
     <div class="relative flex h-11 shrink-0 items-center gap-2 max-sm:h-auto max-sm:gap-0 max-sm:py-1 border-t border-[var(--note-page-border)] bg-[var(--note-page-panel)] px-2 sm:px-4" data-testid="editor-footer" inert={isLoading}>
       <!-- In a conflict the properties are part of what is being resolved: they wait, dimmed, until it is. -->
-      <div class="flex min-w-0 flex-1 items-center gap-2 transition-opacity" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
-        <div class="relative min-w-0 sm:flex-1" data-panel-anchor="category">
+      <div class="flex min-w-0 flex-1 items-center gap-2 transition-opacity max-sm:flex-wrap" class:opacity-40={inConflict} data-testid="note-properties" inert={isLoading || inConflict} title={inConflict ? $localizedText.editor.conflictPropertiesLocked : undefined}>
+        <div class="relative min-w-0 max-sm:shrink-0 sm:flex-1" data-panel-anchor="category">
           <Button
             variant="ghost"
             size="sm"
@@ -1740,7 +1740,7 @@
             class="min-w-0 max-w-full justify-start gap-1.5 px-2 normal-case max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1 {propertyPanel === 'category' ? 'bg-surface text-ink' : 'text-ink-soft'}"
             on:click={() => togglePropertyPanel('category')}
           >
-            <Folder size="14" strokeWidth="1.7" aria-hidden="true" />
+            <Folder slot="icon" size="14" strokeWidth="1.7" aria-hidden="true" />
             <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.folder}</span>
             <span class="hidden min-w-0 truncate sm:inline">{currentFolderLabel}</span>
           </Button>
@@ -1941,10 +1941,10 @@
               aria-haspopup="dialog"
               aria-expanded={propertyPanel === 'related'}
               aria-label={`${$localizedText.editor.localNavigation}: ${relatedCount}`}
-              class="normal-case"
+              class="normal-case max-sm:h-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:flex-col max-sm:justify-center max-sm:gap-0.5 max-sm:px-1"
               on:click={() => togglePropertyPanel('related')}
             >
-              <Link2 size="14" strokeWidth="1.7" aria-hidden="true" />
+              <Link2 slot="icon" size="14" strokeWidth="1.7" aria-hidden="true" />
               <span class="whitespace-nowrap text-[length:var(--text-whisper)] leading-none sm:hidden">{$localizedText.editor.footerShort.links} {relatedCount}</span>
               <span class="hidden sm:inline">{$localizedText.editor.localNavigation}</span>
               <span class="tabular-nums max-sm:hidden">{relatedCount}</span>
