@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.4 — 2026-10-24
+
+### Fixed
+
+- The macOS app opens after a download. The build had no signing identity, so the bundle's seal did not match its
+  `Info.plist` (`codesign --verify` failed with "code has no resources but signature indicates they must be present"),
+  and with the quarantine mark a browser puts on a file macOS did not start the app at all. An ad-hoc signature over the
+  whole bundle (`scripts/adhoc-sign.cjs`, run after packaging; a real identity is left alone, and the build fails if the
+  signature does not verify) puts it on the usual path for an app that is not notarized: macOS says it could not check
+  the developer and **Open Anyway** in Privacy & Security opens it, as the release notes describe. Checked on a copy of
+  the arm64 build with the quarantine mark set: it reaches that dialog; the 1.17.3 build did not start.
+
 ## 1.17.3 — 2026-10-24
 
 ### Fixed

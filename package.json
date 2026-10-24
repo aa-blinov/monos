@@ -1,6 +1,6 @@
 {
   "name": "monos",
-  "version": "1.17.3",
+  "version": "1.17.4",
   "engines": {
     "node": ">=22"
   },
@@ -39,6 +39,7 @@
   "build": {
     "appId": "app.monos.notes",
     "productName": "Monos",
+    "afterSign": "scripts/adhoc-sign.cjs",
     "directories": {
       "output": "release"
     },
