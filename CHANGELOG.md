@@ -17,6 +17,21 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.6 — 2026-10-24
+
+### Fixed
+
+- A choice kept on the server (sort order of attachments, board columns and the like) is no longer undone by a reload right
+  after the click. The reloaded page could read the settings before the write from the closing page had landed, and the
+  older server value won. A choice the server has not confirmed is marked in the browser's copy, wins on the next load
+  and is sent again; the mark goes once the server has it.
+
+### Changed
+
+- Pinned notes in the sidebar show the note name only. The folder line under each name read like a second note in the
+  list and was hard to tell apart; the path is still shown inside the note once it is open. The rows now follow the
+  tree's numbers: 32px tall, 4px apart (they were 2px) and the same right edge (they ran 8px past it).
+
 ## 1.17.5 — 2026-10-24
 
 ### Fixed

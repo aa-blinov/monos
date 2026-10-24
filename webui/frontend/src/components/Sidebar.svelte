@@ -376,11 +376,6 @@
     renameRestorePath = '';
   }
 
-  function recentPathLabel(note) {
-    const relativePath = note.path?.startsWith('notes/') ? note.path.slice(6) : note.path || '';
-    return relativePath.split('/').slice(0, -1).join('/');
-  }
-
   function movedPath(sourcePath, targetPath) {
     const targetDir = targetPath === 'notes' ? 'notes' : targetPath;
     return `${targetDir}/${basename(sourcePath)}`;
@@ -1202,9 +1197,8 @@
       class="mb-4 shrink-0 px-4"
     >
       <!-- However many are pinned, the list takes a third of the panel at most and scrolls inside. -->
-      <div class="max-h-[32vh] space-y-0.5 overflow-y-auto">
+      <div class="max-h-[32vh] space-y-1 overflow-y-auto pr-2">
         {#each $pinnedNotes as note (note.path)}
-          {@const pathLabel = recentPathLabel(note)}
           <SidebarItem
             draggable="true"
             on:dragstart={(event) => writeNoteDragPayload(event.dataTransfer, [note.path])}
@@ -1213,12 +1207,8 @@
               event.preventDefault();
               handleRightClick({ detail: { x: event.clientX, y: event.clientY, path: note.path, name: note.name, isDir: false } });
             }}
-            class="min-h-10"
           >
             <div class="truncate text-xs font-medium tracking-tight">{note.name}</div>
-            {#if pathLabel}
-              <div class="mt-0.5 truncate text-[length:var(--text-whisper)] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{pathLabel}</div>
-            {/if}
           </SidebarItem>
         {/each}
       </div>

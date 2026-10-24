@@ -254,3 +254,73 @@ test('смена, сделанная при применении серверн�
     globalThis.localStorage = prev;
   }
 });
+
+test('выбор, который сервер ещё не подтвердил, не отменяется его старым значением после перезагрузки', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    const sort = mod.persisted('attachmentsSort', 'new', { server: true });
+    mod.startPreferenceSync({ attachmentsSort: 'new' }, () => new Promise(() => {})); // the write is still in flight
+    sort.set('size');
+    mod.flushPreferences(); // the page is closing: the answer never comes back
+
+    // The reloaded page reads the settings before that write has landed: the server still says "new".
+    const second = await freshModule();
+    const sort2 = second.persisted('attachmentsSort', 'new', { server: true });
+    const sent = [];
+    second.startPreferenceSync({ attachmentsSort: 'new' }, (payload) => { sent.push(payload); return Promise.resolve({ ok: true }); });
+    assert.equal(get(sort2), 'size', 'the choice made a moment ago stays');
+    assert.deepEqual(sent, [{ attachmentsSort: 'size' }], 'and goes to the server again');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(globalThis.localStorage.getItem('monosPendingPreferences'), null, 'once the server has it, the mark goes');
+
+    // A third load takes the server's value as usual.
+    const third = await freshModule();
+    const sort3 = third.persisted('attachmentsSort', 'new', { server: true });
+    third.startPreferenceSync({ attachmentsSort: 'name' }, () => assert.fail('nothing to send'));
+    assert.equal(get(sort3), 'name');
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('отказ сервера оставляет отметку: выбор отправится при следующей загрузке', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    const kind = mod.persisted('attachmentsKind', 'all', { server: true });
+    mod.startPreferenceSync({}, () => Promise.resolve({ ok: false }));
+    kind.set('pdf');
+    mod.flushPreferences();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('monosPendingPreferences')), { attachmentsKind: 'pdf' });
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
+
+test('неподтверждённый выбор переживает сброс быстрой копии: побеждает значение из отметки, а не умолчание', async () => {
+  const mod = await freshModule();
+  const prev = globalThis.localStorage;
+  try {
+    globalThis.localStorage = new MemoryStorage();
+    const width = mod.persisted('contentWidth', 'medium', { server: true });
+    mod.startPreferenceSync({}, () => new Promise(() => {}));
+    width.set('broad');
+    mod.flushPreferences();
+
+    // A new origin right away: the quick copy of the key is gone, and a new store writes its default into it.
+    globalThis.localStorage.removeItem('contentWidth');
+    const second = await freshModule();
+    const width2 = second.persisted('contentWidth', 'medium', { server: true });
+    assert.equal(globalThis.localStorage.getItem('contentWidth'), 'medium');
+    const sent = [];
+    second.startPreferenceSync({ contentWidth: 'broad' }, (payload) => { sent.push(payload); return Promise.resolve({ ok: true }); });
+    assert.equal(get(width2), 'broad');
+    assert.deepEqual(sent, [{ contentWidth: 'broad' }], 'the default is never sent over the choice');
+  } finally {
+    globalThis.localStorage = prev;
+  }
+});
