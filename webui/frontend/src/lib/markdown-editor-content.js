@@ -286,7 +286,9 @@ function delimiterAlign(cell) {
 
 function isTableDelimiterLine(line) {
   const cells = splitTableRow(line);
-  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, '')));
+  // GFM: one hyphen is enough, with a colon at either end for alignment. Three were demanded before, and `:--` or
+  // `--:` left the whole table as text.
+  return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell.replace(/\s+/g, '')));
 }
 
 function isTableBodyLine(line) {

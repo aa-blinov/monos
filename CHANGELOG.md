@@ -17,6 +17,16 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.11 — 2026-10-24
+
+### Fixed
+
+- A table whose delimiter row has one or two hyphens (`| :-- | --: |`, `| - | - |`, or a table with no outer pipes)
+  is a table again. The editor asked for three hyphens, so these tables stayed as lines of text; Markdown only needs one,
+  with a colon at either end for alignment. The file is not changed by opening it.
+- Headings of level 5 and 6 are headings in the editor. The schema listed levels 1 to 4, so an H5 was drawn as big as
+  an H1. They now come in decreasing sizes and keep their level when the heading is edited.
+
 ## 1.17.10 — 2026-10-24
 
 ### Fixed
