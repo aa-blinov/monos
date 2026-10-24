@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.8 — 2026-10-24
+
+### Fixed
+
+- The hint of an icon button (the "More" button at the right of the note's footer was the visible case) is placed
+  again. Since the move onto the kit the button's node was never handed to the hint, so the hint had no position: it
+  was drawn on top of the button and ran past the window edge. It now sits above the button, aligned to its right edge
+  and inside the window. The same node reaches the panels that give focus back to a button when they close.
+
 ## 1.17.7 — 2026-10-24
 
 ### Changed

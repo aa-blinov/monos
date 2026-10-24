@@ -1,5 +1,5 @@
 <script>
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { IconButton as KitIconButton } from '@monos/ui';
   import { HOVER_DELAY, placeTooltip, tooltipClass } from '../lib/tooltip.js';
 
@@ -13,8 +13,17 @@
   let className = '';
   export { className as class };
 
-  // The node itself, for a parent that has to hand the focus back when its panel closes.
+  // The node itself, for a parent that has to hand the focus back when its panel closes. The kit's IconButton does
+  // not hand its node out (its `buttonEl` is not a prop), so it is read from the wrapper below.
   export let buttonEl = null;
+  let hostEl;
+
+  function findButton() {
+    if (hostEl && !buttonEl) buttonEl = hostEl.querySelector('button');
+  }
+
+  onMount(findButton);
+  $: if (hostEl) findButton();
 
   $: tooltipClassName = tooltipClass(tooltip);
 
@@ -23,8 +32,10 @@
   let tooltipStyle = '';
 
   function positionTooltip() {
-    if (!buttonEl || !tooltipEl || typeof window === 'undefined') return;
-    const { left, top } = placeTooltip(buttonEl.getBoundingClientRect(), tooltipEl.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight }, { position: tooltipPosition, align: tooltipAlign });
+    findButton();
+    const anchor = buttonEl || hostEl;
+    if (!anchor || !tooltipEl || typeof window === 'undefined') return;
+    const { left, top } = placeTooltip(anchor.getBoundingClientRect(), tooltipEl.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight }, { position: tooltipPosition, align: tooltipAlign });
     tooltipStyle = `left: ${left}px; top: ${top}px;`;
   }
 
@@ -57,6 +68,7 @@
 </script>
 
 <span
+  bind:this={hostEl}
   class="inline-flex"
   role="presentation"
   on:mouseenter={showTooltip}
@@ -71,7 +83,6 @@
 >
   <KitIconButton
     bare
-    bind:buttonEl
     {type}
     {disabled}
     {label}
