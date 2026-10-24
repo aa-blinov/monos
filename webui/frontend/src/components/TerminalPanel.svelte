@@ -44,6 +44,13 @@
   /** @type {Array<{ key: number, sessionId: number|null, term: any, fit: any, search: any, host: HTMLElement|null, exited: boolean, starting: boolean, title: string, firstOutput: Promise<void>|null, resolveFirst: (() => void)|null }>} */
   let tabs = [];
   let activeKey = null;
+  let panelEl;
+
+  // The tab strip scrolls when the shells do not fit, so the shell that was just opened or picked is brought into view.
+  function revealActiveTab() {
+    panelEl?.querySelector('[role="tab"][aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }
+  $: if (activeKey) void tick().then(revealActiveTab);
   $: terminalTabs = tabs.map((tab, index) => ({
     id: tab.key,
     label: tab.title || `${$localizedText.terminal.tab} ${index + 1}`,
@@ -446,6 +453,7 @@
 
 {#if terminalBridge}
   <section
+    bind:this={panelEl}
     class="relative flex shrink-0 flex-col border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]"
     class:hidden={!$terminalOpen}
     style="height: {height}px"
@@ -460,10 +468,12 @@
       title={$localizedText.terminal.resize}
     ></div>
     <header class="flex h-8 shrink-0 items-center gap-2 px-3 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-      <span class="font-bold text-[var(--text-secondary)]">{$localizedText.terminal.title}</span>
-      <!-- Tabs: each its own shell. -->
-      <div class="flex min-w-0 items-center gap-1">
+      <span class="shrink-0 font-bold text-[var(--text-secondary)]">{$localizedText.terminal.title}</span>
+      <!-- Tabs: each its own shell. They take the room that is left and scroll in it, so the buttons at the right
+           stay where they are however many shells are open. -->
+      <div class="flex min-w-0 flex-1 items-center gap-1 [&_[role=tablist]::-webkit-scrollbar]:hidden [&_[role=tablist]]:[scrollbar-width:none]">
         <Tabs
+          class="min-w-0"
           items={terminalTabs}
           bind:value={activeKey}
           variant="bare"
@@ -473,17 +483,11 @@
           on:close={(event) => closeTab(event.detail)}
         />
         {#if tabs.length < MAX_TABS}
-          <TooltipIconButton class={iconButton} label={$localizedText.terminal.newTab} tooltip={$localizedText.terminal.newTab} on:click={() => newTab()}>
+          <TooltipIconButton class="{iconButton} shrink-0" label={$localizedText.terminal.newTab} tooltip={$localizedText.terminal.newTab} on:click={() => newTab()}>
             <Plus size="14" strokeWidth="1.7" aria-hidden="true" />
           </TooltipIconButton>
         {/if}
-      <span class="ml-auto"></span>
-      {#if $agentReview.changes?.length}
-        <Button variant="ghost" size="sm" data-testid="agent-review-open" class="shrink-0 text-[var(--blue)]" on:click={() => agentReviewOpen.set(true)}>{$localizedText.agentReview.button($agentReview.changes.length)}</Button>
-      {/if}
-      <Button variant="ghost" size="sm" data-testid="agent-launch" class="shrink-0" on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}>
-        <Bot size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
-      </Button>
+      </div>
       <!-- Search, restart and the agent's rules: needed now and then, so behind ⋯ (⌘F still searches). A dot on
            ⋯ says the rules are missing. -->
       <Menu
@@ -510,10 +514,19 @@
           </TooltipIconButton>
         </svelte:fragment>
       </Menu>
-      <TooltipIconButton class={iconButton} label={$localizedText.terminal.hide} tooltip={$localizedText.terminal.hide} tooltipAlign="end" on:click={() => terminalOpen.set(false)}>
+      <TooltipIconButton class="{iconButton} shrink-0" label={$localizedText.terminal.hide} tooltip={$localizedText.terminal.hide} tooltipAlign="end" on:click={() => terminalOpen.set(false)}>
         <X size="14" strokeWidth="1.7" aria-hidden="true" />
       </TooltipIconButton>
     </header>
+    <!-- The agent's own row, under the tabs and flush right: it does not move when a shell is opened or closed. -->
+    <div class="flex h-8 shrink-0 items-center justify-end gap-4 px-3" data-testid="terminal-agent-row">
+      {#if $agentReview.changes?.length}
+        <Button variant="text" size="sm" data-testid="agent-review-open" class="shrink-0 !px-0 text-[var(--blue)]" on:click={() => agentReviewOpen.set(true)}>{$localizedText.agentReview.button($agentReview.changes.length)}</Button>
+      {/if}
+      <Button variant="text" size="sm" data-testid="agent-launch" class="shrink-0 !px-0" on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}>
+        <Bot size="14" strokeWidth="1.7" aria-hidden="true" slot="icon" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
+      </Button>
+    </div>
     {#if searchOpen}
       <!-- Search in the visible tab: Enter for the next match, Shift+Enter for the one before, Esc to close. -->
       <div class="absolute right-3 top-9 z-20 flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-lg" data-testid="terminal-search">

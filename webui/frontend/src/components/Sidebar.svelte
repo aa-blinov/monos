@@ -1587,7 +1587,7 @@
 
 <!-- Templates Modal -->
 {#if showTemplatesModal}
-  <ModalShell title={$localizedText.sidebar.templateLibrary} subtitle={$localizedText.sidebar.templateLibrarySubtitle} widthClass="w-[min(94vw,68rem)] h-[88vh] max-h-[88vh] overflow-hidden flex flex-col" closeOnEscape={true} on:close={() => showTemplatesModal = false}>
+  <ModalShell title={$localizedText.sidebar.templateLibrary} subtitle={$localizedText.sidebar.templateLibrarySubtitle} widthClass="w-[min(94vw,68rem)] h-[88vh] max-h-[88vh]" fill closeOnEscape={true} on:close={() => showTemplatesModal = false}>
     <div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
       <div class="min-h-0 flex flex-col overflow-hidden">
         <div class="mb-3">
@@ -1618,7 +1618,7 @@
                     selected={selectedTemplateId === template.id}
                     padding="none"
                     on:click={() => selectTemplate(template)}
-                    class="w-full flex flex-col items-start justify-start gap-0 p-2.5 normal-case"
+                    class="w-full flex flex-col items-start justify-start gap-0 p-2.5 text-left normal-case"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0 flex-1">
