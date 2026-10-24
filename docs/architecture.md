@@ -469,6 +469,12 @@ libsecret) before it reaches the settings table, with no new dependency. Outside
 Electron there is no keychain, so the token stays plaintext and
 `git_token_protected: 0` records that fact rather than pretending otherwise.
 
+The keychain can stop the whole app behind a password dialog (the backend lives
+in the main process), so it is read only where the token is used. `GET
+/api/settings` answers `git_token_set` and never the token; `GET
+/api/settings/secret?key=git_token` decrypts on demand and answers this computer
+only. In a save, an empty `git_token` is ignored and `null` clears the token.
+
 An encrypted blob with no reachable keychain, because the database moved to another
 machine or a locked keychain, reads as *no token*. It must never fall back to
 the raw bytes, which would be pushed at GitHub as if it were a credential.

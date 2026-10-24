@@ -8,7 +8,7 @@ import { assertFileName, canonicalAppPath, folderLinkPatterns, headingLinkPatter
 import { indexAllFiles, indexDirectoryTree, indexFile } from '../indexing.js';
 import { upsertFrontmatter } from '../frontmatter.js';
 import { parseStoredProperties } from '../properties.js';
-import { isEncryptedSecret, protectSecret, revealSecret } from './secret-store.js';
+import { protectSecret, revealSecret } from './secret-store.js';
 import { noteCardPayload, parseTags } from './helpers.js';
 import { requireBodyFields } from './validate.js';
 import { isThisComputerRequest } from '../lan-access.js';
@@ -832,7 +832,12 @@ export function registerNoteRoutes(app) {
   const MAX_SETTING_TEXT = 8192;
   const fromThisComputer = (req) => isThisComputerRequest({ remoteAddress: req.socket.remoteAddress, headers: req.headers });
 
-  app.get('/api/settings', async (req, res) => {
+  // The keychain asks for the login password and the whole app waits behind that dialog (the backend lives in the main
+  // process), so the settings never decrypt the token: they say whether one is stored. The text itself comes from
+  // `/api/settings/secret`, asked for only where it is used.
+  const SECRET_KEYS = ['git_token'];
+
+  app.get('/api/settings', (req, res) => {
     try {
       const rows = getDb().prepare('SELECT key, value FROM settings').all();
       const settings = {};
@@ -840,18 +845,30 @@ export function registerNoteRoutes(app) {
         try { settings[row.key] = JSON.parse(row.value); }
         catch { settings[row.key] = row.value; }
       }
-      if (!fromThisComputer(req)) {
-        for (const key of SECRET_SETTINGS) delete settings[key];
-        res.json(settings);
-        return;
-      }
-      // The frontend needs a working token to query the repo list; it must not
-      // receive the keychain blob.
-      if (typeof settings.git_token === 'string' && isEncryptedSecret(settings.git_token)) {
-        const { value } = await revealSecret(settings.git_token);
-        settings.git_token = value;
-      }
+      const tokenStored = typeof settings.git_token === 'string' && settings.git_token !== '';
+      for (const key of SECRET_SETTINGS) delete settings[key];
+      if (fromThisComputer(req)) settings.git_token_set = tokenStored;
       res.json(settings);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get('/api/settings/secret', async (req, res) => {
+    try {
+      if (!fromThisComputer(req)) {
+        return res.status(403).json({ detail: 'Only this computer can read this secret', code: 'this_computer_only' });
+      }
+      const key = String(req.query.key || '');
+      if (!SECRET_KEYS.includes(key)) throw httpError(400, 'This setting is not a secret', 'invalid_secret');
+      const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key);
+      let stored = row?.value ?? '';
+      try {
+        const parsed = JSON.parse(stored);
+        stored = typeof parsed === 'string' ? parsed : '';
+      } catch { /* kept as it was written */ }
+      const { value } = await revealSecret(stored);
+      res.json({ value });
     } catch (error) {
       sendError(res, error);
     }
@@ -892,6 +909,15 @@ export function registerNoteRoutes(app) {
             ignored.push(key);
           }
         }
+      }
+      // The form saves the whole settings object, so an empty text or the "a token is stored" flag is what it holds
+      // while the token has not been revealed; neither may replace the token. Only a text sets it, only null clears it.
+      delete payload.git_token_set;
+      delete payload.git_token_protected;
+      if (payload.git_token === '') delete payload.git_token;
+      if (payload.git_token === null) {
+        db.prepare('DELETE FROM settings WHERE key IN (?, ?)').run('git_token', 'git_token_protected');
+        delete payload.git_token;
       }
       // The git token is a credential, not a preference: wrap it in the OS
       // keychain before it ever reaches the settings table.

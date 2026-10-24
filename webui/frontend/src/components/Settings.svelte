@@ -48,11 +48,16 @@
   function resetGitAuth() {
     confirmingGitReset = false;
     isAuthenticated = false;
+    gitTokenStored = false;
+    tokenFromStore = false;
     settings.git_token = '';
     settings.git_owner = DEFAULT_GIT_OWNER;
     settings.git_repo = '';
     gitRepos = [];
     gitBranches = [];
+    // An empty token in a later save would be ignored by the server (it is what the form holds before the token is
+    // revealed), so signing out says "clear it" explicitly.
+    void fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ git_token: null, git_owner: DEFAULT_GIT_OWNER, git_repo: '' }) }).catch((e) => console.error(e));
   }
   // Filled from the token's GitHub login after Authorize; an invented owner would point at someone else's account.
   const DEFAULT_GIT_OWNER = '';
@@ -137,6 +142,11 @@
   let connectedTarget = { repo: '', branch: '' };
   let isSettingUp = false;
   let isAuthenticated = false;
+  // The settings say only that a token is stored: reading it wakes the macOS keychain, which can stop the whole app
+  // behind a password dialog. The text is fetched where it is used (`ensureGitToken`), and a token fetched that way
+  // is never sent back in a save.
+  let gitTokenStored = false;
+  let tokenFromStore = false;
   let isSyncing = false;
   let isCheckingStatus = false;
   let isExporting = false;
@@ -413,6 +423,8 @@
       if (r.ok) {
         const saved = await r.json();
         settings = { ...settings, ...saved };
+        gitTokenStored = saved.git_token_set === true;
+        delete settings.git_token_set;
         if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
         if (['system', 'light', 'dark'].includes(saved.themeMode)) $themeMode = saved.themeMode;
         if (saved.fontFamily) $fontFamily = saved.fontFamily;
@@ -432,14 +444,55 @@
       } catch { /* the placeholder stays */ }
     }
 
-    if (settings.git_token) {
-      isAuthenticated = true;
-      await fetchRepos();
-      if (settings.git_repo) {
-        await loadBranches();
-      }
-    }
+    // The lists need the token, so they wait until the sync part is in view (`gitListsWanted`).
+    if (gitTokenStored) isAuthenticated = true;
   }
+
+  // The token for GitHub calls: the one just typed, or the stored one, fetched the first time it is needed.
+  let tokenRequest = null;
+  function ensureGitToken() {
+    if (settings.git_token) return Promise.resolve(settings.git_token);
+    if (!gitTokenStored) return Promise.resolve('');
+    tokenRequest ??= (async () => {
+      try {
+        const response = await fetch('/api/settings/secret?key=git_token');
+        if (response.ok) {
+          const value = String((await response.json()).value || '');
+          if (value && !settings.git_token) {
+            settings.git_token = value;
+            tokenFromStore = true;
+          }
+        }
+      } catch (e) { console.error(e); }
+      finally { tokenRequest = null; }
+      return settings.git_token;
+    })();
+    return tokenRequest;
+  }
+
+  // The repository and branch lists are loaded once, when the sync part is first in view (at once without
+  // IntersectionObserver).
+  let gitListsWanted = false;
+  let gitListsLoaded = false;
+  function seenOnce(node) {
+    if (typeof IntersectionObserver === 'undefined') {
+      gitListsWanted = true;
+      return {};
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      gitListsWanted = true;
+      observer.disconnect();
+    });
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+  async function loadGitLists() {
+    gitListsLoaded = true;
+    await fetchRepos();
+    if (settings.git_repo) await loadBranches();
+  }
+  $: if (gitListsWanted && isAuthenticated && gitTokenStored && !gitListsLoaded) void loadGitLists();
 
   // The automatic sync takes the new choices at once: its timer restarts with the new interval.
   async function saveAutoSync() {
@@ -462,18 +515,21 @@
     try {
       // The form holds the settings as they were when the page opened: the live preferences go over them.
       const payload = { ...settings, ...preferenceSnapshot(), theme: $activeTheme, themeMode: $themeMode, fontFamily: $fontFamily, fontSize: $fontSize, editorFontSize: $editorFontSize, locale: $locale };
+      if (tokenFromStore || !payload.git_token) delete payload.git_token;
       await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (payload.git_token) gitTokenStored = true;
     } catch (e) { console.error(e); }
   }
 
   async function fetchRepos() {
-    if (!settings.git_token) return;
+    const token = await ensureGitToken();
+    if (!token) return;
     isLoadingRepos = true;
     try {
-      const r = await fetch(`/api/git/repos?token=${encodeURIComponent(settings.git_token)}`);
+      const r = await fetch(`/api/git/repos?token=${encodeURIComponent(token)}`);
       if (r.ok) gitRepos = normalizeRepoList(await r.json());
     } catch (e) { console.error(e); }
     finally { isLoadingRepos = false; }
@@ -496,6 +552,7 @@
       }
       gitRepos = normalizeRepoList(await reposR.json());
       isAuthenticated = true;
+      gitListsLoaded = true;
       if (gitRepos.length === 1) settings.git_repo = getRepoOptionValue(gitRepos[0]);
       await saveSettings();
       if (settings.git_repo) { await loadBranches(); await checkRepoSafety(); }
@@ -524,9 +581,10 @@
     repoSafety = null;
     scopeWarnings = [];
     const repo = getSelectedRepoFullName();
-    if (!repo.includes('/') || !settings.git_token) return;
+    const token = await ensureGitToken();
+    if (!repo.includes('/') || !token) return;
     try {
-      const res = await fetch(`/api/git/repo-check?token=${encodeURIComponent(settings.git_token)}&repo=${encodeURIComponent(repo)}`);
+      const res = await fetch(`/api/git/repo-check?token=${encodeURIComponent(token)}&repo=${encodeURIComponent(repo)}`);
       if (!res.ok) return;
       repoSafety = await res.json();
       scopeWarnings = repoSafety.scopeWarnings || [];
@@ -537,10 +595,11 @@
 
   async function loadBranches() {
     const repoFullName = getSelectedRepoFullName();
-    if (!settings.git_token || !repoFullName) return;
+    const token = await ensureGitToken();
+    if (!token || !repoFullName) return;
     isLoadingBranches = true;
     try {
-      const r = await fetch(`/api/git/branches?token=${encodeURIComponent(settings.git_token)}&repo=${encodeURIComponent(repoFullName)}`);
+      const r = await fetch(`/api/git/branches?token=${encodeURIComponent(token)}&repo=${encodeURIComponent(repoFullName)}`);
       if (r.ok) {
         gitBranches = normalizeBranchList(await r.json());
         if (gitBranches.length && !gitBranches.includes(settings.git_branch))
@@ -552,7 +611,8 @@
 
   async function setupGitRepo() {
     const repoFullName = getSelectedRepoFullName();
-    if (!settings.git_token || !repoFullName) return;
+    const token = await ensureGitToken();
+    if (!token || !repoFullName) return;
     isSettingUp = true;
     gitError = '';
     connectPhase = 'connecting';
@@ -565,7 +625,7 @@
       await saveSettings();
       const r = await fetch('/api/git/setup', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: settings.git_token, owner: settings.git_owner, repo: repoFullName, branch: settings.git_branch, device_name: settings.device_name })
+        body: JSON.stringify({ token, owner: settings.git_owner, repo: repoFullName, branch: settings.git_branch, device_name: settings.device_name })
       });
       const answer = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -1006,7 +1066,7 @@
     </section>
 
     <!-- GitHub Connection -->
-    <section class="space-y-5 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-sync" data-testid="sync-section" use:revealSection={'sync'}>
+    <section class="space-y-5 scroll-mt-24 border-t border-[var(--border-subtle)] pt-5 lg:scroll-mt-6" id="settings-sync" data-testid="sync-section" use:revealSection={'sync'} use:seenOnce>
       <h2 class="text-xs uppercase tracking-[0.2em] font-bold text-[var(--text-secondary)]">{$localizedText.settings.githubConnection}</h2>
 
       <!-- Help -->
@@ -1025,7 +1085,7 @@
         <label for="git-token" class="block text-xs text-[var(--text-secondary)] mb-1.5">{$localizedText.settings.personalAccessToken}</label>
         <div class="flex gap-3">
           <input type="text" name="username" autocomplete="username" value="token" class="hidden" aria-hidden="true" tabindex="-1" />
-          <FieldControl type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={$localizedText.settings.tokenPlaceholder} class="flex-1" disabled={isAuthenticated} />
+          <FieldControl type="password" name="token" id="git-token" autocomplete="new-password" bind:value={settings.git_token} placeholder={isAuthenticated ? '••••••••••••••••' : $localizedText.settings.tokenPlaceholder} class="flex-1" disabled={isAuthenticated} />
           {#if isAuthenticated}
             <Button variant="ghost" size="sm" class="shrink-0 text-danger-text" on:click={() => confirmingGitReset = true}>{$localizedText.settings.reset}</Button>
             {#if confirmingGitReset}
@@ -1134,7 +1194,7 @@
           variant="ghost"
           size="md"
           on:click={setupGitRepo}
-          disabled={isSettingUp || !settings.git_token || !getSelectedRepoFullName()}
+          disabled={isSettingUp || !(settings.git_token || gitTokenStored) || !getSelectedRepoFullName()}
         >
           {isSettingUp ? $localizedText.settings.connecting : $localizedText.settings.connectRepository}
         </Button>

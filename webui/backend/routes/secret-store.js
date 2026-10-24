@@ -17,6 +17,10 @@
  * keychain (`utilityProcess` offers no `safeStorage`). What removes the wait is
  * the answer "Always Allow" in that dialog: afterwards the keychain opens
  * without asking, and nothing waits.
+ *
+ * So `revealSecret` runs only where the token is used: never at start and never
+ * for a plain settings load (`GET /api/settings` reports `git_token_set`
+ * instead), only on `GET /api/settings/secret` and in the git routes.
  */
 
 const TOKEN_PREFIX = 'enc:v1:';
