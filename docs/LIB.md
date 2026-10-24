@@ -164,6 +164,8 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `sidebar-api.js` | Wrappers for the sidebar's HTTP endpoints (see also API wrappers above) |
 | `context-menu-position.js` | `computeContextMenuPosition(rect, menuSize, viewport)` — keeps the right-click menu inside the viewport; `availableMenuHeight` and the `fitMenuHeight` action keep a dropdown above the window's bottom edge |
 | `context-menu-position.test.js` | Bottom overflow, left overflow, exact fit |
+| `menu-style.js` | `menuPanelClass`, `menuItemClass`, `menuDangerClass`, `menuSeparatorClass` — one look for every menu the app draws itself (panel, left-aligned sentence-case rows, destructive row, separator), the same as the kit's `Menu` |
+| `menu-style.test.js` | Rows are left aligned and one size, no literal colours, the destructive row changes only colour |
 | `dashboard.js` | `buildDashboardSections(notes, opts)` — what cards appear on the home view, in what order, with what grouping |
 | `dashboard.test.js` | Empty notes, mixed categories, color grouping on/off |
 

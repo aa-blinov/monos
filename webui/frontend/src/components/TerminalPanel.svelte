@@ -19,6 +19,7 @@
   import SearchField from './SearchField.svelte';
   import { activeTheme, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
+  import { menuItemClass, menuPanelClass } from '../lib/menu-style.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
   import { findNoteLinks, notePathsOf } from '../lib/terminal-links.js';
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
@@ -558,12 +559,12 @@
         aria-label={$localizedText.terminal.title}
         on:click|stopPropagation
         on:keydown={handleTermMenuKeys}
-        class="fixed z-[130] w-44 overflow-hidden rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] py-1 shadow-2xl"
+        class="fixed z-[130] w-56 overflow-hidden {menuPanelClass}"
         style="left: {termMenuPos.x}px; top: {termMenuPos.y}px;"
       >
-        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-copy" disabled={!termMenu.canCopy} class="w-full justify-start px-3 normal-case" on:click={copySelection}>{$localizedText.terminal.copy}</Button>
-        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-paste" class="w-full justify-start px-3 normal-case" on:click={pasteClipboard}>{$localizedText.terminal.paste}</Button>
-        <Button variant="ghost" size="sm" role="menuitem" data-testid="terminal-select-all" class="w-full justify-start px-3 normal-case" on:click={selectAllOutput}>{$localizedText.terminal.selectAll}</Button>
+        <Button variant="quiet" size="md" role="menuitem" data-testid="terminal-copy" disabled={!termMenu.canCopy} class={menuItemClass} on:click={copySelection}>{$localizedText.terminal.copy}</Button>
+        <Button variant="quiet" size="md" role="menuitem" data-testid="terminal-paste" class={menuItemClass} on:click={pasteClipboard}>{$localizedText.terminal.paste}</Button>
+        <Button variant="quiet" size="md" role="menuitem" data-testid="terminal-select-all" class={menuItemClass} on:click={selectAllOutput}>{$localizedText.terminal.selectAll}</Button>
       </div>
     {/if}
   </section>

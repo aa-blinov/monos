@@ -17,6 +17,15 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.17.7 — 2026-10-24
+
+### Changed
+
+- Every menu now looks the same. The sort menu, the context menus of the sidebar and of a board card, the terminal's
+  menu and the editor's view and more-tools menus share one panel and one row: sentence case, left aligned, the same
+  height and spacing, a coloured row only for the destructive one (`lib/menu-style.js`). The sidebar menu used to be
+  upper case, widely spaced and centred, the card menu bold.
+
 ## 1.17.6 — 2026-10-24
 
 ### Fixed

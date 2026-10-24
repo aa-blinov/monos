@@ -6,6 +6,7 @@
   import { Editor } from '@tiptap/core';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { createRichEditorExtensions } from '../lib/richEditorExtensions.js';
+  import { menuItemClass, menuPanelClass } from '../lib/menu-style.js';
   import { markdownToEditorContent } from '../lib/markdown-editor-content.js';
   import { createNoteMarkdown } from '../lib/note-markdown.js';
   import { markdownTextFromClipboard } from '../lib/rich-editor-paste.js';
@@ -1056,14 +1057,14 @@
           <svelte:component this={control.icon} size="16" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
         {#if viewPanel === control.id}
-          <div class="absolute right-0 top-full z-30 mt-1 w-44 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={control.label}>
+          <div class="absolute right-0 top-full z-30 mt-1 w-56 {menuPanelClass}" role="menu" aria-label={control.label}>
             {#each control.options as option (option.value)}
               <Button
-                variant="ghost"
-                size="sm"
+                variant="quiet"
+                size="md"
                 role="menuitemradio"
                 aria-checked={control.value === option.value}
-                class="w-full justify-start gap-2 px-3 normal-case"
+                class={menuItemClass}
                 on:click={() => { control.store.set(option.value); viewPanel = null; }}
               >
                 <span class="w-3.5 shrink-0">{#if control.value === option.value}<Check size="14" strokeWidth="1.7" aria-hidden="true" />{/if}</span>
@@ -1090,10 +1091,10 @@
     {/if}
 
     {#if moreOpen}
-      <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 rounded-ui border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-1 shadow-2xl" role="menu" aria-label={$localizedText.richEditor.more}>
+      <div use:fitMenuHeight class="absolute right-2 top-full z-30 mt-1 w-72 {menuPanelClass}" role="menu" aria-label={$localizedText.richEditor.more}>
         {#each extraTools as tool, index (tool.id)}
           {#if index >= visibleExtras}
-            <Button variant="ghost" size="sm" role="menuitem" class="w-full justify-start gap-3 px-3 normal-case" on:click={() => runMore(tool.run)}>
+            <Button variant="quiet" size="md" role="menuitem" class={menuItemClass} on:click={() => runMore(tool.run)}>
               <svelte:component this={tool.icon} size="16" strokeWidth="1.7" aria-hidden="true" />{tool.label}
             </Button>
           {/if}
