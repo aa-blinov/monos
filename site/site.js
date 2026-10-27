@@ -30,29 +30,36 @@
           }, 1400);
         };
 
+        // The clipboard API is refused on a page served over plain HTTP and
+        // when the browser denies the permission. The old way still works,
+        // so a refusal falls through to it instead of failing silently.
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(done, function () {});
+          navigator.clipboard.writeText(text).then(done, function () {
+            copyWithSelection(text, done);
+          });
           return;
         }
-
-        // A page served over plain HTTP has no clipboard API. The old way
-        // still works.
-        var area = document.createElement('textarea');
-        area.value = text;
-        area.setAttribute('readonly', '');
-        area.style.position = 'absolute';
-        area.style.left = '-9999px';
-        document.body.appendChild(area);
-        area.select();
-        try {
-          document.execCommand('copy');
-          done();
-        } catch (error) {
-          // Nothing to do: the text is on screen either way.
-        }
-        document.body.removeChild(area);
+        copyWithSelection(text, done);
       });
     });
+  }
+
+  function copyWithSelection(text, done) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'absolute';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    try {
+      if (document.execCommand('copy')) {
+        done();
+      }
+    } catch (error) {
+      // Nothing to do: the text is on screen either way.
+    }
+    document.body.removeChild(area);
   }
 
   // The platform-specific download button. A page that shows a Linux
