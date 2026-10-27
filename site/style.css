@@ -216,6 +216,8 @@ img {
 .site-nav a {
   color: var(--muted);
   text-decoration: none;
+  /* The padding is part of the link: 23px of text was a thin target. */
+  padding-block: var(--gap-sm);
 }
 
 .site-nav a:hover {
@@ -426,6 +428,7 @@ th {
   text-transform: uppercase;
 }
 
+tbody tr:last-child th,
 tbody tr:last-child td {
   border-bottom: 0;
 }
@@ -485,9 +488,9 @@ figcaption {
 /* -- footer -------------------------------------------------------------- */
 
 .site-footer {
-  margin-top: var(--gap-xl);
+  margin-top: var(--gap-md);
   border-top: 1px solid var(--rule);
-  padding-block: var(--gap-lg);
+  padding-block: var(--gap-md);
   color: var(--faint);
   font-size: 0.88rem;
 }
@@ -495,20 +498,29 @@ figcaption {
 .footer-inner {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap-md);
+  gap: var(--gap-xs) var(--gap-lg);
   align-items: center;
   justify-content: space-between;
+}
+
+/* The browser's paragraph margin made the footer twice as tall as its text. The line may shrink, so the links
+   stay beside it on a wide screen and drop under it on a narrow one. */
+.footer-inner p {
+  margin: 0;
+  flex: 1 1 22rem;
 }
 
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap-md);
+  gap: 0 var(--gap-md);
 }
 
+/* A link is a target: tall enough for a thumb, and the padding is part of the link, not of the gap. */
 .footer-nav a {
   color: var(--muted);
   text-decoration: none;
+  padding-block: var(--gap-sm);
 }
 
 .footer-nav a:hover {
@@ -642,4 +654,15 @@ li::marker {
 table,
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* After the rules it overrides: a finger needs 44px, a mouse is fine with 38. */
+@media (max-width: 720px) {
+  .button,
+  .header-github {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
