@@ -13,9 +13,9 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- Nothing yet.
+- Medeo Sans is the default interface face; code stays in Medeo Mono. A saved JetBrains Mono (the old default) becomes Medeo Sans.
 
 ## 1.19.0 — 2026-10-27
 

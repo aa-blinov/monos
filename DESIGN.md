@@ -23,31 +23,31 @@ colors:
   mauve-purple: "#d3869b"
 typography:
   display:
-    fontFamily: "Medeo Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Sans, system-ui, sans-serif"
     fontSize: "30px"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Medeo Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Sans, system-ui, sans-serif"
     fontSize: "24px"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Medeo Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Sans, system-ui, sans-serif"
     fontSize: "20px"
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: "-0.025em"
   body:
-    fontFamily: "Medeo Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Sans, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.625
     letterSpacing: "normal"
   label:
-    fontFamily: "Medeo Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Sans, system-ui, sans-serif"
     fontSize: "10px"
     fontWeight: 400
     lineHeight: 1.45
@@ -121,7 +121,7 @@ components:
 
 Monos looks like a desk under warm light. Notes are cards laid out on it, each one with its own tint, its own label, its own place in the stack. Nothing is "UI" pretending to be paper; the paper is warm because the palette is warm, and the layout is orderly because a desk is orderly. The system borrows the calm of a printed page rather than the energy of a tool.
 
-The reading is quiet and typographic. Every note title, tag, date, and control is set in one face at a time: Medeo Mono unless the person picks another from the font library, because a card index is sorted by legibility, not by personality. The default monospace is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library. The font library lets a person trade that voice for their own reading comfort; the discipline that survives the trade is one face per screen.
+The reading is quiet and typographic. Every note title, tag, date, and control is set in one face at a time: Medeo Sans unless the person picks another from the font library, because a card index is sorted by legibility, not by personality. The default monospace is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library. The font library lets a person trade that voice for their own reading comfort; the discipline that survives the trade is one face per screen.
 
 Density is moderate and deliberate. Metadata shrinks to `11px` with wide tracking so it whispers; titles sit at `18-24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
 
@@ -130,7 +130,7 @@ Anti-reference, confirmed: **never "designer-made."** The system must not look s
 **Key Characteristics:**
 
 - Warm paper and ink, never pure white and never pure black
-- One face at a time: Medeo Mono by default, or the one the person chose from the font library; code always stays in Medeo Mono
+- One face at a time: Medeo Sans by default, or the one the person chose from the font library; code always stays in Medeo Mono
 - Metadata whispers at 11px with wide uppercase tracking; its labels step up to 12px
 - Flat at rest, lifted only in motion
 - Note color arrives as a tint and a soft glow, never as a border
@@ -282,7 +282,7 @@ another checks that this document's radius table matches the enforced scale.
 
 ## Typography
 
-**Display / Headline / Title / Body / Label Font:** Medeo Mono (with `ui-monospace, monospace`), the default and the face every screen is designed and checked in.
+**Display / Headline / Title / Body / Label Font:** Medeo Sans (with `system-ui, sans-serif`), the default and the face every screen is designed and checked in.
 
 **The font library.** Settings → Typography holds thirteen families from `lib/fonts.js`: monospace (Medeo Mono, Fira Code), sans (Medeo Sans, Roboto, Fira Sans, IBM Plex Sans, PT Sans, Noto Sans) and a display face (Medeo Pixel) and serif (Georgia, PT Serif, IBM Plex Serif). The choice is the person's, stored in the `fontFamily` store and applied as `--font-family` on the root. `body`, `h1`-`h3`, `.font-serif` and `.font-sans` all read `var(--font-family, 'Medeo Mono', ui-monospace, monospace)`, so a choice changes every string in the interface at once. `.font-mono` does not follow it: code blocks, inline code and other fixed-width text stay in Medeo Mono, whatever face the rest of the app uses.
 
@@ -487,7 +487,7 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 ### Do:
 
 - **Do** read every color through `var(--token)` and every family through `var(--font-family)`; use `.font-mono` only for code.
-- **Do** check a new screen in Medeo Mono and in one sans and one serif from the library: hierarchy must hold in all three, through size and weight alone.
+- **Do** check a new screen in Medeo Sans, in Medeo Mono and in one serif from the library: hierarchy must hold in all three, through size and weight alone.
 - **Do** keep surfaces flat at rest and let hover supply the lift. A 0.5px rise with `shadow-xl` is the system's only standard "this is alive" signal.
 - **Do** set metadata uppercase at `9-10px` with `0.1-0.16em` tracking, at or below `--text-secondary` opacity.
 - **Do** express a note's color as a 13% tint plus an 18% blurred glow.
