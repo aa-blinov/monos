@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import { persisted, syncedWithStorage } from './lib/stores/persisted.js';
 import { clampOutlineWidth } from './lib/outline.js';
+import { DEFAULT_FONT, currentFontName } from './lib/fonts.js';
 export { tabsToSpaces } from './lib/tabs.js';
 
 const THEME_MODES = ['system', 'light', 'dark'];
@@ -20,7 +21,7 @@ function initialThemeMode() {
 
 export const activeTheme = persisted('theme', 'gruvbox');
 export const themeMode = writable(initialThemeMode());
-export const fontFamily = persisted('fontFamily', 'JetBrains Mono', { server: true });
+export const fontFamily = persisted('fontFamily', DEFAULT_FONT, { server: true, deserialize: currentFontName });
 export const fontSize = persisted('fontSize', 'medium', { server: true });
 export const lineHeight = persisted('lineHeight', 'normal', { server: true });
 export const editorFontSize = persisted('editorFontSize', 'md', { server: true });

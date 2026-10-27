@@ -692,6 +692,7 @@ const enText = {
       system: 'system',
       sans: 'sans',
       serif: 'serif',
+      display: 'pixel',
     },
     lineHeight: {
       compact: 'Compact',
@@ -1999,6 +2000,7 @@ const ruText = {
       system: 'системный',
       sans: 'гротеск',
       serif: 'с засечками',
+      display: 'пиксельный',
     },
     lineHeight: {
       compact: 'Компактный',

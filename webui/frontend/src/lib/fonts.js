@@ -1,19 +1,34 @@
 export const fontOptions = [
   // The system's own interface font (San Francisco on a Mac, Segoe UI on Windows): nothing to load, native look.
   { name: 'System', family: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif', category: 'system' },
-  { name: 'JetBrains Mono', family: '"JetBrains Mono", ui-monospace, monospace', category: 'mono' },
-  { name: 'Inter', family: '"Inter", system-ui, sans-serif', category: 'sans' },
+  // The three that ship with the app (public/fonts): Medeo, Latin and Cyrillic.
+  { name: 'Medeo Mono', family: '"Medeo Mono", ui-monospace, SFMono-Regular, Menlo, monospace', category: 'mono' },
+  { name: 'Medeo Sans', family: '"Medeo Sans", system-ui, -apple-system, "Segoe UI", sans-serif', category: 'sans' },
+  { name: 'Medeo Pixel', family: '"Medeo Pixel", ui-monospace, monospace', category: 'display' },
   { name: 'Roboto', family: '"Roboto", system-ui, sans-serif', category: 'sans' },
   { name: 'Fira Sans', family: '"Fira Sans", system-ui, sans-serif', category: 'sans' },
   { name: 'IBM Plex Sans', family: '"IBM Plex Sans", system-ui, sans-serif', category: 'sans' },
   { name: 'PT Sans', family: '"PT Sans", system-ui, sans-serif', category: 'sans' },
   { name: 'Noto Sans', family: '"Noto Sans", system-ui, sans-serif', category: 'sans' },
-  { name: 'Source Serif 4', family: '"Source Serif 4", ui-serif, Georgia, serif', category: 'serif' },
   { name: 'Georgia', family: 'Georgia, "Times New Roman", ui-serif, serif', category: 'serif' },
   { name: 'PT Serif', family: '"PT Serif", ui-serif, Georgia, serif', category: 'serif' },
   { name: 'IBM Plex Serif', family: '"IBM Plex Serif", ui-serif, Georgia, serif', category: 'serif' },
   { name: 'Fira Code', family: '"Fira Code", ui-monospace, monospace', category: 'mono' },
 ];
+
+export const DEFAULT_FONT = 'Medeo Mono';
+
+// The faces the app shipped before Medeo. A person who chose one keeps a face of the same kind: JetBrains Mono
+// and Inter become Medeo Mono and Medeo Sans, and a serif stays a serif (the system's Georgia), not a pixel face.
+const LEGACY_FONTS = {
+  'JetBrains Mono': 'Medeo Mono',
+  Inter: 'Medeo Sans',
+  'Source Serif 4': 'Georgia',
+};
+
+export function currentFontName(name) {
+  return Object.hasOwn(LEGACY_FONTS, name) ? LEGACY_FONTS[name] : name;
+}
 
 export const fontSizeOptions = [
   { name: 'Small', value: 'small', base: '14px' },

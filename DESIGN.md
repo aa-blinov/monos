@@ -23,31 +23,31 @@ colors:
   mauve-purple: "#d3869b"
 typography:
   display:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Mono, ui-monospace, monospace"
     fontSize: "30px"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Mono, ui-monospace, monospace"
     fontSize: "24px"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Mono, ui-monospace, monospace"
     fontSize: "20px"
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: "-0.025em"
   body:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Mono, ui-monospace, monospace"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.625
     letterSpacing: "normal"
   label:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Medeo Mono, ui-monospace, monospace"
     fontSize: "10px"
     fontWeight: 400
     lineHeight: 1.45
@@ -121,7 +121,7 @@ components:
 
 Monos looks like a desk under warm light. Notes are cards laid out on it, each one with its own tint, its own label, its own place in the stack. Nothing is "UI" pretending to be paper; the paper is warm because the palette is warm, and the layout is orderly because a desk is orderly. The system borrows the calm of a printed page rather than the energy of a tool.
 
-The reading is quiet and typographic. Every note title, tag, date, and control is set in one face at a time: JetBrains Mono unless the person picks another from the font library, because a card index is sorted by legibility, not by personality. The default monospace is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library. The font library lets a person trade that voice for their own reading comfort; the discipline that survives the trade is one face per screen.
+The reading is quiet and typographic. Every note title, tag, date, and control is set in one face at a time: Medeo Mono unless the person picks another from the font library, because a card index is sorted by legibility, not by personality. The default monospace is the single most characteristic decision here: it says *this is where text lives*, and it makes every string on screen look like it was placed by a person rather than by a component library. The font library lets a person trade that voice for their own reading comfort; the discipline that survives the trade is one face per screen.
 
 Density is moderate and deliberate. Metadata shrinks to `11px` with wide tracking so it whispers; titles sit at `18-24px` and carry the weight. The result is a screen with a clear loud part and a clear quiet part.
 
@@ -130,7 +130,7 @@ Anti-reference, confirmed: **never "designer-made."** The system must not look s
 **Key Characteristics:**
 
 - Warm paper and ink, never pure white and never pure black
-- One face at a time: JetBrains Mono by default, or the one the person chose from the font library; code always stays in JetBrains Mono
+- One face at a time: Medeo Mono by default, or the one the person chose from the font library; code always stays in Medeo Mono
 - Metadata whispers at 11px with wide uppercase tracking; its labels step up to 12px
 - Flat at rest, lifted only in motion
 - Note color arrives as a tint and a soft glow, never as a border
@@ -282,11 +282,11 @@ another checks that this document's radius table matches the enforced scale.
 
 ## Typography
 
-**Display / Headline / Title / Body / Label Font:** JetBrains Mono (with `ui-monospace, monospace`), the default and the face every screen is designed and checked in.
+**Display / Headline / Title / Body / Label Font:** Medeo Mono (with `ui-monospace, monospace`), the default and the face every screen is designed and checked in.
 
-**The font library.** Settings → Typography holds twelve families from `lib/fonts.js`: monospace (JetBrains Mono, Fira Code), sans (Inter, Roboto, Fira Sans, IBM Plex Sans, PT Sans, Noto Sans) and serif (Source Serif 4, Georgia, PT Serif, IBM Plex Serif). The choice is the person's, stored in the `fontFamily` store and applied as `--font-family` on the root. `body`, `h1`-`h3`, `.font-serif` and `.font-sans` all read `var(--font-family, 'JetBrains Mono', ui-monospace, monospace)`, so a choice changes every string in the interface at once. `.font-mono` does not follow it: code blocks, inline code and other fixed-width text stay in JetBrains Mono, whatever face the rest of the app uses.
+**The font library.** Settings → Typography holds thirteen families from `lib/fonts.js`: monospace (Medeo Mono, Fira Code), sans (Medeo Sans, Roboto, Fira Sans, IBM Plex Sans, PT Sans, Noto Sans) and a display face (Medeo Pixel) and serif (Georgia, PT Serif, IBM Plex Serif). The choice is the person's, stored in the `fontFamily` store and applied as `--font-family` on the root. `body`, `h1`-`h3`, `.font-serif` and `.font-sans` all read `var(--font-family, 'Medeo Mono', ui-monospace, monospace)`, so a choice changes every string in the interface at once. `.font-mono` does not follow it: code blocks, inline code and other fixed-width text stay in Medeo Mono, whatever face the rest of the app uses.
 
-Only JetBrains Mono ships with the app (`public/fonts`, Latin and Cyrillic). The other families are used when the system has them; otherwise each one falls back to its own category's stack (`system-ui, sans-serif`, `ui-serif, Georgia, serif`, `ui-monospace, monospace`). A face that is not installed must never break the layout, only change the letterforms.
+Only the three Medeo faces (Mono, Sans, Pixel) ship with the app (`public/fonts`, Latin and Cyrillic). The other families are used when the system has them; otherwise each one falls back to its own category's stack (`system-ui, sans-serif`, `ui-serif, Georgia, serif`, `ui-monospace, monospace`). A face that is not installed must never break the layout, only change the letterforms.
 
 **Character (default face):** A card index in a typewriter hand. Even spacing makes columns of metadata align without effort, and the uniform stroke means no element can shout through typeface alone, so hierarchy has to come from size and weight.
 
@@ -302,7 +302,7 @@ Only JetBrains Mono ships with the app (`public/fonts`, Latin and Cyrillic). The
 
 ### Named rules
 
-**The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for, serif or sans, resolves to the one face the person chose (JetBrains Mono by default), so a stray class can never introduce a second voice. The only fixed exception is `.font-mono` for code.
+**The One Face Rule.** No screen mixes typefaces. Every family name a component could reach for, serif or sans, resolves to the one face the person chose (Medeo Mono by default), so a stray class can never introduce a second voice. The only fixed exception is `.font-mono` for code.
 
 **The Scale Is Small.** The working range is `11px`-`30px`. `text-xs` and `text-sm` carry the interface; `--text-whisper` (11px) carries metadata and `--text-whisper-lg` (12px) its labels. No arbitrary pixel sizes. `text-3xl` is page titles and `text-2xl` is modal titles; nothing in between them is allowed to grow.
 
@@ -426,7 +426,7 @@ The sidebar is the app's left edge: a resizable column (`w-0` when collapsed) ho
 - **A locked note in conflict is never merged as cipher.** Git's line merge would put markers inside the sealed text and leave a note no passphrase opens. The file stays this device's sealed version, both versions wait in git, and the note opens on its own conflict screen (not the passphrase form, which would show one side and let it be edited): keep one version whole without opening it, or enter the passphrase to compare. The versions are opened in memory, merged like any note (separate edits combine with one button, the same place is chosen part by part; every part must be chosen), and the result is sealed again before it is written. A version sealed with another passphrase is named, and only whole-version keeping is offered.
 - **One word, one thing.** "Folder" is where a note's file is: the bottom bar shows it ("Work", "No folder") and moves the note; a new name creates the folder. The due date has its own button and is not counted again under Properties; the notes table calls it "Due" and shows dates as the Modified column does. The sidebar's sync is "Sync now", never "Back up". Settings name what each size changes: "Interface size", "Text size in notes".
 - **Callouts read as in Obsidian.** The `[!type]` marker is hidden unless the caret is on its line; the title is bold in the callout's colour on its own line; the body is not italic. The file keeps the text as written.
-- **The agent terminal sits under the note.** A bottom dock in the content column (⌘J or Ctrl+`, the terminal button at the foot of the note and in the board header, the note's three-dot menu, or the palette; the sidebar has no Terminal row), in the theme's own colours and JetBrains Mono, opened in the notes folder. Its header keeps in view only the label, the tabs ("Shell 1"…, each its own shell, up to six, + for a new one, × to close), "Agent changes: N" when there are any, "Start <agent>", ⋯ and hide; search (also ⌘F: Enter, Shift+Enter, Esc), restart and the agent's rules sit behind ⋯, with a small dot on ⋯ while the rules are missing. Hiding keeps the shells running. A note path in the output is underlined and opens the note. It opens at 45% of the window (never under 320px) until its top edge is dragged (double-click resets). It exists only in the desktop app: a browser or a phone shows no trace of it. Files the agent writes appear on the board, in the tree and in the open note as it writes them.
+- **The agent terminal sits under the note.** A bottom dock in the content column (⌘J or Ctrl+`, the terminal button at the foot of the note and in the board header, the note's three-dot menu, or the palette; the sidebar has no Terminal row), in the theme's own colours and Medeo Mono, opened in the notes folder. Its header keeps in view only the label, the tabs ("Shell 1"…, each its own shell, up to six, + for a new one, × to close), "Agent changes: N" when there are any, "Start <agent>", ⋯ and hide; search (also ⌘F: Enter, Shift+Enter, Esc), restart and the agent's rules sit behind ⋯, with a small dot on ⋯ while the rules are missing. Hiding keeps the shells running. A note path in the output is underlined and opens the note. It opens at 45% of the window (never under 320px) until its top edge is dragged (double-click resets). It exists only in the desktop app: a browser or a phone shows no trace of it. Files the agent writes appear on the board, in the tree and in the open note as it writes them.
 - **The agent is one button away, never a chat to learn.** The terminal's header starts the agent chosen in Settings ("Start Claude Code"); the note's ⋯ menu asks it about this note (not offered for a locked note), typing the question with the cursor left where the person writes. Until the notes folder has rules for the agent, the header carries a quiet underlined link reading "Add rules for the agent".
 - **The agent's edits wait for the person.** Notes the agent changed carry a blue "Agent" label on the board and a blue dot in the tree; the terminal's header shows "Agent changes: N". The review window lists them (New, Changed, Deleted) beside the difference against how they were when the agent started, with Keep and Revert for one file or all. Kept edits go to the other devices as "Agent edits"; until then nothing the agent did leaves this computer.
 - **A paused sync says why.** When an agent's edit waiting for review was also changed on another device, the sync stops before git would fail and says so in words, naming the notes; the sidebar keeps a blue "Sync waits for agent changes" link to the review until they are kept or reverted.
@@ -487,7 +487,7 @@ The editor renders Markdown constructs that a CommonMark parser does not know, a
 ### Do:
 
 - **Do** read every color through `var(--token)` and every family through `var(--font-family)`; use `.font-mono` only for code.
-- **Do** check a new screen in JetBrains Mono and in one sans and one serif from the library: hierarchy must hold in all three, through size and weight alone.
+- **Do** check a new screen in Medeo Mono and in one sans and one serif from the library: hierarchy must hold in all three, through size and weight alone.
 - **Do** keep surfaces flat at rest and let hover supply the lift. A 0.5px rise with `shadow-xl` is the system's only standard "this is alive" signal.
 - **Do** set metadata uppercase at `9-10px` with `0.1-0.16em` tracking, at or below `--text-secondary` opacity.
 - **Do** express a note's color as a 13% tint plus an 18% blurred glow.

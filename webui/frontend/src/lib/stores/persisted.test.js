@@ -120,7 +120,7 @@ test('persisted использует custom serialize для записи', () =
 
 test('persisted notify подписчиков при изменении', () => {
   withStorage({}, () => {
-    const store = persisted('fontFamily', 'JetBrains Mono');
+    const store = persisted('fontFamily', 'Medeo Mono');
     let observed = null;
     const unsub = store.subscribe(v => { observed = v; });
     store.set('Fira Code');

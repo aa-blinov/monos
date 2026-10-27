@@ -62,7 +62,7 @@ Object.defineProperty(window, 'innerWidth', {
 beforeEach(async () => {
   storage.clear();
   storage.setItem('theme', 'gruvbox');
-  storage.setItem('fontFamily', 'JetBrains Mono');
+  storage.setItem('fontFamily', 'Medeo Mono');
   storage.setItem('fontSize', 'medium');
   storage.setItem('lineHeight', 'normal');
   storage.setItem('contentWidth', 'wide');
@@ -79,7 +79,7 @@ beforeEach(async () => {
 
   const stores = await import('../stores.js');
   stores.activeTheme.set('gruvbox');
-  stores.fontFamily.set('JetBrains Mono');
+  stores.fontFamily.set('Medeo Mono');
   stores.fontSize.set('medium');
   stores.lineHeight.set('normal');
   stores.contentWidth.set('wide');

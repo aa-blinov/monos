@@ -10,6 +10,7 @@ const {
 } = require('./window-state.cjs');
 const { resolveDroppedNote } = require('./dropped-note.cjs');
 const { backgroundNotice } = require('./notify.cjs');
+const { hasCustomTitleBar, overlayColors, titleBarOptions, TITLEBAR_HEIGHT } = require('./titlebar.cjs');
 
 const APP_DATA_DIR = 'MonosData';
 const APP_HOST = '127.0.0.1';
@@ -297,6 +298,7 @@ function openSettingsWindow() {
     ...(icon ? { icon } : {}),
     show: false,
     backgroundColor: '#282828',
+    ...titleBarOptions(process.platform),
     title: settingsWindowTitle(),
     webPreferences: { ...SECURE_WEB_PREFERENCES, preload: path.join(__dirname, 'preload.cjs') },
   });
@@ -305,6 +307,7 @@ function openSettingsWindow() {
     settingsWindow?.show();
   });
   settingsWindow.on('focus', () => applyMenuState());
+  announceFullScreen(settingsWindow);
   settingsWindow.on('closed', () => { settingsWindow = null; });
   // The page's own title would replace ours.
   settingsWindow.webContents.on('page-title-updated', (event) => {
@@ -313,6 +316,22 @@ function openSettingsWindow() {
   });
   settingsWindow.loadURL(`${appOrigin}/settings?window=1`);
 }
+
+// Full screen hides the traffic lights, and the strip's room for them goes with them.
+function announceFullScreen(win) {
+  if (process.platform !== 'darwin') return;
+  for (const [event, on] of [['enter-full-screen', true], ['leave-full-screen', false]]) {
+    win.on(event, () => { if (!win.isDestroyed()) win.webContents.send('window:fullscreen', on); });
+  }
+}
+
+// The page draws the strip, so it knows the colours; the Windows buttons are tinted to match.
+ipcMain.on('titlebar:colors', (event, colors) => {
+  if (process.platform !== 'win32' || !hasCustomTitleBar(process.platform)) return;
+  const sender = BrowserWindow.fromWebContents(event.sender);
+  if (!sender || sender.isDestroyed()) return;
+  sender.setTitleBarOverlay({ ...overlayColors(colors), height: TITLEBAR_HEIGHT });
+});
 
 function settingsWindowTitle() {
   return menuLocale === 'ru' ? `Настройки — ${APP_NAME}` : `Settings — ${APP_NAME}`;
@@ -338,11 +357,13 @@ function createWindow(port) {
     autoHideMenuBar: process.platform !== 'darwin',
     show: false,
     backgroundColor: '#282828',
+    ...titleBarOptions(process.platform),
     // The preload gives only this window the terminal bridge; windows it opens (the print view) get none.
     webPreferences: { ...SECURE_WEB_PREFERENCES, preload: path.join(__dirname, 'preload.cjs') },
   });
 
   if (process.platform !== 'darwin') mainWindow.setMenu(null);
+  announceFullScreen(mainWindow);
   // The window's title is set from the note that is open (menu:state below). The page names its own title for a
   // browser tab ("Trash — Monos"); here that would replace the note's.
   mainWindow.webContents.on('page-title-updated', (event) => event.preventDefault());

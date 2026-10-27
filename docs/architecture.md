@@ -267,7 +267,7 @@ Use `text-[length:var(--text-whisper)]`. Two rules, both learned the hard way:
    silently produced no font-size at all and the element inherited the root size.
    `text-[length:var(--text-whisper)]` is the only form that works.
 
-JetBrains Mono is a variable font covering `wght` 100-800; the interface uses 400,
+Medeo Mono is a variable font covering `wght` 100-900; the interface uses 400,
 500, 600 and 700, all real strokes. No `font-feature-settings` override is set:
 contextual ligatures (`calt`) stay on at the browser default, which suits the
 technical register, and figures are tabular by construction. A monospaced face
@@ -316,7 +316,7 @@ identity; only the two secondary text steps are accessibility-governed.
 
 ## Self-hosted font
 
-JetBrains Mono ships inside the repository. The interface makes no network
+Medeo ships inside the repository. The interface makes no network
 request of its own, so the family is not fetched from a CDN at runtime.
 
 - `webui/frontend/public/fonts/*.woff2`: one variable file per subset

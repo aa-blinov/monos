@@ -161,7 +161,7 @@
   function mountTerm(host, tab) {
     tab.host = host;
     const term = new Terminal({
-      fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+      fontFamily: '"Medeo Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
       fontSize: 13,
       lineHeight: 1.2,
       cursorBlink: true,

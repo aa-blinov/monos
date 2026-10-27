@@ -14,10 +14,10 @@ test('fontOptions содержит известные семейства с ка
   for (const opt of fontOptions) {
     assert.ok(opt.name);
     assert.ok(opt.family);
-    assert.ok(['mono', 'sans', 'serif', 'system'].includes(opt.category), `unexpected category ${opt.category}`);
+    assert.ok(['mono', 'sans', 'serif', 'display', 'system'].includes(opt.category), `unexpected category ${opt.category}`);
   }
-  // JetBrains Mono обязателен — это дефолт в stores.js
-  assert.ok(fontOptions.some((o) => o.name === 'JetBrains Mono'));
+  // Medeo Mono обязателен — это дефолт в stores.js
+  assert.ok(fontOptions.some((o) => o.name === 'Medeo Mono'));
 });
 
 test('fontSizeOptions покрывает small/medium/large', () => {

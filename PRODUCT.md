@@ -74,7 +74,7 @@ The public site states it as: "A calm notes app that does not trap your knowledg
 **Privacy**
 
 - No accounts, no authentication, no analytics, no telemetry.
-- The interface opens no network connection of its own. JetBrains Mono is shipped in the repository rather than fetched from a CDN, and a remote font or asset would break that property.
+- The interface opens no network connection of its own. Medeo (Mono, Sans and Pixel) is shipped in the repository rather than fetched from a CDN, and a remote font or asset would break that property.
 - The repository carries no personal notes. The `notes/` directory is runtime data.
 
 **Search**

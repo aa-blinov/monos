@@ -254,6 +254,16 @@ notes/              # Markdown заметки
     равен ему (`pb-4`), а фон продлён вверх на этот шаг (`before:h-4`), чтобы над ним не выглядывала карточка. Меню
     порядка висит по левому краю своей кнопки, как список тегов, и уезжает влево только если иначе не помещается
 
+29. **Верхняя полоса окна рисуется страницей на macOS и Windows.** Системный заголовок скрыт (`titleBarStyle: 'hidden'`,
+    `electron/titlebar.cjs`), по всей ширине идёт полоса 40px (`components/TitleBar.svelte`) одного цвета с темой и с
+    названием окна («CV — Monos»): за неё окно перетаскивают (`-webkit-app-region: drag`, кнопок в ней нет). Родными
+    остаются светофор macOS (`trafficLightPosition`) и кнопки Windows (`titleBarOverlay`), которые страница красит в
+    цвета темы (`monosWindow.setTitleBarColors`). На Linux остаётся рамка оконного менеджера, в браузере полосы нет:
+    страница узнаёт об этом из `window.monosWindow.customTitleBar`
+30. **Шрифт — Medeo** (`public/fonts`, `src/fonts.css`): Mono по умолчанию, Sans и Pixel рядом, латиница и кириллица в
+    одном файле. Прежние имена (`JetBrains Mono`, `Inter`, `Source Serif 4`) заменяет `currentFontName` в
+    `lib/fonts.js` при чтении настройки: serif переходит в Georgia, а не в пиксельный шрифт
+
 ## Traps
 
 - **The backend loads its dependencies from the root `node_modules`.** `webui/backend/package.json` holds only `better-sqlite3`, because that one is compiled and has to match the runtime that loads it: the tests run on plain Node with the copy in `webui/backend/node_modules`, the app runs on Electron with the copy in the root. `npm run check:deps` fails when a runtime dependency is missing from the root file, and CI runs it. A new backend dependency goes into the root `package.json` too.
