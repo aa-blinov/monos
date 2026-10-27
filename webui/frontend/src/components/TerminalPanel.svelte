@@ -157,11 +157,30 @@
     try { knownNotes = notePathsOf(await (await fetch('/api/tree')).json()); } catch { /* links stay as they were */ }
   }
 
+  // Medeo Mono first, then the Nerd Fonts a person may have installed for a shell prompt (Medeo has no powerline or
+  // git glyphs), then the system's monospace.
+  const TERMINAL_FONT = '"Medeo Mono", "MesloLGS NF", "JetBrainsMono Nerd Font", "Hack Nerd Font", ui-monospace, SFMono-Regular, Menlo, monospace';
+
+  // xterm measures a cell once, from the face it finds when it opens. Medeo Mono is no longer the page's own face
+  // (that is Medeo Sans), so nothing has asked for its file yet and the first measure used a fallback: the text
+  // came out spaced for another font. The face is loaded first, and the cell is measured again if it arrives late.
+  function remeasureWhenFontLoads(term, tab) {
+    const done = () => {
+      if (tab.term !== term) return;
+      // The same value would not count as a change, so the cell would keep its old size.
+      term.options.fontFamily = 'monospace';
+      term.options.fontFamily = TERMINAL_FONT;
+      fitTab(tab);
+    };
+    document.fonts?.load?.('13px "Medeo Mono"').then(done, () => {});
+    document.fonts?.ready?.then(done, () => {});
+  }
+
   // The xterm for a tab, created when its element is in the page.
   function mountTerm(host, tab) {
     tab.host = host;
     const term = new Terminal({
-      fontFamily: '"Medeo Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+      fontFamily: TERMINAL_FONT,
       fontSize: 13,
       lineHeight: 1.2,
       cursorBlink: true,
@@ -204,6 +223,7 @@
       if (tab.sessionId !== null && !tab.exited) terminalBridge.resize(tab.sessionId, cols, rows);
     });
     tab.term = term;
+    remeasureWhenFontLoads(term, tab);
     const observer = new ResizeObserver(() => fitTab(tab));
     observer.observe(host);
     tick().then(() => {
