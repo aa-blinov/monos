@@ -81,19 +81,19 @@
 
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
-    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
   }
 
   h1 {
-    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
     @apply text-xl font-bold tracking-tight;
   }
   h2 {
-    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
     @apply text-lg font-bold tracking-tight;
   }
   h3 {
-    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
     @apply text-base font-bold tracking-tight;
   }
 
@@ -146,15 +146,15 @@
 }
 
 .font-serif {
-  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+  font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 
 .font-sans {
-  font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+  font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .prose-typography {

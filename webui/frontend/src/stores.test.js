@@ -60,7 +60,7 @@ storesTest('stores читают стартовые значения из localSt
 storesTest('stores сохраняют изменения обратно в localStorage', () => {
   stores.activeTheme.set('gruvbox');
   stores.themeMode.set('light');
-  stores.fontFamily.set('JetBrains Mono');
+  stores.fontFamily.set('Medeo Mono');
   stores.fontSize.set('medium');
   stores.lineHeight.set('normal');
   stores.contentWidth.set('medium');
@@ -72,7 +72,7 @@ storesTest('stores сохраняют изменения обратно в local
   assert.equal(global.localStorage.getItem('theme'), 'gruvbox');
   assert.equal(global.localStorage.getItem('themeMode'), 'light');
   assert.equal(global.localStorage.getItem('darkMode'), 'false');
-  assert.equal(global.localStorage.getItem('fontFamily'), 'JetBrains Mono');
+  assert.equal(global.localStorage.getItem('fontFamily'), 'Medeo Mono');
   assert.equal(global.localStorage.getItem('fontSize'), 'medium');
   assert.equal(global.localStorage.getItem('lineHeight'), 'normal');
   assert.equal(global.localStorage.getItem('contentWidth'), 'medium');

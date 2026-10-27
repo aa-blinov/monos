@@ -1746,7 +1746,7 @@
   :global(.template-preview h1) {
     margin-bottom: 1.25rem;
     color: var(--text-primary);
-    font-family: var(--font-family, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
     font-size: 1.25rem;
     font-weight: 600;
     line-height: 1.25;

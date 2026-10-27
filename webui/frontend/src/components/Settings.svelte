@@ -14,7 +14,7 @@
   import Checkbox from './Checkbox.svelte';
   import { DEFAULT_SYNC_MINUTES, gitFailureText, normalizeSyncMinutes, setAutoSyncPolicy, uploadsChanges } from '../lib/git-sync.js';
   import { themes } from '../lib/themes.js';
-  import { fontOptions, fontSizeOptions, editorFontSizeOptions, lineHeightOptions, contentWidthOptions } from '../lib/fonts.js';
+  import { fontOptions, fontSizeOptions, editorFontSizeOptions, lineHeightOptions, contentWidthOptions, currentFontName } from '../lib/fonts.js';
   import { isSupportedLocale, locale, localeOptions, localizedText, uiText } from '../lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, editorFontSize, editorState, settingsSection, tabsToSpaces, lineHeight, contentWidth } from '../stores.js';
   import ConnectStatus from './ConnectStatus.svelte';
@@ -427,7 +427,7 @@
         delete settings.git_token_set;
         if (saved.theme && themes[saved.theme]) $activeTheme = saved.theme;
         if (['system', 'light', 'dark'].includes(saved.themeMode)) $themeMode = saved.themeMode;
-        if (saved.fontFamily) $fontFamily = saved.fontFamily;
+        if (saved.fontFamily) $fontFamily = currentFontName(saved.fontFamily);
         if (saved.fontSize) $fontSize = saved.fontSize;
         if (isSupportedLocale(saved.locale)) $locale = saved.locale;
       }

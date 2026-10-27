@@ -24,6 +24,7 @@ import { get } from 'svelte/store';
   import { applyTheme, applyTypographyVars, detectDarkMode, normalizeNotePath } from './lib/app-shell.js';
   import { noteRoute } from './lib/note-url.js';
   import { documentTitle } from './lib/document-title.js';
+  import TitleBar from './components/TitleBar.svelte';
   import { startPreferenceSync, flushPreferences } from './lib/stores/persisted.js';
   import { localizedText, locale } from './lib/strings.js';
   import { activeTheme, themeMode, fontFamily, fontSize, lineHeight, contentWidth, editorFontSize, noteView, searchQuery, searchResults, isSearching, editorState, noteSaveSignal, editorViewCommand, editorAction, menuState, updateMenuState } from './stores.js';
@@ -243,8 +244,10 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   $: menuBridge?.setLocale($locale);
   // The document speaks it too: a screen reader reads the page with the right voice.
   $: document.documentElement.lang = $locale;
+  let windowTitle = '';
   // The tab names the page: "Trash — Monos", "CV — Monos" for a note.
-  $: document.title = documentTitle({ route: routePath, noteTitle: $menuState.noteTitle, texts: $localizedText });
+  $: windowTitle = (documentTitle({ route: routePath, noteTitle: $menuState.noteTitle, texts: $localizedText }));
+  $: document.title = windowTitle;
   // The menu also shows what the window shows: the checkmarks and the items that need a note.
   // The settings window has no note of its own, so it reports an empty state.
   $: updateMenuState(isSettingsWindow
@@ -1045,6 +1048,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     on:dragover={handleDragOver}
     on:drop={handleDrop}
   >
+    <TitleBar title={windowTitle} />
     <!-- The first Tab stop: past the sidebar straight to the content. -->
     <a
       href="#main-content"

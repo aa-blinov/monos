@@ -29,7 +29,7 @@ export async function prepareMonos(page, {
     data: {
       locale: 'en',
       theme: 'gruvbox',
-      fontFamily: 'JetBrains Mono',
+      fontFamily: 'Medeo Mono',
       fontSize: 'medium',
       editorFontSize: 'md',
     },

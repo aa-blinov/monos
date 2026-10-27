@@ -41,3 +41,12 @@ contextBridge.exposeInMainWorld('monosMenu', {
   // A background event: the system tells the person, the window cannot.
   notify: (title, body, action) => ipcRenderer.invoke('notify', { title, body, action }),
 });
+
+// The window the page sits in: whether the page draws the top bar itself (macOS and Windows hide the
+// system's), and the colours the Windows buttons are tinted to.
+contextBridge.exposeInMainWorld('monosWindow', {
+  platform: process.platform,
+  customTitleBar: process.platform === 'darwin' || process.platform === 'win32',
+  setTitleBarColors: (colors) => ipcRenderer.send('titlebar:colors', colors),
+  onFullScreen: (callback) => listen('window:fullscreen', callback),
+});
