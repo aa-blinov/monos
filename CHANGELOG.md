@@ -17,6 +17,18 @@ All notable changes to monos. Versions are ordered newest first.
 
 - Nothing yet.
 
+## 1.19.0 — 2026-10-27
+
+### Added
+
+- On macOS and Windows the window has its own top bar: one strip, the same on both systems, that the window is moved by. The traffic lights and the Windows buttons stay the system's, tinted to the theme.
+- Medeo Mono, Medeo Sans and Medeo Pixel ship with the app (Latin and Cyrillic, real italics). Medeo Mono is the default face.
+
+### Changed
+
+- JetBrains Mono, Inter and Source Serif 4 are gone from the font list. A saved choice moves to Medeo Mono or Medeo Sans, and a serif moves to Georgia.
+- The landing page: a compact footer, larger tap targets, a copy button that still works when the browser refuses the clipboard.
+
 ## 1.18.0 — 2026-10-25
 
 ### Added
