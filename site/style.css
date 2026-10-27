@@ -63,6 +63,12 @@ html {
   scroll-padding-top: calc(56px + var(--gap-md));
 }
 
+@media (max-width: 720px) {
+  html {
+    scroll-padding-top: calc(88px + var(--gap-sm));
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -238,8 +244,35 @@ img {
 }
 
 @media (max-width: 720px) {
+  /* The sections stay reachable on a phone: the menu drops to a row of its own under the brand and slides sideways
+     when it does not fit, so no link is hidden and none wraps onto a third line. */
+  .header-inner {
+    flex-wrap: wrap;
+    row-gap: 0;
+    min-height: 0;
+    padding-top: var(--gap-xs);
+  }
+
+  .header-github {
+    margin-left: auto;
+  }
+
   .site-nav {
+    order: 3;
+    flex: 1 0 100%;
+    margin-left: 0;
+    gap: var(--gap-lg);
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .site-nav::-webkit-scrollbar {
     display: none;
+  }
+
+  .site-nav a {
+    white-space: nowrap;
   }
 }
 
