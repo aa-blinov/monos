@@ -106,7 +106,7 @@ Git sync runs against the notes folder itself, so only the Markdown and the atta
 | Notes folder | `notes/` in the app data directory | Where the files live. A folder you choose can be an Obsidian vault, or one a cloud service already syncs. |
 | Palette | `gruvbox` | One of gruvbox, github, dracula, nord, solarized, catppuccin. |
 | Theme mode | `system` | `light`, `dark` or `system`. |
-| Interface font | Medeo Mono | The list also holds Medeo Sans, Medeo Pixel and other families, including the system font. The three Medeo faces ship with the app (Latin and Cyrillic), the rest fall back to what the system has |
+| Interface font | Medeo Sans | The list also holds Medeo Mono, Medeo Pixel and other families, including the system font. The three Medeo faces ship with the app (Latin and Cyrillic), the rest fall back to what the system has |
 | Interface size | 16px | 14, 16, 18 or 20. |
 | Editor size | 16px | 13, 14, 16, 18 or 20. |
 | Sync interval | 15 minutes | How often a round runs while the app is open. |

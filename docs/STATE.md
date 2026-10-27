@@ -30,7 +30,7 @@ Current persisted stores:
 |-------|---------|-------|
 | `activeTheme` | `'gruvbox'` | palette name |
 | `themeMode` | `'system'` (in `localStorage`) | `light` / `dark` / `system`; legacy `darkMode` boolean is migrated on first read |
-| `fontFamily` | `'Medeo Mono'` | |
+| `fontFamily` | `'Medeo Sans'` | |
 | `fontSize` | `'medium'` | UI font scale |
 | `lineHeight` | `'normal'` | |
 | `editorFontSize` | `'md'` | editor-only override |

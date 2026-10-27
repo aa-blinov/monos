@@ -260,9 +260,9 @@ notes/              # Markdown заметки
     остаются светофор macOS (`trafficLightPosition`) и кнопки Windows (`titleBarOverlay`), которые страница красит в
     цвета темы (`monosWindow.setTitleBarColors`). На Linux остаётся рамка оконного менеджера, в браузере полосы нет:
     страница узнаёт об этом из `window.monosWindow.customTitleBar`
-30. **Шрифт — Medeo** (`public/fonts`, `src/fonts.css`): Mono по умолчанию, Sans и Pixel рядом, латиница и кириллица в
-    одном файле. Прежние имена (`JetBrains Mono`, `Inter`, `Source Serif 4`) заменяет `currentFontName` в
-    `lib/fonts.js` при чтении настройки: serif переходит в Georgia, а не в пиксельный шрифт
+30. **Шрифт — Medeo** (`public/fonts`, `src/fonts.css`): Sans по умолчанию, Mono (им набран код) и Pixel рядом, латиница и кириллица в
+    одном файле. Прежние имена (`JetBrains Mono`, `Inter`) становятся Medeo Sans, `Source Serif 4` — Georgia: заменяет их `currentFontName` в
+    `lib/fonts.js` при чтении настройки; serif переходит в Georgia, а не в пиксельный шрифт
 
 ## Traps
 

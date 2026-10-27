@@ -81,19 +81,19 @@
 
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-none;
-    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
   }
 
   h1 {
-    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
     @apply text-xl font-bold tracking-tight;
   }
   h2 {
-    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
     @apply text-lg font-bold tracking-tight;
   }
   h3 {
-    font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
     @apply text-base font-bold tracking-tight;
   }
 
@@ -146,11 +146,11 @@
 }
 
 .font-serif {
-  font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
 }
 
 .font-sans {
-  font-family: var(--font-family, 'Medeo Mono', ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--font-family, 'Medeo Sans', system-ui, -apple-system, 'Segoe UI', sans-serif);
 }
 
 .font-mono {

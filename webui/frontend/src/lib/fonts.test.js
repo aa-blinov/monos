@@ -16,7 +16,8 @@ test('fontOptions содержит известные семейства с ка
     assert.ok(opt.family);
     assert.ok(['mono', 'sans', 'serif', 'display', 'system'].includes(opt.category), `unexpected category ${opt.category}`);
   }
-  // Medeo Mono обязателен — это дефолт в stores.js
+  // Medeo Sans обязателен — это дефолт в stores.js, Medeo Mono остаётся для кода
+  assert.ok(fontOptions.some((o) => o.name === 'Medeo Sans'));
   assert.ok(fontOptions.some((o) => o.name === 'Medeo Mono'));
 });
 

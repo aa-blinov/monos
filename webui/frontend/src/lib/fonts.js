@@ -16,12 +16,12 @@ export const fontOptions = [
   { name: 'Fira Code', family: '"Fira Code", ui-monospace, monospace', category: 'mono' },
 ];
 
-export const DEFAULT_FONT = 'Medeo Mono';
+export const DEFAULT_FONT = 'Medeo Sans';
 
-// The faces the app shipped before Medeo. A person who chose one keeps a face of the same kind: JetBrains Mono
-// and Inter become Medeo Mono and Medeo Sans, and a serif stays a serif (the system's Georgia), not a pixel face.
+// The faces the app shipped before Medeo. JetBrains Mono was the default, so it follows the new default, Medeo Sans;
+// Inter becomes Medeo Sans as well, and a serif stays a serif (the system's Georgia), not a pixel face.
 const LEGACY_FONTS = {
-  'JetBrains Mono': 'Medeo Mono',
+  'JetBrains Mono': 'Medeo Sans',
   Inter: 'Medeo Sans',
   'Source Serif 4': 'Georgia',
 };
