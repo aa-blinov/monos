@@ -13,6 +13,12 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
+### Added
+
+- Nothing yet.
+
+## 1.19.2 — 2026-10-28
+
 ### Fixed
 
 - The terminal measures its cell after Medeo Mono has loaded, so the text no longer comes out spaced for another font.
