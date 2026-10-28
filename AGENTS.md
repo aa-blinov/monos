@@ -262,7 +262,8 @@ notes/              # Markdown заметки
     страница узнаёт об этом из `window.monosWindow.customTitleBar`
 30. **Шрифт — Medeo** (`public/fonts`, `src/fonts.css`): Sans по умолчанию, Mono (им набран код) и Pixel рядом, латиница и кириллица в
     одном файле. Прежние имена (`JetBrains Mono`, `Inter`) становятся Medeo Sans, `Source Serif 4` — Georgia: заменяет их `currentFontName` в
-    `lib/fonts.js` при чтении настройки; serif переходит в Georgia, а не в пиксельный шрифт
+    `lib/fonts.js` при чтении настройки; serif переходит в Georgia, а не в пиксельный шрифт. Терминал рисует значки приглашения (ветка git, powerline) шрифтом Symbols Nerd Font Mono из
+    `public/fonts` после Medeo Mono: у Medeo этих знаков нет, а шрифты надо загрузить до измерения ячейки xterm
 
 ## Traps
 
