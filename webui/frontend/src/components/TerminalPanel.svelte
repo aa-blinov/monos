@@ -157,9 +157,9 @@
     try { knownNotes = notePathsOf(await (await fetch('/api/tree')).json()); } catch { /* links stay as they were */ }
   }
 
-  // Medeo Mono first, then the Nerd Fonts a person may have installed for a shell prompt (Medeo has no powerline or
-  // git glyphs), then the system's monospace.
-  const TERMINAL_FONT = '"Medeo Mono", "MesloLGS NF", "JetBrainsMono Nerd Font", "Hack Nerd Font", ui-monospace, SFMono-Regular, Menlo, monospace';
+  // Medeo Mono first; the icons of a shell prompt (git branch, powerline) come from the Symbols Nerd Font that ships
+  // with the app, since Medeo has none of them; a Nerd Font the person installed still wins over the system's.
+  const TERMINAL_FONT = '"Medeo Mono", "Symbols Nerd Font Mono", "MesloLGS NF", "JetBrainsMono Nerd Font", "Hack Nerd Font", ui-monospace, SFMono-Regular, Menlo, monospace';
 
   // xterm measures a cell once, from the face it finds when it opens. Medeo Mono is no longer the page's own face
   // (that is Medeo Sans), so nothing has asked for its file yet and the first measure used a fallback: the text
@@ -173,6 +173,8 @@
       fitTab(tab);
     };
     document.fonts?.load?.('13px "Medeo Mono"').then(done, () => {});
+    // The icon face is loaded only when a glyph asks for it, and a prompt draws one before the first redraw.
+    document.fonts?.load?.('13px "Symbols Nerd Font Mono"', '\ue0a0').then(done, () => {});
     document.fonts?.ready?.then(done, () => {});
   }
 

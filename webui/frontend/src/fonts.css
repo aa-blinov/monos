@@ -51,3 +51,13 @@
   font-display: swap;
   src: url('/fonts/medeo-pixel.woff') format('woff');
 }
+
+/* Symbols Nerd Font Mono: only the icon glyphs a shell prompt draws (git branch, powerline, file icons). The
+   terminal uses it after Medeo Mono, which has none of them. MIT; see LICENSE-SymbolsNerdFont.txt. */
+@font-face {
+  font-family: 'Symbols Nerd Font Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/symbols-nerd-font-mono.ttf') format('truetype');
+}

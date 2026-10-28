@@ -13,9 +13,13 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
+### Fixed
+
+- The terminal measures its cell after Medeo Mono has loaded, so the text no longer comes out spaced for another font.
+
 ### Added
 
-- Nothing yet.
+- The terminal shows the icons of a shell prompt (the git branch, powerline) with the bundled Symbols Nerd Font.
 
 ## 1.19.1 — 2026-10-27
 
