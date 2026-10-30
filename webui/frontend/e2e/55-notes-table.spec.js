@@ -160,3 +160,29 @@ test('таблица заметок: подсказки в фильтре — с
   await page.getByTestId('properties-suggestion').filter({ hasText: 'done' }).click();
   await expect(input).toHaveValue('prop:status=done ');
 });
+
+// The suggestions under the filter float over the table: when the field lost focus they used to leave the flow, the table
+// jumped up under the pointer, and the first click on a cell was lost.
+test('таблица заметок: подсказки фильтра не сдвигают таблицу, первый клик по ячейке открывает правку', async ({ page }) => {
+  await openEditable(page);
+  const input = page.getByTestId('properties-query');
+  await input.click();
+  await input.fill('prop:status=');
+  await expect(page.getByTestId('properties-suggestions')).toBeVisible();
+  const before = await page.getByTestId('properties-scroller').boundingBox();
+  await page.locator('tbody tr').first().getByTestId('properties-cell').first().click();
+  await expect(page.getByTestId('properties-cell-input')).toBeVisible();
+  const after = await page.getByTestId('properties-scroller').boundingBox();
+  expect(after.y).toBe(before.y);
+});
+
+// A header and the values under it start at the same x, so a column reads as a column.
+test('таблица заметок: заголовок колонки начинается там же, где значения под ним', async ({ page }) => {
+  await openEditable(page);
+  const left = async (locator) => (await locator.boundingBox()).x;
+  const headers = page.locator('thead th');
+  const first = page.locator('tbody tr').first();
+  for (const index of [1, 2]) {
+    expect(await left(headers.nth(index).getByRole('button'))).toBe(await left(first.locator('td').nth(index).getByRole('button')));
+  }
+});

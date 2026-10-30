@@ -18,6 +18,11 @@ All notable changes to monos. Versions are ordered newest first.
 - The agent starts where you are: Start and Ask the agent open the shell in the folder of the open note, one terminal tab for each folder ("claude (Work)"). Before, every launch went to the whole notes folder, whatever note was open.
 - A note the agent changed shows a blue icon in its bottom bar, one press from the review.
 
+### Fixed
+
+- Notes table: after typing in the filter, the first click on a cell did nothing, because the suggestions under the field left the page and the table jumped up under the pointer. They now float over the table.
+- Notes table: column headers started 12 to 20 pixels to the right of the values under them; they line up now.
+
 ## 1.19.2 — 2026-10-28
 
 ### Fixed

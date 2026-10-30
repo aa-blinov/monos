@@ -265,24 +265,25 @@
         <h1 class="truncate font-serif text-3xl tracking-tight">{$localizedText.properties.tableTitle}</h1>
         <p class="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.properties.tableHint}</p>
       </div>
-      <div on:focusin={() => { searchFocused = true; }} on:focusout={() => { searchFocused = false; }}>
-      <SearchField
-        bind:value={query}
-        bind:inputEl={searchInput}
-        on:input={onQueryInput}
-        placeholder={$localizedText.properties.tableSearch}
-        testid="properties-query"
-      />
+      <!-- The suggestions float over what follows: taking room in the flow moved the table when the field lost focus, and the click that caused it landed on the wrong place. -->
+      <div class="relative" on:focusin={() => { searchFocused = true; }} on:focusout={() => { searchFocused = false; }}>
+        <SearchField
+          bind:value={query}
+          bind:inputEl={searchInput}
+          on:input={onQueryInput}
+          placeholder={$localizedText.properties.tableSearch}
+          testid="properties-query"
+        />
+        {#if suggestions.length > 0 && searchFocused}
+          <ul class="rounded-ui absolute inset-x-0 top-full z-20 mt-1 flex flex-wrap gap-2 border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-2 shadow-lg shadow-black/10" data-testid="properties-suggestions" aria-label={$localizedText.properties.suggestions}>
+            {#each suggestions as item (item.text)}
+              <li>
+                <span role="presentation" on:mousedown|preventDefault><Button variant="outline" size="sm" data-testid="properties-suggestion" class="normal-case" on:click={() => applySuggestion(item)}>{item.label}</Button></span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </div>
-      {#if suggestions.length > 0 && searchFocused}
-        <ul class="flex flex-wrap gap-2" data-testid="properties-suggestions" aria-label={$localizedText.properties.suggestions}>
-          {#each suggestions as item (item.text)}
-            <li>
-              <span role="presentation" on:mousedown|preventDefault><Button variant="outline" size="sm" data-testid="properties-suggestion" class="normal-case" on:click={() => applySuggestion(item)}>{item.label}</Button></span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
       <p class="text-xs text-[var(--text-tertiary)] max-sm:hidden">{$localizedText.properties.syntaxHint}</p>
       <details class="text-xs text-[var(--text-tertiary)] sm:hidden">
         <summary class="min-h-10 cursor-pointer py-2">{$localizedText.properties.syntaxTitle}</summary>
@@ -336,12 +337,12 @@
                 <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy('title')}>{$localizedText.properties.noteColumn}</Button>
               </th>
               {#each columns || [] as key (key)}
-                <th class="px-3 py-2 font-medium" aria-sort={ariaSort(key)}>
-                  <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy(key)}>{columnLabel(key)}</Button>
+                <th class="px-1 py-2 font-medium" aria-sort={ariaSort(key)}>
+                  <Button variant="quiet" size="sm" class="px-2 font-medium" on:click={() => sortBy(key)}>{columnLabel(key)}</Button>
                 </th>
               {/each}
-              <th class="px-3 py-2 font-medium" aria-sort={ariaSort('modified')}>
-                <Button variant="quiet" size="sm" class="font-medium" on:click={() => sortBy('modified')}>{$localizedText.properties.modified}</Button>
+              <th class="px-1 py-2 font-medium" aria-sort={ariaSort('modified')}>
+                <Button variant="quiet" size="sm" class="px-2 font-medium" on:click={() => sortBy('modified')}>{$localizedText.properties.modified}</Button>
               </th>
             </tr>
           </thead>
