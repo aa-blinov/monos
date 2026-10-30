@@ -12,9 +12,11 @@ const MAX_PATH = 240;
  * @param {string} line one line of terminal text
  * @param {Set<string>} notes note paths relative to the notes folder (`Work/Plan.md`)
  * @param {string} [root] the notes folder's absolute path, for paths printed in full
+ * @param {string} [base] the folder the shell runs in, relative to the notes folder: an agent started there prints
+ *   the paths relative to it ("Plan.md" for `Work/Plan.md`)
  * @returns {Array<{ start: number, end: number, path: string }>} `start` inclusive, `end` exclusive, `path` as in the app (`notes/…`)
  */
-export function findNoteLinks(line, notes, root = '') {
+export function findNoteLinks(line, notes, root = '', base = '') {
   const links = [];
   const text = String(line || '');
   const lower = text.toLowerCase();
@@ -32,7 +34,9 @@ export function findNoteLinks(line, notes, root = '') {
       let candidate = text.slice(start, end);
       if (prefix && candidate.startsWith(prefix)) candidate = candidate.slice(prefix.length);
       candidate = candidate.replace(/^\.\//, '');
+      const inBase = base && !candidate.startsWith('/') ? `${base.replace(/\/+$/, '')}/${candidate}` : '';
       if (notes.has(candidate)) best = { start, end, path: `notes/${candidate}` };
+      else if (inBase && notes.has(inBase)) best = { start, end, path: `notes/${inBase}` };
     }
     if (best && !links.some((link) => link.start < best.end && best.start < link.end)) links.push(best);
   }

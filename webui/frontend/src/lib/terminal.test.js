@@ -83,3 +83,12 @@ test('Cursor CLI — среди агентов в настройках, вопр
   const line = noteQuestion('notes/Work/План.md', (path) => `Про ${path}: `).commandLine('cursor-agent');
   assert.match(line, /^cursor-agent "Про /);
 });
+
+test('агент стартует в папке заметки, а с доски — в папке заметок', async () => {
+  const { noteFolder } = await import('./terminal.js');
+  assert.equal(noteFolder('notes/Work/Plans/Plan.md'), 'Work/Plans');
+  assert.equal(noteFolder('notes/Plan.md'), '');
+  assert.equal(noteFolder('Work/Plan.md'), 'Work');
+  assert.equal(noteFolder(''), '');
+  assert.equal(noteFolder(undefined), '');
+});

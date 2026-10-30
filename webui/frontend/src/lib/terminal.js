@@ -95,14 +95,25 @@ export function agentLabel(command) {
 /** A request for the terminal panel: start the agent, or ask it about a note. */
 export const agentRequest = writable(null);
 
-export function launchAgent() {
+/**
+ * The folder a note lives in, relative to the notes folder (`notes/Work/Plans/Plan.md` gives `Work/Plans`; a note
+ * at the top, or no note, gives ''). An agent started from a note works in this folder.
+ */
+export function noteFolder(notePath) {
+  const parts = String(notePath || '').replace(/^notes\//, '').split('/').filter(Boolean);
+  parts.pop();
+  return parts.join('/');
+}
+
+/** Start the agent where the person is: in the open note's folder, or in the notes folder from the board. */
+export function launchAgent(notePath = '') {
   if (!terminalBridge) return;
-  agentRequest.set({ kind: 'launch', at: Date.now() });
+  agentRequest.set({ kind: 'launch', folder: noteFolder(notePath), at: Date.now() });
 }
 
 export function askAgentAboutNote(notePath) {
   if (!terminalBridge || !notePath) return;
-  agentRequest.set({ kind: 'ask', notePath, at: Date.now() });
+  agentRequest.set({ kind: 'ask', notePath, folder: noteFolder(notePath), at: Date.now() });
 }
 
 const SHELLS = new Set(['zsh', 'bash', 'sh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh', 'powershell', 'powershell.exe', 'pwsh.exe', 'cmd', 'cmd.exe']);

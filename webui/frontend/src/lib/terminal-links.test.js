@@ -28,3 +28,10 @@ test('пути заметок из дерева', () => {
   const tree = { path: 'notes', is_dir: true, children: [{ path: 'notes/Идеи.md', is_dir: false }, { path: 'notes/Work', is_dir: true, children: [{ path: 'notes/Work/Plan.md', is_dir: false }] }] };
   assert.deepEqual([...notePathsOf(tree)].sort(), ['Work/Plan.md', 'Идеи.md']);
 });
+
+test('агент, запущенный в папке, печатает пути от неё: «Plan.md» открывает Work/Plan.md', () => {
+  const notes = new Set(['Work/Plan.md', 'Plan.md']);
+  assert.equal(findNoteLinks('edited Plan.md', notes, '', 'Work')[0].path, 'notes/Plan.md');
+  assert.equal(findNoteLinks('edited Plan.md', new Set(['Work/Plan.md']), '', 'Work')[0].path, 'notes/Work/Plan.md');
+  assert.equal(findNoteLinks('edited Plan.md', new Set(['Work/Plan.md']))[0], undefined);
+});

@@ -15,7 +15,8 @@ All notable changes to monos. Versions are ordered newest first.
 
 ### Added
 
-- Nothing yet.
+- The agent starts where you are: Start and Ask the agent open the shell in the folder of the open note, one terminal tab for each folder ("claude (Work)"). Before, every launch went to the whole notes folder, whatever note was open.
+- A note the agent changed shows a blue icon in its bottom bar, one press from the review.
 
 ## 1.19.2 — 2026-10-28
 

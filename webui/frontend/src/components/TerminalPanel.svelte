@@ -17,7 +17,7 @@
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { IconButton, Menu, Tabs } from '@monos/ui';
   import SearchField from './SearchField.svelte';
-  import { activeTheme, themeMode } from '../stores.js';
+  import { activeTheme, menuState, themeMode } from '../stores.js';
   import { localizedText } from '../lib/strings.js';
   import { menuItemClass, menuPanelClass } from '../lib/menu-style.js';
   import { agentReview, agentReviewOpen, ensureAgentCheckpoint, refreshAgentReview } from '../lib/agent-review.js';
@@ -36,7 +36,12 @@
     terminalBridge,
     terminalOpen,
     terminalTheme,
+    launchAgent,
+    noteFolder,
   } from '../lib/terminal.js';
+
+  // The agent button starts the agent in the folder of the open note.
+  $: launchFolder = noteFolder($menuState.notePath);
 
   const HEIGHT_KEY = 'monos.terminalHeight';
   const MAX_TABS = 6;
@@ -59,7 +64,6 @@
     class: tab.exited ? 'line-through opacity-60' : '',
   }));
   let nextKey = 1;
-  let folder = '';
   let root = '';
   let agentCommand = DEFAULT_AGENT_COMMAND;
   // Whether the notes folder has the files that tell an agent how to work in it (AGENTS.md, CLAUDE.md).
@@ -200,7 +204,7 @@
     term.registerLinkProvider({
       provideLinks(y, callback) {
         const line = term.buffer.active.getLine(y - 1)?.translateToString(true) || '';
-        const links = findNoteLinks(line, knownNotes, root).map((link) => ({
+        const links = findNoteLinks(line, knownNotes, root, tab.folder).map((link) => ({
           range: { start: { x: link.start + 1, y }, end: { x: link.end, y } },
           text: line.slice(link.start, link.end),
           decorations: { underline: true, pointerCursor: true },
@@ -242,9 +246,8 @@
     tab.exited = false;
     try {
       tab.firstOutput = new Promise((resolve) => { tab.resolveFirst = resolve; });
-      const session = await terminalBridge.create({ cols: tab.term.cols, rows: tab.term.rows });
+      const session = await terminalBridge.create({ cols: tab.term.cols, rows: tab.term.rows, folder: tab.folder });
       tab.sessionId = session.id;
-      folder = session.cwd;
       root = session.root || '';
       // From here on, files changed outside Monos are compared with how they are now.
       void ensureAgentCheckpoint().then(refreshAgentReview);
@@ -257,9 +260,11 @@
     }
   }
 
-  function newTab() {
+  // `folder` is where the shell starts, relative to the notes folder: '' for the notes folder, a folder's path for an
+  // agent started from a note in it.
+  function newTab(folder = '') {
     if (tabs.length >= MAX_TABS) return null;
-    const tab = { key: nextKey++, sessionId: null, term: null, fit: null, search: null, host: null, exited: false, starting: false, title: '', firstOutput: null, resolveFirst: null };
+    const tab = { key: nextKey++, folder, sessionId: null, term: null, fit: null, search: null, host: null, exited: false, starting: false, title: '', firstOutput: null, resolveFirst: null };
     tabs = [...tabs, tab];
     activeKey = tab.key;
     return tab;
@@ -375,7 +380,12 @@
     agentRequest.set(null);
     terminalOpen.set(true);
     await tick();
-    let tab = active || newTab();
+    // One agent for each place it works in: the tab of this folder, else a new one, so an agent in Work and
+    // another in Personal do not share a shell (and so a note's folder is never the folder of the last launch).
+    const wanted = request.folder || '';
+    let tab = tabs.find((item) => item.folder === wanted && !item.exited) || newTab(wanted) || active || tabs[0];
+    if (!tab) return;
+    activeKey = tab.key;
     await tick();
     // A brand-new tab mounts its xterm and starts its shell first.
     for (let i = 0; i < 50 && (!tab.term || tab.sessionId === null) && !tab.exited; i += 1) {
@@ -396,7 +406,7 @@
       else terminalBridge.write(tab.sessionId, question.prompt);
     }
     if (inShell) {
-      tab.title = agentLabel(agentCommand);
+      tab.title = tab.folder ? $localizedText.terminal.tabIn(agentLabel(agentCommand), tab.folder) : agentLabel(agentCommand);
       tabs = tabs;
     }
     tab.term.focus();
@@ -545,8 +555,8 @@
       {#if $agentReview.changes?.length}
         <Button variant="text" size="sm" data-testid="agent-review-open" class="shrink-0 !px-0 text-[var(--blue)]" on:click={() => agentReviewOpen.set(true)}>{$localizedText.agentReview.button($agentReview.changes.length)}</Button>
       {/if}
-      <Button variant="text" size="sm" data-testid="agent-launch" class="shrink-0 !px-0" on:click={() => agentRequest.set({ kind: 'launch', at: Date.now() })}>
-        <Bot size="14" strokeWidth="1.7" aria-hidden="true" slot="icon" />{$localizedText.terminal.launch(agentLabel(agentCommand))}
+      <Button variant="text" size="sm" data-testid="agent-launch" class="shrink-0 !px-0" on:click={() => launchAgent($menuState.notePath)}>
+        <Bot size="14" strokeWidth="1.7" aria-hidden="true" slot="icon" />{launchFolder ? $localizedText.terminal.launchIn(agentLabel(agentCommand), launchFolder) : $localizedText.terminal.launch(agentLabel(agentCommand))}
       </Button>
     </div>
     {#if searchOpen}

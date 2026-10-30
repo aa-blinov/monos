@@ -265,7 +265,14 @@ notes/              # Markdown заметки
     `lib/fonts.js` при чтении настройки; serif переходит в Georgia, а не в пиксельный шрифт. Терминал рисует значки приглашения (ветка git, powerline) шрифтом Symbols Nerd Font Mono из
     `public/fonts` после Medeo Mono: у Medeo этих знаков нет, а шрифты надо загрузить до измерения ячейки xterm
 
-## Traps
+31. **Агент работает там, где человек, а не «один на всю папку».** Кнопка «Запустить агента» и «Спросить агента» стартуют
+    оболочку в папке открытой заметки (`noteFolder` в `lib/terminal.js`; с доски — в папке заметок). У каждой папки своя
+    вкладка терминала («claude (Work)»), и повторное нажатие возвращает в неё, а не в последний терминал. Папку проверяет
+    главный процесс, а не страница (`electron/terminal-cwd.cjs`): только внутри папки заметок, через ссылки тоже, без
+    скрытых мест. Пути, которые агент печатает от своей папки, открываются кликом (`findNoteLinks`, параметр `base`).
+    Правку агента в открытой заметке показывает синяя иконка в нижней панели (`footer-agent-changes`), одно нажатие до
+    проверки; пока проверять нечего, иконки нет
+
 
 - **The backend loads its dependencies from the root `node_modules`.** `webui/backend/package.json` holds only `better-sqlite3`, because that one is compiled and has to match the runtime that loads it: the tests run on plain Node with the copy in `webui/backend/node_modules`, the app runs on Electron with the copy in the root. `npm run check:deps` fails when a runtime dependency is missing from the root file, and CI runs it. A new backend dependency goes into the root `package.json` too.
 - **`webui/run.sh` and `pyproject.toml` are leftovers.** The project was a Python app with a FastAPI backend once. `run.sh` installs `requirements.txt` and starts `uvicorn`, and neither exists now; `pyproject.toml` carries the mdformat, ruff and pre-commit tooling the hooks use, and a `tui` group for a text interface that was never built. There is no Python in the application.

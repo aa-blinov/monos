@@ -18,6 +18,7 @@
   import { markPinned, pinEvents } from '../lib/sidebar-pinned.js';
   import { syncState } from '../lib/git-conflicts.js';
   import { askAgentAboutNote, terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
+  import { agentReviewOpen, agentTouched } from '../lib/agent-review.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
   import { parseDueInput, formatDueInput } from '../lib/due-input.js';
@@ -264,6 +265,8 @@
   let metadataTimer;
   const METADATA_DELAY = 1200;
   let loadedFilePath = null;
+  // The review names notes as `notes/…`; the open note may be named with or without that prefix.
+  $: agentChangedHere = Boolean(currentFile?.path) && $agentTouched.has(`notes/${String(currentFile.path).replace(/^notes\//, '')}`);
   let loadingFilePath = null;
   let displayedFile = null;
   let visibleFile = null;
@@ -2122,6 +2125,24 @@
             tooltipAlign="end"
           >
             <History size="14" strokeWidth="1.7" aria-hidden="true" />
+          </TooltipIconButton>
+        {/if}
+
+        <!-- What the agent changed in this note and the person has not reviewed yet: said in the bar where the note's own
+             properties are, and one press from the review. Shown only while there is something to review. -->
+        {#if agentChangedHere && !inConflict}
+          <TooltipIconButton
+            type="button"
+            data-testid="footer-agent-changes"
+            on:click={() => agentReviewOpen.set(true)}
+            class="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-ui text-[var(--blue)] transition max-sm:h-11 max-sm:w-11 hover:bg-[color-mix(in_srgb,var(--bg-secondary)_60%,transparent)]"
+            label={$localizedText.agentReview.badge}
+            tooltip={$localizedText.agentReview.footerHint}
+            tooltipPosition="top"
+            tooltipAlign="end"
+          >
+            <Bot size="14" strokeWidth="1.7" aria-hidden="true" />
+            <span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>
           </TooltipIconButton>
         {/if}
 

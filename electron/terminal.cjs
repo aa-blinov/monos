@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { resolveSessionCwd } = require('./terminal-cwd.cjs');
 
 const MAX_SESSIONS = 8;
 // Output is sent to the page at most once a frame: a busy agent writes thousands of small chunks.
@@ -62,7 +63,8 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
     if (sessions.size >= MAX_SESSIONS) throw new Error('Too many terminals');
     pty ??= require('node-pty');
     const { file, args } = defaultShell();
-    const cwd = getCwd();
+    const root = getCwd();
+    const cwd = resolveSessionCwd(root, options.folder);
     const id = nextId++;
     const proc = pty.spawn(file, args, {
       name: 'xterm-256color',
@@ -89,7 +91,7 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
       send('terminal:exit', id, exitCode);
     });
     sessions.set(id, session);
-    return { id, cwd: path.basename(cwd), root: cwd, shell: path.basename(file) };
+    return { id, cwd: path.basename(cwd), root, folder: path.relative(root, cwd).split(path.sep).join('/'), shell: path.basename(file) };
   });
 
   ipcMain.on('terminal:write', (event, id, data) => {
