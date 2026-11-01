@@ -195,6 +195,8 @@
         // 423: a locked note answers that way until it is unlocked. That is its state, not a failure to log.
         if (error?.status === 423) {
           orderedNotes = orderedNotes.map((item) => item.path === note.path ? { ...item, locked: true } : item);
+        } else if (error?.status === 404 || error?.status === 410) {
+          // The note went to the trash or was renamed while the board was reading it: the list reloads, nothing to report.
         } else {
           console.error('Failed to hydrate board excerpt:', error);
         }

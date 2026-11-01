@@ -13,6 +13,21 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
+## 1.21.0 — 2026-11-02
+
+### Fixed
+
+- Search results showed the time the index first saw a note ("Today, 01:09") instead of the date it was changed. The result now carries `modified`, which the card prints first.
+- Settings: the part names in the left column stand at the left edge instead of the centre.
+- Favorites and the "page not found" screen start at the same left edge and top as every other page; before, their column was centred and narrower.
+- Attachments: "Recently deleted" looked like a section title above the grid. It is a button with a trash icon at the right edge. The filter chips are 36px tall on a phone, the map's zoom buttons 40px.
+- The due-date popover lays its quick choices out two by two; "In a week" no longer stands alone on a line.
+- Notes table: a cell with no value shows a short rule instead of nothing, so an empty row no longer looks like a table that failed to load.
+- Settings: the colour theme names are no longer cut with an ellipsis in a window 1024 to 1100 pixels wide; six cards in a row start at 1280.
+- A note, a selection or a folder moved to the trash leaves the board at once, and the board no longer logs a 410 for the card of a note that is gone.
+- The folder and note menus in the sidebar carry icons, like the card menu on the board.
+- On a phone the path above a note reads "… / Folder" instead of three parts cut at both ends, and the strip of Settings parts no longer shows a scrollbar.
+
 ## 1.20.0 — 2026-11-01
 
 ### Added

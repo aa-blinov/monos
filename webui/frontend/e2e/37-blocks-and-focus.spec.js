@@ -36,7 +36,8 @@ test('голый адрес в тексте подсвечен и открыва
   await link.click();
   const popup = page.waitForEvent('popup');
   await page.getByTestId('wiki-link-bar').getByRole('button', { name: /Open link/ }).click();
-  expect((await popup).url()).toContain('example.com/docs');
+  // A window opened without an opener has no address until its navigation starts; reading it at once raced that.
+  await (await popup).waitForURL(/example\.com\/docs/, { waitUntil: 'commit' });
 });
 
 test('режим фокуса прячет сайдбар и нижнюю панель, Esc возвращает всё как было', async ({ page }) => {

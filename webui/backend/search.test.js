@@ -117,6 +117,22 @@ test('searchEntries использует title как отображаемое �
   assert.deepEqual(results[0].tags, ['LLM', 'агенты']);
 });
 
+test('searchEntries отдаёт дату изменения: карточка печатает её раньше даты открытия', () => {
+  const entries = [{
+    path: 'notes/a.md',
+    name: 'a.md',
+    title: '',
+    content: 'текст',
+    tags: '[]',
+    modified_at: '2026-01-01T10:00:00.000Z',
+    last_opened: '2026-05-01T10:00:00.000Z',
+  }];
+
+  const [result] = searchEntries(entries, { query: 'текст', searchContent: true });
+
+  assert.equal(result.modified, '2026-01-01T10:00:00.000Z');
+});
+
 test('parseSearchQuery раскладывает текст и операторы', () => {
   const parsed = parseSearchQuery('report body:quarterly updated:2026-10');
   assert.deepEqual(parsed.text, ['report']);

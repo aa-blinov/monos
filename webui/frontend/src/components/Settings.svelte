@@ -374,7 +374,9 @@
   }
   let archiveInput;
   // Six palettes fit one row until the interface text grows: then a name such as "Catppuccin" would be cut, so two rows of three.
-  $: themeGridClass = ['large', 'xlarge'].includes($fontSize) ? 'sm:grid-cols-3' : 'sm:grid-cols-6';
+  // Six in a row need the width of an `xl` window: between 1024 and 1100 the column of parts leaves the cards too narrow
+  // for "Catppuccin" and "Solarized".
+  $: themeGridClass = ['large', 'xlarge'].includes($fontSize) ? 'sm:grid-cols-3' : 'sm:grid-cols-3 xl:grid-cols-6';
   let gitError = '';
   // The sentence about where the token is kept names the key store of this system.
   const platform = detectPlatform();

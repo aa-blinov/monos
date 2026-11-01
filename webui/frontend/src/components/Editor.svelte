@@ -1893,7 +1893,8 @@
                   </span>
                 {/if}
               </div>
-              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+              <!-- Two by two: in a row the popover's width left "Через неделю" alone on a line. -->
+              <div class="mt-2 grid grid-cols-2 items-center justify-items-start gap-1.5">
                 {#each DUE_QUICK_DAYS as days}
                   <Button
                     type="button"

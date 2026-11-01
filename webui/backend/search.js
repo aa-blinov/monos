@@ -614,6 +614,8 @@ export function searchEntries(entries, { query, searchContent = false, limit = 5
         category: entry.category || '',
         tags: parseTags(entry.tags),
         score: ranked.score,
+        // The card prints `modified` before `lastOpened`; without it a result showed the time the index first saw the note.
+        modified: entry.modified_at || null,
         lastOpened: entry.last_opened,
         locked: Boolean(entry.locked),
         conflict: Boolean(entry.conflict),

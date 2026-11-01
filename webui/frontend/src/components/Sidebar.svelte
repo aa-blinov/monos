@@ -15,6 +15,7 @@
   import ModalShell from './ModalShell.svelte';
   import RenameModal from './RenameModal.svelte';
   import IconPickerModal from './IconPickerModal.svelte';
+  import { Copy, FilePlus, FolderOpen, FolderPlus, Pencil, Pin, PinOff, Smile, Star, Tag, Trash2 } from 'lucide-svelte';
   import SidebarMoreMenu from './SidebarMoreMenu.svelte';
   import {
     isSameOrDescendant,
@@ -991,6 +992,8 @@
       selectedPaths = new Set([...selectedPaths].filter((path) => !uniquePaths.includes(path)));
       await loadTree();
       await loadDirectories();
+      // Every way of deleting ends here (one note, a selection, a folder): the board drops these cards at once.
+      dispatch('itemsDeleted', uniquePaths);
       if (deletedActivePath) {
         selectedPath = null;
         dispatch('fileDeleted');
@@ -1445,25 +1448,25 @@
       style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
     >
       {#if contextMenu.isDir}
-        <Button variant="quiet" size="md" on:click={() => handleContextAction('newNote')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.newNote}</Button>
-        <Button variant="quiet" size="md" on:click={() => handleContextAction('newFolder')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.newFolder}</Button>
+        <Button variant="quiet" size="md" on:click={() => handleContextAction('newNote')} class={menuItemClass} role="menuitem"><FilePlus size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.newNote}</Button>
+        <Button variant="quiet" size="md" on:click={() => handleContextAction('newFolder')} class={menuItemClass} role="menuitem"><FolderPlus size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.newFolder}</Button>
         <div class={menuSeparatorClass} role="separator"></div>
       {/if}
       {#if !contextMenu.isDir}
         {#if isPinned(contextMenu.targetPath)}
-          <Button variant="quiet" size="md" on:click={() => handleContextAction('unpin')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.unpin}</Button>
+          <Button variant="quiet" size="md" on:click={() => handleContextAction('unpin')} class={menuItemClass} role="menuitem"><PinOff size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.unpin}</Button>
         {:else}
-          <Button variant="quiet" size="md" on:click={() => handleContextAction('pin')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.pin}</Button>
+          <Button variant="quiet" size="md" on:click={() => handleContextAction('pin')} class={menuItemClass} role="menuitem"><Pin size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.pin}</Button>
         {/if}
         {#if contextFavorite}
-          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('unfavorite')} class={menuItemClass} role="menuitem">{$localizedText.editor.favoriteRemove}</Button>
+          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('unfavorite')} class={menuItemClass} role="menuitem"><Star size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.editor.favoriteRemove}</Button>
         {:else}
-          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('favorite')} class={menuItemClass} role="menuitem">{$localizedText.editor.favoriteAdd}</Button>
+          <Button variant="quiet" size="md" data-testid="context-favorite" on:click={() => handleContextAction('favorite')} class={menuItemClass} role="menuitem"><Star size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.editor.favoriteAdd}</Button>
         {/if}
         <div class={menuSeparatorClass} role="separator"></div>
       {/if}
-      <Button variant="quiet" size="md" on:click={() => handleContextAction('setIcon')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.editIcon}</Button>
-      <Button variant="quiet" size="md" on:click={() => handleContextAction('rename')} class={menuItemClass} role="menuitem">{$localizedText.sidebar.context.rename}</Button>
+      <Button variant="quiet" size="md" on:click={() => handleContextAction('setIcon')} class={menuItemClass} role="menuitem"><Smile size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.editIcon}</Button>
+      <Button variant="quiet" size="md" on:click={() => handleContextAction('rename')} class={menuItemClass} role="menuitem"><Pencil size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.rename}</Button>
       {#if !contextMenu.isDir}
         <Button variant="quiet" size="md"
           type="button"
@@ -1472,7 +1475,7 @@
           on:click={() => { bulkTagPaths = contextMenu.selectionPaths?.length ? contextMenu.selectionPaths : [contextMenu.targetPath]; showBulkTagPrompt = true; bulkTagValue = ''; bulkError = ''; closeContextMenu(); }}
           class={menuItemClass}
         >
-          {contextMenu.selectionPaths?.length > 1
+          <Tag size="14" strokeWidth="1.7" aria-hidden="true" /> {contextMenu.selectionPaths?.length > 1
             ? $localizedText.sidebar.context.tagSelected(contextMenu.selectionPaths.length)
             : $localizedText.sidebar.context.addTag}
         </Button>
@@ -1483,7 +1486,7 @@
           on:click={() => { duplicateTarget = contextMenu.targetPath; closeContextMenu(); duplicateNote(); }}
           class={menuItemClass}
         >
-          {$localizedText.sidebar.context.duplicate}
+          <Copy size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.duplicate}
         </Button>
         <div class={menuSeparatorClass} role="separator"></div>
       {/if}
@@ -1495,12 +1498,12 @@
           on:click={() => revealInFinder(contextMenu.targetPath)}
           class={menuItemClass}
         >
-          {$localizedText.sidebar.context.showInFinder}
+          <FolderOpen size="14" strokeWidth="1.7" aria-hidden="true" /> {$localizedText.sidebar.context.showInFinder}
         </Button>
         <div class={menuSeparatorClass} role="separator"></div>
       {/if}
       <Button variant="quiet" size="md" on:click={() => handleContextAction('delete')} role="menuitem" class="{menuItemClass} {menuDangerClass}">
-        {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
+        <Trash2 size="14" strokeWidth="1.7" aria-hidden="true" /> {contextMenu.selectionPaths?.length > 1 ? $localizedText.sidebar.context.deleteSelected : $localizedText.sidebar.context.delete}
       </Button>
     </div>
   {/if}

@@ -88,11 +88,16 @@
       <p class="ml-2 min-w-0 flex-1 truncate font-serif text-sm font-medium tracking-tight text-[var(--text-primary)]" data-testid="header-compact-title">{editedTitle}</p>
     {:else}
       <div class="ml-2 flex min-w-0 flex-1 items-center gap-1 text-[length:var(--text-whisper)] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+        <!-- On a phone only the folder the note lies in stays: three parts cut at both ends ("BA… / DIGITAL NOMAD RESID…")
+             said nothing, and a single "…" says that the path is longer. -->
+        {#if breadcrumbParts.length > 1}
+          <span class="sm:hidden" aria-hidden="true">…&nbsp;/</span>
+        {/if}
         {#each breadcrumbParts as part, index}
           {#if index > 0}
-            <span aria-hidden="true">/</span>
+            <span aria-hidden="true" class="max-sm:hidden">/</span>
           {/if}
-          <span class="max-w-[12rem] truncate">{part.name}</span>
+          <span class="max-w-[12rem] truncate {index < breadcrumbParts.length - 1 ? 'max-sm:hidden' : ''}">{part.name}</span>
         {/each}
       </div>
     {/if}

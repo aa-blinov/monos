@@ -430,13 +430,13 @@
         </Checkbox>
       {/if}
       <div class="inline-flex items-center gap-1 rounded-ui border border-[var(--border-subtle)] p-1">
-        <TooltipIconButton label={$localizedText.map.zoomOut} class="flex h-7 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => zoomBy(0.8)}>
+        <TooltipIconButton label={$localizedText.map.zoomOut} class="flex h-7 w-8 max-sm:h-10 max-sm:w-10 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => zoomBy(0.8)}>
           <Minus size="14" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
-        <TooltipIconButton label={$localizedText.map.zoomIn} class="flex h-7 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => zoomBy(1.25)}>
+        <TooltipIconButton label={$localizedText.map.zoomIn} class="flex h-7 w-8 max-sm:h-10 max-sm:w-10 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => zoomBy(1.25)}>
           <Plus size="14" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
-        <TooltipIconButton label={$localizedText.map.fit} tooltipAlign="end" class="flex h-7 w-8 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => fitAll()}>
+        <TooltipIconButton label={$localizedText.map.fit} tooltipAlign="end" class="flex h-7 w-8 max-sm:h-10 max-sm:w-10 items-center justify-center rounded-ui text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]" on:click={() => fitAll()}>
           <Maximize2 size="14" strokeWidth="1.7" aria-hidden="true" />
         </TooltipIconButton>
       </div>

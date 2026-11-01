@@ -6,7 +6,7 @@
 
 <script>
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
-  import { Check, ChevronLeft, ChevronRight, FileText, ImageOff } from 'lucide-svelte';
+  import { Check, ChevronLeft, ChevronRight, FileText, ImageOff, Trash2 } from 'lucide-svelte';
   import { localizedText, locale } from '../lib/strings.js';
   import {
     attachmentEmbed, attachmentFolders, deleteAttachmentsRequest, duplicateNames, fetchAllAttachments, fetchAttachmentTrash,
@@ -307,13 +307,13 @@
       <p class="text-xs text-[var(--text-tertiary)]">{$localizedText.attachments.empty}</p>
     {:else}
       <div class="flex flex-wrap items-center gap-2" role="group" aria-label={$localizedText.attachments.title}>
-        <FilterChip active={filter === 'all'} data-testid="attachments-filter-all" on:click={() => { filter = 'all'; narrowed(); }}>{$localizedText.attachments.filterAll} ({items.length})</FilterChip>
-        <FilterChip active={filter === 'unused'} data-testid="attachments-filter-unused" on:click={() => { filter = 'unused'; narrowed(); }}>{$localizedText.attachments.filterUnused} ({unusedItems.length})</FilterChip>
+        <FilterChip class="max-sm:min-h-9" active={filter === 'all'} data-testid="attachments-filter-all" on:click={() => { filter = 'all'; narrowed(); }}>{$localizedText.attachments.filterAll} ({items.length})</FilterChip>
+        <FilterChip class="max-sm:min-h-9" active={filter === 'unused'} data-testid="attachments-filter-unused" on:click={() => { filter = 'unused'; narrowed(); }}>{$localizedText.attachments.filterUnused} ({unusedItems.length})</FilterChip>
 
         <Button variant="outline" size="sm" data-testid="attachments-filters-toggle" aria-expanded={filtersOpen} class="sm:hidden" on:click={() => { filtersOpen = !filtersOpen; }}>{$localizedText.attachments.filters(activeFilters)}</Button>
         <div class="contents {filtersOpen ? '' : 'max-sm:hidden'}" data-testid="attachments-filter-row">
         {#if names.size > 0}
-          <FilterChip active={filter === 'duplicates'} data-testid="attachments-filter-duplicates" on:click={() => { filter = filter === 'duplicates' ? 'all' : 'duplicates'; narrowed(); }}>{$localizedText.attachments.filterDuplicates}</FilterChip>
+          <FilterChip class="max-sm:min-h-9" active={filter === 'duplicates'} data-testid="attachments-filter-duplicates" on:click={() => { filter = filter === 'duplicates' ? 'all' : 'duplicates'; narrowed(); }}>{$localizedText.attachments.filterDuplicates}</FilterChip>
         {/if}
         <FieldControl as="select" aria-label={$localizedText.attachments.kindLabel} data-testid="attachments-kind" bind:value={$attachmentsKind} on:change={narrowed} class="!w-auto" options={[
           { value: 'all', label: $localizedText.attachments.kindAll },
@@ -346,7 +346,8 @@
             <Button variant="ghost" size="sm" type="button" data-testid="attachments-select" on:click={() => { selecting = true; }} class="min-h-8 !px-0">{$localizedText.attachments.select}</Button>
           {/if}
           {/if}
-          <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash-open" on:click={openTrash} class="min-h-8 !px-0">{$localizedText.attachments.removed}</Button>
+          <!-- Alone in its row it read as a section title above the grid; the icon and the right edge make it a button. -->
+          <Button variant="ghost" size="sm" type="button" data-testid="attachments-trash-open" aria-haspopup="dialog" on:click={openTrash} class="ml-auto min-h-8 !px-0"><Trash2 size="14" strokeWidth="1.7" aria-hidden="true" />{$localizedText.attachments.removed}</Button>
         </div>
       {/if}
 

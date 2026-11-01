@@ -8,8 +8,8 @@
   const dispatch = createEventDispatcher();
 </script>
 
-<section class="h-full overflow-y-auto px-4 py-10 sm:py-12 lg:px-12" data-testid="not-found">
-  <div class="mx-auto max-w-xl">
+<section class="h-full overflow-y-auto px-4 py-4 sm:py-6 lg:px-12 lg:py-8" data-testid="not-found">
+  <div class="mx-auto max-w-5xl">
     <h1 class="font-serif text-3xl tracking-tight text-[var(--text-primary)]">{$localizedText.app.notFound.title}</h1>
     <p class="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{$localizedText.app.notFound.text}</p>
     <div class="mt-6">

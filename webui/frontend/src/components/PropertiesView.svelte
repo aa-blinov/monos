@@ -375,7 +375,7 @@
                         on:click={() => startEdit(row, key)}
                         title={$localizedText.properties.editCell}
                         class="block min-h-8 w-full min-w-[5rem] justify-start px-2 text-left text-xs max-sm:min-h-10"
-                      >{cellText(row, key) || ' '}</Button>
+                      >{#if cellText(row, key)}{cellText(row, key)}{:else}<!-- A blank cell looked like a table that failed to load; a short rule says there is no value yet and the cell still takes one. --><span class="inline-block h-px w-3 align-middle bg-[var(--text-tertiary)] opacity-60" aria-hidden="true"></span>{/if}</Button>
                     {/if}
                   </td>
                 {/each}

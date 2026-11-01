@@ -552,6 +552,15 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
   let trashNoticeHeld = false;
   let undoTrashError = '';
   $: scheduleTrashNotice($trashedNotice, trashNoticeHeld);
+  // A note that went to the trash leaves the board's list at once. Left there until the next reload, its card stayed
+  // and the board read the text of a file that was no longer there (410 in the console). Undo reloads the list.
+  $: if ($trashedNotice) dropFromBoard($trashedNotice.notes.map((note) => note.path));
+
+  // `paths` may name folders: their notes go with them.
+  function dropFromBoard(paths) {
+    const gone = (path) => paths.some((item) => path === item || path.startsWith(`${item}/`));
+    homeRecentNotes.update((current) => (current.some((note) => gone(note.path)) ? current.filter((note) => !gone(note.path)) : current));
+  }
 
   function scheduleTrashNotice(notice, held) {
     clearTimeout(trashTimer);
@@ -1096,6 +1105,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
         <Sidebar
           bind:this={sidebarComponent}
           on:navigate={handleNavigate}
+          on:itemsDeleted={(event) => dropFromBoard(event.detail)}
           on:fileDeleted={() => showDashboard({ replace: true, closeSidebar: false })}
           on:openSettings={openSettings}
           on:openTrash={openTrash}
