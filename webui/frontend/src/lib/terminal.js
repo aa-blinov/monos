@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { askStyle } from './agents.js';
 
 /**
  * The agent terminal. It exists only in the desktop app: the preload gives the window `monosTerminal`,
@@ -76,21 +77,8 @@ export function clampTerminalHeight(value, viewportHeight) {
   return Math.min(max, Math.max(140, Math.round(height)));
 }
 
-/** The agents offered in Settings; any other command can be typed as "Other". */
-export const AGENT_PRESETS = [
-  { id: 'claude', label: 'Claude Code', command: 'claude' },
-  { id: 'codex', label: 'Codex', command: 'codex' },
-  { id: 'gemini', label: 'Gemini CLI', command: 'gemini' },
-  { id: 'opencode', label: 'OpenCode', command: 'opencode' },
-  // Cursor's command-line agent; it takes the first question as the argument, like Claude Code.
-  { id: 'cursor', label: 'Cursor CLI', command: 'cursor-agent' },
-];
-export const DEFAULT_AGENT_COMMAND = 'claude';
-
-export function agentLabel(command) {
-  const preset = AGENT_PRESETS.find((item) => item.command === String(command || '').trim());
-  return preset ? preset.label : String(command || '').trim() || 'Claude Code';
-}
+// The catalogue lives in agents.js; these names stay for the code that imported them from here.
+export { AGENTS as AGENT_PRESETS, DEFAULT_AGENT_COMMAND, agentLabel } from './agents.js';
 
 /** A request for the terminal panel: start the agent, or ask it about a note. */
 export const agentRequest = writable(null);
@@ -106,9 +94,9 @@ export function noteFolder(notePath) {
 }
 
 /** Start the agent where the person is: in the open note's folder, or in the notes folder from the board. */
-export function launchAgent(notePath = '') {
+export function launchAgent(notePath = '', command = '') {
   if (!terminalBridge) return;
-  agentRequest.set({ kind: 'launch', folder: noteFolder(notePath), at: Date.now() });
+  agentRequest.set({ kind: 'launch', folder: noteFolder(notePath), command, at: Date.now() });
 }
 
 export function askAgentAboutNote(notePath) {
@@ -136,25 +124,19 @@ export function shellDoubleQuote(text) {
  *
  * @param {string} notePath app path, `notes/Work/Plan.md`
  * @param {(path: string) => string} sentence the localized lead-in, given the path
- * @returns {{ prompt: string, commandLine: (command: string) => string }}
+ * @returns {{ prompt: string, takesQuestion: (command: string) => boolean, commandLine: (command: string) => string }}
  */
 export function noteQuestion(notePath, sentence) {
   const relative = String(notePath || '').replace(/^notes\//, '');
   const prompt = sentence(relative);
   return {
     prompt,
+    // An agent that cannot be given a question on its command line is only started.
+    takesQuestion: (command) => askStyle(command).supported,
     // The cursor is left before the closing quote (one step left), inside the question.
-    commandLine: (command) => `${command}${promptFlag(command)} ${shellDoubleQuote(prompt)}`,
+    commandLine: (command) => {
+      const { supported, flag } = askStyle(command);
+      return supported ? `${command}${flag ? ` ${flag}` : ''} ${shellDoubleQuote(prompt)}` : command;
+    },
   };
-}
-
-/**
- * How an agent is given its first question. Claude Code, Codex and Gemini CLI take it as the argument
- * (`claude "…"`, in a terminal that opens the interactive session); OpenCode's argument is a folder, and the
- * question goes after `--prompt`. Found in the command's words, so `/opt/bin/opencode --model x` is known too.
- */
-function promptFlag(command) {
-  const words = String(command || '');
-  if (/(^|[\s/\\])opencode(?:\.(?:exe|cmd))?(?=\s|$)/i.test(words) && !/(^|\s)--prompt(\s|=|$)/.test(words)) return ' --prompt';
-  return '';
 }

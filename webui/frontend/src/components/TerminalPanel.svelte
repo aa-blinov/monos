@@ -7,13 +7,14 @@
    * Several tabs, each its own shell; ⌘F searches the visible one; a note path in the output opens the note.
    */
   import { onDestroy, onMount, tick } from 'svelte';
-  import { Button } from '@monos/ui';
+  import { Button, FieldControl } from '@monos/ui';
+  import AgentIcon from './AgentIcon.svelte';
   import { Terminal } from '@xterm/xterm';
   import { FitAddon } from '@xterm/addon-fit';
   import { WebLinksAddon } from '@xterm/addon-web-links';
   import { SearchAddon } from '@xterm/addon-search';
   import '@xterm/xterm/css/xterm.css';
-  import { Bot, ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
+  import { ChevronDown, ChevronUp, MoreHorizontal, Plus, RotateCcw, Search, X } from 'lucide-svelte';
   import TooltipIconButton from './TooltipIconButton.svelte';
   import { IconButton, Menu, Tabs } from '@monos/ui';
   import SearchField from './SearchField.svelte';
@@ -25,11 +26,18 @@
   import { computeContextMenuPosition } from '../lib/context-menu-position.js';
   import { NOTES_PULLED_EVENT } from '../lib/note-refresh.js';
   import {
+    agentCommand,
     agentLabel,
+    detectInstalledAgents,
+    installedAgents,
+    installedCommands,
+    loadAgentCommand,
+    saveAgentCommand,
+  } from '../lib/agents.js';
+  import {
     agentRequest,
     clampTerminalHeight,
     storedTerminalHeight,
-    DEFAULT_AGENT_COMMAND,
     noteLinkRequest,
     noteQuestion,
     shellInForeground,
@@ -65,7 +73,6 @@
   }));
   let nextKey = 1;
   let root = '';
-  let agentCommand = DEFAULT_AGENT_COMMAND;
   // Whether the notes folder has the files that tell an agent how to work in it (AGENTS.md, CLAUDE.md).
   let rulesMissing = false;
   let knownNotes = new Set();
@@ -347,10 +354,7 @@
   }
 
   async function loadAgentSettings() {
-    try {
-      const settings = await (await fetch('/api/settings')).json();
-      agentCommand = String(settings?.agent_command || '').trim() || DEFAULT_AGENT_COMMAND;
-    } catch { /* the default stays */ }
+    await loadAgentCommand(true);
     try {
       const rules = await (await fetch('/api/agent/rules')).json();
       rulesMissing = !rules?.['AGENTS.md'] && !rules?.['CLAUDE.md'];
@@ -358,9 +362,66 @@
       rulesMissing = false;
     }
   }
+  // Which known agents this computer has, asked when the panel opens (a few seconds at most: the shell is asked).
+  let detecting = false;
+  async function rescanAgents() {
+    if (detecting) return;
+    detecting = true;
+    try { await detectInstalledAgents(); } finally { detecting = false; }
+  }
   $: if ($terminalOpen) {
+    if ($installedCommands === null) void rescanAgents();
     void loadAgentSettings();
     void loadKnownNotes();
+  }
+
+  // The agent menu: the agents found here, the one in use ticked, then a command of the person's own.
+  $: agentMenuItems = [
+    ...installedAgents($installedCommands).map((agent) => ({
+      value: agent.command,
+      label: agent.label,
+      icon: AgentIcon,
+      iconProps: { agent: agent.id },
+      checked: agent.command === $agentCommand.trim(),
+      testid: `agent-choice-${agent.id}`,
+    })),
+    ...(installedAgents($installedCommands).length
+      ? []
+      : [{ value: '__none', label: $installedCommands === null ? $localizedText.terminal.agentSearching : $localizedText.terminal.agentNone, disabled: true }]),
+    { separator: true },
+    { value: '__custom', label: $localizedText.terminal.agentCustom, testid: 'agent-choice-custom' },
+    { value: '__rescan', label: $localizedText.terminal.agentRescan, testid: 'agent-rescan' },
+  ];
+  let customOpen = false;
+  let customCommand = '';
+  let customInput;
+
+  async function chooseAgent(command) {
+    await saveAgentCommand(command);
+    launchAgent($menuState.notePath, command);
+  }
+  function pickAgentMenu(value) {
+    if (value === '__custom') {
+      customCommand = '';
+      customOpen = true;
+      void tick().then(() => customInput?.focus());
+    } else if (value === '__rescan') void rescanAgents();
+    else if (value && value !== '__none') void chooseAgent(value);
+  }
+  function runCustom() {
+    const command = customCommand.trim();
+    if (!command) return;
+    customOpen = false;
+    void chooseAgent(command);
+  }
+  function customKeydown(event) {
+    if (event.key === 'Enter' && !event.isComposing) {
+      event.preventDefault();
+      runCustom();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      customOpen = false;
+    }
   }
 
   async function createRules() {
@@ -397,16 +458,19 @@
     await Promise.race([tab.firstOutput, new Promise((resolve) => setTimeout(resolve, 1500))]);
     await new Promise((resolve) => setTimeout(resolve, 150));
     await loadAgentSettings();
+    // A launch from the agent menu names its command; any other launch starts the agent chosen in Settings.
+    const command = request.command || $agentCommand;
     const inShell = shellInForeground(await terminalBridge.process(tab.sessionId));
     if (request.kind === 'launch') {
-      if (inShell) terminalBridge.write(tab.sessionId, `${agentCommand}\r`);
+      if (inShell) terminalBridge.write(tab.sessionId, `${command}\r`);
     } else {
       const question = noteQuestion(request.notePath, $localizedText.terminal.aboutNote);
-      if (inShell) terminalBridge.write(tab.sessionId, `${question.commandLine(agentCommand)}\x1b[D`);
+      // The cursor goes inside the quotes only when the agent took the question on its command line.
+      if (inShell) terminalBridge.write(tab.sessionId, `${question.commandLine(command)}${question.takesQuestion(command) ? '\x1b[D' : ''}`);
       else terminalBridge.write(tab.sessionId, question.prompt);
     }
     if (inShell) {
-      tab.title = tab.folder ? $localizedText.terminal.tabIn(agentLabel(agentCommand), tab.folder) : agentLabel(agentCommand);
+      tab.title = tab.folder ? $localizedText.terminal.tabIn(agentLabel(command), tab.folder) : agentLabel(command);
       tabs = tabs;
     }
     tab.term.focus();
@@ -555,9 +619,54 @@
       {#if $agentReview.changes?.length}
         <Button variant="text" size="sm" data-testid="agent-review-open" class="shrink-0 !px-0 text-[var(--blue)]" on:click={() => agentReviewOpen.set(true)}>{$localizedText.agentReview.button($agentReview.changes.length)}</Button>
       {/if}
-      <Button variant="text" size="sm" data-testid="agent-launch" class="shrink-0 !px-0" on:click={() => launchAgent($menuState.notePath)}>
-        <Bot size="14" strokeWidth="1.7" aria-hidden="true" slot="icon" />{launchFolder ? $localizedText.terminal.launchIn(agentLabel(agentCommand), launchFolder) : $localizedText.terminal.launch(agentLabel(agentCommand))}
-      </Button>
+      {#if customOpen}
+        <!-- A command of the person's own: typed here, run in the folder of the open note. -->
+        <div class="flex min-w-0 flex-1 items-center justify-end gap-2" data-testid="agent-custom-row">
+          <FieldControl
+            bind:inputEl={customInput}
+            bind:value={customCommand}
+            type="text"
+            size="sm"
+            aria-label={$localizedText.terminal.agentCustomField}
+            placeholder={$localizedText.terminal.agentCustomPlaceholder}
+            data-testid="agent-custom-input"
+            class="min-w-0 max-w-sm flex-1 font-mono"
+            on:keydown={customKeydown}
+          />
+          <Button variant="text" size="sm" data-testid="agent-custom-run" class="shrink-0 !px-0" disabled={!customCommand.trim()} on:click={runCustom}>{$localizedText.terminal.agentCustomRun}</Button>
+          <Button variant="text" size="sm" class="shrink-0 !px-0 text-[var(--text-tertiary)]" on:click={() => { customOpen = false; }}>{$localizedText.terminal.agentCustomCancel}</Button>
+        </div>
+      {:else}
+        <!-- One control in two parts: the agent in use starts at once, the arrow lists the others found here. -->
+        <div class="flex shrink-0 items-center gap-1">
+          <Button variant="text" size="sm" data-testid="agent-launch" class="shrink-0 !px-0" on:click={() => launchAgent($menuState.notePath)}>
+            <AgentIcon agent={$agentCommand} size={16} slot="icon" />{launchFolder ? $localizedText.terminal.launchIn(agentLabel($agentCommand), launchFolder) : $localizedText.terminal.launch(agentLabel($agentCommand))}
+          </Button>
+          <Menu
+            items={agentMenuItems}
+            label={$localizedText.terminal.agentMenu}
+            placement="top"
+            align="end"
+            width="auto"
+            menuTestid="agent-menu-list"
+            on:select={(event) => pickAgentMenu(event.detail.value)}
+          >
+            <svelte:fragment slot="trigger" let:toggle let:triggerProps>
+              <TooltipIconButton
+                {...triggerProps}
+                class="{iconButton} shrink-0"
+                label={$localizedText.terminal.agentMenu}
+                tooltip={$localizedText.terminal.agentMenu}
+                tooltipAlign="end"
+                data-testid="agent-menu"
+                on:click={toggle}
+              >
+                <ChevronUp size="14" strokeWidth="1.7" aria-hidden="true" />
+              </TooltipIconButton>
+            </svelte:fragment>
+          </Menu>
+        </div>
+      {/if}
     </div>
     {#if searchOpen}
       <!-- Search in the visible tab: Enter for the next match, Shift+Enter for the one before, Esc to close. -->

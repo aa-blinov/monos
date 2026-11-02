@@ -13,6 +13,19 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
+## 1.22.0 — 2026-11-02
+
+### Added
+
+- The agent button in the terminal has an arrow beside it: a menu of the agents found on this computer, the one in use ticked, and "Another command…", which opens a field to type any command and runs it in the folder of the open note. Before, only the agent chosen in Settings could be started, and that was Claude Code until someone found the setting.
+- The app looks for agents itself. The desktop shell asks the person's own shell (login and interactive, so nvm, Homebrew and `~/.local/bin` are seen) and the folders of PATH which of the known commands exist; Settings lists the found ones first and marks the rest as not found, but they can still be chosen.
+- The catalogue grew from five agents to twenty-one: Claude Code, Codex, Gemini CLI, OpenCode, Cursor CLI, GitHub Copilot, Qwen Code, Droid, Auggie, Mistral Vibe, Cline, Aider, Goose, Amp, Crush, Kiro, Kilo Code, Grok, Junie, Codebuff and OpenHands.
+- Each agent has its own coloured mark instead of the grey robot, in the terminal, the Settings list, the "Ask the agent" menu item and the bottom bar of a note the agent changed. The marks are drawn in the app (no remote assets) and are simplified glyphs, not the companies' exact logos.
+
+### Changed
+
+- "Ask the agent about this note" starts agents that cannot take a question on their command line (Aider, Goose, Amp and others) without typing one, instead of passing the question as a file name.
+
 ## 1.21.0 — 2026-11-02
 
 ### Fixed

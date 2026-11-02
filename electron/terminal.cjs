@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { resolveSessionCwd } = require('./terminal-cwd.cjs');
+const { detectAgents } = require('./agent-detect.cjs');
 
 const MAX_SESSIONS = 8;
 // Output is sent to the page at most once a frame: a busy agent writes thousands of small chunks.
@@ -121,6 +122,13 @@ function registerTerminal({ ipcMain, getWindow, getOrigin, getCwd }) {
     } catch {
       return null;
     }
+  });
+
+  // Which of the agents the page knows are installed here; the names are checked as plain words before they
+  // reach a shell (`agent-detect.cjs`).
+  ipcMain.handle('agents:detect', (event, commands) => {
+    if (!trusted(event)) return [];
+    return detectAgents(commands, { env: shellEnv() });
   });
 
   ipcMain.on('terminal:kill', (event, id) => {

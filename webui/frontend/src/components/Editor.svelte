@@ -18,6 +18,10 @@
   import { markPinned, pinEvents } from '../lib/sidebar-pinned.js';
   import { syncState } from '../lib/git-conflicts.js';
   import { askAgentAboutNote, terminalBridge, terminalOpen, toggleTerminal } from '../lib/terminal.js';
+  import { agentCommand, loadAgentCommand } from '../lib/agents.js';
+  import AgentIcon from './AgentIcon.svelte';
+  // The agent's own mark (not a generic robot) stands for it in the menu and the bottom bar.
+  if (terminalBridge) void loadAgentCommand();
   import { agentReviewOpen, agentTouched } from '../lib/agent-review.js';
   import { layoutLocalGraph, truncateLabel } from '../lib/local-graph.js';
   import { dueLabel, dueStatus, parseFrontmatter, replaceFrontmatterBody, setFrontmatterKey, splitFrontmatter, upsertFrontmatter } from '../lib/frontmatter.js';
@@ -67,7 +71,7 @@
   import ConflictNoteView from './ConflictNoteView.svelte';
   import ConflictDeletedView from './ConflictDeletedView.svelte';
   import LockedConflictView from './LockedConflictView.svelte';
-  import { CalendarDays, Download, Folder, History, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, Star, MoreHorizontal, Bot, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
+  import { CalendarDays, Download, Folder, History, Link2, Lock, Palette, SlidersHorizontal, Tag, Trash2, FileText, X, Focus, Pin, Star, MoreHorizontal, TerminalSquare, ArrowLeft, ArrowLeftRight, ArrowRight, Waypoints } from 'lucide-svelte';
   import NoteProperties from './NoteProperties.svelte';
   import NoteLock from './NoteLock.svelte';
   import LockedNote from './LockedNote.svelte';
@@ -149,7 +153,7 @@
       ? { value: 'terminal', label: $localizedText.terminal.open, icon: TerminalSquare, class: 'sm:hidden', testid: 'menu-terminal' }
       : null,
     terminalBridge && loadedFilePath && !fileInfo?.locked
-      ? { value: 'agent', label: $localizedText.terminal.askAboutNote, icon: Bot, testid: 'menu-ask-agent' }
+      ? { value: 'agent', label: $localizedText.terminal.askAboutNote, icon: AgentIcon, iconProps: { agent: $agentCommand }, testid: 'menu-ask-agent' }
       : null,
     { value: 'lock', label: $localizedText.editor.lockMenu, icon: Lock, testid: 'menu-lock' },
     { value: 'focus', label: focusMode ? $localizedText.editor.focusOff : $localizedText.editor.focusOn, icon: Focus, testid: 'toggle-focus-mode' },
@@ -2142,7 +2146,7 @@
             tooltipPosition="top"
             tooltipAlign="end"
           >
-            <Bot size="14" strokeWidth="1.7" aria-hidden="true" />
+            <AgentIcon agent={$agentCommand} size={16} />
             <span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--blue)]" aria-hidden="true"></span>
           </TooltipIconButton>
         {/if}

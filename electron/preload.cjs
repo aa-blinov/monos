@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('monosTerminal', {
   resize: (id, cols, rows) => ipcRenderer.send('terminal:resize', id, cols, rows),
   kill: (id) => ipcRenderer.send('terminal:kill', id),
   process: (id) => ipcRenderer.invoke('terminal:process', id),
+  detectAgents: (commands) => ipcRenderer.invoke('agents:detect', commands),
   onData: (callback) => listen('terminal:data', callback),
   onExit: (callback) => listen('terminal:exit', callback),
 });

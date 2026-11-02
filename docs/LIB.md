@@ -66,6 +66,10 @@ The split rule: `lib/` is for **pure logic**. If a module imports Svelte or has 
 | `three-way-merge.test.js` | Separate edits merge, same edit taken once, overlapping edits give a readable conflict |
 | `strings-coverage.test.js` | Every `$localizedText` key a component asks for exists in every language: a missing one renders as "undefined" |
 | `terminal.js` | `terminalBridge`, `terminalOpen`, `toggleTerminal`, `terminalTheme`, `clampTerminalHeight` — the agent terminal: present only in the desktop app, coloured by the theme |
+| `agents.js` | `AGENTS`, `agentForCommand`, `agentLabel`, `askStyle`, `agentCommand`, `installedCommands`, `detectInstalledAgents` — the coding agents Monos knows by name (command, how a first question is given), the one chosen in Settings, and which of them this computer has |
+| `agents.test.js` | Catalogue without repeats, an agent known by the first word of a command, labels, how each agent takes a question, found agents in the catalogue's order |
+| `agent-icons.js` | `AGENT_ICONS`, `agentIcon` — a coloured mark drawn by hand for each agent (no remote assets) |
+| `agent-icons.test.js` | A mark for every agent and no extra, hex colours, a glyph that stands out from its colour, markup without scripts or links |
 | `terminal.test.js` | Theme colours with fallbacks, selection colour xterm can parse, panel height limits |
 | `notes-events.js` | `listenForNoteChanges` — files changed outside Monos (an agent) arrive over `/api/events`; the open note rereads, the board and tree refresh |
 | `notes-events.test.js` | Change events reach the app, malformed ones are ignored, no EventSource is harmless |
