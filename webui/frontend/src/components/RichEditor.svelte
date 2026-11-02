@@ -1130,7 +1130,7 @@
         <span role="presentation" on:mousedown|preventDefault>
         <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => openExternal(wikiLinkHere.status.href)}>
           <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
-          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.openExternal}<span class="ml-2 text-[var(--text-tertiary)]">{wikiLinkHere.status.href.replace(/^https?:\/\//, '')}</span></span>
+          <span class="min-w-0 flex-1 truncate text-left">{$localizedText.richEditor.wikiLink.openExternal}<span class="ml-2 text-[var(--text-tertiary)]">{wikiLinkHere.status.href.replace(/^https?:\/\//, '')}</span></span>
           <kbd class="hidden shrink-0 font-sans text-[length:var(--text-whisper)] text-[var(--text-tertiary)] sm:inline">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
         </Button>
         </span>
@@ -1138,7 +1138,7 @@
         <span role="presentation" on:mousedown|preventDefault>
         <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => openWikiNote(wikiLinkHere.status)}>
           <ArrowUpRight size="16" strokeWidth="1.7" aria-hidden="true" />
-          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.open(wikiLinkHere.status.name)}</span>
+          <span class="min-w-0 flex-1 truncate text-left">{$localizedText.richEditor.wikiLink.open(wikiLinkHere.status.name)}</span>
           <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
         </Button>
         </span>
@@ -1146,7 +1146,7 @@
         <span role="presentation" on:mousedown|preventDefault>
         <Button variant="ghost" size="sm" class="w-full justify-start gap-2 normal-case" on:click={() => createWikiNote(wikiLinkHere.target)}>
           <FilePlus size="16" strokeWidth="1.7" aria-hidden="true" />
-          <span class="min-w-0 flex-1 truncate">{$localizedText.richEditor.wikiLink.create(newNoteForWikiLink(wikiLinkHere.target).title)}</span>
+          <span class="min-w-0 flex-1 truncate text-left">{$localizedText.richEditor.wikiLink.create(newNoteForWikiLink(wikiLinkHere.target).title)}</span>
           <kbd class="hidden shrink-0 font-sans sm:inline text-[length:var(--text-whisper)] text-[var(--text-tertiary)]">{shortcutLabel($localizedText.richEditor.wikiLink.shortcut)}</kbd>
         </Button>
         </span>

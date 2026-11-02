@@ -28,6 +28,9 @@
   onMount(() => {
     if (!active) return;
     sendColors();
+    // Panels that cover the whole window on a phone-sized one start under the strip, or their buttons (a close
+    // cross at the top left) would sit on the traffic lights.
+    document.documentElement.style.setProperty('--titlebar-offset', 'var(--titlebar-height, 40px)');
     observer = new MutationObserver(sendColors);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'] });
     stopFullScreen = bridge.onFullScreen?.((on) => { fullScreen = on; }) || (() => {});
@@ -36,6 +39,7 @@
   onDestroy(() => {
     observer?.disconnect();
     stopFullScreen();
+    document.documentElement.style.removeProperty('--titlebar-offset');
   });
 </script>
 

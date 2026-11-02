@@ -1086,7 +1086,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
     <div class="flex flex-1 overflow-hidden relative">
       {#if isMobile && $sidebarOpen && !isSettingsWindow}
         <button
-          class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
+          class="fixed inset-0 top-[var(--titlebar-offset,0px)] bg-black/40 backdrop-blur-sm z-40 transition-opacity"
           on:click={toggleSidebar}
           aria-label={$localizedText.app.closeMenu}
         ></button>
@@ -1095,7 +1095,7 @@ import { DEFAULT_SYNC_MINUTES, backgroundEvent, normalizeSyncMinutes, setAutoSyn
       {#if !isSettingsWindow}
       <nav
         aria-label={$localizedText.app.sidebarLabel}
-        class="{isMobile ? 'fixed inset-y-0 left-0 z-50 w-full flex flex-col' : 'relative shrink-0 flex flex-col'}
+        class="{isMobile ? 'fixed inset-y-0 left-0 top-[var(--titlebar-offset,0px)] z-50 w-full flex flex-col' : 'relative shrink-0 flex flex-col'}
                {!$sidebarOpen ? (isMobile ? '-translate-x-full' : 'w-0') : ''}
                overflow-hidden"
         data-testid="sidebar-shell"

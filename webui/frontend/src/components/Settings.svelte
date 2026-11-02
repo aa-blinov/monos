@@ -1227,7 +1227,7 @@
         </div>
       </details>
 
-      <div class="space-y-3">
+      <div class="flex flex-col items-start gap-3">
         <Checkbox id="git-auto-upload" bind:checked={settings.git_auto_upload} on:change={saveAutoSync}>
           {$localizedText.settings.autoUpload}
         </Checkbox>

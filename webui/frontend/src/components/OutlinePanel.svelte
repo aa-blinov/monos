@@ -114,7 +114,7 @@
 {/if}
 
 <aside
-  class="{open ? 'fixed inset-y-0 right-0 z-40 block w-64 max-w-[85vw] overflow-y-auto shadow-2xl' : 'hidden w-56'} {collapsed ? 'lg:hidden' : 'lg:block'} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs lg:relative lg:z-auto lg:w-[var(--outline-width)] lg:max-w-none lg:overflow-visible lg:shadow-none"
+  class="{open ? 'fixed inset-y-0 right-0 top-[var(--titlebar-offset,0px)] z-40 block w-64 max-w-[85vw] overflow-y-auto shadow-2xl' : 'hidden w-56'} {collapsed ? 'lg:hidden' : 'lg:block'} shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-6 text-xs lg:relative lg:z-auto lg:w-[var(--outline-width)] lg:max-w-none lg:overflow-visible lg:shadow-none"
   style="--outline-width: min({$outlineWidth}px, 45vw)"
   data-testid="outline-panel"
 >

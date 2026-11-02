@@ -155,7 +155,7 @@
                     class="w-full justify-start normal-case"
                     on:click={() => pick($boardTag === entry.tag ? '' : entry.tag)}
                   >
-                    <span class="min-w-0 flex-1 truncate">{entry.tag}</span>
+                    <span class="min-w-0 flex-1 truncate text-left">{entry.tag}</span>
                     {#if $boardTag === entry.tag}<Check size="12" strokeWidth="1.7" aria-hidden="true" />{/if}
                     <span class="tabular-nums text-[var(--text-tertiary)]">{entry.count}</span>
                   </Button>

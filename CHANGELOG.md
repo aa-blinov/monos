@@ -13,6 +13,14 @@ All notable changes to monos. Versions are ordered newest first.
 
 ## [Unreleased]
 
+## 1.22.1 — 2026-11-02
+
+### Fixed
+
+- The tag list on the board (the "All tags" menu) and the link bar of the editor centred their labels. A button centres its text, and the label sat in a box stretched over the row; the box now aligns left, as every list does.
+- In a window with the app's own top strip (macOS, Windows), the sidebar and the Structure column of a narrow window began at the very top and put their close cross on the traffic lights. They now begin under the strip.
+- Settings, sync: the two "send my changes" checkboxes stood side by side in one line; they are one under the other.
+
 ## 1.22.0 — 2026-11-02
 
 ### Added

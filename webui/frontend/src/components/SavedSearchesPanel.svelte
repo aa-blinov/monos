@@ -162,7 +162,7 @@
                   on:click={() => { dispatch('run', entry); open = false; }}
                 >
                   <Bookmark size="12" strokeWidth="1.7" class="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
-                  <span class="min-w-0 flex-1">
+                  <span class="min-w-0 flex-1 text-left">
                     <span class="block truncate text-sm text-[var(--text-primary)]">{entry.name}</span>
                     <span class="block truncate font-mono text-[length:var(--text-whisper-lg)] text-[var(--text-secondary)]">{entry.query}</span>
                   </span>
